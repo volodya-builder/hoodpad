@@ -56,10 +56,10 @@ export default function App() {
         <div className="container header-inner">
           <a className="logo" href="#/" aria-label="hood">
             <svg width="32" height="32" viewBox="0 0 64 64">
-              <rect width="64" height="64" rx="15" fill="#f2f2ee" stroke="#d9d9d0" strokeWidth="1" />
-              <path d="M32 6 C23 12 11 31 11 47 C11 53 15 56 20 55 L44 55 C49 56 53 53 53 47 C53 31 41 12 32 6 Z" fill="#43464b" />
-              <path d="M32 19 C26.5 23.5 20 32 20 42.5 C20 50 25 54.5 32 54.5 C39 54.5 44 50 44 42.5 C44 32 37.5 23.5 32 19 Z" fill="#0c0d0e" stroke="#f2f2ee" strokeWidth="2.6" />
-            </svg>
+      <rect width="64" height="64" rx="14" fill="#f5f5f2"/>
+      <path d="M32 9.5 C27.5 13 16.5 27 12.8 42.5 C11.8 47 12.6 50.3 15.6 51 L48.4 51 C51.4 50.3 52.2 47 51.2 42.5 C47.5 27 36.5 13 32 9.5 Z" fill="#4a4d51"/>
+      <path d="M32 24 C26 28 20.8 34.5 20.2 42 C19.8 46 20.6 49.5 22.3 52 C23.7 54.5 26.5 55.8 32 55.8 C37.5 55.8 40.3 54.5 41.7 52 C43.4 49.5 44.2 46 43.8 42 C43.2 34.5 38 28 32 24 Z" fill="#101112" stroke="#f5f5f2" strokeWidth="2.4"/>
+    </svg>
             <span className="logo-word">HOOD</span>
           </a>
           <nav className="nav">
