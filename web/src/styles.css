@@ -43,8 +43,8 @@ header {
 .logo { display: flex; align-items: center; gap: 10px; cursor: pointer; }
 .logo svg { flex: none; }
 .logo-word {
-  font-family: var(--font-display); font-weight: 700; font-size: 23px;
-  letter-spacing: .3px;
+  font-family: var(--font-ui); font-weight: 700; font-size: 17px;
+  letter-spacing: 7px; margin-left: 2px;
 }
 .logo-word .dot { color: var(--gold); }
 .nav { display: flex; gap: 10px; align-items: center; }
