@@ -315,13 +315,11 @@ function createView() {
         <span>Дополнительно</span><span class="chev">▾</span>
       </div>
       <div class="adv-body" id="advBody">
-        <div class="preview-stats" style="border:none;margin:0">
-          <div class="row"><span class="k">Сапплай</span><span class="v">1 000 000 000 (фикс.)</span></div>
-          <div class="row"><span class="k">На кривой</span><span class="v">80% · 800M</span></div>
-          <div class="row"><span class="k">Резерв DEX</span><span class="v">20% · 200M</span></div>
-          <div class="row"><span class="k">Комиссия трейда</span><span class="v">1%</span></div>
-          <div class="row"><span class="k">Контракт токена</span><span class="v">без минта и владельца</span></div>
-        </div>
+        <label>Кошелёк создателя</label>
+        <input id="fWallet" placeholder="0xVolo…dya (подключённый)" spellcheck="false" oninput="syncPreview()" />
+        <div class="hint" id="hWallet">Получает долю создателя в комиссиях (70%) и покупку создателя. Оставьте пустым, чтобы использовать подключённый кошелёк.</div>
+        <label>Сайт</label>
+        <input id="fSite" placeholder="https://example.com" inputmode="url" />
       </div>
 
       <div class="due-row">
@@ -401,6 +399,14 @@ function syncPreview() {
     document.getElementById("pBuyVal").textContent =
       `${fmt(buyV,4)} ETH ≈ ${fmt(Math.min(quoteBuy({eth:0,sold:0}, buyV), TOTAL),0)} токенов`;
   } else row.style.display = "none";
+  // creator wallet validation
+  const wv = document.getElementById("fWallet").value.trim();
+  const hW = document.getElementById("hWallet");
+  const okW = wv === "" || /^0x[0-9a-fA-F]{40}$/.test(wv);
+  hW.classList.toggle("bad", !okW);
+  hW.textContent = okW
+    ? "Получает долю создателя в комиссиях (70%) и покупку создателя. Оставьте пустым, чтобы использовать подключённый кошелёк."
+    : "Неверный адрес: нужен формат 0x… (42 символа).";
   // validation hints
   const hSym = document.getElementById("hSym");
   const okSym = /^[A-Z0-9]*$/.test(sym);
@@ -432,12 +438,16 @@ function createToken() {
   const desc = document.getElementById("fDesc").value.trim();
   const xh = document.getElementById("fX").value.trim();
   const tg = document.getElementById("fTg").value.trim();
+  const site = document.getElementById("fSite").value.trim();
+  const cw = document.getElementById("fWallet").value.trim();
   const first = parseFloat(document.getElementById("fBuy").value) || 0;
   if (!draft.img) return toast("Добавьте картинку токена");
   if (!name || !sym) return toast("Нужны название и тикер");
   if (!/^[A-Z0-9]{1,10}$/.test(sym)) return toast("Тикер: только буквы и цифры, до 10 символов");
   if (first > MAX_DEV_BUY_ETH) return toast(`Покупка создателя ограничена ${fmt(MAX_DEV_BUY_ETH,4)} ETH (5% сапплая)`);
-  const t = makeToken(name, sym, desc, "0xVolo…dya (вы)", draft.img, xh, tg);
+  if (cw && !/^0x[0-9a-fA-F]{40}$/.test(cw)) return toast("Кошелёк создателя: неверный адрес");
+  const t = makeToken(name, sym, desc, cw ? cw.slice(0,6) + "…" + cw.slice(-4) : "0xVolo…dya (вы)", draft.img, xh, tg);
+  t.site = site;
   t.mine = true;
   tokens.unshift(t);
   toast(`Токен $${sym} запущен! 🚀`);
@@ -452,6 +462,7 @@ function tokenView(t) {
   const links = [
     t.x ? `<a href="https://x.com/${esc(t.x)}" target="_blank" style="color:var(--accent)">x.com/${esc(t.x)}</a>` : "",
     t.tg ? `<a href="https://t.me/${esc(t.tg)}" target="_blank" style="color:var(--accent)">t.me/${esc(t.tg)}</a>` : "",
+    t.site ? `<a href="${esc(t.site)}" target="_blank" style="color:var(--accent)">${esc(t.site.replace(/^https?:\/\//,""))}</a>` : "",
   ].filter(Boolean).join(" · ");
   return `
   <div class="token-layout">
