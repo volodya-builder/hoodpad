@@ -214,3 +214,8 @@ input:focus, textarea:focus { border-color: var(--accent); }
 .preview-stats .k { color: var(--text-dim); }
 .preview-stats .v { font-weight: 700; text-align: right; }
 .preview-stats .v.green { color: var(--accent); }
+
+.adv-toggle { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-top: 1px solid var(--border); margin-top: 22px; cursor: pointer; font-weight: 700; font-size: 15px; }
+.adv-toggle .chev { transition: transform .2s; color: var(--text-dim); }
+.adv-toggle.open .chev { transform: rotate(180deg); }
+.adv-body { padding-bottom: 6px; }

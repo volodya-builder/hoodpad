@@ -1,7 +1,7 @@
 import { parseAbi } from "viem";
 
 export const factoryAbi = parseAbi([
-  "function createToken(string name, string symbol, string metadataURI) payable returns (address token, address pool)",
+  "function createToken(string name, string symbol, string metadataURI, address creatorWallet) payable returns (address token, address pool)",
   "function tokenCount() view returns (uint256)",
   "function tokens(uint256 offset, uint256 limit) view returns (address[])",
   "function poolOf(address token) view returns (address)",

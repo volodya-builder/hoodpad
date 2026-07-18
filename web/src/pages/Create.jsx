@@ -31,12 +31,16 @@ function fileToDataUrl(file) {
 export default function Create({ wallet, onConnect }) {
   const [form, setForm] = useState({
     name: "", symbol: "", description: "", x: "", telegram: "", initialBuy: "",
+    creatorWallet: "", website: "",
   });
   const [consent, setConsent] = useState(false);
   const [image, setImage] = useState("");
+  const [advOpen, setAdvOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const fileRef = useRef(null);
+
+  const ZERO = "0x0000000000000000000000000000000000000000";
 
   const set = (k) => (e) =>
     setForm({ ...form, [k]: k === "symbol" ? e.target.value.toUpperCase() : e.target.value });
@@ -44,6 +48,8 @@ export default function Create({ wallet, onConnect }) {
   const buyValue = parseFloat(form.initialBuy) || 0;
   const symbolOk = /^[A-Z0-9]*$/.test(form.symbol);
   const buyOk = buyValue <= MAX_DEV_BUY_ETH;
+  const walletOk =
+    form.creatorWallet.trim() === "" || /^0x[0-9a-fA-F]{40}$/.test(form.creatorWallet.trim());
 
   async function onFile(e) {
     const f = e.target.files?.[0];
@@ -63,6 +69,7 @@ export default function Create({ wallet, onConnect }) {
     if (!form.name.trim() || !form.symbol.trim()) return setError("Нужны название и тикер.");
     if (!symbolOk) return setError("Тикер: только буквы и цифры.");
     if (!buyOk) return setError(`Покупка создателя ограничена ${MAX_DEV_BUY_ETH.toFixed(4)} ETH (5% сапплая).`);
+    if (!walletOk) return setError("Кошелёк создателя: неверный адрес (нужен 0x… из 42 символов).");
 
     setBusy(true);
     try {
@@ -71,6 +78,7 @@ export default function Create({ wallet, onConnect }) {
         image, // self-contained data URL — no external hosting
         x: form.x.trim(),
         telegram: form.telegram.trim(),
+        website: form.website.trim(),
       };
       const uri =
         "data:application/json;base64," +
@@ -81,7 +89,7 @@ export default function Create({ wallet, onConnect }) {
         address: FACTORY_ADDRESS,
         abi: factoryAbi,
         functionName: "createToken",
-        args: [form.name.trim(), form.symbol.trim(), uri],
+        args: [form.name.trim(), form.symbol.trim(), uri, form.creatorWallet.trim() || ZERO],
         value,
       });
       const rcpt = await publicClient.waitForTransactionReceipt({ hash });
@@ -187,6 +195,38 @@ export default function Create({ wallet, onConnect }) {
             ? `Макс ${MAX_DEV_BUY_ETH.toFixed(4)} ETH · 5% сапплая. Исполняется в той же транзакции — защита от снайперов.`
             : `Больше лимита: максимум ${MAX_DEV_BUY_ETH.toFixed(4)} ETH (5% сапплая).`}
         </div>
+
+        <div
+          className={`adv-toggle ${advOpen ? "open" : ""}`}
+          onClick={() => setAdvOpen(!advOpen)}
+        >
+          <span>Дополнительно</span>
+          <span className="chev">▾</span>
+        </div>
+        {advOpen && (
+          <div className="adv-body open">
+            <label>Кошелёк создателя</label>
+            <input
+              value={form.creatorWallet}
+              onChange={set("creatorWallet")}
+              placeholder={wallet ? wallet.account : "0x…"}
+              spellCheck={false}
+            />
+            <div className={`hint ${walletOk ? "" : "bad"}`}>
+              {walletOk
+                ? "Получает долю создателя в комиссиях (70%) и покупку создателя. Оставьте пустым, чтобы использовать подключённый кошелёк."
+                : "Неверный адрес: нужен формат 0x… (42 символа)."}
+            </div>
+
+            <label>Сайт</label>
+            <input
+              value={form.website}
+              onChange={set("website")}
+              placeholder="https://example.com"
+              inputMode="url"
+            />
+          </div>
+        )}
 
         <div className="due-row">
           <span>Uniswap V3 после градации · ликвидность запирается навсегда</span>

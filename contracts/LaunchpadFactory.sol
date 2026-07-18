@@ -52,18 +52,22 @@ contract LaunchpadFactory is Ownable {
     // ------------------------------------------------------------- launch
 
     /// @notice Launch a token. Any ETH sent is used as the creator's first buy.
+    /// @param creatorWallet receives the creator fee share (70%) and the
+    ///        developer buy; pass address(0) to use msg.sender.
     function createToken(
         string calldata name,
         string calldata symbol,
-        string calldata metadataURI
+        string calldata metadataURI,
+        address creatorWallet
     ) external payable returns (address tokenAddr, address poolAddr) {
+        address creator_ = creatorWallet == address(0) ? msg.sender : creatorWallet;
         // Deploy pool first (needs token address) — use CREATE2-free two-step:
         // predict is unnecessary; deploy pool with token=0 impossible, so
         // deploy token to the pool address computed after pool creation is
         // circular. Instead: deploy pool, then token minted straight to it.
         BondingCurvePool pool = new BondingCurvePool(
             _predictTokenAddress(),
-            msg.sender,
+            creator_,
             TOTAL_SUPPLY,
             SALE_CAP,
             VIRTUAL_ETH,
@@ -78,11 +82,11 @@ contract LaunchpadFactory is Ownable {
         allTokens.push(tokenAddr);
         poolOf[tokenAddr] = poolAddr;
 
-        emit TokenCreated(tokenAddr, poolAddr, msg.sender, name, symbol, metadataURI);
+        emit TokenCreated(tokenAddr, poolAddr, creator_, name, symbol, metadataURI);
 
         // Creator's first buy in the same tx (front-run protection).
         if (msg.value > 0) {
-            pool.buy{value: msg.value}(0, msg.sender);
+            pool.buy{value: msg.value}(0, creator_);
         }
     }
 

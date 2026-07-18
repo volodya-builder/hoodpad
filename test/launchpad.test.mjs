@@ -87,6 +87,7 @@ test("launch: token + pool deployed in one tx, registry updated", async () => {
     "Volodya Coin",
     "VOLO",
     "ipfs://volo-metadata",
+    "0x0000000000000000000000000000000000000000",
   ]);
 
   const created = rcpt.logs
@@ -121,7 +122,7 @@ test("launch with initial creator buy in the same tx", async () => {
     creator,
     factory,
     "createToken",
-    ["Second", "SEC", "ipfs://sec"],
+    ["Second", "SEC", "ipfs://sec", "0x0000000000000000000000000000000000000000"],
     parseEther("1")
   );
   const created = rcpt.logs
@@ -139,6 +140,33 @@ test("launch with initial creator buy in the same tx", async () => {
   // expected: net = 0.99 ETH; out = Y*e/(x+e) = 1e9 * 0.99 / (1.625+0.99)
   const expected = (TOTAL * parseEther("0.99")) / (VIRT + parseEther("0.99"));
   assert.equal(bal, expected);
+});
+
+test("launch with custom creator wallet: fees and dev buy go to it", async () => {
+  const rcpt = await write(
+    trader1, // launcher is trader1...
+    factory,
+    "createToken",
+    ["Custom", "CUST", "ipfs://cust", trader2.address], // ...but creator wallet is trader2
+    parseEther("0.5")
+  );
+  const created = rcpt.logs
+    .map((l) => {
+      try {
+        return decodeEventLog({ abi: factory.abi, data: l.data, topics: l.topics });
+      } catch {
+        return null;
+      }
+    })
+    .find((e) => e && e.eventName === "TokenCreated");
+  assert.equal(getAddress(created.args.creator), getAddress(trader2.address));
+
+  const tok = { address: created.args.token, abi: ART("LaunchToken").abi };
+  const poolC = { address: created.args.pool, abi: ART("BondingCurvePool").abi };
+  // dev buy landed on the custom wallet, not the launcher
+  assert.ok((await read(tok, "balanceOf", [trader2.address])) > 0n);
+  assert.equal(await read(tok, "balanceOf", [trader1.address]), 0n);
+  assert.equal(getAddress(await read(poolC, "creator")), getAddress(trader2.address));
 });
 
 test("buy: quoted amount matches, fees accrue 70/30", async () => {

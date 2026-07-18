@@ -160,6 +160,34 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           {meta.description && (
             <p className="dim" style={{ marginTop: 10 }}>{meta.description}</p>
           )}
+          {(meta.x || meta.telegram || meta.website) && (
+            <p className="dim" style={{ marginTop: 6 }}>
+              {[
+                meta.x && (
+                  <a key="x" href={`https://x.com/${meta.x}`} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>
+                    x.com/{meta.x}
+                  </a>
+                ),
+                meta.telegram && (
+                  <a key="tg" href={`https://t.me/${meta.telegram}`} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>
+                    t.me/{meta.telegram}
+                  </a>
+                ),
+                meta.website && (
+                  <a key="web" href={meta.website} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>
+                    {meta.website.replace(/^https?:\/\//, "")}
+                  </a>
+                ),
+              ]
+                .filter(Boolean)
+                .map((el, i) => (
+                  <React.Fragment key={i}>
+                    {i > 0 && " · "}
+                    {el}
+                  </React.Fragment>
+                ))}
+            </p>
+          )}
           {meta.image && (
             <img
               src={meta.image}
