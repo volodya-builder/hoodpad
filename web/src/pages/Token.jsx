@@ -417,7 +417,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               {copiedLink ? `✓ ${t("Ссылка скопирована!")}` : `⧉ ${t("Скопировать ссылку")}`}
             </button>
             <a className="btn" target="_blank" rel="noreferrer"
-               href={`https://x.com/intent/tweet?text=${encodeURIComponent(`$${data.symbol} — ${data.name} · hood`)}&url=${encodeURIComponent(window.location.href)}`}>
+               href={`https://x.com/intent/tweet?text=${encodeURIComponent(`$${data.symbol} — ${data.name} · hood`)}&url=${encodeURIComponent(window.location.href)}&via=hoodandarrow`}>
               𝕏 {t("Поделиться")}
             </a>
           </div>

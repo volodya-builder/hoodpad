@@ -227,6 +227,9 @@ export default function App() {
           <div style={{ maxWidth: 300 }}>
             <div className="footer-tag">hood</div>
             <div className="dim" style={{ marginTop: 10 }}>{t("Запускайте и исследуйте токены с фиксированным сапплаем на Robinhood Chain. Каждую транзакцию подписывает ваш кошелёк — hood не хранит активы.")}</div>
+            <a className="x-link" href="https://x.com/hoodandarrow" target="_blank" rel="noreferrer">
+              𝕏 @hoodandarrow
+            </a>
           </div>
           <div className="footer-cols">
             <div className="fcol">

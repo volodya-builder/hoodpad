@@ -685,3 +685,12 @@ html[data-theme="light"] .king-card { background: var(--card); }
 /* -------- slippage picker -------- */
 .slip-row { display: flex; align-items: center; gap: 7px; margin-top: 12px; font-size: 12px; flex-wrap: wrap; }
 .slip-pill { padding: 4px 11px; font-size: 12px; }
+
+/* -------- footer X link -------- */
+.x-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 14px; padding: 7px 14px; border-radius: 999px;
+  border: 1px solid var(--border); color: var(--text);
+  font-size: 12.5px; font-weight: 700; text-decoration: none;
+}
+.x-link:hover { border-color: var(--gold); color: var(--gold); }
