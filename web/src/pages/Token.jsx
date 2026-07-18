@@ -155,7 +155,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <h3 style={{ fontSize: 24 }}>
               {data.name} <span className="ticker">${data.symbol}</span>
             </h3>
-            {data.graduated && <span className="badge">Graduated</span>}
+            {data.graduated && <span className="badge">🎯 В яблочке</span>}
           </div>
           {meta.description && (
             <p className="dim" style={{ marginTop: 10 }}>{meta.description}</p>

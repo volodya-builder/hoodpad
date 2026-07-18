@@ -54,11 +54,18 @@ export default function App() {
     <>
       <header>
         <div className="container header-inner">
-          <a className="logo" href="#/">
-            hood<span className="dot">pad</span>
+          <a className="logo" href="#/" aria-label="HoodPad">
+            <svg width="30" height="30" viewBox="0 0 64 64" fill="none">
+              <rect width="64" height="64" rx="14" fill="#121a14" stroke="#22301f" />
+              <path d="M15 49 L45 19 M45 19 l-11 2 M45 19 l-2 11" stroke="#d9a93d" strokeWidth="4.5" strokeLinecap="round" />
+              <path d="M20 14 C36 20 44 28 50 44" stroke="#4caf6d" strokeWidth="3" strokeLinecap="round" opacity=".85" />
+            </svg>
+            <span className="logo-word">
+              hood<span className="dot">pad</span>
+            </span>
           </a>
           <nav className="nav">
-            <span className="dim">{CHAIN.name}</span>
+            <span className="net-pill">{CHAIN.name}</span>
             <a className="btn" href="#/create">+ Launch token</a>
             {wallet ? (
               <span className="btn mono">{short(wallet.account)}</span>

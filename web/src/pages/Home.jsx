@@ -63,17 +63,28 @@ export default function Home() {
   return (
     <>
       <section className="hero">
+        <div className="eyebrow">Лаунчпад Robinhood Chain</div>
         <h1>
-          Launch a token in <span className="green">one transaction</span>
+          Честный запуск —<br />
+          <span className="gold">закон Шервуда</span>
         </h1>
-        <p>
-          Fair-launch bonding curves on Robinhood Chain. No presale, no team
-          allocation, liquidity locked forever at graduation. Creators earn
-          70% of trading fees.
+        <p className="sub">
+          Токен запускается одной транзакцией и живёт по правилам, которые не
+          может изменить никто: фиксированный сапплай, прозрачная кривая цены,
+          ликвидность заперта навсегда. Без пресейлов. Без привилегий. Для всех.
         </p>
-        <a className="btn btn-primary" href="#/create" style={{ padding: "13px 28px" }}>
-          Launch your token
-        </a>
+        <div className="hero-cta">
+          <a className="btn btn-primary" href="#/create" style={{ padding: "14px 30px" }}>
+            Запустить свой токен
+          </a>
+        </div>
+        <div className="feature-chips">
+          <span className="chip">Запуск: <b>0 ETH</b></span>
+          <span className="chip">Создателю: <b>70% комиссий</b></span>
+          <span className="chip">Ликвидность: <b>заперта навсегда</b></span>
+          <span className="chip">Защита от снайперов: <b>встроена</b></span>
+        </div>
+        <div className="forest"></div>
       </section>
 
       {error && <div className="error">{error}</div>}
@@ -103,7 +114,7 @@ export default function Home() {
               </div>
               {t.graduated ? (
                 <div style={{ marginTop: 14 }}>
-                  <span className="badge">Graduated · on DEX</span>
+                  <span className="badge">🎯 В яблочке · на DEX</span>
                 </div>
               ) : (
                 <div className="progress">
