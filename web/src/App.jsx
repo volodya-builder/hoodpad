@@ -5,6 +5,7 @@ import TokenPage from "./pages/Token.jsx";
 import Analytics from "./pages/Analytics.jsx";
 import Profile from "./pages/Profile.jsx";
 import Vote from "./pages/Vote.jsx";
+import { Privacy, Terms } from "./pages/Legal.jsx";
 import { connectWallet, hasWallet, short, fmt } from "./lib/web3.js";
 import { CHAIN, FACTORY_ADDRESS } from "./lib/config.js";
 import { loadTokens } from "./lib/data.js";
@@ -129,6 +130,10 @@ export default function App() {
     page = <Analytics />;
   } else if (route === "/vote") {
     page = <Vote wallet={wallet} onConnect={connect} />;
+  } else if (route === "/privacy") {
+    page = <Privacy />;
+  } else if (route === "/terms") {
+    page = <Terms />;
   } else if (route === "/profile") {
     page = <Profile wallet={wallet} onConnect={connect} />;
   } else {
@@ -180,6 +185,34 @@ export default function App() {
         )}
         {page}
       </main>
+      <footer>
+        <div className="container footer-inner">
+          <div style={{ maxWidth: 300 }}>
+            <div className="footer-tag">hood</div>
+            <div className="dim" style={{ marginTop: 10 }}>{t("Запускайте и исследуйте токены с фиксированным сапплаем на Robinhood Chain. Каждую транзакцию подписывает ваш кошелёк — hood не хранит активы.")}</div>
+          </div>
+          <div className="footer-cols">
+            <div className="fcol">
+              <h4>{t("Продукт")}</h4>
+              <a href="#/">{t("Обзор")}</a>
+              <a href="#/analytics">{t("Аналитика")}</a>
+              <a href="#/vote">{t("Голосование")}</a>
+              <a href="#/create">{t("Создать")}</a>
+              <a href="#/profile">{t("Профиль")}</a>
+            </div>
+            <div className="fcol">
+              <h4>{t("Правовое")}</h4>
+              <a href="#/privacy">{t("Политика конфиденциальности")}</a>
+              <a href="#/terms">{t("Условия использования")}</a>
+            </div>
+          </div>
+          <div className="footer-note">
+            <h4 style={{ fontSize: "11.5px", textTransform: "uppercase", color: "var(--text-dim)", letterSpacing: 1, margin: "0 0 11px" }}>{t("Риск-нотис")}</h4>
+            {t("Транзакции отправляются вашим кошельком и необратимы. Токены волатильны и могут полностью обесцениться. hood не хранит активы, не даёт гарантий и финансовых советов.")}
+            <div className="dim" style={{ marginTop: 14 }}>© 2026 hood · Robinhood Chain</div>
+          </div>
+        </div>
+      </footer>
       <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   );
