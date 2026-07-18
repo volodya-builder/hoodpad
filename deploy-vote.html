@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>hood — деплой ончейн-чата</title>
+<style>
+:root { --bg:#0d0e0c; --card:#161715; --border:#282923; --text:#f1f2ed; --dim:#9b9e94;
+        --acc:#b9c94b; --red:#e05c5c; font-family:"Manrope",-apple-system,sans-serif; }
+* { box-sizing:border-box }
+body { margin:0; background:var(--bg); color:var(--text); min-height:100vh; padding:40px 20px; }
+.wrap { max-width:640px; margin:0 auto; }
+h1 { font-size:24px; margin:0 0 6px }
+.dim { color:var(--dim); font-size:13.5px; line-height:1.6 }
+.card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:22px; margin-top:18px }
+.btn { border:1px solid var(--border); background:#111210; color:var(--text); padding:12px 22px;
+       border-radius:11px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit }
+.btn-primary { background:linear-gradient(135deg,#c8d955,#aab83f); color:#15170a; border-color:transparent }
+.btn:disabled { opacity:.4; cursor:not-allowed }
+.mono { font-family:ui-monospace,monospace; font-size:12.5px; word-break:break-all }
+a { color:var(--acc) }
+.result { background:#111210; border:1px solid #3c3e2a; border-radius:12px; padding:16px; margin-top:14px; display:none }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Деплой голосования за выкуп</h1>
+  <p class="dim">Одна транзакция — и появится еженедельное ончейн-голосование: один кошелёк — один голос в неделю, каждый голос подписан кошельком и хранится в блокчейне.</p>
+  <div class="card">
+    <button class="btn btn-primary" id="goBtn">Подключить и задеплоить (1 транзакция)</button>
+    <div class="dim" id="status" style="margin-top:12px">Ожидание…</div>
+  </div>
+  <div class="result" id="result">
+    <b style="color:var(--acc)">Голосование в блокчейне ✓</b>
+    <div class="dim" style="margin:8px 0 4px">Адрес контракта голосования — пришлите его Клоду:</div>
+    <div class="mono" id="addr"></div>
+    <div style="margin-top:12px"><button class="btn" id="copyBtn">Скопировать</button></div>
+  </div>
+  <p class="dim" style="margin-top:14px">деплоер голосования v1 · без внешних зависимостей</p>
+</div>
+<script>
+"use strict";
+var BYTECODE = "0x6080604052348015600f57600080fd5b506102d48061001f6000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c80635277b4ae1461005c5780636dd7d8ea1461009c578063900cf0cf146100b1578063ac4746ab146100c7578063f1431ecd146100d1575b600080fd5b61008761006a3660046101eb565b600060208181529281526040808220909352908152205460ff1681565b60405190151581526020015b60405180910390f35b6100af6100aa366004610217565b6100d9565b005b6100b961019f565b604051908152602001610093565b6100b962093a8081565b6100b96101b3565b6001600160a01b0381166101005760405163ad1991f560e01b815260040160405180910390fd5b600061010a61019f565b60008181526020818152604080832033845290915290205490915060ff161561014657604051637c9a1cf960e01b815260040160405180910390fd5b600081815260208181526040808320338085529252808320805460ff191660011790555183926001600160a01b038616917f66a9138482c99e9baf08860110ef332cc0c23b4a199a53593d8db0fc8f96fbfc9190a45050565b60006101ae62093a804261024f565b905090565b60006101c262093a8042610263565b6101ae9062093a80610277565b80356001600160a01b03811681146101e657600080fd5b919050565b600080604083850312156101fe57600080fd5b8235915061020e602084016101cf565b90509250929050565b60006020828403121561022957600080fd5b610232826101cf565b9392505050565b634e487b7160e01b600052601260045260246000fd5b60008261025e5761025e610239565b500490565b60008261027257610272610239565b500690565b8181038181111561029857634e487b7160e01b600052601160045260246000fd5b9291505056fea2646970667358221220d745c7f3b5141387fe434b6f563f360e1b1c1216b71d6bf131bdcb3f7cea951664736f6c634300081c0033";
+var CHAIN_HEX = "0xb626";
+var discovered = [];
+window.addEventListener("eip6963:announceProvider", function (e) { discovered.push(e.detail); });
+window.dispatchEvent(new Event("eip6963:requestProvider"));
+function pick() {
+  var mm = discovered.find(function (d) { return d.info && /metamask/i.test(d.info.name); });
+  if (mm) return mm.provider;
+  if (discovered.length) return discovered[0].provider;
+  if (window.ethereum && window.ethereum.providers) {
+    var p = window.ethereum.providers.find(function (x) { return x.isMetaMask; });
+    if (p) return p;
+  }
+  return window.ethereum || null;
+}
+function st(m) { document.getElementById("status").innerHTML = m; }
+document.getElementById("goBtn").onclick = async function () {
+  var btn = this; btn.disabled = true;
+  try {
+    var pr = pick();
+    if (!pr) { st('<span style="color:var(--red)">Кошелёк не найден</span>'); btn.disabled = false; return; }
+    st("Запрашиваю доступ к аккаунту…");
+    var accs = await pr.request({ method: "eth_requestAccounts" });
+    var acc = accs[0];
+    var cur = await pr.request({ method: "eth_chainId" });
+    if (cur !== CHAIN_HEX) {
+      st("Переключаю сеть на Robinhood Chain Testnet…");
+      await pr.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CHAIN_HEX }] });
+    }
+    st("Отправляю деплой — подтвердите в MetaMask…");
+    var hash = await pr.request({ method: "eth_sendTransaction", params: [{ from: acc, data: BYTECODE }] });
+    st("Жду подтверждения " + hash.slice(0, 12) + "…");
+    var r = null;
+    for (var i = 0; i < 180 && !r; i++) {
+      r = await pr.request({ method: "eth_getTransactionReceipt", params: [hash] });
+      if (!r) await new Promise(function (res) { setTimeout(res, 1500); });
+    }
+    if (!r || r.status !== "0x1") throw new Error("Транзакция не подтвердилась");
+    st('<b style="color:var(--acc)">Готово ✓</b>');
+    document.getElementById("addr").textContent = r.contractAddress;
+    document.getElementById("result").style.display = "block";
+    document.getElementById("copyBtn").onclick = function () {
+      navigator.clipboard.writeText("VOTE=" + r.contractAddress);
+      this.textContent = "Скопировано ✓";
+    };
+  } catch (e) {
+    st('<span style="color:var(--red)">Ошибка: ' + (e && e.message ? e.message : String(e)) + "</span>");
+    btn.disabled = false;
+  }
+};
+</script>
+</body>
+</html>
