@@ -598,3 +598,13 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
 .verify-note a { color: var(--gold); font-weight: 700; }
 .cta-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 34px; }
 .cta-row .btn { display: inline-flex; align-items: center; padding: 0 22px; height: 42px; }
+
+/* -------- profile extras -------- */
+.usd-sub { color: var(--text-dim); font-size: .86em; font-variant-numeric: tabular-nums; }
+.mini-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 7px; cursor: pointer;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text-dim); font-size: 12px; text-decoration: none;
+}
+.mini-btn:hover { color: var(--gold); border-color: var(--gold); }

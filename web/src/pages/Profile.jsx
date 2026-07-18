@@ -1,15 +1,31 @@
 import React, { useEffect, useState } from "react";
 import { formatEther } from "viem";
 import { publicClient, fmt, short } from "../lib/web3.js";
-import { tokenAbi } from "../lib/abi.js";
+import { tokenAbi, poolAbi } from "../lib/abi.js";
 import { EXPLORER } from "../lib/config.js";
 import { loadTokens, poolTrades } from "../lib/data.js";
+import { useEthUsd, usd } from "../lib/price.js";
 import { useLang } from "../lib/i18n.jsx";
 
 export default function Profile({ wallet, onConnect }) {
   const { t } = useLang();
+  const rate = useEthUsd();
   const [state, setState] = useState(null);
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [claiming, setClaiming] = useState("");
+  const [reload, setReload] = useState(0);
+
+  // ETH → "(~$X)" рядом с каждой суммой
+  const dollars = (e) => {
+    const v = e * rate;
+    const a = Math.abs(v);
+    if (a > 0 && a < 0.01) return "<$0.01";
+    const s = v < 0 ? "-" : "";
+    if (a >= 1e3) return s + usd(a);
+    return s + "$" + a.toFixed(2);
+  };
+  const U = (e) => <span className="usd-sub">({dollars(e)})</span>;
 
   useEffect(() => {
     if (!wallet) return;
@@ -20,38 +36,64 @@ export default function Profile({ wallet, onConnect }) {
         loadTokens(),
         publicClient.getBalance({ address: wallet.account }),
       ]);
-      const enriched = await Promise.all(tokens.map(async (t) => {
-        const [bal, hist] = await Promise.all([
+      const enriched = await Promise.all(tokens.map(async (tk) => {
+        const [bal, hist, creator, feesAccrued] = await Promise.all([
           publicClient.readContract({
-            address: t.token, abi: tokenAbi, functionName: "balanceOf", args: [wallet.account],
+            address: tk.token, abi: tokenAbi, functionName: "balanceOf", args: [wallet.account],
           }),
-          poolTrades(t.pool).catch(() => ({ trades: [] })),
+          poolTrades(tk.pool).catch(() => ({ trades: [] })),
+          publicClient.readContract({ address: tk.pool, abi: poolAbi, functionName: "creator" }).catch(() => null),
+          publicClient.readContract({ address: tk.pool, abi: poolAbi, functionName: "creatorFeesAccrued" }).catch(() => 0n),
         ]);
         const mine = hist.trades.filter((tr) => tr.addr.toLowerCase() === me);
         const invested = mine.filter((x) => x.side === "buy").reduce((s, x) => s + x.eth + x.fee, 0);
         const realized = mine.filter((x) => x.side === "sell").reduce((s, x) => s + x.eth, 0);
-        return { ...t, bal, mine, invested, realized };
+        return {
+          ...tk, bal, mine, invested, realized,
+          isMine: creator && creator.toLowerCase() === me,
+          feesAccrued,
+        };
       }));
       if (!alive) return;
-      const positions = enriched.filter((t) => t.bal > 0n || t.mine.length > 0);
-      const launched = enriched.filter((t) => false); // creator match below
-      for (const t of enriched) {
-        // creator is on the pool; cheap check via my trades isn't enough — skip deep read
-      }
+      const positions = enriched.filter((tk) => tk.bal > 0n || tk.mine.length > 0);
+      const launched = enriched.filter((tk) => tk.isMine);
       let totVal = 0, totInv = 0, totReal = 0;
-      positions.forEach((t) => {
-        totVal += Number(formatEther(t.bal)) * Number(formatEther(t.price));
-        totInv += t.invested; totReal += t.realized;
+      positions.forEach((tk) => {
+        totVal += Number(formatEther(tk.bal)) * Number(formatEther(tk.price));
+        totInv += tk.invested; totReal += tk.realized;
       });
       setState({
         ethBal, positions, launched,
         totVal, totInv, totReal, totPnl: totVal + totReal - totInv,
-        myTrades: enriched.flatMap((t) => t.mine.map((tr) => ({ ...tr, sym: t.symbol, token: t.token })))
+        tradesCount: enriched.reduce((s, tk) => s + tk.mine.length, 0),
+        myTrades: enriched.flatMap((tk) => tk.mine.map((tr) => ({ ...tr, sym: tk.symbol, token: tk.token })))
           .sort((a, b) => Number(b.block - a.block)).slice(0, 20),
       });
     })().catch((e) => alive && setError(e.shortMessage || e.message));
     return () => { alive = false; };
-  }, [wallet]);
+  }, [wallet, reload]);
+
+  async function copyAddr() {
+    try {
+      await navigator.clipboard.writeText(wallet.account);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (e) { /* clipboard unavailable */ }
+  }
+
+  async function claim(tk) {
+    setError("");
+    setClaiming(tk.token);
+    try {
+      const hash = await wallet.walletClient.writeContract({
+        address: tk.pool, abi: poolAbi, functionName: "claimCreatorFees", args: [wallet.account],
+      });
+      await publicClient.waitForTransactionReceipt({ hash });
+      setReload((x) => x + 1);
+    } catch (e) {
+      setError(e.shortMessage || e.message);
+    } finally { setClaiming(""); }
+  }
 
   if (!wallet) {
     return (
@@ -68,21 +110,18 @@ export default function Profile({ wallet, onConnect }) {
         <div className="pf-ava">🏹</div>
         <div>
           <div className="page-title" style={{ margin: 0 }}>{t("Профиль")}</div>
-          <div className="dim mono">
-            {short(wallet.account)} · {t("баланс")} {state ? fmt(Number(formatEther(state.ethBal)), 4) : "…"} ETH
+          <div className="dim mono" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            {short(wallet.account)}
+            <button className="mini-btn" onClick={copyAddr} title={t("Скопировать адрес")}>
+              {copied ? "✓" : "⧉"}
+            </button>
+            <a className="mini-btn" href={`${EXPLORER}/address/${wallet.account}`} target="_blank" rel="noreferrer"
+               title={t("Открыть в эксплорере")}>↗</a>
+            <span>
+              · {t("баланс")} {state ? <>{fmt(Number(formatEther(state.ethBal)), 4)} ETH {U(Number(formatEther(state.ethBal)))}</> : "…"}
+            </span>
           </div>
         </div>
-        {state && (
-          <div style={{ marginLeft: "auto" }} className="about-stat">
-            <div className="k">{t("Общий PnL")}</div>
-            <div className="v" style={{ color: state.totPnl >= 0 ? "var(--leaf)" : "var(--red)" }}>
-              {state.totPnl >= 0 ? "+" : ""}{fmt(state.totPnl, 5)} ETH
-            </div>
-            <div className="s">
-              {t("позиции")} {fmt(state.totVal, 5)} · {t("вложено")} {fmt(state.totInv, 5)} · {t("реализовано")} {fmt(state.totReal, 5)}
-            </div>
-          </div>
-        )}
       </div>
 
       {error && <div className="error">{error}</div>}
@@ -90,7 +129,66 @@ export default function Profile({ wallet, onConnect }) {
 
       {state && (
         <>
-          <div className="bottom-card" style={{ marginTop: 0 }}>
+          <div className="ana-grid" style={{ margin: "18px 0 8px" }}>
+            <div className="ana-card">
+              <div className="k">{t("Общий PnL")}</div>
+              <div className="v" style={{ color: state.totPnl >= 0 ? "var(--leaf)" : "var(--red)", fontSize: 24 }}>
+                {state.totPnl >= 0 ? "+" : ""}{fmt(state.totPnl, 5)} ETH
+              </div>
+              <div className="s">{dollars(state.totPnl)} · {state.tradesCount} {t("сделок")}</div>
+            </div>
+            <div className="ana-card">
+              <div className="k">{t("Стоимость позиций")}</div>
+              <div className="v" style={{ fontSize: 24 }}>{fmt(state.totVal, 5)} ETH</div>
+              <div className="s">{dollars(state.totVal)} · {state.positions.length} {t("позиций")}</div>
+            </div>
+            <div className="ana-card">
+              <div className="k">{t("Вложено")}</div>
+              <div className="v" style={{ fontSize: 24 }}>{fmt(state.totInv, 5)} ETH</div>
+              <div className="s">{dollars(state.totInv)}</div>
+            </div>
+            <div className="ana-card">
+              <div className="k">{t("Реализовано")}</div>
+              <div className="v" style={{ fontSize: 24 }}>{fmt(state.totReal, 5)} ETH</div>
+              <div className="s">{dollars(state.totReal)}</div>
+            </div>
+          </div>
+
+          {state.launched.length > 0 && (
+            <div className="bottom-card" style={{ marginTop: 18 }}>
+              <div className="bt-tabs"><div className="bt-tab on">{t("Мои запуски")}</div></div>
+              <div className="prow6 hdr" style={{ gridTemplateColumns: "1.6fr 1fr 1fr 1.4fr 120px" }}>
+                <span>{t("Токен")}</span><span>{t("Капитализация")}</span><span>{t("Кривая")}</span>
+                <span>{t("Комиссии к выплате")}</span><span></span>
+              </div>
+              {state.launched.map((tk) => {
+                const mcapEth = Number(formatEther(tk.price)) * 1e9;
+                const prog = Number((tk.sold * 10000n) / tk.cap) / 100;
+                const fees = Number(formatEther(tk.feesAccrued));
+                return (
+                  <div className="prow6" key={tk.token} style={{ gridTemplateColumns: "1.6fr 1fr 1fr 1.4fr 120px" }}>
+                    <a href={`#/token/${tk.token}`} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      {tk.meta.image && <img src={tk.meta.image} style={{ width: 26, height: 26, borderRadius: 7 }} alt="" />}
+                      <b>{tk.symbol}</b>
+                    </a>
+                    <span>{usd(mcapEth * rate)}</span>
+                    <span className="dim">{tk.graduated ? "🎯" : fmt(prog, 0) + "%"}</span>
+                    <span style={{ color: fees > 0 ? "var(--gold)" : "inherit" }}>
+                      {fmt(fees, 5)} ETH {U(fees)}
+                    </span>
+                    <span>
+                      <button className="btn" disabled={fees <= 0 || claiming === tk.token}
+                              onClick={() => claim(tk)}>
+                        {claiming === tk.token ? "…" : t("Забрать")}
+                      </button>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="bottom-card" style={{ marginTop: 18 }}>
             <div className="bt-tabs"><div className="bt-tab on">{t("Мои позиции")}</div></div>
             {state.positions.length === 0 && <div className="center">{t("Пока нет позиций.")}</div>}
             {state.positions.length > 0 && (
@@ -110,10 +208,10 @@ export default function Profile({ wallet, onConnect }) {
                         <b>{p.symbol}</b>
                       </span>
                       <span>{fmt(Number(formatEther(p.bal)), 0)}</span>
-                      <span>{fmt(val, 5)} ETH</span>
-                      <span>{fmt(p.invested, 5)} ETH</span>
+                      <span>{fmt(val, 5)} ETH {U(val)}</span>
+                      <span>{fmt(p.invested, 5)} ETH {U(p.invested)}</span>
                       <span className={pnl >= 0 ? "pnl-pos" : "pnl-neg"}>
-                        {pnl >= 0 ? "+" : ""}{fmt(pnl, 5)} ETH
+                        {pnl >= 0 ? "+" : ""}{fmt(pnl, 5)} ETH {U(pnl)}
                       </span>
                       <span className="dim">{p.graduated ? "🎯" : fmt(prog, 0) + "%"}</span>
                     </a>
@@ -136,7 +234,7 @@ export default function Profile({ wallet, onConnect }) {
                     <span className={tr.side === "buy" ? "side-buy" : "side-sell"}>
                       {t(tr.side === "buy" ? "Купил" : "Продал")}
                     </span>
-                    <span>{fmt(tr.eth, 5)}</span>
+                    <span>{fmt(tr.eth, 5)} {U(tr.eth)}</span>
                     <span>{fmt(tr.tokens, 0)}</span>
                     <span><b>{tr.sym}</b></span>
                     <span className="dim">{String(tr.block)}</span>
