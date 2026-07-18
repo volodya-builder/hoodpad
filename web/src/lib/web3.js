@@ -12,34 +12,63 @@ export const publicClient = createPublicClient({
   transport: http(),
 });
 
+// ---------------------------------------------------------------- providers
+// EIP-6963 multi-wallet discovery: in browsers with several wallet
+// extensions, window.ethereum may be hijacked by a non-MetaMask wallet.
+// We collect announced providers and prefer MetaMask explicitly.
+const discovered = [];
+if (typeof window !== "undefined") {
+  window.addEventListener("eip6963:announceProvider", (e) => {
+    if (e.detail?.provider) discovered.push(e.detail);
+  });
+  try {
+    window.dispatchEvent(new Event("eip6963:requestProvider"));
+  } catch (e) { /* ignore */ }
+}
+
+export function pickProvider() {
+  const mm = discovered.find((d) => /metamask/i.test(d.info?.name || ""));
+  if (mm) return mm.provider;
+  if (discovered.length) return discovered[0].provider;
+  if (window.ethereum?.providers?.length) {
+    const p = window.ethereum.providers.find((x) => x.isMetaMask);
+    if (p) return p;
+  }
+  return window.ethereum ?? null;
+}
+
 export function hasWallet() {
-  return typeof window !== "undefined" && !!window.ethereum;
+  return typeof window !== "undefined" && (discovered.length > 0 || !!window.ethereum);
 }
 
 export async function connectWallet() {
-  if (!hasWallet()) throw new Error("No wallet found. Install MetaMask or Rabby.");
-  const [account] = await window.ethereum.request({ method: "eth_requestAccounts" });
-  await ensureChain();
+  const provider = pickProvider();
+  if (!provider) {
+    throw new Error("Кошелёк не найден. Установите MetaMask и обновите страницу.");
+  }
+  const [account] = await provider.request({ method: "eth_requestAccounts" });
+  await ensureChain(provider);
   const walletClient = createWalletClient({
     account,
     chain: CHAIN,
-    transport: custom(window.ethereum),
+    transport: custom(provider),
   });
-  return { account, walletClient };
+  return { account, walletClient, provider };
 }
 
-export async function ensureChain() {
-  const current = await window.ethereum.request({ method: "eth_chainId" });
+export async function ensureChain(provider) {
+  provider = provider || pickProvider();
+  const current = await provider.request({ method: "eth_chainId" });
   if (parseInt(current, 16) === CHAIN.id) return;
   try {
-    await window.ethereum.request({
+    await provider.request({
       method: "wallet_switchEthereumChain",
       params: [{ chainId: numberToHex(CHAIN.id) }],
     });
   } catch (e) {
     // 4902 = unknown chain -> add it
     if (e.code === 4902 || String(e.message).includes("4902")) {
-      await window.ethereum.request({
+      await provider.request({
         method: "wallet_addEthereumChain",
         params: [
           {
