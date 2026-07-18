@@ -57,7 +57,7 @@ export function Privacy() {
           ["16. Policy Changes",
            "We may update this Policy as the product evolves. The current version with its effective date is always available on this page; material changes may additionally be announced in the interface. Continued use after changes take effect constitutes acceptance."],
           ["17. Contact",
-           "Questions, privacy requests and complaints regarding this Policy can be sent to the platform operator: volodyacryptodeg@gmail.com. We will make reasonable efforts to respond promptly."],
+           "Questions, privacy requests and complaints regarding this Policy can be sent to the platform operator: contact@hoodandarrow.com. We will make reasonable efforts to respond promptly."],
         ]}
       />
     );
@@ -100,7 +100,7 @@ export function Privacy() {
         ["16. Изменения политики",
          "Мы можем обновлять эту Политику по мере развития продукта. Актуальная версия с датой вступления в силу всегда доступна на этой странице; о существенных изменениях мы можем дополнительно сообщить в интерфейсе. Продолжение использования после вступления изменений в силу означает согласие с ними."],
         ["17. Контакты",
-         "Вопросы, запросы по приватности и жалобы по этой Политике направляйте оператору платформы: volodyacryptodeg@gmail.com. Мы приложим разумные усилия, чтобы ответить оперативно."],
+         "Вопросы, запросы по приватности и жалобы по этой Политике направляйте оператору платформы: contact@hoodandarrow.com. Мы приложим разумные усилия, чтобы ответить оперативно."],
       ]}
     />
   );
@@ -165,7 +165,7 @@ export function Terms() {
           ["25. Changes to these Terms",
            "We may update these Terms as the product evolves. The current version with its effective date is always available on this page; material changes may additionally be announced in the interface. Continued use after the effective date constitutes acceptance."],
           ["26. Contact",
-           "Questions about these Terms: volodyacryptodeg@gmail.com."],
+           "Questions about these Terms: contact@hoodandarrow.com."],
         ]}
       />
     );
@@ -226,7 +226,7 @@ export function Terms() {
         ["25. Изменения условий",
          "Мы можем обновлять эти Условия по мере развития продукта. Актуальная версия с датой вступления в силу всегда доступна на этой странице; о существенных изменениях мы можем дополнительно сообщить в интерфейсе. Продолжение использования после даты вступления в силу означает согласие."],
         ["26. Контакты",
-         "Вопросы по этим Условиям: volodyacryptodeg@gmail.com."],
+         "Вопросы по этим Условиям: contact@hoodandarrow.com."],
       ]}
     />
   );
