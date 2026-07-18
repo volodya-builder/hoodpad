@@ -513,6 +513,7 @@ html[data-theme="light"] .forest { opacity: .28; }
     <div class="nav-pill" id="npAna" onclick="go('analytics')">Аналитика</div>
   </div>
   <nav class="nav">
+    <button class="icon-btn" id="langBtn" onclick="toggleLang()" title="Язык / Language" style="font-size:12px;font-weight:800;width:auto;padding:0 13px">EN</button>
     <button class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Сменить тему">☀</button>
     <div class="wallet-wrap">
       <span class="btn mono" style="font-size:13px;cursor:pointer" onclick="toggleWalletMenu(event)">0xVolo…dya ▾</span>
@@ -707,10 +708,11 @@ function sell(t, tokIn) {
 }
 function fmtAgo(ts) {
   const s = Math.max(1, (Date.now() - ts) / 1000);
-  if (s < 60) return Math.floor(s) + "с";
-  if (s < 3600) return Math.floor(s/60) + "м";
-  if (s < 86400) return Math.floor(s/3600) + "ч";
-  return Math.floor(s/86400) + "д";
+  const u = lang === "en" ? ["s","m","h","d"] : ["с","м","ч","д"];
+  if (s < 60) return Math.floor(s) + u[0];
+  if (s < 3600) return Math.floor(s/60) + u[1];
+  if (s < 86400) return Math.floor(s/3600) + u[2];
+  return Math.floor(s/86400) + u[3];
 }
 function vol24(t) {
   const cut = Date.now() - 86400e3;
@@ -722,15 +724,231 @@ function migrate(t) {
   render();
 }
 
+// ------------------------------------------------ i18n (RU base -> EN)
+let lang = "ru";
+try { lang = localStorage.getItem("hp_lang") || "ru"; } catch (e) {}
+const EN_PAIRS = [
+  ["ДЕМО-РЕЖИМ — блокчейн симулируется в браузере · Ваш демо-баланс:", "DEMO MODE — the blockchain is simulated in your browser · Your demo balance:"],
+  ["Токены, прошедшие порог градации — ликвидность заперта на DEX.", "Tokens that cleared the graduation threshold — liquidity locked on the DEX."],
+  ["Токены, летящие к градации на Robinhood Chain — сбор 6.5 ETH.", "Tokens climbing toward graduation on Robinhood Chain — 6.5 ETH raise."],
+  ["Получает долю создателя в комиссиях (70%) и покупку создателя. Оставьте пустым, чтобы использовать подключённый кошелёк.", "Receives the creator share of trading fees (70%) and the developer buy. Leave blank to use your connected wallet."],
+  ["Я понимаю, что выбранное изображение будет опубликовано и станет\n        частью неизменяемых метаданных токена.", "I understand the selected image will be published and become part of the token's immutable metadata."],
+  ["Транзакции отправляются вашим кошельком и необратимы. Токены волатильны и могут\n    полностью обесцениться. hoodpad не хранит активы, не даёт гарантий и финансовых советов.", "Transactions are submitted by your wallet and may be irreversible. Tokens are volatile and can lose all value. hoodpad does not custody assets and gives no warranties or financial advice."],
+  ["Запускайте и исследуйте токены с фиксированным\n    сапплаем на Robinhood Chain. Все транзакции отправляет ваш кошелёк — hoodpad не хранит активы.", "Launch and explore fixed-supply tokens on Robinhood Chain. Every transaction is submitted by your wallet — hoodpad does not custody assets."],
+  ["Данные — из событий демо-симуляции. В продакшене: индексация\n  событий Buy/Sell/Graduated контрактов через The Graph (поддерживает Robinhood Chain).", "Data comes from demo-simulation events. In production: Buy/Sell/Graduated contract events indexed via The Graph (supports Robinhood Chain)."],
+  ["Писать могут все — холд не нужен. Будьте взаимно вежливы.", "Anyone can post — no holding required. Be kind to each other."],
+  ["Кривая заполнена! Кто угодно может запустить миграцию ликвидности.", "The curve is full! Anyone can trigger the liquidity migration."],
+  ["Токен градуировал — торгуйте на Uniswap V3. Кривая закрыта.", "This token graduated — trade on Uniswap V3. The curve is closed."],
+  ["Ликвидность мигрирована на Uniswap V3 и заперта навсегда 🔒", "Liquidity migrated to Uniswap V3 and locked forever 🔒"],
+  ["Uniswap V3 после градации · ликвидность запирается навсегда", "Uniswap V3 after graduation · liquidity locks forever"],
+  ["Буквы, цифры и пробелы. Максимум 32 символа.", "Letters, numbers and spaces. 32 characters max."],
+  ["Буквы и цифры. Максимум 10 символов.", "Letters and numbers. 10 characters max."],
+  ["Тикер: только буквы и цифры, до 10 символов", "Ticker: letters and numbers only, up to 10 characters"],
+  ["5% сапплая. Исполняется в той же транзакции — защита от снайперов.", "5% of supply. Executes in the same transaction — snipe protection."],
+  ["Больше лимита: максимум", "Over the limit: max"],
+  ["Неверный адрес: нужен формат 0x… (42 символа).", "Invalid address: expected 0x… format (42 characters)."],
+  ["Кошелёк создателя: неверный адрес", "Creator wallet: invalid address"],
+  ["Покупка создателя ограничена", "Developer buy is capped at"],
+  ["Независимая отчётность по рынкам hoodpad на Robinhood Chain.", "Independent reporting for hoodpad markets on Robinhood Chain."],
+  ["70% всех комиссий — правило Шервуда", "70% of all fees — the Sherwood rule"],
+  ["70% комиссий — создателю. Ликвидность запирается навсегда.", "70% of fees go to the creator. Liquidity locks forever."],
+  ["градаций · доля градаций", "graduations · graduation rate"],
+  ["Вы ещё не запускали токены.", "You have not launched any tokens yet."],
+  ["Пока нет позиций — купите первый токен.", "No positions yet — buy your first token."],
+  ["Нет активных токенов — запустите первый!", "No live tokens — launch the first one!"],
+  ["Картинка загружена — нажмите, чтобы заменить", "Image uploaded — click to replace"],
+  ["Сначала подтвердите публикацию", "Confirm publication first"],
+  ["Сначала поставьте галочку согласия", "Tick the consent box first"],
+  ["Выбрать картинку токена", "Choose a token image"],
+  ["Добавьте картинку токена", "Add a token image"],
+  ["Укажите название и тикер", "Enter a name and ticker"],
+  ["Нужны название и тикер", "Name and ticker required"],
+  ["Запустить токен и купить на", "Launch token and buy for"],
+  ["Поиск токена по имени или тикеру…", "Search by name or ticker…"],
+  ["Демо-кошелёк отключить нельзя 🙂", "The demo wallet cannot be disconnected 🙂"],
+  ["запуски, позиции, PnL", "launches, positions, PnL"],
+  ["Честный запуск — <span class=\"gold\">закон Шервуда.</span>", "A fair launch is <span class=\"gold\">the law of Sherwood.</span>"],
+  ["hoodpad · лаунчпад Robinhood Chain", "hoodpad · the Robinhood Chain launchpad"],
+  ["Политика конфиденциальности — добавим перед релизом", "Privacy policy — coming before release"],
+  ["Условия использования — добавим перед релизом", "Terms of use — coming before release"],
+  ["Пул появится после градации", "The pool appears after graduation"],
+  ["Пул: Uniswap V3 (демо)", "Pool: Uniswap V3 (demo)"],
+  ["Лимитные ордера — скоро", "Limit orders — soon"],
+  ["Ордера — скоро", "Orders — soon"],
+  ["Токены, летящие к градации", "Tokens climbing toward graduation"],
+  ["Аналитика протокола", "Protocol analytics"],
+  ["Выплачено создателям", "Paid to creators"],
+  ["Запуски токенов", "Token launches"],
+  ["Заработано создателем", "Creator earnings"],
+  ["70% всех комиссий", "70% of all fees"],
+  ["Объём за всё время", "All-time volume"],
+  ["Объём торгов", "Trading volume"],
+  ["Объём 24ч", "24h volume"],
+  ["Комиссия 1% · создатель получает 70%", "1% fee · creator gets 70%"],
+  ["Комиссии с трейдов", "Trading fees"],
+  ["Комиссия запуска: 0 ETH", "Launch fee: 0 ETH"],
+  ["Комиссия запуска", "Launch fee"],
+  ["70% создателю / 30% протоколу", "70% creator / 30% protocol"],
+  ["Комиссии создателя (70%)", "Creator fees (70%)"],
+  ["Мигрировать на DEX", "Migrate to DEX"],
+  ["Последние сделки", "Recent trades"],
+  ["Недавние покупки", "Recent buys"],
+  ["Капитализация", "Market cap"],
+  ["Короткое описание токена", "A short description of the token"],
+  ["Название токена", "Token name"],
+  ["Картинка токена", "Token image"],
+  ["Покупка создателя", "Developer buy"],
+  ["Кошелёк создателя", "Creator wallet"],
+  ["(подключённый)", "(connected)"],
+  ["Запустить токен", "Launch token"],
+  ["Запустить первый →", "Launch your first →"],
+  ["Мои позиции", "My positions"],
+  ["Мои запуски", "My launches"],
+  ["Мои сделки", "My trades"],
+  ["Общий PnL", "Total PnL"],
+  ["Проскальзывание", "Slippage"],
+  ["Настроить", "Adjust"],
+  ["Введите сумму", "Enter amount"],
+  ["Ничего не найдено", "Nothing found"],
+  ["Пока нет сделок", "No trades yet"],
+  ["Пока нет держателей", "No holders yet"],
+  ["До градации", "To graduation"],
+  ["Градуировали", "Graduated"],
+  ["Градуировал · на DEX", "Graduated · on DEX"],
+  ["Градуировал", "Graduated"],
+  ["Градация", "Graduation"],
+  ["градация", "graduation"],
+  ["Заперта навсегда", "Locked forever"],
+  ["Ликвидность заперта на DEX", "Liquidity locked on the DEX"],
+  ["Ликвидность", "Liquidity"],
+  ["Поиск токенов", "Search tokens"],
+  ["Ваша покупка", "Your buy"],
+  ["Ваш баланс", "Your balance"],
+  ["Ваш токен", "Your token"],
+  ["Стоимость", "Value"],
+  ["Вложено", "Invested"],
+  ["Держатели", "Holders"],
+  ["по 12 часов", "12-hour buckets"],
+  ["по часам", "hourly"],
+  ["по дням", "daily"],
+  ["за 24 часа", "last 24 hours"],
+  ["за неделю", "last week"],
+  ["за месяц", "last month"],
+  ["за всё время", "all time"],
+  ["Всё время", "All time"],
+  ["Всё", "All"],
+  ["Неделя", "Week"],
+  ["Месяц", "Month"],
+  ["Сделки", "Trades"],
+  ["сделок", "trades"],
+  ["Аналитика", "Analytics"],
+  ["Обзор", "Explore"],
+  ["на кривой", "on the curve"],
+  ["Отключить", "Disconnect"],
+  ["Профиль X", "X profile"],
+  ["Профиль", "Profile"],
+  ["Описание", "Description"],
+  ["Название", "Name"],
+  ["Тикер", "Ticker"],
+  ["СИМВОЛ", "SYMBOL"],
+  ["тикер", "ticker"],
+  ["О токене", "About"],
+  ["🌐 Сайт", "🌐 Website"],
+  ["Сайт", "Website"],
+  ["Контракт", "Contract"],
+  ["Пул", "Pool"],
+  ["Рынок", "Market"],
+  ["Лимит", "Limit"],
+  ["Ордера", "Orders"],
+  ["Платите", "You pay"],
+  ["Продаёте", "You sell"],
+  ["Получаете", "You receive"],
+  ["доступно", "available"],
+  ["Дополнительно", "Advanced"],
+  ["Продукт", "Product"],
+  ["Правовое", "Legal"],
+  ["Политика", "Privacy"],
+  ["Условия", "Terms"],
+  ["Риск-нотис", "Risk notice"],
+  ["Запустить", "Launch"],
+  ["Создатель:", "Creator:"],
+  ["создатель", "creator"],
+  ["Куплено", "Bought"],
+  ["Продано за", "Sold for"],
+  ["Купить", "Buy"],
+  ["Продать", "Sell"],
+  ["Купил", "Bought"],
+  ["Продал", "Sold"],
+  ["Недостаточно ETH", "Not enough ETH"],
+  ["Недостаточно токенов", "Not enough tokens"],
+  ["Токен $", "Token $"],
+  ["запущен! 🏹", "launched! 🏹"],
+  ["— стрела в яблочке! 🎯", "— bullseye, graduated! 🎯"],
+  ["Сообщение…", "Message…"],
+  ["(вы)", "(you)"],
+  ["(демо)", "(demo)"],
+  ["Кошелёк", "Wallet"],
+  ["Время", "Time"],
+  ["Тип", "Type"],
+  ["Баланс:", "Balance:"],
+  ["Баланс", "Balance"],
+  ["баланс", "balance"],
+  ["Доля", "Share"],
+  ["Чат", "Chat"],
+  ["Цена", "Price"],
+  ["Собрано", "Raised"],
+  ["позиции", "positions"],
+  ["вложено", "invested"],
+  ["реализовано", "realized"],
+  ["запущено", "launched"],
+  ["кап · ", "cap · "],
+  [" назад", " ago"],
+  ["Новые", "Newest"],
+  ["Вы получите (оценка)", "You get (est.)"],
+  ["макс", "max"],
+  ["Макс", "Max"],
+  ["+ Создать", "+ Create"],
+  ["+ Запустить токен", "+ Launch token"],
+  ["‹ Назад", "‹ Back"],
+  ["24ч", "24h"],
+  ["7д", "7d"],
+].sort((a, b) => b[0].length - a[0].length);
+
+function tr(s) {
+  if (lang !== "en" || !s) return s;
+  let out = s;
+  for (const [ru, en] of EN_PAIRS) out = out.split(ru).join(en);
+  return out;
+}
+let STATIC_ORIG = null;
+function captureStatic() {
+  STATIC_ORIG = [".demo-banner", ".nav-pills", "#walletMenu", "footer .footer-inner", ".search-modal"]
+    .map(sel => { const el = document.querySelector(sel); return el ? [el, el.innerHTML] : null; })
+    .filter(Boolean);
+}
+function applyLang() {
+  if (!STATIC_ORIG) captureStatic();
+  for (const [el, orig] of STATIC_ORIG) el.innerHTML = tr(orig);
+  document.documentElement.lang = lang === "en" ? "en" : "ru";
+  const lb = document.getElementById("langBtn");
+  if (lb) lb.textContent = lang === "en" ? "RU" : "EN";
+}
+function toggleLang() {
+  lang = lang === "en" ? "ru" : "en";
+  try { localStorage.setItem("hp_lang", lang); } catch (e) {}
+  applyLang();
+  render();
+}
+
 // ------------------------------------------------ ui
 const fmt = (n, d=4) => Number(n).toLocaleString("en-US", { maximumFractionDigits: d });
 const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-let view = { page: "home", idx: 0, dir: "buy", tf: "1Ч", btab: "trades", slip: 1,
+let view = { page: "home", idx: 0, dir: "buy", tf: "1H", btab: "trades", slip: 1,
              sort: "recent", win: "all", anaTf: "all", gpage: 1 };
 let draft = { consent: false, img: "", advOpen: false };
 function go(page, idx) {
   const keep = { sort: view.sort, win: view.win, anaTf: view.anaTf, gpage: view.gpage || 1 };
-  view = { page, idx: idx ?? 0, dir: "buy", tf: "1Ч", btab: "trades", slip: 1, ...keep };
+  view = { page, idx: idx ?? 0, dir: "buy", tf: "1H", btab: "trades", slip: 1, ...keep };
   if (page === "create") draft = { consent: false, img: "", advOpen: false };
   closeSearch();
   document.getElementById("walletMenu")?.classList.remove("open");
@@ -763,12 +981,12 @@ function renderSearch() {
     .filter(({ t }) => !q || t.name.toLowerCase().includes(q) || t.symbol.toLowerCase().includes(q))
     .slice(0, 8);
   window._sr = res.map(r => r.i);
-  document.getElementById("srList").innerHTML = res.map(({ t, i }) => `
+  document.getElementById("srList").innerHTML = tr(res.map(({ t, i }) => `
     <div class="sr-item" onclick="closeSearch();go('token',${i})">
       ${t.img ? `<img src="${t.img}">` : ""}
       <span class="n">${esc(t.name)} <span class="ticker">$${esc(t.symbol)}</span></span>
       <span class="m">${fmt(mcap(t), 2)} ETH${t.graduated ? " · 🎯" : ""}</span>
-    </div>`).join("") || '<div class="center" style="padding:20px 0">Ничего не найдено</div>';
+    </div>`).join("") || '<div class="center" style="padding:20px 0">Ничего не найдено</div>');
 }
 document.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); openSearch(); }
@@ -786,7 +1004,7 @@ function lastBuyTs(t) {
 }
 function toast(msg) {
   const el = document.getElementById("toast");
-  el.textContent = msg; el.classList.add("show");
+  el.textContent = tr(msg); el.classList.add("show");
   clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("show"), 2600);
 }
 function render() {
@@ -794,11 +1012,11 @@ function render() {
   document.getElementById("npHome").classList.toggle("on", view.page === "home");
   document.getElementById("npAna").classList.toggle("on", view.page === "analytics");
   const m = document.getElementById("main");
-  if (view.page === "home") m.innerHTML = homeView();
-  else if (view.page === "create") { m.innerHTML = createView(); wireCreate(); }
-  else if (view.page === "analytics") m.innerHTML = analyticsView();
-  else if (view.page === "profile") m.innerHTML = profileView();
-  else { m.innerHTML = tokenView(tokens[view.idx]); wireChart();
+  if (view.page === "home") m.innerHTML = tr(homeView());
+  else if (view.page === "create") { m.innerHTML = tr(createView()); wireCreate(); }
+  else if (view.page === "analytics") m.innerHTML = tr(analyticsView());
+  else if (view.page === "profile") m.innerHTML = tr(profileView());
+  else { m.innerHTML = tr(tokenView(tokens[view.idx])); wireChart();
          const cl = document.getElementById("chatList"); if (cl) cl.scrollTop = cl.scrollHeight; }
 }
 
@@ -1141,8 +1359,8 @@ function syncUpload() {
   if (!box) return;
   box.classList.toggle("disabled", !draft.consent);
   box.classList.toggle("ready", !!draft.img);
-  if (draft.img) { th.innerHTML = `<img src="${draft.img}">`; lbl.textContent = "Картинка загружена — нажмите, чтобы заменить"; }
-  else { th.textContent = "🖼️"; lbl.textContent = draft.consent ? "Выбрать картинку токена" : "Сначала подтвердите публикацию"; }
+  if (draft.img) { th.innerHTML = `<img src="${draft.img}">`; lbl.textContent = tr("Картинка загружена — нажмите, чтобы заменить"); }
+  else { th.textContent = "🖼️"; lbl.textContent = tr(draft.consent ? "Выбрать картинку токена" : "Сначала подтвердите публикацию"); }
   syncCta();
 }
 function syncAdv() {
@@ -1160,27 +1378,27 @@ function syncPreview() {
   if (buyV > 0) {
     row.style.display = "flex";
     document.getElementById("pBuyVal").textContent =
-      `${fmt(buyV,4)} ETH ≈ ${fmt(Math.min(quoteBuy({eth:0,sold:0}, buyV), TOTAL),0)} токенов`;
+      `${fmt(buyV,4)} ETH ≈ ${fmt(Math.min(quoteBuy({eth:0,sold:0}, buyV), TOTAL),0)} ` + (lang === 'en' ? 'tokens' : 'токенов');
   } else row.style.display = "none";
   // creator wallet validation
   const wv = document.getElementById("fWallet").value.trim();
   const hW = document.getElementById("hWallet");
   const okW = wv === "" || /^0x[0-9a-fA-F]{40}$/.test(wv);
   hW.classList.toggle("bad", !okW);
-  hW.textContent = okW
+  hW.textContent = tr(okW
     ? "Получает долю создателя в комиссиях (70%) и покупку создателя. Оставьте пустым, чтобы использовать подключённый кошелёк."
-    : "Неверный адрес: нужен формат 0x… (42 символа).";
+    : "Неверный адрес: нужен формат 0x… (42 символа).");
   // validation hints
   const hSym = document.getElementById("hSym");
   const okSym = /^[A-Z0-9]*$/.test(sym);
   hSym.classList.toggle("bad", !okSym);
-  hSym.textContent = okSym ? "Буквы и цифры. Максимум 10 символов." : "Только буквы и цифры!";
+  hSym.textContent = tr(okSym ? "Буквы и цифры. Максимум 10 символов." : "Только буквы и цифры!");
   const hBuy = document.getElementById("hBuy");
   const okBuy = buyV <= MAX_DEV_BUY_ETH;
   hBuy.classList.toggle("bad", !okBuy);
-  hBuy.textContent = okBuy
+  hBuy.textContent = tr(okBuy
     ? `Макс ${fmt(MAX_DEV_BUY_ETH, 4)} ETH · 5% сапплая. Исполняется в той же транзакции — защита от снайперов.`
-    : `Больше лимита: максимум ${fmt(MAX_DEV_BUY_ETH, 4)} ETH (5% сапплая).`;
+    : `Больше лимита: максимум ${fmt(MAX_DEV_BUY_ETH, 4)} ETH (5% сапплая).`);
   syncCta();
 }
 function syncCta() {
@@ -1189,11 +1407,11 @@ function syncCta() {
   const name = document.getElementById("fName").value.trim();
   const sym = document.getElementById("fSym").value.trim();
   const buyV = parseFloat(document.getElementById("fBuy").value) || 0;
-  if (!draft.img) btn.textContent = "Добавьте картинку токена";
-  else if (!name || !sym) btn.textContent = "Укажите название и тикер";
+  if (!draft.img) btn.textContent = tr("Добавьте картинку токена");
+  else if (!name || !sym) btn.textContent = tr("Укажите название и тикер");
   else btn.textContent = buyV > 0
-    ? `Запустить токен и купить на ${fmt(buyV,4)} ETH`
-    : "Запустить токен";
+    ? tr("Запустить токен и купить на") + ` ${fmt(buyV,4)} ETH`
+    : tr("Запустить токен");
 }
 function createToken() {
   const name = document.getElementById("fName").value.trim();
@@ -1220,7 +1438,7 @@ function createToken() {
 }
 
 // ------------------------------------------------ token page (Pons-style)
-const TFS = { "5М": 5*60e3, "1Ч": 3600e3, "6Ч": 6*3600e3, "1Д": 86400e3, "ВСЁ": Infinity };
+const TFS = { "5M": 5*60e3, "1H": 3600e3, "6H": 6*3600e3, "1D": 86400e3, "ALL": Infinity };
 const ethIcon = "data:image/svg+xml," + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18'><circle cx='9' cy='9' r='9' fill='%23343f4f'/><path d='M9 2.5 L13 9 9 11.5 5 9z M9 12.7 L13 10.2 9 15.5 5 10.2z' fill='%23cfd8e6'/></svg>");
 
 function chartData(t) {
@@ -1295,7 +1513,7 @@ function wireChart() {
     tip.style.display = "block";
     tip.style.left = (best.x / 660 * r.width) + "px";
     tip.style.top = (best.y / 250 * r.height) + "px";
-    tip.innerHTML = `${fmt(best.p * TOTAL, 2)} ETH <span class="t">кап · ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}</span>`;
+    tip.innerHTML = tr(`${fmt(best.p * TOTAL, 2)} ETH <span class="t">кап · ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}</span>`);
   };
   wrap.onmouseleave = () => {
     tip.style.display = "none"; cv.setAttribute("opacity", "0"); dot.setAttribute("opacity", "0");
@@ -1481,13 +1699,13 @@ function updateSwap() {
   const v = parseFloat(document.getElementById("giveAmt").value) || 0;
   const get = document.getElementById("getAmt");
   const cta = document.getElementById("swapCta");
-  if (v <= 0) { get.value = ""; cta.disabled = true; cta.textContent = "Введите сумму"; return; }
+  if (v <= 0) { get.value = ""; cta.disabled = true; cta.textContent = tr("Введите сумму"); return; }
   if (isBuy) {
     get.value = fmt(Math.min(quoteBuy(t, v), CAP - t.sold), 0);
-    cta.textContent = `Купить ${esc(t.symbol)}`;
+    cta.textContent = tr("Купить") + " " + esc(t.symbol);
   } else {
     get.value = fmt(quoteSell(t, v), 6);
-    cta.textContent = `Продать ${esc(t.symbol)}`;
+    cta.textContent = tr("Продать") + " " + esc(t.symbol);
   }
   cta.disabled = false;
 }
@@ -1508,6 +1726,8 @@ function sendChat() {
   if (list) list.scrollTop = list.scrollHeight;
 }
 
+captureStatic();
+applyLang();
 render();
 </script>
 </body>
