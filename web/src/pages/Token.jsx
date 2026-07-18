@@ -9,7 +9,7 @@ import Chat from "./Chat.jsx";
 import { useSplit, loadCreationTimes, timeAgo } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 
-const SLIPPAGE_BPS = 300n; // 3%
+const SLIPPAGE_CHOICES = [0.5, 1, 3, 5]; // %
 
 function MiniChart({ points }) {
   if (!points || points.length < 2) {
@@ -54,6 +54,14 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [extra, setExtra] = useState({});       // creatorFees, treasuryOwner, treasuryHeld, burned
   const [bbAmt, setBbAmt] = useState("");
   const [copiedLink, setCopiedLink] = useState(false);
+  const [tf, setTf] = useState("all"); // таймфрейм графика
+  const [slip, setSlip] = useState(() => {
+    try { return Number(localStorage.getItem("hood_slip")) || 3; } catch (e) { return 3; }
+  });
+  const setSlipSave = (s) => {
+    setSlip(s);
+    try { localStorage.setItem("hood_slip", String(s)); } catch (e) { /* ignore */ }
+  };
 
   // ETH → доллары мелким шрифтом
   const dollars = (e) => {
@@ -79,6 +87,16 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       .map(([a, v]) => ({ addr: a, bal: v, pct: (v / TOTAL) * 100 }));
     return { list, unsold, unsoldPct: (unsold / TOTAL) * 100 };
   }, [history, data]);
+
+  const chartPoints = useMemo(() => {
+    if (!history) return null;
+    if (tf === "all" || !history.now) return history.points;
+    const cutoff = history.now - (tf === "24h" ? 86400e3 : 7 * 86400e3);
+    const after = history.points.filter((p) => (p.ts ?? 0) >= cutoff);
+    const before = history.points.filter((p) => (p.ts ?? 0) < cutoff);
+    const base = before.length ? [before[before.length - 1]] : [];
+    return [...base, ...after];
+  }, [history, tf]);
 
   async function copyLink() {
     try {
@@ -142,6 +160,23 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "burnedOf", args: [tokenAddress] }).catch(() => 0n),
       loadCreationTimes([tokenAddress]).catch(() => ({})),
     ]);
+    // Время сделок: интерполяция по блокам (2 RPC-вызова) — для таймфреймов графика
+    if (h.trades.length > 0) {
+      try {
+        const blocks = h.trades.map((tr) => Number(tr.block));
+        const minB = Math.min(...blocks);
+        const [latestB, oldestB] = await Promise.all([
+          publicClient.getBlock(),
+          publicClient.getBlock({ blockNumber: BigInt(minB) }),
+        ]);
+        const span = Number(latestB.number) - minB;
+        const avg = span > 0 ? (Number(latestB.timestamp) - Number(oldestB.timestamp)) / span : 0;
+        for (const tr of h.trades) tr.ts = (Number(oldestB.timestamp) + (Number(tr.block) - minB) * avg) * 1000;
+        const chrono = [...h.trades].reverse();
+        h.points.forEach((p, k) => { p.ts = k === 0 ? chrono[0].ts : chrono[k - 1].ts; });
+        h.now = Number(latestB.timestamp) * 1000;
+      } catch (e) { /* график останется в режиме «всё время» */ }
+    }
     setHistory(h);
     setExtra({ creatorFees, treasuryOwner, treasuryHeld, burned,
                createdAt: createdMap[tokenAddress.toLowerCase()] });
@@ -201,9 +236,10 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     if (!quote) return;
     setBusy(true);
     try {
+      const slipBps = BigInt(Math.round(slip * 100));
       let hash;
       if (tab === "buy") {
-        const minOut = quote.value - (quote.value * SLIPPAGE_BPS) / 10000n;
+        const minOut = quote.value - (quote.value * slipBps) / 10000n;
         hash = await wallet.walletClient.writeContract({
           address: data.pool, abi: poolAbi, functionName: "buy",
           args: [minOut, wallet.account],
@@ -222,7 +258,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           });
           await publicClient.waitForTransactionReceipt({ hash: approveHash });
         }
-        const minOut = quote.value - (quote.value * SLIPPAGE_BPS) / 10000n;
+        const minOut = quote.value - (quote.value * slipBps) / 10000n;
         hash = await wallet.walletClient.writeContract({
           address: data.pool, abi: poolAbi, functionName: "sell",
           args: [tokensIn, minOut],
@@ -388,8 +424,15 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         </div>
 
         <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
-          <div className="card-title"><h3>{t("Капитализация по сделкам")}</h3></div>
-          <MiniChart points={history?.points} />
+          <div className="card-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+            <h3>{t("Капитализация по сделкам")}</h3>
+            <div className="pill-group">
+              {[["24h", t("24ч")], ["7d", t("7д")], ["all", t("Всё")]].map(([k, lbl]) => (
+                <div key={k} className={`fpill ${tf === k ? "on" : ""}`} onClick={() => setTf(k)}>{lbl}</div>
+              ))}
+            </div>
+          </div>
+          <MiniChart points={chartPoints} />
         </div>
 
         <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
@@ -498,6 +541,15 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               </p>
             )}
 
+            <div className="slip-row">
+              <span className="dim">{t("Слиппедж")}</span>
+              {SLIPPAGE_CHOICES.map((s) => (
+                <div key={s} className={`fpill slip-pill ${slip === s ? "on" : ""}`} onClick={() => setSlipSave(s)}>
+                  {s}%
+                </div>
+              ))}
+            </div>
+
             {quote && (
               <div className="quote-box">
                 <span>{t("Вы получите (оценка)")}</span>
@@ -523,7 +575,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 : `${t("Продать")} ${data.symbol}`}
             </button>
             <p className="dim" style={{ marginTop: 12 }}>
-              {t("Комиссия 1%")} · {t("слиппедж 3%")} · {split.creator}% {t("создателю")}{split.team > 0 ? ` · ${split.team}% ${t("команде")}` : ""} · {split.buyback}% {t("на выкуп")}
+              {t("Комиссия 1%")} · {t("слиппедж")} {slip}% · {split.creator}% {t("создателю")}{split.team > 0 ? ` · ${split.team}% ${t("команде")}` : ""} · {split.buyback}% {t("на выкуп")}
             </p>
             {error && <div className="error">{error}</div>}
           </div>

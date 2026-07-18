@@ -1,64 +1,101 @@
 import React, { useEffect, useState } from "react";
 import { formatEther } from "viem";
-import { publicClient, fmt } from "../lib/web3.js";
+import { publicClient, fmt, short } from "../lib/web3.js";
 import { useEthUsd, usd } from "../lib/price.js";
-import { useSplit, timeAgo } from "../lib/data.js";
+import { useSplit, timeAgo, loadTokens, tradeEvents } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
-import { factoryAbi, poolAbi, tokenAbi } from "../lib/abi.js";
-import { FACTORY_ADDRESS } from "../lib/config.js";
 
-const PAGE = 48n;
+/** Живая лента последних сделок по всем пулам платформы. */
+function LiveFeed({ tokens }) {
+  const { t } = useLang();
+  const [items, setItems] = useState(null);
 
-function parseMeta(uri) {
-  try {
-    if (uri?.startsWith("data:application/json;base64,")) {
-      return JSON.parse(decodeURIComponent(escape(atob(uri.split(",")[1]))));
+  useEffect(() => {
+    if (!tokens || tokens.length === 0) return;
+    let alive = true;
+    const byPool = {};
+    tokens.forEach((tk) => { byPool[tk.pool.toLowerCase()] = { sym: tk.symbol, token: tk.token }; });
+    const pools = tokens.map((tk) => tk.pool);
+
+    async function pull() {
+      const logs = await publicClient.getLogs({
+        address: pools, events: tradeEvents, fromBlock: 0n, toBlock: "latest",
+      });
+      if (logs.length === 0) { if (alive) setItems([]); return; }
+      logs.sort((a, b) => Number(b.blockNumber - a.blockNumber) || (b.logIndex - a.logIndex));
+      const top = logs.slice(0, 12);
+      const minB = Number(top[top.length - 1].blockNumber);
+      const [latest, oldest] = await Promise.all([
+        publicClient.getBlock(),
+        publicClient.getBlock({ blockNumber: BigInt(minB) }),
+      ]);
+      const span = Number(latest.number) - minB;
+      const avg = span > 0 ? (Number(latest.timestamp) - Number(oldest.timestamp)) / span : 0;
+      const list = top.map((l) => {
+        const isBuy = l.eventName === "Buy";
+        const info = byPool[l.address.toLowerCase()] ?? {};
+        return {
+          side: isBuy ? "buy" : "sell",
+          addr: isBuy ? l.args.buyer : l.args.seller,
+          eth: Number(isBuy ? l.args.ethIn : l.args.ethOut) / 1e18,
+          sym: info.sym, token: info.token,
+          ts: (Number(oldest.timestamp) + (Number(l.blockNumber) - minB) * avg) * 1000,
+          key: l.transactionHash + String(l.logIndex),
+        };
+      }).filter((x) => x.token);
+      if (alive) setItems(list);
     }
-  } catch (e) { /* ignore malformed metadata */ }
-  return {};
+    pull().catch(() => {});
+    const id = setInterval(() => pull().catch(() => {}), 15000);
+    return () => { alive = false; clearInterval(id); };
+  }, [tokens]);
+
+  if (!items || items.length === 0) return null;
+  return (
+    <div className="feed-strip">
+      <span className="feed-label">⚡ {t("Лента сделок")}</span>
+      <div className="feed-scroll">
+        {items.map((x) => (
+          <a className="feed-chip" key={x.key} href={`#/token/${x.token}`}>
+            <span className={x.side === "buy" ? "side-buy" : "side-sell"}>{x.side === "buy" ? "▲" : "▼"}</span>
+            <span className="mono dim">{short(x.addr)}</span>
+            <span>{t(x.side === "buy" ? "купил" : "продал")}</span>
+            <b>${x.sym}</b>
+            <span>{t("за")} {fmt(x.eth, 4)} ETH</span>
+            <span className="dim">· {timeAgo(x.ts)}</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
 }
 
-async function loadTokens() {
-  const count = await publicClient.readContract({
-    address: FACTORY_ADDRESS,
-    abi: factoryAbi,
-    functionName: "tokenCount",
-  });
-  if (count === 0n) return [];
-  const offset = count > PAGE ? count - PAGE : 0n;
-  const addrs = await publicClient.readContract({
-    address: FACTORY_ADDRESS,
-    abi: factoryAbi,
-    functionName: "tokens",
-    args: [offset, PAGE],
-  });
-
-  const items = await Promise.all(
-    addrs.map(async (token) => {
-      const pool = await publicClient.readContract({
-        address: FACTORY_ADDRESS,
-        abi: factoryAbi,
-        functionName: "poolOf",
-        args: [token],
-      });
-      const [name, symbol, uri, price, sold, cap, reserve, graduated] =
-        await Promise.all([
-          publicClient.readContract({ address: token, abi: tokenAbi, functionName: "name" }),
-          publicClient.readContract({ address: token, abi: tokenAbi, functionName: "symbol" }),
-          publicClient.readContract({ address: token, abi: tokenAbi, functionName: "metadataURI" }),
-          publicClient.readContract({ address: pool, abi: poolAbi, functionName: "spotPrice" }),
-          publicClient.readContract({ address: pool, abi: poolAbi, functionName: "tokensSold" }),
-          publicClient.readContract({ address: pool, abi: poolAbi, functionName: "saleCap" }),
-          publicClient.readContract({ address: pool, abi: poolAbi, functionName: "ethReserve" }),
-          publicClient.readContract({ address: pool, abi: poolAbi, functionName: "graduated" }),
-        ]);
-      return {
-        token, pool, name, symbol, price, sold, cap, reserve, graduated,
-        meta: parseMeta(uri),
-      };
-    })
+/** Король горы — самый близкий к градации токен. */
+function KingCard({ king }) {
+  const { t } = useLang();
+  const rate = useEthUsd();
+  if (!king) return null;
+  const progress = Number((king.sold * 10000n) / king.cap) / 100;
+  const mcapEth = Number(formatEther(king.price)) * 1_000_000_000;
+  return (
+    <a className="king-card" href={`#/token/${king.token}`}>
+      <div className="king-img">{king.meta.image ? <img src={king.meta.image} alt="" /> : "🖼️"}</div>
+      <div className="king-info">
+        <div className="king-tag">👑 {t("Король горы")}</div>
+        <div className="king-name">
+          {king.name} <span className="ticker">${king.symbol}</span>
+        </div>
+        <div className="king-stats">
+          {usd(mcapEth * rate)} MC · {fmt(Number(formatEther(king.reserve)), 3)} / 6.5 ETH
+          {king.createdAt ? <> · {timeAgo(king.createdAt)}</> : null}
+        </div>
+        <div className="pbar king-bar">
+          <div style={{ width: `${Math.min(progress, 100)}%` }} />
+        </div>
+      </div>
+      <div className="king-pct">{fmt(Math.min(progress, 100), 0)}%</div>
+    </a>
   );
-  return items.reverse(); // newest first
 }
 
 function loadFavs() {
@@ -162,6 +199,13 @@ export default function Home({ onSearch }) {
 
       {error && <div className="error">{error}</div>}
       {!tokens && !error && <div className="center">{t("Загружаю токены из блокчейна…")}</div>}
+
+      <LiveFeed tokens={tokens} />
+      <KingCard
+        king={(tokens ?? [])
+          .filter((x) => !x.graduated && x.reserve > 0n)
+          .sort((a, b) => (b.reserve > a.reserve ? 1 : -1))[0]}
+      />
 
       <div className="grad-wrap">
         <div className="sec-head">

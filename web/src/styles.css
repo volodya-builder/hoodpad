@@ -637,3 +637,51 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
 .tcard:hover .fav-btn { opacity: 1; }
 .fav-btn.on { opacity: 1; color: #f7c948; border-color: rgba(247, 201, 72, .5); }
 .fav-btn:hover { transform: scale(1.1); }
+
+/* -------- live feed strip -------- */
+.feed-strip {
+  display: flex; align-items: center; gap: 12px;
+  margin: 4px 0 18px; padding: 10px 14px;
+  background: linear-gradient(180deg, #191a17 0%, #151613 100%);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  overflow: hidden;
+}
+html[data-theme="light"] .feed-strip { background: var(--card); }
+.feed-label { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--text-dim); white-space: nowrap; }
+.feed-scroll { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+.feed-scroll::-webkit-scrollbar { display: none; }
+.feed-chip {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  padding: 6px 11px; border-radius: 999px; font-size: 12px;
+  border: 1px solid var(--border); color: var(--text); text-decoration: none;
+  background: rgba(255, 255, 255, .02);
+}
+.feed-chip:hover { border-color: var(--gold); }
+
+/* -------- king of the hill -------- */
+.king-card {
+  display: flex; align-items: center; gap: 20px;
+  margin: 0 0 26px; padding: 18px 22px;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--gold) 9%, #17181500) 0%, #171815 55%);
+  border: 1px solid color-mix(in srgb, var(--gold) 45%, var(--border));
+  border-radius: var(--radius); text-decoration: none; color: var(--text);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--gold) 12%, transparent);
+  transition: transform .12s;
+}
+.king-card:hover { transform: translateY(-2px); }
+html[data-theme="light"] .king-card { background: var(--card); }
+.king-img { width: 84px; height: 84px; border-radius: 16px; overflow: hidden; flex-shrink: 0;
+  border: 2px solid #f7c948; box-shadow: 0 0 14px rgba(247, 201, 72, .35);
+  display: flex; align-items: center; justify-content: center; font-size: 34px; background: var(--bg); }
+.king-img img { width: 100%; height: 100%; object-fit: cover; }
+.king-info { min-width: 0; flex: 1; }
+.king-tag { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: #f7c948; }
+.king-name { font-size: 19px; font-weight: 800; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.king-stats { font-size: 12.5px; color: var(--text-dim); margin-top: 3px; font-variant-numeric: tabular-nums; }
+.king-bar { margin-top: 10px; height: 7px; }
+.king-pct { font-size: 22px; font-weight: 800; color: #f7c948; font-variant-numeric: tabular-nums; }
+@media (max-width: 620px) { .king-pct { display: none; } }
+
+/* -------- slippage picker -------- */
+.slip-row { display: flex; align-items: center; gap: 7px; margin-top: 12px; font-size: 12px; flex-wrap: wrap; }
+.slip-pill { padding: 4px 11px; font-size: 12px; }
