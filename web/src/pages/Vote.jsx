@@ -16,12 +16,15 @@ const voteEvent = parseAbiItem(
 );
 
 function countdown(sec) {
+  let en = false;
+  try { en = localStorage.getItem("hood_lang") === "en"; } catch (e) { /* ignore */ }
+  const [D, H, M] = en ? ["d", "h", "m"] : ["д", "ч", "м"];
   const d = Math.floor(sec / 86400);
   const h = Math.floor((sec % 86400) / 3600);
   const m = Math.floor((sec % 3600) / 60);
-  if (d > 0) return `${d}д ${h}ч`;
-  if (h > 0) return `${h}ч ${m}м`;
-  return `${m}м`;
+  if (d > 0) return `${d}${D} ${h}${H} ${m}${M}`;
+  if (h > 0) return `${h}${H} ${m}${M}`;
+  return `${m}${M}`;
 }
 
 export default function Vote({ wallet, onConnect }) {
