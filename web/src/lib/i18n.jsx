@@ -3,6 +3,8 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 // RU — базовый язык интерфейса; словарь переводит на EN.
 const EN = {
   "Обзор": "Explore",
+  "Поиск токенов": "Search tokens",
+  "+ Создать": "+ Create",
   "Аналитика": "Analytics",
   "Голосование": "Vote",
   "+ Запустить токен": "+ Launch token",

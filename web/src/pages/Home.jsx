@@ -120,7 +120,14 @@ export default function Home({ onSearch }) {
 
   return (
     <>
-      <div className="page-title" style={{ marginTop: 34 }}>{t("Обзор")}</div>
+      <div className="search-row">
+        <div className="big-search" onClick={onSearch}>
+          ⌕ {t("Поиск токенов")} <span className="kbd">Ctrl K</span>
+        </div>
+        <a className="btn btn-primary" style={{ padding: "0 26px", display: "flex", alignItems: "center" }} href="#/create">
+          {t("+ Создать")}
+        </a>
+      </div>
       <div className="page-sub">
         {t("Токены с фиксированным сапплаем на Robinhood Chain")} — {t("запуск в одну транзакцию")},{" "}
         {split.creator}% {t("создателю")}{split.team > 0 ? `, ${split.team}% ${t("команде")}` : ""},{" "}

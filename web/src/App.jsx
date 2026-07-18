@@ -161,7 +161,6 @@ export default function App() {
             <button className="icon-btn" onClick={() => setTheme(theme === "light" ? "" : "light")} title="Сменить тему">
               {theme === "light" ? "☾" : "☀"}
             </button>
-            <a className="btn" href="#/create">{t("+ Запустить токен")}</a>
             {wallet ? (
               <a className="btn mono" href="#/profile" title="Профиль">{short(wallet.account)}</a>
             ) : (
