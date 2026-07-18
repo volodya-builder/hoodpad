@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>HoodPad — честный запуск токенов на Robinhood Chain</title>
+<title>hood — лаунчпад Robinhood Chain</title>
 <meta name="description" content="Лаунчпад Robinhood Chain. Запуск в одну транзакцию, 70% комиссий создателю, ликвидность заперта навсегда. Честный запуск — закон Шервуда." />
-<meta property="og:title" content="HoodPad — честный запуск токенов" />
+<meta property="og:title" content="hood — честный запуск токенов" />
 <meta property="og:description" content="70% комиссий создателю · 0 ETH за запуск · ликвидность заперта навсегда. Robinhood Chain." />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230c130e'/%3E%3Cpath d='M14 50 L46 18 M46 18 l-12 2 M46 18 l-2 12' stroke='%23b9c94b' stroke-width='5' stroke-linecap='round' fill='none'/%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%23f2f2ee'/%3E%3Cpath d='M32 6 C23 12 11 31 11 47 C11 53 15 56 20 55 L44 55 C49 56 53 53 53 47 C53 31 41 12 32 6 Z' fill='%2343464b'/%3E%3Cpath d='M32 19 C26.5 23.5 20 32 20 42.5 C20 50 25 54.5 32 54.5 C39 54.5 44 50 44 42.5 C44 32 37.5 23.5 32 19 Z' fill='%230c0d0e' stroke='%23f2f2ee' stroke-width='2.6'/%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -56,8 +56,8 @@ header {
 .logo { display: flex; align-items: center; gap: 10px; cursor: pointer; }
 .logo svg { flex: none; }
 .logo-word {
-  font-family: "Playfair Display", Georgia, serif; font-weight: 700; font-size: 23px;
-  letter-spacing: .3px;
+  font-family: var(--font-ui); font-weight: 700; font-size: 17px;
+  letter-spacing: 7px; margin-left: 2px;
 }
 .logo-word .dot { color: var(--gold); }
 .nav { display: flex; gap: 10px; align-items: center; }
@@ -500,13 +500,13 @@ html[data-theme="light"] .forest { opacity: .28; }
 <body>
 <div class="demo-banner">ДЕМО-РЕЖИМ — блокчейн симулируется в браузере · Ваш демо-баланс: <span id="balTop">10.000</span> ETH</div>
 <header><div class="container header-inner">
-  <a class="logo" onclick="go('home')" aria-label="HoodPad">
-    <svg width="30" height="30" viewBox="0 0 64 64" fill="none">
-      <rect width="64" height="64" rx="14" fill="#161715" stroke="#282923"/>
-      <path d="M15 49 L45 19 M45 19 l-11 2 M45 19 l-2 11" stroke="#b9c94b" stroke-width="4.5" stroke-linecap="round"/>
-      <path d="M20 14 C36 20 44 28 50 44" stroke="#4caf6d" stroke-width="3" stroke-linecap="round" opacity=".85"/>
+  <a class="logo" onclick="go('home')" aria-label="hood">
+    <svg width="32" height="32" viewBox="0 0 64 64">
+      <rect width="64" height="64" rx="15" fill="#f2f2ee" stroke="#d9d9d0" stroke-width="1"/>
+      <path d="M32 6 C23 12 11 31 11 47 C11 53 15 56 20 55 L44 55 C49 56 53 53 53 47 C53 31 41 12 32 6 Z" fill="#43464b"/>
+      <path d="M32 19 C26.5 23.5 20 32 20 42.5 C20 50 25 54.5 32 54.5 C39 54.5 44 50 44 42.5 C44 32 37.5 23.5 32 19 Z" fill="#0c0d0e" stroke="#f2f2ee" stroke-width="2.6"/>
     </svg>
-    <span class="logo-word">hood<span class="dot">pad</span></span>
+    <span class="logo-word">HOOD</span>
   </a>
   <div class="nav-pills">
     <div class="nav-pill on" id="npHome" onclick="go('home')">Обзор</div>
@@ -529,7 +529,7 @@ html[data-theme="light"] .forest { opacity: .28; }
   <div style="max-width:300px">
     <div class="footer-tag">Честный запуск — <span class="gold">закон Шервуда.</span></div>
     <div class="dim" style="margin-top:10px">Запускайте и исследуйте токены с фиксированным
-    сапплаем на Robinhood Chain. Все транзакции отправляет ваш кошелёк — hoodpad не хранит активы.</div>
+    сапплаем на Robinhood Chain. Все транзакции отправляет ваш кошелёк — hood не хранит активы.</div>
   </div>
   <div class="footer-cols">
     <div class="fcol">
@@ -548,7 +548,7 @@ html[data-theme="light"] .forest { opacity: .28; }
   <div class="footer-note">
     <h4 style="font-size:11.5px;text-transform:uppercase;color:var(--text-dim);letter-spacing:1px;margin:0 0 11px">Риск-нотис</h4>
     Транзакции отправляются вашим кошельком и необратимы. Токены волатильны и могут
-    полностью обесцениться. hoodpad не хранит активы, не даёт гарантий и финансовых советов.
+    полностью обесцениться. hood не хранит активы, не даёт гарантий и финансовых советов.
   </div>
 </div></footer>
 <div class="modal-back" id="searchBack" onclick="if(event.target===this)closeSearch()">
@@ -735,7 +735,7 @@ function doBuyback(t, ethAmt) {
   treasury.eth -= ethAmt; treasury.spent += ethAmt;
   treasury.holdings[t.symbol] = (treasury.holdings[t.symbol] || 0) + out;
   treasury.buybacks.unshift({ sym: t.symbol, eth: ethAmt, tokens: out, t: Date.now() });
-  record(t, "buy", ethAmt, out, "Казна hoodpad", Date.now());
+  record(t, "buy", ethAmt, out, "Казна hood", Date.now());
   toast(`Выкуплено ${fmt(out,0)} ${t.symbol} за ${fmt(ethAmt,4)} ETH`);
   render();
 }
@@ -777,14 +777,14 @@ const EN_PAIRS = [
   ["Сожжено", "Burned"],
   ["Выкуплено", "Bought back"],
   ["Выкупить", "Buy back"],
-  ["Казна hoodpad", "hoodpad treasury"],
+  ["Казна hood", "hood treasury"],
   ["ДЕМО-РЕЖИМ — блокчейн симулируется в браузере · Ваш демо-баланс:", "DEMO MODE — the blockchain is simulated in your browser · Your demo balance:"],
   ["Токены, прошедшие порог градации — ликвидность заперта на DEX.", "Tokens that cleared the graduation threshold — liquidity locked on the DEX."],
   ["Токены, летящие к градации на Robinhood Chain — сбор 6.5 ETH.", "Tokens climbing toward graduation on Robinhood Chain — 6.5 ETH raise."],
   ["Получает долю создателя в комиссиях (20%) и покупку создателя. Оставьте пустым, чтобы использовать подключённый кошелёк.", "Receives the creator share of trading fees (70%) and the developer buy. Leave blank to use your connected wallet."],
   ["Я понимаю, что выбранное изображение будет опубликовано и станет\n        частью неизменяемых метаданных токена.", "I understand the selected image will be published and become part of the token's immutable metadata."],
-  ["Транзакции отправляются вашим кошельком и необратимы. Токены волатильны и могут\n    полностью обесцениться. hoodpad не хранит активы, не даёт гарантий и финансовых советов.", "Transactions are submitted by your wallet and may be irreversible. Tokens are volatile and can lose all value. hoodpad does not custody assets and gives no warranties or financial advice."],
-  ["Запускайте и исследуйте токены с фиксированным\n    сапплаем на Robinhood Chain. Все транзакции отправляет ваш кошелёк — hoodpad не хранит активы.", "Launch and explore fixed-supply tokens on Robinhood Chain. Every transaction is submitted by your wallet — hoodpad does not custody assets."],
+  ["Транзакции отправляются вашим кошельком и необратимы. Токены волатильны и могут\n    полностью обесцениться. hood не хранит активы, не даёт гарантий и финансовых советов.", "Transactions are submitted by your wallet and may be irreversible. Tokens are volatile and can lose all value. hood does not custody assets and gives no warranties or financial advice."],
+  ["Запускайте и исследуйте токены с фиксированным\n    сапплаем на Robinhood Chain. Все транзакции отправляет ваш кошелёк — hood не хранит активы.", "Launch and explore fixed-supply tokens on Robinhood Chain. Every transaction is submitted by your wallet — hood does not custody assets."],
   ["Данные — из событий демо-симуляции. В продакшене: индексация\n  событий Buy/Sell/Graduated контрактов через The Graph (поддерживает Robinhood Chain).", "Data comes from demo-simulation events. In production: Buy/Sell/Graduated contract events indexed via The Graph (supports Robinhood Chain)."],
   ["Писать могут все — холд не нужен. Будьте взаимно вежливы.", "Anyone can post — no holding required. Be kind to each other."],
   ["Кривая заполнена! Кто угодно может запустить миграцию ликвидности.", "The curve is full! Anyone can trigger the liquidity migration."],
@@ -799,7 +799,7 @@ const EN_PAIRS = [
   ["Неверный адрес: нужен формат 0x… (42 символа).", "Invalid address: expected 0x… format (42 characters)."],
   ["Кошелёк создателя: неверный адрес", "Creator wallet: invalid address"],
   ["Покупка создателя ограничена", "Developer buy is capped at"],
-  ["Независимая отчётность по рынкам hoodpad на Robinhood Chain.", "Independent reporting for hoodpad markets on Robinhood Chain."],
+  ["Независимая отчётность по рынкам hood на Robinhood Chain.", "Independent reporting for hood markets on Robinhood Chain."],
   ["20% всех комиссий — с первого трейда", "20% of all fees — from the very first trade"],
   ["20% комиссий — создателю, 80% — в казну выкупа. Ликвидность запирается навсегда.", "70% of fees go to the creator. Liquidity locks forever."],
   ["градаций · доля градаций", "graduations · graduation rate"],
@@ -818,7 +818,7 @@ const EN_PAIRS = [
   ["Демо-кошелёк отключить нельзя 🙂", "The demo wallet cannot be disconnected 🙂"],
   ["запуски, позиции, PnL", "launches, positions, PnL"],
   ["Честный запуск — <span class=\"gold\">закон Шервуда.</span>", "A fair launch is <span class=\"gold\">the law of Sherwood.</span>"],
-  ["hoodpad · лаунчпад Robinhood Chain", "hoodpad · the Robinhood Chain launchpad"],
+  ["hood · лаунчпад Robinhood Chain", "hood · the Robinhood Chain launchpad"],
   ["Политика конфиденциальности — добавим перед релизом", "Privacy policy — coming before release"],
   ["Условия использования — добавим перед релизом", "Terms of use — coming before release"],
   ["Пул появится после градации", "The pool appears after graduation"],
@@ -1196,7 +1196,7 @@ function analyticsView() {
     `<div class="fpill ${view.anaTf === k ? "on" : ""}" onclick="view.anaTf='${k}';render()">${lbl}</div>`;
   return `
   <div class="page-title">Аналитика протокола</div>
-  <div class="page-sub">Независимая отчётность по рынкам hoodpad на Robinhood Chain.</div>
+  <div class="page-sub">Независимая отчётность по рынкам hood на Robinhood Chain.</div>
   <div class="pill-group" style="display:inline-flex">${tfPill("24h", "24ч")}${tfPill("7d", "Неделя")}${tfPill("30d", "Месяц")}${tfPill("all", "Всё время")}</div>
   <div class="ana-grid">
     <div class="ana-card">
