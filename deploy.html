@@ -42,6 +42,7 @@ a { color:var(--acc) }
       <div class="dim">Страница добавит сеть тестнета автоматически.</div>
       <div style="margin-top:10px"><button class="btn btn-primary" id="connectBtn">Подключить MetaMask</button></div>
       <div class="dim mono" id="acct" style="margin-top:8px"></div>
+      <div class="dim" id="walletStatus" style="margin-top:6px">Ищу кошелёк…</div>
     </div></div>
     <div class="step"><div class="st" id="s1">2</div><div style="flex:1">
       <b>Задеплоить контракты</b>
@@ -51,6 +52,7 @@ a { color:var(--acc) }
     </div></div>
   </div>
 
+  <p class="dim" style="margin-top:14px">деплоер v3 · без внешних зависимостей · при клике лог появляется под кнопкой</p>
   <div class="result" id="result">
     <b style="color:var(--acc)">Готово! Контракты в тестнете.</b>
     <div class="dim" style="margin:8px 0 4px">Фабрика (главный адрес — пришлите его Клоду):</div>
@@ -69,6 +71,33 @@ var CHAIN_ID = 46630, CHAIN_HEX = "0xb626";
 var EXPLORER = "https://explorer.testnet.chain.robinhood.com";
 var SETCONFIG_SEL = "0x8f29b869"; // setConfig(address,address,uint16,uint16)
 var account = null;
+var provider = null;
+var discovered = [];
+window.addEventListener("eip6963:announceProvider", function (e) {
+  discovered.push(e.detail);
+  refreshWalletStatus();
+});
+window.dispatchEvent(new Event("eip6963:requestProvider"));
+function pickProvider() {
+  var mm = discovered.find(function (d) { return d.info && /metamask/i.test(d.info.name); });
+  if (mm) return mm.provider;
+  if (discovered.length === 1) return discovered[0].provider;
+  if (window.ethereum && window.ethereum.providers) {
+    var p = window.ethereum.providers.find(function (x) { return x.isMetaMask; });
+    if (p) return p;
+  }
+  if (window.ethereum) return window.ethereum;
+  return null;
+}
+function refreshWalletStatus() {
+  var el = document.getElementById("walletStatus");
+  if (!el) return;
+  var names = discovered.map(function (d) { return d.info.name; });
+  if (names.length) el.textContent = "Найдены кошельки: " + names.join(", ") + (names.length > 1 ? " — использую MetaMask" : "");
+  else if (window.ethereum) el.textContent = "Кошелёк найден (window.ethereum)";
+  else el.textContent = "Кошелёк НЕ найден — проверьте, что MetaMask включён для этого сайта";
+}
+setTimeout(refreshWalletStatus, 400);
 function $(id) { return document.getElementById(id); }
 function log(m) { $("log").innerHTML = m; }
 function pad32(v) {
@@ -76,7 +105,7 @@ function pad32(v) {
   return v.toString(16).padStart(64, "0");
 }
 function eth(method, params) {
-  return window.ethereum.request({ method: method, params: params || [] });
+  return provider.request({ method: method, params: params || [] });
 }
 async function waitReceipt(hash) {
   for (var i = 0; i < 180; i++) {
@@ -97,8 +126,12 @@ async function sendTx(tx) {
 
 $("connectBtn").onclick = async function () {
   try {
-    if (!window.ethereum) { alert("MetaMask не найден. Установите расширение MetaMask и обновите страницу."); return; }
+    log("Нажатие получено. Ищу провайдера…");
+    provider = pickProvider();
+    if (!provider) { log('<span style="color:var(--red)">Кошелёк не найден. Включите MetaMask для этого сайта и обновите страницу.</span>'); return; }
+    log("Провайдер найден. Запрашиваю доступ к аккаунту — проверьте окно MetaMask (иногда оно открывается в панели расширений, иконка с цифрой)…");
     var accs = await eth("eth_requestAccounts");
+    log("Аккаунт получен. Проверяю сеть…");
     account = accs[0];
     var cur = await eth("eth_chainId");
     if (parseInt(cur, 16) !== CHAIN_ID) {
@@ -118,7 +151,10 @@ $("connectBtn").onclick = async function () {
     if (bal === 0) $("acct").textContent += " — баланс 0! Сначала возьмите ETH в кране.";
     $("s0").classList.add("done"); $("s0").textContent = "✓";
     $("deployBtn").disabled = false;
-  } catch (e) { alert(e && e.message ? e.message : String(e)); }
+    log("Кошелёк подключён ✓ — можно деплоить.");
+  } catch (e) {
+    log('<span style="color:var(--red)">Ошибка подключения: ' + (e && e.message ? e.message : String(e)) + "</span>");
+  }
 };
 
 $("deployBtn").onclick = async function () {
