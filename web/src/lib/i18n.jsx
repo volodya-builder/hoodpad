@@ -86,6 +86,11 @@ const EN = {
   "Голос — маленькая транзакция в сети (газ — доли цента). Новый раунд начинается автоматически каждые 7 дней.":
     "A vote is a tiny on-chain transaction (gas costs a fraction of a cent). A new round starts automatically every 7 days.",
   "Голосование скоро появится — контракт готовится к деплою.": "Voting is coming soon — the contract is being deployed.",
+  "Нажмите на строку, чтобы увидеть, кто голосовал.": "Click a row to see who voted.",
+  "Пока никто не голосовал за этот токен.": "No one has voted for this token yet.",
+  "Кошельки раунда": "Voters this round",
+  "Поиск: адрес или тикер…": "Search: address or ticker…",
+  "Все токены": "All tokens",
   "Читаю блокчейн…": "Reading the chain…",
   "Аналитика протокола": "Protocol analytics",
   "Все цифры читаются напрямую из контрактов hood в Robinhood Chain.": "Every number is read directly from hood contracts on Robinhood Chain.",

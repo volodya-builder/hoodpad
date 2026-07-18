@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { parseAbi, parseAbiItem } from "viem";
 import { publicClient, fmt, short } from "../lib/web3.js";
-import { VOTE_ADDRESS } from "../lib/config.js";
-import { loadTokens } from "../lib/data.js";
+import { VOTE_ADDRESS, EXPLORER } from "../lib/config.js";
+import { loadTokens, timeAgo } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 
 const voteAbi = parseAbi([
@@ -29,6 +29,9 @@ export default function Vote({ wallet, onConnect }) {
   const [state, setState] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [expanded, setExpanded] = useState(null); // token addr, раскрытый список голосов
+  const [q, setQ] = useState("");                 // фильтр: адрес или тикер
+  const [ftoken, setFtoken] = useState("all");    // фильтр: конкретный токен
 
   const enabled = VOTE_ADDRESS !== "0x0000000000000000000000000000000000000000";
 
@@ -43,24 +46,49 @@ export default function Vote({ wallet, onConnect }) {
       address: VOTE_ADDRESS, event: voteEvent, args: { epoch: ep },
       fromBlock: 0n, toBlock: "latest",
     });
-    const tally = {};
-    for (const l of logs) {
-      const k = l.args.token.toLowerCase();
-      tally[k] = (tally[k] ?? 0) + 1;
+
+    // Время каждого голоса: интерполяция по блокам (2 RPC-вызова).
+    let votes = logs.map((l) => ({
+      voter: l.args.voter,
+      token: l.args.token.toLowerCase(),
+      block: Number(l.blockNumber),
+      ts: null,
+    }));
+    if (votes.length > 0) {
+      const minB = Math.min(...votes.map((v) => v.block));
+      const [latest, oldest] = await Promise.all([
+        publicClient.getBlock(),
+        publicClient.getBlock({ blockNumber: BigInt(minB) }),
+      ]);
+      const span = Number(latest.number) - minB;
+      const avg = span > 0
+        ? (Number(latest.timestamp) - Number(oldest.timestamp)) / span
+        : 0;
+      for (const v of votes) {
+        v.ts = (Number(oldest.timestamp) + (v.block - minB) * avg) * 1000;
+      }
     }
+    votes.sort((a, b) => b.block - a.block); // новые сверху
+
+    const tally = {};
+    for (const v of votes) tally[v.token] = (tally[v.token] ?? 0) + 1;
+
     let myVote = null;
     if (wallet) {
-      const mine = logs.find(
-        (l) => l.args.voter.toLowerCase() === wallet.account.toLowerCase()
+      const mine = votes.find(
+        (v) => v.voter.toLowerCase() === wallet.account.toLowerCase()
       );
-      if (mine) myVote = mine.args.token.toLowerCase();
+      if (mine) myVote = mine.token;
     }
-    const total = logs.length;
+
+    const symByAddr = {};
+    for (const tk of tokens) symByAddr[tk.token.toLowerCase()] = tk.symbol;
+
     const rows = tokens
-      .filter((t) => !t.graduated)
-      .map((t) => ({ ...t, votes: tally[t.token.toLowerCase()] ?? 0 }))
+      .filter((tk) => !tk.graduated)
+      .map((tk) => ({ ...tk, votes: tally[tk.token.toLowerCase()] ?? 0 }))
       .sort((a, b) => b.votes - a.votes);
-    setState({ rows, total, endsIn: Number(endsIn), myVote, ep });
+    setState({ rows, votes, symByAddr, total: votes.length, endsIn: Number(endsIn), myVote, ep });
   }, [wallet, enabled]);
 
   useEffect(() => {
@@ -83,6 +111,18 @@ export default function Vote({ wallet, onConnect }) {
       setError(e.shortMessage || e.message);
     } finally { setBusy(false); }
   }
+
+  // Боковой список: фильтр по адресу/тикеру + по конкретному токену.
+  const filteredVotes = useMemo(() => {
+    if (!state) return [];
+    const needle = q.trim().toLowerCase();
+    return state.votes.filter((v) => {
+      if (ftoken !== "all" && v.token !== ftoken) return false;
+      if (!needle) return true;
+      const sym = (state.symByAddr[v.token] ?? "").toLowerCase();
+      return v.voter.toLowerCase().includes(needle) || sym.includes(needle);
+    });
+  }, [state, q, ftoken]);
 
   if (!enabled) {
     return (
@@ -128,46 +168,108 @@ export default function Vote({ wallet, onConnect }) {
       )}
 
       {state && state.rows.length > 0 && (
-        <div className="bottom-card" style={{ marginTop: 18 }}>
-          {state.rows.map((r, i) => {
-            const sharePct = state.total > 0 ? (r.votes / state.total) * 100 : 0;
-            const isMine = state.myVote === r.token.toLowerCase();
-            return (
-              <div className="prow6" key={r.token}
-                   style={{ gridTemplateColumns: "40px 1.6fr 2fr 90px 130px" }}>
-                <span className="dim">{i + 1}</span>
-                <a href={`#/token/${r.token}`}
-                   style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                  {r.meta.image && (
-                    <img src={r.meta.image} style={{ width: 30, height: 30, borderRadius: 8 }} alt="" />
+        <div className="vote-layout">
+          <div className="bottom-card" style={{ marginTop: 0 }}>
+            <div className="vote-hint">{t("Нажмите на строку, чтобы увидеть, кто голосовал.")}</div>
+            {state.rows.map((r, i) => {
+              const addr = r.token.toLowerCase();
+              const sharePct = state.total > 0 ? (r.votes / state.total) * 100 : 0;
+              const isMine = state.myVote === addr;
+              const isOpen = expanded === addr;
+              const voters = isOpen ? state.votes.filter((v) => v.token === addr) : [];
+              const rank = r.votes > 0 && i < 3 ? i + 1 : 0; // топ-3 — медальные рамки
+              return (
+                <React.Fragment key={r.token}>
+                  <div className="prow6 vote-row"
+                       style={{ gridTemplateColumns: "40px 1.6fr 2fr 90px 130px", cursor: "pointer" }}
+                       onClick={() => setExpanded(isOpen ? null : addr)}>
+                    <span className={rank ? `rank-num rk${rank}` : "dim"}>{i + 1}</span>
+                    <a href={`#/token/${r.token}`} onClick={(e) => e.stopPropagation()}
+                       style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                      {r.meta.image && (
+                        <img src={r.meta.image} className={`vote-ava${rank ? ` r${rank}` : ""}`} alt="" />
+                      )}
+                      <span>
+                        <b>{r.symbol}</b>{" "}
+                        <span className="dim" style={{ fontSize: 12 }}>{r.name}</span>
+                      </span>
+                    </a>
+                    <span style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                      <span className="pbar" style={{ flex: 1, margin: 0 }}>
+                        <span style={{ display: "block", height: "100%", borderRadius: 3,
+                                       background: "var(--gold)", width: `${sharePct}%` }} />
+                      </span>
+                      <span className="dim" style={{ fontVariantNumeric: "tabular-nums" }}>
+                        {fmt(sharePct, 0)}%
+                      </span>
+                    </span>
+                    <b style={{ fontVariantNumeric: "tabular-nums" }}>
+                      {r.votes} <span className={`chev-mini ${isOpen ? "open" : ""}`}>▾</span>
+                    </b>
+                    {isMine ? (
+                      <span className="badge">{t("ваш голос")}</span>
+                    ) : (
+                      <button className="btn" disabled={busy || !!state.myVote}
+                              onClick={(e) => { e.stopPropagation(); castVote(r.token); }}
+                              title={state.myVote ? t("Вы уже голосовали в этом раунде") : ""}>
+                        {t("Голосовать")}
+                      </button>
+                    )}
+                  </div>
+                  {isOpen && (
+                    <div className="vote-voters">
+                      {voters.length === 0 && (
+                        <div className="dim">{t("Пока никто не голосовал за этот токен.")}</div>
+                      )}
+                      {voters.map((v, k) => (
+                        <div className="vv-row" key={k}>
+                          <span>🏹</span>
+                          <a className="mono" href={`${EXPLORER}/address/${v.voter}`}
+                             target="_blank" rel="noreferrer"
+                             onClick={(e) => e.stopPropagation()}>
+                            {short(v.voter)}
+                          </a>
+                          <span className="when">{v.ts ? timeAgo(v.ts) : `#${v.block}`}</span>
+                        </div>
+                      ))}
+                    </div>
                   )}
-                  <span>
-                    <b>{r.symbol}</b>{" "}
-                    <span className="dim" style={{ fontSize: 12 }}>{r.name}</span>
-                  </span>
+                </React.Fragment>
+              );
+            })}
+          </div>
+
+          <aside className="wallet-panel">
+            <h3>{t("Кошельки раунда")} <span className="chat-count">{filteredVotes.length}</span></h3>
+            <div className="wp-filters">
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder={t("Поиск: адрес или тикер…")}
+                spellCheck={false}
+              />
+              <select value={ftoken} onChange={(e) => setFtoken(e.target.value)}>
+                <option value="all">{t("Все токены")}</option>
+                {state.rows.map((r) => (
+                  <option key={r.token} value={r.token.toLowerCase()}>
+                    ${r.symbol} · {r.votes}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="wp-list">
+              {filteredVotes.length === 0 && <div className="dim">{t("Ничего не найдено")}</div>}
+              {filteredVotes.map((v, k) => (
+                <a className="wp-item" key={k}
+                   href={`${EXPLORER}/address/${v.voter}`} target="_blank" rel="noreferrer">
+                  <span>🏹</span>
+                  <span className="mono">{short(v.voter)}</span>
+                  <span className="sym">${state.symByAddr[v.token] ?? short(v.token)}</span>
+                  <span className="when">{v.ts ? timeAgo(v.ts) : ""}</span>
                 </a>
-                <span style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                  <span className="pbar" style={{ flex: 1, margin: 0 }}>
-                    <span style={{ display: "block", height: "100%", borderRadius: 3,
-                                   background: "var(--gold)", width: `${sharePct}%` }} />
-                  </span>
-                  <span className="dim" style={{ fontVariantNumeric: "tabular-nums" }}>
-                    {fmt(sharePct, 0)}%
-                  </span>
-                </span>
-                <b style={{ fontVariantNumeric: "tabular-nums" }}>{r.votes}</b>
-                {isMine ? (
-                  <span className="badge">{t("ваш голос")}</span>
-                ) : (
-                  <button className="btn" disabled={busy || !!state.myVote}
-                          onClick={() => castVote(r.token)}
-                          title={state.myVote ? t("Вы уже голосовали в этом раунде") : ""}>
-                    {t("Голосовать")}
-                  </button>
-                )}
-              </div>
-            );
-          })}
+              ))}
+            </div>
+          </aside>
         </div>
       )}
 
