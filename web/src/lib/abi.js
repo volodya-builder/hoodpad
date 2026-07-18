@@ -39,6 +39,7 @@ export const treasuryAbi = parseAbi([
 
 export const poolExtraAbi = parseAbi([
   "function creatorFeesAccrued() view returns (uint256)",
+  "function creatorFeeShareBps() view returns (uint16)",
   "function protocolFeesAccrued() view returns (uint256)",
   "function claimCreatorFees(address to)",
   "function claimProtocolFees()",

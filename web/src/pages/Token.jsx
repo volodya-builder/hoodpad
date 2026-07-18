@@ -298,7 +298,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
 
           <div className="stats-grid" style={{ marginTop: 12 }}>
             <div className="stat-card">
-              <div className="k">Комиссии создателя (20%)</div>
+              <div className="k">Комиссии создателя</div>
               <div className="v" style={{ color: "var(--gold)" }}>
                 {fmt(formatEther(extra.creatorFees ?? 0n), 5)} ETH
               </div>
@@ -432,7 +432,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 : `Sell ${data.symbol}`}
             </button>
             <p className="dim" style={{ marginTop: 12 }}>
-              Комиссия 1% · слиппедж 3% · 20% создателю, 80% в казну выкупа
+              Комиссия 1% · слиппедж 3% · 40% создателю · 20% команде · 40% на выкуп
             </p>
             {error && <div className="error">{error}</div>}
           </div>

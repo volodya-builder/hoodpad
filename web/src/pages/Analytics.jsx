@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { formatEther } from "viem";
 import { publicClient, fmt } from "../lib/web3.js";
-import { treasuryAbi } from "../lib/abi.js";
+import { treasuryAbi, poolExtraAbi } from "../lib/abi.js";
 import { TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
 import { loadTokens, poolTrades } from "../lib/data.js";
 
@@ -13,10 +13,18 @@ export default function Analytics() {
     let alive = true;
     (async () => {
       const tokens = await loadTokens();
-      const all = await Promise.all(tokens.map((t) => poolTrades(t.pool).catch(() => ({ trades: [] }))));
+      const all = await Promise.all(tokens.map(async (t) => {
+        const [h, shareBps] = await Promise.all([
+          poolTrades(t.pool).catch(() => ({ trades: [] })),
+          publicClient.readContract({ address: t.pool, abi: poolExtraAbi, functionName: "creatorFeeShareBps" }).catch(() => 2000),
+        ]);
+        return { ...h, shareBps: Number(shareBps) };
+      }));
       const trades = all.flatMap((h) => h.trades);
       const volume = trades.reduce((s, tr) => s + tr.eth + tr.fee, 0);
       const fees = trades.reduce((s, tr) => s + tr.fee, 0);
+      const creatorPaidExact = all.reduce((s, h) =>
+        s + h.trades.reduce((x, tr) => x + tr.fee, 0) * (h.shareBps / 10000), 0);
       const [treBal, received, spent] = await Promise.all([
         publicClient.getBalance({ address: TREASURY_ADDRESS }),
         publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "totalReceived" }).catch(() => 0n),
@@ -27,7 +35,7 @@ export default function Analytics() {
         volume, fees, tradesCount: trades.length,
         launches: tokens.length,
         grads: tokens.filter((t) => t.graduated).length,
-        creatorPaid: fees * 0.2,
+        creatorPaid: creatorPaidExact,
         treBal, received, spent,
       });
     })().catch((e) => alive && setError(e.shortMessage || e.message));
@@ -55,7 +63,7 @@ export default function Analytics() {
           <div className="ana-card">
             <div className="k">Выплачено создателям</div>
             <div className="v" style={{ color: "var(--gold)" }}>{fmt(stats.creatorPaid, 5)} ETH</div>
-            <div className="s">20% всех комиссий — с первого трейда</div>
+            <div className="s">доля создателя каждого пула — с первого трейда</div>
           </div>
           <div className="ana-card">
             <div className="k">Казна выкупа</div>
