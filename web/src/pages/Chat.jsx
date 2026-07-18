@@ -21,6 +21,7 @@ export default function Chat({ tokenAddress, wallet, onConnect }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [status, setStatus] = useState("");
 
   const enabled = CHAT_ADDRESS !== "0x0000000000000000000000000000000000000000";
 
@@ -47,19 +48,25 @@ export default function Chat({ tokenAddress, wallet, onConnect }) {
   async function send() {
     const t = text.trim();
     if (!t) return;
-    if (!wallet) return onConnect();
+    if (!wallet) {
+      setError("Кошелёк не подключён — подключите его и нажмите отправить ещё раз.");
+      onConnect();
+      return;
+    }
     setError(""); setBusy(true);
+    setStatus("Подтвердите транзакцию в MetaMask. Если окно не всплыло — откройте иконку MetaMask: запрос может ждать в очереди расширения.");
     try {
       const hash = await wallet.walletClient.writeContract({
         address: CHAT_ADDRESS, abi: chatAbi, functionName: "post",
         args: [tokenAddress, t],
       });
+      setStatus("Транзакция отправлена, жду подтверждения сети…");
       await publicClient.waitForTransactionReceipt({ hash });
       setText("");
       await load();
     } catch (e) {
       setError(e.shortMessage || e.message);
-    } finally { setBusy(false); }
+    } finally { setBusy(false); setStatus(""); }
   }
 
   if (!enabled) {
@@ -108,6 +115,7 @@ export default function Chat({ tokenAddress, wallet, onConnect }) {
           {busy ? "…" : "➤"}
         </button>
       </div>
+      {status && <div className="dim" style={{ marginTop: 8 }}>{status}</div>}
       {error && <div className="error">{error}</div>}
     </div>
   );
