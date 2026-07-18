@@ -385,6 +385,96 @@ footer { border-top: 1px solid #1a241b; padding: 34px 0 40px; margin-top: 20px; 
 }
 .toast.show { opacity: 1; }
 ::selection { background: #d9a93d55; }
+
+/* ---------------- nav pills / header controls */
+.nav-pills { display: flex; background: #0c120d; border: 1px solid var(--border); border-radius: 999px; padding: 3px; gap: 3px; }
+.nav-pill { padding: 7px 16px; border-radius: 999px; font-size: 13.5px; font-weight: 800; color: var(--text-dim); cursor: pointer; transition: all .15s; }
+.nav-pill.on { background: var(--bg-soft); color: var(--text); }
+.icon-btn { width: 40px; height: 40px; border-radius: 11px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+.icon-btn:hover { background: var(--card-hover); }
+.wallet-wrap { position: relative; }
+.wallet-menu { position: absolute; right: 0; top: calc(100% + 8px); background: var(--card); border: 1px solid var(--border-gold); border-radius: 12px; padding: 6px; min-width: 190px; display: none; z-index: 30; box-shadow: 0 18px 50px -20px #000c; }
+.wallet-menu.open { display: block; }
+.wallet-item { padding: 10px 13px; border-radius: 9px; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.wallet-item:hover { background: var(--bg-soft); }
+.wallet-item .sub { font-size: 11.5px; color: var(--text-dim); font-weight: 600; }
+
+/* ---------------- explore filters */
+.filter-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin: 6px 0 20px; }
+.pill-group { display: flex; background: #0c120d; border: 1px solid var(--border); border-radius: 11px; padding: 3px; gap: 3px; }
+.fpill { padding: 7px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 800; color: var(--text-dim); cursor: pointer; white-space: nowrap; }
+.fpill.on { background: var(--bg-soft); color: var(--gold); }
+.search-fake { display: flex; align-items: center; gap: 9px; color: var(--text-dim); border: 1px solid var(--border); background: #0c120d; border-radius: 11px; padding: 9px 14px; cursor: pointer; font-size: 13px; font-weight: 600; }
+.search-fake:hover { border-color: var(--border-gold); }
+.kbd { font-size: 11px; border: 1px solid var(--border); border-radius: 5px; padding: 1px 7px; background: var(--card); font-family: ui-monospace, monospace; }
+
+/* ---------------- search modal */
+.modal-back { position: fixed; inset: 0; background: #000a; backdrop-filter: blur(4px); z-index: 50; display: none; align-items: flex-start; justify-content: center; padding-top: 12vh; }
+.modal-back.open { display: flex; }
+.search-modal { width: min(560px, 92vw); background: var(--card); border: 1px solid var(--border-gold); border-radius: 16px; padding: 14px; box-shadow: 0 30px 80px -20px #000; }
+.sr-list { margin-top: 10px; max-height: 320px; overflow-y: auto; }
+.sr-item { display: flex; gap: 11px; align-items: center; padding: 10px 12px; border-radius: 10px; cursor: pointer; }
+.sr-item:hover { background: var(--bg-soft); }
+.sr-item img { width: 34px; height: 34px; border-radius: 9px; }
+.sr-item .n { font-weight: 800; font-size: 14px; }
+.sr-item .m { margin-left: auto; font-size: 12.5px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+
+/* ---------------- analytics */
+.page-title { font-family: var(--font-display); font-size: 36px; font-weight: 700; margin: 40px 0 6px; letter-spacing: -.5px; }
+.page-sub { color: var(--text-dim); font-size: 14.5px; margin-bottom: 22px; }
+.ana-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin: 18px 0 60px; }
+.ana-card { background: linear-gradient(180deg, #131b15 0%, #101711 100%); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
+.ana-card .k { font-size: 11.5px; color: var(--text-dim); font-weight: 800; text-transform: uppercase; letter-spacing: .5px; }
+.ana-card .v { font-size: 30px; font-weight: 800; margin-top: 6px; font-variant-numeric: tabular-nums; letter-spacing: -.5px; }
+.ana-card .s { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
+.bars { display: flex; align-items: flex-end; gap: 3px; height: 90px; margin-top: 16px; }
+.bars .bar { flex: 1; background: linear-gradient(180deg, var(--gold), #6b5518); border-radius: 3px 3px 0 0; min-height: 2px; opacity: .9; transition: opacity .15s; }
+.bars .bar:hover { opacity: 1; }
+.ana-note { font-size: 12px; color: var(--text-dim); margin: -40px 0 60px; line-height: 1.6; }
+
+/* ---------------- profile */
+.pf-head { display: flex; align-items: center; gap: 16px; margin: 40px 0 20px; flex-wrap: wrap; }
+.pf-ava { width: 64px; height: 64px; border-radius: 50%; background: var(--gold-dim); border: 1px solid var(--border-gold); display: flex; align-items: center; justify-content: center; font-size: 26px; }
+.pnl-pos { color: var(--leaf); font-weight: 800; }
+.pnl-neg { color: var(--red); font-weight: 800; }
+.prow6 { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr .8fr; gap: 10px; padding: 11px 4px; border-top: 1px solid #1a241b; font-size: 13px; align-items: center; font-variant-numeric: tabular-nums; }
+.prow6.hdr { color: var(--text-dim); font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; border-top: none; }
+
+/* ---------------- footer columns */
+.footer-cols { display: flex; gap: 70px; flex-wrap: wrap; }
+.fcol h4 { font-size: 11.5px; text-transform: uppercase; color: var(--text-dim); letter-spacing: 1px; margin: 0 0 11px; }
+.fcol a { display: block; font-size: 13.5px; font-weight: 600; margin: 8px 0; cursor: pointer; }
+.fcol a:hover { color: var(--gold); }
+
+/* ---------------- light theme («день в Шервуде») */
+html[data-theme="light"] {
+  --bg: #f3efe3; --bg-soft: #e9e4d3; --card: #faf7ee; --card-hover: #f1ecdd;
+  --border: #d8d1ba; --border-gold: #c9a94f; --text: #20261d; --text-dim: #6d7a67;
+  --gold: #a97c17; --gold-bright: #8a6410; --gold-dim: #a97c171f;
+  --leaf: #2e7d47; --leaf-dim: #2e7d471a; --red: #c04545;
+}
+html[data-theme="light"] body {
+  background: radial-gradient(1200px 500px at 50% -100px, #dcd4b877 0%, transparent 60%), var(--bg);
+}
+html[data-theme="light"] header { background: rgba(243,239,227,.85); border-bottom-color: var(--border); }
+html[data-theme="light"] .card, html[data-theme="light"] .panel, html[data-theme="light"] .preview-card,
+html[data-theme="light"] .chart-panel, html[data-theme="light"] .chat-panel, html[data-theme="light"] .about-card,
+html[data-theme="light"] .bottom-card, html[data-theme="light"] .ana-card { background: var(--card); }
+html[data-theme="light"] input, html[data-theme="light"] textarea, html[data-theme="light"] .swap-box,
+html[data-theme="light"] .prefix-input, html[data-theme="light"] .suffix-input, html[data-theme="light"] .quote-box,
+html[data-theme="light"] .stat-card, html[data-theme="light"] .mode-tabs, html[data-theme="light"] .pill-group,
+html[data-theme="light"] .search-fake, html[data-theme="light"] .nav-pills, html[data-theme="light"] .pct,
+html[data-theme="light"] .slip-btn, html[data-theme="light"] .tab { background: #fffdf4; }
+html[data-theme="light"] .btn { background: #fffdf4; }
+html[data-theme="light"] .btn:hover { background: var(--card-hover); }
+html[data-theme="light"] .btn-primary { background: linear-gradient(135deg, #c9962a 0%, #a97c17 100%); color: #fffdf4; }
+html[data-theme="light"] .demo-banner { background: #a97c1715; color: #8a6410; border-bottom-color: #c9a94f; }
+html[data-theme="light"] .toast { background: var(--card); color: var(--text); }
+html[data-theme="light"] footer, html[data-theme="light"] .chart-stats { border-color: var(--border); }
+html[data-theme="light"] .progress .track { background: #ddd5bd; }
+html[data-theme="light"] .trow, html[data-theme="light"] .prow6, html[data-theme="light"] .preview-stats .row { border-color: #e4ddc8; }
+html[data-theme="light"] .chip { background: #fffdf4aa; }
+html[data-theme="light"] .forest { opacity: .28; }
 </style>
 </head>
 <body>
@@ -398,23 +488,57 @@ footer { border-top: 1px solid #1a241b; padding: 34px 0 40px; margin-top: 20px; 
     </svg>
     <span class="logo-word">hood<span class="dot">pad</span></span>
   </a>
+  <div class="nav-pills">
+    <div class="nav-pill on" id="npHome" onclick="go('home')">Обзор</div>
+    <div class="nav-pill" id="npAna" onclick="go('analytics')">Аналитика</div>
+  </div>
   <nav class="nav">
-    <span class="net-pill">Robinhood Chain</span>
+    <button class="icon-btn" onclick="openSearch()" title="Поиск (Ctrl+K)">⌕</button>
+    <button class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Сменить тему">☀</button>
     <button class="btn" onclick="go('create')">+ Запустить токен</button>
-    <span class="btn mono" style="font-size:13px">0xVolo…dya</span>
+    <div class="wallet-wrap">
+      <span class="btn mono" style="font-size:13px;cursor:pointer" onclick="toggleWalletMenu(event)">0xVolo…dya ▾</span>
+      <div class="wallet-menu" id="walletMenu">
+        <div class="wallet-item" onclick="go('profile')">Профиль<div class="sub">запуски, позиции, PnL</div></div>
+        <div class="wallet-item" onclick="toast('Демо-кошелёк отключить нельзя 🙂')">Отключить</div>
+      </div>
+    </div>
   </nav>
 </div></header>
 <main class="container" id="main"></main>
 <footer><div class="container footer-inner">
-  <div>
+  <div style="max-width:300px">
     <div class="footer-tag">Честный запуск — <span class="gold">закон Шервуда.</span></div>
-    <div class="dim" style="margin-top:8px">hoodpad · лаунчпад Robinhood Chain</div>
+    <div class="dim" style="margin-top:10px">Запускайте и исследуйте токены с фиксированным
+    сапплаем на Robinhood Chain. Все транзакции отправляет ваш кошелёк — hoodpad не хранит активы.</div>
+  </div>
+  <div class="footer-cols">
+    <div class="fcol">
+      <h4>Продукт</h4>
+      <a onclick="go('home')">Обзор</a>
+      <a onclick="go('analytics')">Аналитика</a>
+      <a onclick="go('create')">Запустить</a>
+      <a onclick="go('profile')">Профиль</a>
+    </div>
+    <div class="fcol">
+      <h4>Правовое</h4>
+      <a onclick="toast('Политика конфиденциальности — добавим перед релизом')">Политика</a>
+      <a onclick="toast('Условия использования — добавим перед релизом')">Условия</a>
+    </div>
   </div>
   <div class="footer-note">
+    <h4 style="font-size:11.5px;text-transform:uppercase;color:var(--text-dim);letter-spacing:1px;margin:0 0 11px">Риск-нотис</h4>
     Транзакции отправляются вашим кошельком и необратимы. Токены волатильны и могут
     полностью обесцениться. hoodpad не хранит активы, не даёт гарантий и финансовых советов.
   </div>
 </div></footer>
+<div class="modal-back" id="searchBack" onclick="if(event.target===this)closeSearch()">
+  <div class="search-modal">
+    <input id="searchInput" placeholder="Поиск токена по имени или тикеру…" oninput="renderSearch()"
+      onkeydown="if(event.key==='Enter'){const f=window._sr&&window._sr[0];if(f!==undefined){closeSearch();go('token',f);}}" />
+    <div class="sr-list" id="srList"></div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 <input type="file" id="fileInput" accept="image/*" style="display:none" />
 
@@ -434,7 +558,7 @@ const YOU = "0xVolo…dya";
 function makeToken(name, symbol, desc, creator, img, x, tg) {
   return { name, symbol, desc, creator, img: img || "", x: x || "", tg: tg || "", site: "",
            eth: 0, sold: 0, graduated: false, migrated: false, myBal: 0,
-           creatorFees: 0, protoFees: 0,
+           creatorFees: 0, protoFees: 0, myCost: 0, myRealized: 0, mine: false,
            createdAt: Date.now(), history: [], trades: [], holders: {}, chat: [], ath: 0 };
 }
 function randAddr() {
@@ -533,6 +657,7 @@ function buy(t, ethIn, silent) {
   t.eth += net; t.sold += out; t.myBal += out;
   applyFee(t, spent - net);
   ethBalance -= spent;
+  t.myCost += spent;
   record(t, "buy", spent, out, YOU, Date.now());
   if (!silent) { toast(`Куплено ${fmt(out,0)} ${t.symbol}` + (t.graduated ? " — стрела в яблочке! 🎯" : "")); render(); }
   return true;
@@ -541,9 +666,13 @@ function sell(t, tokIn) {
   if (tokIn <= 0 || tokIn > t.myBal) return toast("Недостаточно токенов");
   const outNet = quoteSell(t, tokIn);
   const gross = outNet / (1 - FEE);
+  const balBefore = t.myBal;
   t.eth -= gross; t.sold -= tokIn; t.myBal -= tokIn;
   applyFee(t, gross - outNet);
   ethBalance += outNet;
+  const costPart = balBefore > 0 ? t.myCost * (tokIn / balBefore) : 0;
+  t.myCost -= costPart;
+  t.myRealized += outNet - costPart;
   record(t, "sell", outNet, tokIn, YOU, Date.now());
   toast(`Продано за ${fmt(outNet,4)} ETH`);
   render();
@@ -568,12 +697,64 @@ function migrate(t) {
 // ------------------------------------------------ ui
 const fmt = (n, d=4) => Number(n).toLocaleString("en-US", { maximumFractionDigits: d });
 const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-let view = { page: "home", idx: 0, dir: "buy", tf: "1Ч", btab: "trades", slip: 1 };
+let view = { page: "home", idx: 0, dir: "buy", tf: "1Ч", btab: "trades", slip: 1,
+             sort: "recent", win: "all", anaTf: "all" };
 let draft = { consent: false, img: "", advOpen: false };
 function go(page, idx) {
-  view = { page, idx: idx ?? 0, dir: "buy", tf: "1Ч", btab: "trades", slip: 1 };
+  const keep = { sort: view.sort, win: view.win, anaTf: view.anaTf };
+  view = { page, idx: idx ?? 0, dir: "buy", tf: "1Ч", btab: "trades", slip: 1, ...keep };
   if (page === "create") draft = { consent: false, img: "", advOpen: false };
+  closeSearch();
+  document.getElementById("walletMenu")?.classList.remove("open");
   render(); window.scrollTo(0,0);
+}
+// ---------------- theme / wallet menu / search
+function toggleTheme() {
+  const h = document.documentElement;
+  h.dataset.theme = h.dataset.theme === "light" ? "" : "light";
+  document.getElementById("themeBtn").textContent = h.dataset.theme === "light" ? "☾" : "☀";
+  render();
+}
+function toggleWalletMenu(e) {
+  e.stopPropagation();
+  document.getElementById("walletMenu").classList.toggle("open");
+}
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".wallet-wrap"))
+    document.getElementById("walletMenu")?.classList.remove("open");
+});
+function openSearch() {
+  document.getElementById("searchBack").classList.add("open");
+  const inp = document.getElementById("searchInput");
+  inp.value = ""; renderSearch(); setTimeout(() => inp.focus(), 30);
+}
+function closeSearch() { document.getElementById("searchBack").classList.remove("open"); }
+function renderSearch() {
+  const q = document.getElementById("searchInput").value.trim().toLowerCase();
+  const res = tokens.map((t, i) => ({ t, i }))
+    .filter(({ t }) => !q || t.name.toLowerCase().includes(q) || t.symbol.toLowerCase().includes(q))
+    .slice(0, 8);
+  window._sr = res.map(r => r.i);
+  document.getElementById("srList").innerHTML = res.map(({ t, i }) => `
+    <div class="sr-item" onclick="closeSearch();go('token',${i})">
+      ${t.img ? `<img src="${t.img}">` : ""}
+      <span class="n">${esc(t.name)} <span class="ticker">$${esc(t.symbol)}</span></span>
+      <span class="m">${fmt(mcap(t), 2)} ETH${t.graduated ? " · 🎯" : ""}</span>
+    </div>`).join("") || '<div class="center" style="padding:20px 0">Ничего не найдено</div>';
+}
+document.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); openSearch(); }
+  if (e.key === "Escape") closeSearch();
+});
+const WINS = { "all": Infinity, "24h": 86400e3, "7d": 7 * 86400e3 };
+function volWin(t) {
+  const w = WINS[view.win];
+  const cut = Date.now() - (w === Infinity ? 1e15 : w);
+  return t.trades.reduce((s, tr) => tr.t >= cut ? s + tr.eth : s, 0);
+}
+function lastBuyTs(t) {
+  const tr = t.trades.find(x => x.side === "buy");
+  return tr ? tr.t : t.createdAt;
 }
 function toast(msg) {
   const el = document.getElementById("toast");
@@ -582,9 +763,13 @@ function toast(msg) {
 }
 function render() {
   document.getElementById("balTop").textContent = fmt(ethBalance, 3);
+  document.getElementById("npHome").classList.toggle("on", view.page === "home");
+  document.getElementById("npAna").classList.toggle("on", view.page === "analytics");
   const m = document.getElementById("main");
   if (view.page === "home") m.innerHTML = homeView();
   else if (view.page === "create") { m.innerHTML = createView(); wireCreate(); }
+  else if (view.page === "analytics") m.innerHTML = analyticsView();
+  else if (view.page === "profile") m.innerHTML = profileView();
   else { m.innerHTML = tokenView(tokens[view.idx]); wireChart();
          const cl = document.getElementById("chatList"); if (cl) cl.scrollTop = cl.scrollHeight; }
 }
@@ -622,22 +807,181 @@ function homeView() {
     </div>
     <div class="forest"></div>
   </section>
-  <div class="section-head">
-    <h2>Токены</h2>
-    <span class="dim">стрела летит к мишени — 6.5 ETH до градации</span>
-  </div>
-  <div class="grid">${tokens.map((t, i) => `
+  ${exploreSection()}`;
+}
+
+function tokenCard(t, i) {
+  return `
     <div class="card" onclick="go('token', ${i})">
       <div class="card-title">
         ${t.img ? `<img class="card-img" src="${t.img}" alt="">` : ""}
         <h3>${esc(t.name)}</h3><span class="ticker">$${esc(t.symbol)}</span>
       </div>
       <div class="stat-row"><span>Капитализация</span><b>${fmt(mcap(t), 2)} ETH</b></div>
+      <div class="stat-row"><span>Объём ${view.win === "all" ? "за всё время" : view.win === "24h" ? "24ч" : "7д"}</span><b>${fmt(volWin(t), 3)} ETH</b></div>
       <div class="stat-row"><span>Собрано</span><b>${fmt(t.eth, 3)} / 6.5 ETH</b></div>
       ${t.graduated
         ? `<div style="margin-top:15px"><span class="badge">🎯 В яблочке · на DEX</span></div>`
         : arrowProgress(progress(t))}
-    </div>`).join("")}
+    </div>`;
+}
+
+function exploreSection() {
+  const idx = tokens.map((t, i) => ({ t, i }));
+  const live = idx.filter(x => !x.t.graduated);
+  const grad = idx.filter(x => x.t.graduated);
+  const sorters = {
+    recent: (a, b) => lastBuyTs(b.t) - lastBuyTs(a.t),
+    new:    (a, b) => b.t.createdAt - a.t.createdAt,
+    mcap:   (a, b) => mcap(b.t) - mcap(a.t),
+  };
+  live.sort(sorters[view.sort]); grad.sort(sorters[view.sort]);
+  const sortPill = (k, lbl) =>
+    `<div class="fpill ${view.sort === k ? "on" : ""}" onclick="view.sort='${k}';render()">${lbl}</div>`;
+  const winPill = (k, lbl) =>
+    `<div class="fpill ${view.win === k ? "on" : ""}" onclick="view.win='${k}';render()">${lbl}</div>`;
+  return `
+  <div class="section-head">
+    <h2>Токены на кривой</h2>
+    <span class="dim">стрела летит к мишени — 6.5 ETH до градации</span>
+  </div>
+  <div class="filter-row">
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <div class="pill-group">
+        ${sortPill("recent", "Недавние покупки")}${sortPill("new", "Новые")}${sortPill("mcap", "Капитализация")}
+      </div>
+      <div class="pill-group">
+        ${winPill("all", "Всё")}${winPill("24h", "24ч")}${winPill("7d", "7д")}
+      </div>
+    </div>
+    <div class="search-fake" onclick="openSearch()">⌕ Поиск токена <span class="kbd">Ctrl K</span></div>
+  </div>
+  <div class="grid" style="padding-bottom:26px">${live.map(x => tokenCard(x.t, x.i)).join("") || '<div class="center">Нет активных токенов — запустите первый!</div>'}</div>
+  ${grad.length ? `
+  <div class="section-head" style="margin-top:8px">
+    <h2>🎯 В яблочке</h2>
+    <span class="dim">градуировали — ликвидность заперта на DEX</span>
+  </div>
+  <div class="grid">${grad.map(x => tokenCard(x.t, x.i)).join("")}</div>` : ""}`;
+}
+
+// ------------------------------------------------ analytics page
+function analyticsView() {
+  const w = view.anaTf === "24h" ? 86400e3 : Infinity;
+  const cut = Date.now() - (w === Infinity ? 1e15 : w);
+  const allTrades = tokens.flatMap(t => t.trades).filter(tr => tr.t >= cut);
+  const volume = allTrades.reduce((s, tr) => s + tr.eth, 0);
+  const launches = tokens.filter(t => t.createdAt >= cut).length;
+  const grads = tokens.filter(t => t.graduated).length;
+  const creatorPaid = tokens.reduce((s, t) => s + t.creatorFees, 0);
+  const N = view.anaTf === "24h" ? 24 : 14;
+  const span = view.anaTf === "24h" ? 3600e3 : 86400e3;
+  const now = Date.now();
+  const volB = Array(N).fill(0), cntB = Array(N).fill(0);
+  allTrades.forEach(tr => {
+    const k = N - 1 - Math.floor((now - tr.t) / span);
+    if (k >= 0 && k < N) { volB[k] += tr.eth; cntB[k] += 1; }
+  });
+  const bars = (arr, unit) => {
+    const mx = Math.max(...arr, 1e-9);
+    return `<div class="bars">${arr.map(v =>
+      `<div class="bar" style="height:${Math.max(2, v / mx * 100)}%" title="${fmt(v, 3)} ${unit}"></div>`).join("")}</div>`;
+  };
+  const tfPill = (k, lbl) =>
+    `<div class="fpill ${view.anaTf === k ? "on" : ""}" onclick="view.anaTf='${k}';render()">${lbl}</div>`;
+  return `
+  <div class="page-title">Аналитика протокола</div>
+  <div class="page-sub">Независимая отчётность по рынкам hoodpad на Robinhood Chain.</div>
+  <div class="pill-group" style="display:inline-flex">${tfPill("24h", "24ч")}${tfPill("all", "Всё время")}</div>
+  <div class="ana-grid">
+    <div class="ana-card">
+      <div class="k">Объём торгов</div>
+      <div class="v">${fmt(volume, 3)} ETH</div>
+      <div class="s">${allTrades.length} сделок · ${view.anaTf === "24h" ? "по часам" : "по дням"}</div>
+      ${bars(volB, "ETH")}
+    </div>
+    <div class="ana-card">
+      <div class="k">Сделки</div>
+      <div class="v">${allTrades.length}</div>
+      <div class="s">${view.anaTf === "24h" ? "за 24 часа" : "за всё время"}</div>
+      ${bars(cntB, "сделок")}
+    </div>
+    <div class="ana-card">
+      <div class="k">Запуски токенов</div>
+      <div class="v">${launches}</div>
+      <div class="s">${grads} градаций · доля градаций ${tokens.length ? fmt(grads / tokens.length * 100, 0) : 0}%</div>
+    </div>
+    <div class="ana-card">
+      <div class="k">Выплачено создателям</div>
+      <div class="v" style="color:var(--gold)">${fmt(creatorPaid, 4)} ETH</div>
+      <div class="s">70% всех комиссий — правило Шервуда</div>
+    </div>
+  </div>
+  <div class="ana-note">Данные — из событий демо-симуляции. В продакшене: индексация
+  событий Buy/Sell/Graduated контрактов через The Graph (поддерживает Robinhood Chain).</div>`;
+}
+
+// ------------------------------------------------ profile page
+function profileView() {
+  const launched = tokens.map((t, i) => ({ t, i })).filter(x => x.t.mine);
+  const positions = tokens.map((t, i) => ({ t, i }))
+    .filter(x => x.t.myBal > 0.5 || Math.abs(x.t.myRealized) > 1e-9 || x.t.myCost > 1e-9);
+  let totVal = 0, totCost = 0, totReal = 0;
+  const posRows = positions.map(({ t, i }) => {
+    const val = t.myBal * price(t);
+    const pnl = val - t.myCost + t.myRealized;
+    totVal += val; totCost += t.myCost; totReal += t.myRealized;
+    return `
+    <div class="prow6" style="cursor:pointer" onclick="go('token',${i})">
+      <span style="display:flex;align-items:center;gap:8px">${t.img ? `<img src="${t.img}" style="width:26px;height:26px;border-radius:7px">` : ""}<b>${esc(t.symbol)}</b></span>
+      <span>${fmt(t.myBal, 0)}</span>
+      <span>${fmt(val, 4)} ETH</span>
+      <span>${fmt(t.myCost, 4)} ETH</span>
+      <span class="${pnl >= 0 ? "pnl-pos" : "pnl-neg"}">${pnl >= 0 ? "+" : ""}${fmt(pnl, 4)} ETH</span>
+      <span class="dim">${t.graduated ? "🎯" : fmt(progress(t), 0) + "%"}</span>
+    </div>`;
+  }).join("");
+  const totPnl = totVal - totCost + totReal;
+  const myTrades = tokens.flatMap((t, i) =>
+    t.trades.filter(tr => tr.addr === YOU).map(tr => ({ ...tr, sym: t.symbol, i })))
+    .sort((a, b) => b.t - a.t).slice(0, 15);
+  return `
+  <div class="pf-head">
+    <div class="pf-ava">🏹</div>
+    <div>
+      <div class="page-title" style="margin:0">Профиль</div>
+      <div class="dim mono">0xVolo…dya · баланс ${fmt(ethBalance, 4)} ETH</div>
+    </div>
+    <div style="margin-left:auto" class="about-stat">
+      <div class="k">Общий PnL</div>
+      <div class="v" style="color:${totPnl >= 0 ? "var(--leaf)" : "var(--red)"}">${totPnl >= 0 ? "+" : ""}${fmt(totPnl, 4)} ETH</div>
+      <div class="s">позиции ${fmt(totVal, 4)} · вложено ${fmt(totCost, 4)} · реализовано ${totReal >= 0 ? "+" : ""}${fmt(totReal, 4)}</div>
+    </div>
+  </div>
+
+  <div class="bottom-card" style="margin-top:0">
+    <div class="bt-tabs"><div class="bt-tab on">Мои позиции</div></div>
+    ${positions.length ? `
+    <div class="prow6 hdr"><span>Токен</span><span>Баланс</span><span>Стоимость</span><span>Вложено</span><span>PnL</span><span>Кривая</span></div>
+    ${posRows}` : '<div class="center">Пока нет позиций — купите первый токен.</div>'}
+  </div>
+
+  <div class="bottom-card">
+    <div class="bt-tabs"><div class="bt-tab on">Мои запуски</div></div>
+    ${launched.length ? `<div class="grid" style="padding-bottom:6px">${launched.map(x => tokenCard(x.t, x.i)).join("")}</div>`
+      : `<div class="center">Вы ещё не запускали токены. <a style="color:var(--gold);cursor:pointer" onclick="go('create')">Запустить первый →</a></div>`}
+  </div>
+
+  <div class="bottom-card">
+    <div class="bt-tabs"><div class="bt-tab on">Мои сделки</div></div>
+    ${myTrades.length ? `
+    <div class="trow hdr"><span>Тип</span><span>ETH</span><span>Токены</span><span>Токен</span><span>Время</span></div>
+    ${myTrades.map(tr => `
+    <div class="trow" style="cursor:pointer" onclick="go('token',${tr.i})">
+      <span class="${tr.side === "buy" ? "side-buy" : "side-sell"}">${tr.side === "buy" ? "Купил" : "Продал"}</span>
+      <span>${fmt(tr.eth, 4)}</span><span>${fmt(tr.tokens, 0)}</span>
+      <span><b>${esc(tr.sym)}</b></span><span class="dim">${fmtAgo(tr.t)}</span>
+    </div>`).join("")}` : '<div class="center">Сделок пока нет.</div>'}
   </div>`;
 }
 
