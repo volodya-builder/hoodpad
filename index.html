@@ -277,6 +277,96 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 .mono { font-family: ui-monospace, monospace; }
 .token-head-img { width: 68px; height: 68px; border-radius: 15px; object-fit: cover; background: var(--bg-soft); border: 1px solid var(--border); }
 
+/* ---------------- pons-style token page */
+.about-card {
+  background: linear-gradient(180deg, #131b15 0%, #101711 100%);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 22px 26px; margin-top: 26px;
+  display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; align-items: center;
+}
+.about-card h3 { font-family: var(--font-display); font-size: 20px; margin: 0 0 6px; }
+.about-links { display: flex; gap: 8px; flex-wrap: wrap; }
+.about-stat .k { font-size: 11.5px; color: var(--text-dim); font-weight: 800; text-transform: uppercase; letter-spacing: .4px; }
+.about-stat .v { font-size: 26px; font-weight: 800; color: var(--gold); font-variant-numeric: tabular-nums; }
+.about-stat .s { font-size: 12px; color: var(--text-dim); }
+.pons-layout { display: grid; grid-template-columns: 320px 1fr 300px; gap: 18px; margin-top: 18px; align-items: start; }
+@media (max-width: 1080px) { .pons-layout { grid-template-columns: 1fr 1fr; } .chart-panel { grid-column: 1 / -1; order: -1; } }
+@media (max-width: 720px) { .pons-layout { grid-template-columns: 1fr; } .chart-panel { grid-column: auto; } }
+
+/* trade panel (swap style) */
+.tp-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.tp-head img { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border); }
+.tp-head .n { font-weight: 800; font-size: 16px; }
+.tp-head .s { color: var(--gold); font-size: 12px; font-weight: 800; }
+.mode-tabs { display: flex; background: #0c120d; border: 1px solid var(--border); border-radius: 11px; padding: 3px; gap: 3px; margin-bottom: 14px; }
+.mode-tab { flex: 1; text-align: center; padding: 8px; border-radius: 8px; font-size: 13px; font-weight: 800; color: var(--text-dim); cursor: pointer; }
+.mode-tab.on { background: #1a241b; color: var(--text); }
+.swap-box { background: #0c120d; border: 1px solid var(--border); border-radius: 13px; padding: 14px 15px; }
+.swap-box .lbl { font-size: 11.5px; color: var(--text-dim); font-weight: 800; text-transform: uppercase; letter-spacing: .4px; display: flex; justify-content: space-between; }
+.swap-box input { border: none; background: transparent; padding: 6px 0 2px; font-size: 26px; font-weight: 800; box-shadow: none !important; font-variant-numeric: tabular-nums; }
+.swap-box .asset { display: inline-flex; align-items: center; gap: 7px; background: #131b15; border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; font-weight: 800; font-size: 13px; }
+.swap-box .asset img { width: 18px; height: 18px; border-radius: 5px; }
+.swap-row { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+.swap-mid { display: flex; justify-content: center; margin: -8px 0; position: relative; z-index: 2; }
+.swap-btn {
+  width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border);
+  background: #131b15; color: var(--gold); cursor: pointer; font-size: 15px;
+  display: flex; align-items: center; justify-content: center; transition: transform .2s;
+}
+.swap-btn:hover { transform: rotate(180deg); }
+.pct-row { display: flex; gap: 7px; margin-top: 14px; }
+.pct { flex: 1; text-align: center; font-size: 12px; font-weight: 800; color: var(--text-dim); border: 1px solid var(--border); border-radius: 9px; padding: 7px 0; cursor: pointer; background: #0c120d; }
+.pct:hover { color: var(--gold); border-color: var(--border-gold); }
+.slip-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--text-dim); margin: 14px 2px 0; }
+.slip-btn { font-size: 12px; font-weight: 800; color: var(--text); background: #0c120d; border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+
+/* chart panel */
+.chart-panel { background: linear-gradient(180deg, #131b15 0%, #101711 100%); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; }
+.chart-stats { display: flex; gap: 26px; flex-wrap: wrap; border-bottom: 1px solid #1a241b; padding-bottom: 13px; }
+.chart-stats .cs .k { font-size: 11px; color: var(--text-dim); font-weight: 800; text-transform: uppercase; letter-spacing: .4px; }
+.chart-stats .cs .v { font-size: 14.5px; font-weight: 800; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.chart-head { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 14px; flex-wrap: wrap; gap: 10px; }
+.big-cap { font-size: 34px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.5px; }
+.chg { font-size: 13px; font-weight: 800; margin-top: 2px; }
+.chg.up { color: var(--leaf); } .chg.down { color: var(--red); }
+.tf-row { display: flex; gap: 5px; }
+.tf { font-size: 12px; font-weight: 800; color: var(--text-dim); padding: 6px 10px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
+.tf.on { color: var(--gold); background: var(--gold-dim); border-color: var(--border-gold); }
+.chart-wrap { position: relative; margin-top: 8px; }
+.chart-tip {
+  position: absolute; pointer-events: none; display: none; z-index: 5;
+  background: #0c120d; border: 1px solid var(--border-gold); border-radius: 9px;
+  padding: 7px 10px; font-size: 12px; font-weight: 700; white-space: nowrap;
+  transform: translate(-50%, -130%);
+}
+.chart-tip .t { color: var(--text-dim); font-weight: 600; font-size: 11px; }
+
+/* chat */
+.chat-panel { background: linear-gradient(180deg, #131b15 0%, #101711 100%); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; max-height: 560px; }
+.chat-head { display: flex; justify-content: space-between; align-items: center; }
+.chat-head h3 { margin: 0; font-size: 17px; font-weight: 800; }
+.chat-count { font-size: 11px; font-weight: 800; background: var(--gold-dim); color: var(--gold); border-radius: 999px; padding: 3px 9px; }
+.chat-sub { font-size: 11.5px; color: var(--text-dim); margin: 6px 0 12px; }
+.chat-list { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 13px; padding-right: 4px; min-height: 220px; }
+.chat-msg { display: flex; gap: 9px; font-size: 12.5px; }
+.chat-ava { width: 26px; height: 26px; border-radius: 50%; background: #1a241b; border: 1px solid var(--border); flex: none; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--gold); }
+.chat-msg .who { font-weight: 800; font-size: 12px; }
+.chat-msg .when { color: var(--text-dim); font-weight: 600; font-size: 11px; margin-left: 6px; }
+.chat-msg .txt { color: #cdd6c8; margin-top: 2px; line-height: 1.45; word-break: break-word; }
+.chat-input-row { display: flex; gap: 8px; margin-top: 13px; }
+.chat-input-row input { padding: 10px 13px; font-size: 13.5px; }
+.chat-send { padding: 0 16px; border-radius: 11px; }
+
+/* trades / holders */
+.bottom-card { background: linear-gradient(180deg, #131b15 0%, #101711 100%); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin: 18px 0 60px; }
+.bt-tabs { display: flex; gap: 4px; margin-bottom: 6px; }
+.bt-tab { font-size: 13.5px; font-weight: 800; color: var(--text-dim); padding: 8px 14px; border-radius: 9px; cursor: pointer; }
+.bt-tab.on { color: var(--text); background: #1a241b; }
+.trow { display: grid; grid-template-columns: 70px 1fr 1fr 1fr 70px; gap: 10px; padding: 10px 4px; border-top: 1px solid #1a241b; font-size: 13px; align-items: center; font-variant-numeric: tabular-nums; }
+.trow.hdr { color: var(--text-dim); font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; border-top: none; }
+.side-buy { color: var(--leaf); font-weight: 800; }
+.side-sell { color: var(--red); font-weight: 800; }
+
 /* footer */
 footer { border-top: 1px solid #1a241b; padding: 34px 0 40px; margin-top: 20px; }
 .footer-inner { display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
@@ -339,32 +429,82 @@ const tokens = [];
 const emojiImg = (e, bg) => "data:image/svg+xml," + encodeURIComponent(
   `<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96'><rect width='96' height='96' rx='20' fill='${bg}'/><text x='48' y='62' font-size='44' text-anchor='middle'>${e}</text></svg>`);
 
+const YOU = "0xVolo…dya";
+
 function makeToken(name, symbol, desc, creator, img, x, tg) {
   return { name, symbol, desc, creator, img: img || "", x: x || "", tg: tg || "", site: "",
            eth: 0, sold: 0, graduated: false, migrated: false, myBal: 0,
-           creatorFees: 0, protoFees: 0 };
+           creatorFees: 0, protoFees: 0,
+           createdAt: Date.now(), history: [], trades: [], holders: {}, chat: [], ath: 0 };
 }
-function seed(t, ethIn) {
-  const net = ethIn * (1 - FEE);
-  const x = VIRT + t.eth, y = TOTAL - t.sold;
-  const out = y * net / (x + net);
-  t.sold += out; t.eth += net;
-  const fee = ethIn * FEE; t.creatorFees += fee * CREATOR_SHARE; t.protoFees += fee * (1 - CREATOR_SHARE);
+function randAddr() {
+  const h = "0123456789abcdef";
+  let s = "0x";
+  for (let i = 0; i < 4; i++) s += h[Math.floor(Math.random()*16)];
+  s += "…";
+  for (let i = 0; i < 4; i++) s += h[Math.floor(Math.random()*16)];
+  return s;
+}
+function record(t, side, ethAmt, tokAmt, addr, ts) {
+  t.trades.unshift({ side, eth: ethAmt, tokens: tokAmt, addr, t: ts });
+  if (t.trades.length > 60) t.trades.pop();
+  t.holders[addr] = (t.holders[addr] || 0) + (side === "buy" ? tokAmt : -tokAmt);
+  if (t.holders[addr] <= 1) delete t.holders[addr];
+  t.history.push({ t: ts, p: price(t) });
+  t.ath = Math.max(t.ath, mcap(t));
+}
+// simulated historical trade (random wallets, spread over time)
+function simTrade(t, side, amt, ts) {
+  if (side === "buy") {
+    const net = amt * (1 - FEE);
+    const x = VIRT + t.eth, y = TOTAL - t.sold;
+    let out = y * net / (x + net);
+    const remaining = CAP - t.sold;
+    if (out >= remaining) { out = remaining; t.graduated = true; }
+    t.sold += out; t.eth += net;
+    applyFee(t, amt - net);
+    record(t, "buy", amt, out, randAddr(), ts);
+  } else {
+    const tokIn = amt;
+    const outNet = quoteSell(t, tokIn);
+    t.eth -= outNet / (1 - FEE); t.sold -= tokIn;
+    applyFee(t, outNet / (1 - FEE) - outNet);
+    record(t, "sell", outNet, tokIn, randAddr(), ts);
+  }
+}
+function seedToken(t, targetEth, hoursAgo, chatSeeds) {
+  const start = Date.now() - hoursAgo * 3600e3;
+  t.createdAt = start;
+  t.history.push({ t: start, p: price(t) });
+  let ts = start;
+  while (t.eth < targetEth && !t.graduated) {
+    ts += (Date.now() - ts) * (0.04 + Math.random() * 0.1);
+    if (ts >= Date.now()) ts = Date.now() - Math.random() * 60e3;
+    if (Math.random() < 0.75 || t.sold < TOTAL * 0.05) {
+      simTrade(t, "buy", Math.min(0.03 + Math.random() * 0.35, targetEth - t.eth + 0.05), ts);
+    } else {
+      simTrade(t, "sell", t.sold * (0.01 + Math.random() * 0.05), ts);
+    }
+  }
+  (chatSeeds || []).forEach((m, i) => t.chat.push({
+    addr: randAddr(), text: m, t: start + (i + 1) * (Date.now() - start) / ((chatSeeds.length || 1) + 1),
+  }));
 }
 (function() {
   const a = makeToken("Hood Doge", "HDOGE", "Первая собака на Robinhood Chain.", "0x1a2…b3c", emojiImg("🐕","#1c2a1e"), "hooddoge", "hooddoge");
-  seed(a, 4.1);
+  seedToken(a, 4.1, 26, ["Первая собака Шервуда 🐕", "залетел на 0.5, летим к градации", "$HDOGE to the moon", "когда мишень? 🎯"]);
   const b = makeToken("Sherwood", "SHER", "Забираем у китов, раздаём комьюнити.", "0x9f4…e21", emojiImg("🏹","#25301b"));
-  seed(b, 6.566); b.sold = Math.min(b.sold, CAP); b.eth = Math.min(b.eth, 6.5);
+  seedToken(b, 6.6, 48, ["Стрела в яблочке 🎯", "ликвидность заперта, теперь только вверх", "холдим дальше"]);
+  b.sold = Math.min(b.sold, CAP); b.eth = Math.min(b.eth, 6.5);
   b.graduated = true; b.migrated = true;
   const c = makeToken("Robin Cat", "RCAT", "Кот, который тоже стреляет из лука.", "0x77d…901", emojiImg("🐱","#2a231c"), "robincat");
-  seed(c, 0.8);
+  seedToken(c, 0.8, 7, ["мяу 🐱", "тихо копим до мишени"]);
   tokens.push(a, b, c);
 })();
 
-const price = t => (VIRT + t.eth) / (TOTAL - t.sold);
-const mcap = t => price(t) * TOTAL;
-const progress = t => Math.min(100, t.sold / CAP * 100);
+function price(t) { return (VIRT + t.eth) / (TOTAL - t.sold); }
+function mcap(t) { return price(t) * TOTAL; }
+function progress(t) { return Math.min(100, t.sold / CAP * 100); }
 
 function quoteBuy(t, ethIn) {
   const net = ethIn * (1 - FEE);
@@ -393,6 +533,7 @@ function buy(t, ethIn, silent) {
   t.eth += net; t.sold += out; t.myBal += out;
   applyFee(t, spent - net);
   ethBalance -= spent;
+  record(t, "buy", spent, out, YOU, Date.now());
   if (!silent) { toast(`Куплено ${fmt(out,0)} ${t.symbol}` + (t.graduated ? " — стрела в яблочке! 🎯" : "")); render(); }
   return true;
 }
@@ -403,8 +544,20 @@ function sell(t, tokIn) {
   t.eth -= gross; t.sold -= tokIn; t.myBal -= tokIn;
   applyFee(t, gross - outNet);
   ethBalance += outNet;
+  record(t, "sell", outNet, tokIn, YOU, Date.now());
   toast(`Продано за ${fmt(outNet,4)} ETH`);
   render();
+}
+function fmtAgo(ts) {
+  const s = Math.max(1, (Date.now() - ts) / 1000);
+  if (s < 60) return Math.floor(s) + "с";
+  if (s < 3600) return Math.floor(s/60) + "м";
+  if (s < 86400) return Math.floor(s/3600) + "ч";
+  return Math.floor(s/86400) + "д";
+}
+function vol24(t) {
+  const cut = Date.now() - 86400e3;
+  return t.trades.reduce((s, tr) => tr.t >= cut ? s + tr.eth : s, 0);
 }
 function migrate(t) {
   t.migrated = true;
@@ -415,10 +568,10 @@ function migrate(t) {
 // ------------------------------------------------ ui
 const fmt = (n, d=4) => Number(n).toLocaleString("en-US", { maximumFractionDigits: d });
 const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-let view = { page: "home", idx: 0, tab: "buy" };
+let view = { page: "home", idx: 0, dir: "buy", tf: "1Ч", btab: "trades", slip: 1 };
 let draft = { consent: false, img: "", advOpen: false };
 function go(page, idx) {
-  view = { page, idx: idx ?? 0, tab: "buy" };
+  view = { page, idx: idx ?? 0, dir: "buy", tf: "1Ч", btab: "trades", slip: 1 };
   if (page === "create") draft = { consent: false, img: "", advOpen: false };
   render(); window.scrollTo(0,0);
 }
@@ -432,7 +585,8 @@ function render() {
   const m = document.getElementById("main");
   if (view.page === "home") m.innerHTML = homeView();
   else if (view.page === "create") { m.innerHTML = createView(); wireCreate(); }
-  else m.innerHTML = tokenView(tokens[view.idx]);
+  else { m.innerHTML = tokenView(tokens[view.idx]); wireChart();
+         const cl = document.getElementById("chatList"); if (cl) cl.scrollTop = cl.scrollHeight; }
 }
 
 // arrow-progress component: стрела летит к мишени-градации
@@ -684,81 +838,293 @@ function createToken() {
   render(); window.scrollTo(0,0);
 }
 
-// ------------------------------------------------ token page
-function tokenView(t) {
-  const p = price(t);
-  const links = [
-    t.x ? `<a href="https://x.com/${esc(t.x)}" target="_blank" style="color:var(--gold)">x.com/${esc(t.x)}</a>` : "",
-    t.tg ? `<a href="https://t.me/${esc(t.tg)}" target="_blank" style="color:var(--gold)">t.me/${esc(t.tg)}</a>` : "",
-    t.site ? `<a href="${esc(t.site)}" target="_blank" style="color:var(--gold)">${esc(t.site.replace(/^https?:\/\//,""))}</a>` : "",
-  ].filter(Boolean).join(" · ");
+// ------------------------------------------------ token page (Pons-style)
+const TFS = { "5М": 5*60e3, "1Ч": 3600e3, "6Ч": 6*3600e3, "1Д": 86400e3, "ВСЁ": Infinity };
+const ethIcon = "data:image/svg+xml," + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18'><circle cx='9' cy='9' r='9' fill='%23343f4f'/><path d='M9 2.5 L13 9 9 11.5 5 9z M9 12.7 L13 10.2 9 15.5 5 10.2z' fill='%23cfd8e6'/></svg>");
+
+function chartData(t) {
+  const win = TFS[view.tf] ?? Infinity;
+  const now = Date.now();
+  let pts = t.history.filter(p => now - p.t <= win);
+  if (pts.length < 2) {
+    const first = t.history.length ? t.history[0] : { t: t.createdAt, p: VIRT / TOTAL };
+    pts = [ { t: win === Infinity ? first.t : now - Math.min(win, now - first.t), p: pts.length ? pts[0].p : first.p }, ...pts ];
+  }
+  pts = [...pts, { t: now, p: price(t) }];
+  return pts;
+}
+function chartSvg(t) {
+  const pts = chartData(t);
+  const W = 660, H = 250, PADR = 58, PADB = 22, PADT = 10;
+  const t0 = pts[0].t, t1 = pts[pts.length-1].t || 1;
+  let pmin = Infinity, pmax = -Infinity;
+  pts.forEach(p => { pmin = Math.min(pmin, p.p); pmax = Math.max(pmax, p.p); });
+  if (pmax - pmin < pmax * 0.02) { pmax *= 1.01; pmin *= 0.99; }
+  const X = ts => (ts - t0) / Math.max(1, t1 - t0) * (W - PADR - 6) + 3;
+  const Y = p => PADT + (1 - (p - pmin) / (pmax - pmin)) * (H - PADT - PADB);
+  const px = pts.map(p => ({ x: X(p.t), y: Y(p.p), t: p.t, p: p.p }));
+  window._chartPts = px;
+  const line = px.map((p, i) => (i ? "L" : "M") + p.x.toFixed(1) + " " + p.y.toFixed(1)).join(" ");
+  const area = line + ` L${px[px.length-1].x.toFixed(1)} ${H-PADB} L${px[0].x.toFixed(1)} ${H-PADB} Z`;
+  const capOf = p => fmt(p * TOTAL, 2);
+  const grid = [pmax, (pmax+pmin)/2, pmin].map(p =>
+    `<line x1="0" x2="${W-PADR}" y1="${Y(p).toFixed(1)}" y2="${Y(p).toFixed(1)}" stroke="#1d2a1c" stroke-dasharray="3 5"/>` +
+    `<text x="${W-PADR+8}" y="${(Y(p)+4).toFixed(1)}" fill="#8fa08a" font-size="11" font-family="Manrope">${capOf(p)}</text>`
+  ).join("");
+  const times = [0.08, 0.5, 0.92].map(f => {
+    const ts = t0 + (t1 - t0) * f;
+    const d = new Date(ts);
+    const lbl = (Date.now() - ts > 86400e3)
+      ? `${d.getDate()}.${String(d.getMonth()+1).padStart(2,"0")}`
+      : `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+    return `<text x="${X(ts).toFixed(1)}" y="${H-6}" fill="#8fa08a" font-size="11" text-anchor="middle" font-family="Manrope">${lbl}</text>`;
+  }).join("");
+  const last = px[px.length-1];
   return `
-  <div class="token-layout">
-    <div><div class="card" style="cursor:default;transform:none">
-      <div class="card-title">
-        ${t.img ? `<img class="token-head-img" src="${t.img}" alt="">` : ""}
-        <h3 style="font-size:26px;font-family:var(--font-display)">${esc(t.name)} <span class="ticker">$${esc(t.symbol)}</span></h3>
-        ${t.graduated ? '<span class="badge">🎯 В яблочке</span>' : ""}
+  <svg id="chartSvg" viewBox="0 0 ${W} ${H}" style="width:100%;display:block" preserveAspectRatio="none">
+    <defs><linearGradient id="areaG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d9a93d" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#d9a93d" stop-opacity="0"/>
+    </linearGradient></defs>
+    ${grid}${times}
+    <path d="${area}" fill="url(#areaG)"/>
+    <path d="${line}" fill="none" stroke="#d9a93d" stroke-width="2" stroke-linejoin="round"/>
+    <line id="crossV" x1="0" x2="0" y1="${PADT}" y2="${H-PADB}" stroke="#8fa08a" stroke-dasharray="3 4" opacity="0"/>
+    <circle id="hoverDot" r="4" fill="#f0c25a" stroke="#0a0f0b" stroke-width="2" opacity="0"/>
+    <circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="4.5" fill="#f0c25a" stroke="#0a0f0b" stroke-width="2"/>
+  </svg>`;
+}
+function wireChart() {
+  const wrap = document.getElementById("chartWrap");
+  if (!wrap) return;
+  const svg = document.getElementById("chartSvg");
+  const tip = document.getElementById("chartTip");
+  const cv = document.getElementById("crossV");
+  const dot = document.getElementById("hoverDot");
+  wrap.onmousemove = (e) => {
+    const pts = window._chartPts || [];
+    if (!pts.length) return;
+    const r = svg.getBoundingClientRect();
+    const xr = (e.clientX - r.left) / r.width * 660;
+    let best = pts[0];
+    for (const p of pts) if (Math.abs(p.x - xr) < Math.abs(best.x - xr)) best = p;
+    cv.setAttribute("x1", best.x); cv.setAttribute("x2", best.x); cv.setAttribute("opacity", ".6");
+    dot.setAttribute("cx", best.x); dot.setAttribute("cy", best.y); dot.setAttribute("opacity", "1");
+    const d = new Date(best.t);
+    tip.style.display = "block";
+    tip.style.left = (best.x / 660 * r.width) + "px";
+    tip.style.top = (best.y / 250 * r.height) + "px";
+    tip.innerHTML = `${fmt(best.p * TOTAL, 2)} ETH <span class="t">кап · ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}</span>`;
+  };
+  wrap.onmouseleave = () => {
+    tip.style.display = "none"; cv.setAttribute("opacity", "0"); dot.setAttribute("opacity", "0");
+  };
+}
+
+function tokenView(t) {
+  const pts = chartData(t);
+  const chg = pts[0].p > 0 ? (pts[pts.length-1].p / pts[0].p - 1) * 100 : 0;
+  const isBuy = view.dir !== "sell";
+  const holders = Object.entries(t.holders).sort((a,b) => b[1]-a[1]);
+  const links = [
+    t.site ? `<a class="btn" style="padding:8px 14px;font-size:13px" href="${esc(t.site)}" target="_blank">🌐 Сайт</a>` : "",
+    t.x ? `<a class="btn" style="padding:8px 14px;font-size:13px" href="https://x.com/${esc(t.x)}" target="_blank">𝕏 ${esc(t.x)}</a>` : "",
+    t.tg ? `<a class="btn" style="padding:8px 14px;font-size:13px" href="https://t.me/${esc(t.tg)}" target="_blank">✈️ Telegram</a>` : "",
+    `<button class="btn" style="padding:8px 14px;font-size:13px" onclick="toast('Контракт: 0x7a3f…d21c (демо)')">📄 Контракт</button>`,
+    `<button class="btn" style="padding:8px 14px;font-size:13px" onclick="toast(${t.migrated ? "'Пул: Uniswap V3 (демо)'" : "'Пул появится после градации'"})">💧 Пул</button>`,
+  ].filter(Boolean).join("");
+
+  return `
+  <button class="btn back-btn" onclick="go('home')">‹ Назад</button>
+
+  <div class="about-card">
+    <div style="max-width:440px">
+      <h3>О токене</h3>
+      <div class="dim">${t.desc ? esc(t.desc) + " · " : ""}70% комиссий — создателю. Ликвидность запирается навсегда.</div>
+    </div>
+    <div class="about-stat">
+      <div class="k">Заработано создателем</div>
+      <div class="v">${fmt(t.creatorFees, 4)} ETH</div>
+      <div class="s">70% всех комиссий · ${esc(t.creator)}</div>
+    </div>
+    <div class="about-links">${links}</div>
+  </div>
+
+  <div class="pons-layout">
+    <!-- trade panel -->
+    <div class="panel" style="padding:20px">
+      <div class="tp-head">
+        ${t.img ? `<img src="${t.img}" alt="">` : ""}
+        <div><div class="n">${esc(t.name)}</div><div class="s">$${esc(t.symbol)}</div></div>
       </div>
-      ${t.desc ? `<p class="dim" style="margin-top:10px">${esc(t.desc)}</p>` : ""}
-      ${links ? `<p class="dim" style="margin-top:6px">${links}</p>` : ""}
-      <div class="stats-grid">
-        <div class="stat-card"><div class="k">Цена</div><div class="v">${p.toExponential(3)} ETH</div></div>
-        <div class="stat-card"><div class="k">Капитализация</div><div class="v">${fmt(mcap(t), 2)} ETH</div></div>
-        <div class="stat-card"><div class="k">Собрано</div><div class="v">${fmt(t.eth, 3)} ETH</div></div>
-        <div class="stat-card"><div class="k">До градации</div><div class="v">${fmt(progress(t), 1)}%</div></div>
+      ${t.graduated ? (t.migrated
+        ? `<div class="notice">🎯 Токен градуировал — торгуйте на Uniswap V3. Кривая закрыта.</div>`
+        : `<div class="notice">Кривая заполнена! Запустите миграцию ликвидности.</div>
+           <button class="btn btn-primary btn-block" onclick="migrate(tokens[${view.idx}])">Мигрировать на DEX</button>`)
+      : `
+      <div class="mode-tabs">
+        <div class="mode-tab on">Рынок</div>
+        <div class="mode-tab" onclick="toast('Лимитные ордера — скоро')">Лимит</div>
+        <div class="mode-tab" onclick="toast('Ордера — скоро')">Ордера</div>
       </div>
-      ${!t.graduated ? `<div style="margin-top:20px">${arrowProgress(progress(t))}</div>` : ""}
-      <div class="stats-grid" style="margin-top:12px">
-        <div class="stat-card"><div class="k">Ваш баланс</div><div class="v">${fmt(t.myBal, 0)}</div></div>
-        <div class="stat-card"><div class="k">Комиссии создателя (70%)</div><div class="v" style="color:var(--gold)">${fmt(t.creatorFees, 4)} ETH</div></div>
+      <div class="swap-box">
+        <div class="lbl"><span>${isBuy ? "Платите" : "Продаёте"}</span>
+          <span>доступно ${isBuy ? fmt(ethBalance, 4) + " ETH" : fmt(t.myBal, 0)}</span></div>
+        <input id="giveAmt" placeholder="0" inputmode="decimal" oninput="updateSwap()" />
+        <div class="swap-row">
+          <span class="dim">$0.00</span>
+          <span class="asset">${isBuy
+            ? `<img src="${ethIcon}"> ETH`
+            : `${t.img ? `<img src="${t.img}">` : ""} ${esc(t.symbol)}`}</span>
+        </div>
       </div>
-      <p class="dim" style="margin-top:18px">Создатель: <span class="mono">${esc(t.creator)}</span></p>
-    </div></div>
-    <div>${tradePanel(t)}</div>
+      <div class="swap-mid"><button class="swap-btn" onclick="view.dir='${isBuy ? "sell" : "buy"}';render()">⇅</button></div>
+      <div class="swap-box">
+        <div class="lbl"><span>Получаете</span><span></span></div>
+        <input id="getAmt" placeholder="0" readonly />
+        <div class="swap-row">
+          <span class="dim"></span>
+          <span class="asset">${isBuy
+            ? `${t.img ? `<img src="${t.img}">` : ""} ${esc(t.symbol)}`
+            : `<img src="${ethIcon}"> ETH`}</span>
+        </div>
+      </div>
+      <div class="pct-row">
+        <div class="pct" onclick="setPct(0.25)">25%</div>
+        <div class="pct" onclick="setPct(0.5)">50%</div>
+        <div class="pct" onclick="setPct(0.75)">75%</div>
+        <div class="pct" onclick="setPct(1)">100%</div>
+      </div>
+      <div class="slip-row">
+        <span>Проскальзывание</span>
+        <button class="slip-btn" onclick="cycleSlip()">${view.slip}% ⚙ Настроить</button>
+      </div>
+      <div style="margin-top:14px">
+        <button class="btn btn-primary btn-block" id="swapCta" onclick="execSwap()" disabled>Введите сумму</button>
+      </div>
+      <p class="dim" style="margin:12px 0 0">Комиссия 1% · создатель получает 70%</p>`}
+    </div>
+
+    <!-- chart panel -->
+    <div class="chart-panel">
+      <div class="chart-stats">
+        <div class="cs"><div class="k">Капитализация</div><div class="v">${fmt(mcap(t), 2)} ETH</div></div>
+        <div class="cs"><div class="k">Ликвидность</div><div class="v">${fmt(t.eth, 3)} ETH</div></div>
+        <div class="cs"><div class="k">Объём 24ч</div><div class="v">${fmt(vol24(t), 3)} ETH</div></div>
+        <div class="cs"><div class="k">ATH</div><div class="v">${fmt(t.ath, 2)} ETH</div></div>
+        <div class="cs"><div class="k">До градации</div><div class="v">${t.graduated ? "🎯 100%" : fmt(progress(t), 1) + "%"}</div></div>
+      </div>
+      <div class="chart-head">
+        <div>
+          <div class="big-cap">${fmt(mcap(t), 2)} ETH</div>
+          <div class="chg ${chg >= 0 ? "up" : "down"}">${chg >= 0 ? "+" : ""}${fmt(chg, 2)}% · ${esc(view.tf)}</div>
+        </div>
+        <div class="tf-row">${Object.keys(TFS).map(k =>
+          `<div class="tf ${view.tf === k ? "on" : ""}" onclick="view.tf='${k}';render()">${k}</div>`).join("")}
+        </div>
+      </div>
+      <div class="chart-wrap" id="chartWrap">
+        ${chartSvg(t)}
+        <div class="chart-tip" id="chartTip"></div>
+      </div>
+      ${!t.graduated ? `<div style="margin-top:10px">${arrowProgress(progress(t))}</div>` : ""}
+    </div>
+
+    <!-- chat -->
+    <div class="chat-panel">
+      <div class="chat-head"><h3>Чат</h3><span class="chat-count">${t.chat.length}</span></div>
+      <div class="chat-sub">Писать могут все — холд не нужен. Будьте взаимно вежливы.</div>
+      <div class="chat-list" id="chatList">
+        ${t.chat.map(m => `
+        <div class="chat-msg">
+          <div class="chat-ava">${m.addr === YOU ? "🏹" : "👤"}</div>
+          <div>
+            <span class="who">${esc(m.addr)}</span><span class="when">${fmtAgo(m.t)}</span>
+            <div class="txt">${esc(m.text)}</div>
+          </div>
+        </div>`).join("")}
+      </div>
+      <div class="chat-input-row">
+        <input id="chatInput" placeholder="Сообщение…" maxlength="280"
+          onkeydown="if(event.key==='Enter')sendChat()" />
+        <button class="btn btn-primary chat-send" onclick="sendChat()">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- trades / holders -->
+  <div class="bottom-card">
+    <div class="bt-tabs">
+      <div class="bt-tab ${view.btab !== "holders" ? "on" : ""}" onclick="view.btab='trades';render()">Последние сделки</div>
+      <div class="bt-tab ${view.btab === "holders" ? "on" : ""}" onclick="view.btab='holders';render()">Держатели <span class="dim">${holders.length}</span></div>
+    </div>
+    ${view.btab === "holders" ? `
+      <div class="trow hdr"><span>#</span><span>Кошелёк</span><span>Баланс</span><span>Доля</span><span></span></div>
+      ${holders.slice(0, 12).map(([addr, bal], i) => `
+      <div class="trow">
+        <span class="dim">${i+1}</span>
+        <span class="mono">${esc(addr)}${addr === YOU ? ' <span style="color:var(--gold)">(вы)</span>' : ""}${addr === t.creator ? ' <span class="dim">создатель</span>' : ""}</span>
+        <span>${fmt(bal, 0)}</span>
+        <span>${fmt(bal / TOTAL * 100, 2)}%</span><span></span>
+      </div>`).join("") || '<div class="center">Пока нет держателей</div>'}
+    ` : `
+      <div class="trow hdr"><span>Тип</span><span>ETH</span><span>${esc(t.symbol)}</span><span>Кошелёк</span><span>Время</span></div>
+      ${t.trades.slice(0, 14).map(tr => `
+      <div class="trow">
+        <span class="${tr.side === "buy" ? "side-buy" : "side-sell"}">${tr.side === "buy" ? "Купил" : "Продал"}</span>
+        <span>${fmt(tr.eth, 4)}</span>
+        <span>${fmt(tr.tokens, 0)}</span>
+        <span class="mono">${esc(tr.addr)}${tr.addr === YOU ? ' <span style="color:var(--gold)">(вы)</span>' : ""}</span>
+        <span class="dim">${fmtAgo(tr.t)}</span>
+      </div>`).join("") || '<div class="center">Пока нет сделок</div>'}
+    `}
   </div>`;
 }
 
-function tradePanel(t) {
-  if (t.graduated && t.migrated) return `
-    <div class="panel">
-      <div class="notice">🎯 Стрела в яблочке — токен градуировал, ликвидность заперта на DEX навсегда. Торгуйте на Uniswap V3.</div>
-    </div>`;
-  if (t.graduated) return `
-    <div class="panel">
-      <div class="notice">Кривая заполнена! Кто угодно может запустить миграцию ликвидности.</div>
-      <button class="btn btn-primary btn-block" onclick="migrate(tokens[${view.idx}])">Мигрировать ликвидность на DEX</button>
-    </div>`;
-  const isBuy = view.tab === "buy";
-  return `
-  <div class="panel">
-    <div class="tabs">
-      <div class="tab ${isBuy ? "active-buy" : ""}" onclick="view.tab='buy';render()">Купить</div>
-      <div class="tab ${!isBuy ? "active-sell" : ""}" onclick="view.tab='sell';render()">Продать</div>
-    </div>
-    <label>${isBuy ? "Вы платите (ETH)" : `Вы продаёте (${esc(t.symbol)})`}</label>
-    <input id="amt" placeholder="0.0" inputmode="decimal" oninput="updateQuote()" />
-    ${!isBuy ? `<p class="dim" style="margin:6px 0 0">Баланс: ${fmt(t.myBal, 0)}
-      <a href="#" onclick="event.preventDefault();document.getElementById('amt').value=${t.myBal};updateQuote()" style="color:var(--gold)">макс</a></p>` : ""}
-    <div class="quote-box"><span>Вы получите (оценка)</span><b id="quoteOut">—</b></div>
-    <button class="btn btn-block ${isBuy ? "btn-primary" : "btn-danger"}" onclick="doTrade()">
-      ${isBuy ? "Купить" : "Продать"} ${esc(t.symbol)}</button>
-    <p class="dim" style="margin-top:12px">Комиссия 1% · создатель получает 70% комиссий</p>
-  </div>`;
-}
-function updateQuote() {
+function setPct(p) {
   const t = tokens[view.idx];
-  const v = parseFloat(document.getElementById("amt").value) || 0;
-  const out = document.getElementById("quoteOut");
-  if (v <= 0) { out.textContent = "—"; return; }
-  out.textContent = view.tab === "buy"
-    ? `${fmt(Math.min(quoteBuy(t, v), CAP - t.sold), 0)} ${t.symbol}`
-    : `${fmt(quoteSell(t, v), 6)} ETH`;
+  const isBuy = view.dir !== "sell";
+  const avail = isBuy ? ethBalance * 0.999 : t.myBal;
+  const el = document.getElementById("giveAmt");
+  el.value = isBuy ? (avail * p).toFixed(4) : Math.floor(avail * p);
+  updateSwap();
 }
-function doTrade() {
+function cycleSlip() {
+  const order = [0.5, 1, 2, 5];
+  view.slip = order[(order.indexOf(view.slip) + 1) % order.length];
+  render();
+}
+function updateSwap() {
   const t = tokens[view.idx];
-  const v = parseFloat(document.getElementById("amt").value) || 0;
-  view.tab === "buy" ? buy(t, v) : sell(t, v);
+  const isBuy = view.dir !== "sell";
+  const v = parseFloat(document.getElementById("giveAmt").value) || 0;
+  const get = document.getElementById("getAmt");
+  const cta = document.getElementById("swapCta");
+  if (v <= 0) { get.value = ""; cta.disabled = true; cta.textContent = "Введите сумму"; return; }
+  if (isBuy) {
+    get.value = fmt(Math.min(quoteBuy(t, v), CAP - t.sold), 0);
+    cta.textContent = `Купить ${esc(t.symbol)}`;
+  } else {
+    get.value = fmt(quoteSell(t, v), 6);
+    cta.textContent = `Продать ${esc(t.symbol)}`;
+  }
+  cta.disabled = false;
+}
+function execSwap() {
+  const t = tokens[view.idx];
+  const v = parseFloat(document.getElementById("giveAmt").value) || 0;
+  view.dir !== "sell" ? buy(t, v) : sell(t, v);
+}
+function sendChat() {
+  const t = tokens[view.idx];
+  const el = document.getElementById("chatInput");
+  const text = el.value.trim();
+  if (!text) return;
+  t.chat.push({ addr: YOU, text, t: Date.now() });
+  el.value = "";
+  render();
+  const list = document.getElementById("chatList");
+  if (list) list.scrollTop = list.scrollHeight;
 }
 
 render();
