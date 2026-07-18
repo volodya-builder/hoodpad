@@ -76,6 +76,12 @@ export default function App() {
   const { lang, t, setLang } = useLang();
   const route = useHashRoute();
   const [wallet, setWallet] = useState(null); // { account, walletClient }
+  const [walletMenu, setWalletMenu] = useState(false);
+  useEffect(() => {
+    const close = (e) => { if (!e.target.closest(".wallet-wrap")) setWalletMenu(false); };
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, []);
   const [searchOpen, setSearchOpen] = useState(false);
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem("hood_theme") || ""; } catch (e) { return ""; }
@@ -167,7 +173,18 @@ export default function App() {
               {theme === "light" ? "☾" : "☀"}
             </button>
             {wallet ? (
-              <a className="btn mono" href="#/profile" title="Профиль">{short(wallet.account)}</a>
+              <div className="wallet-wrap">
+                <button className="btn mono" onClick={() => setWalletMenu(!walletMenu)}>
+                  {short(wallet.account)} ▾
+                </button>
+                <div className={`wallet-menu ${walletMenu ? "open" : ""}`}>
+                  <a className="wallet-item" href="#/profile" onClick={() => setWalletMenu(false)}
+                     style={{ display: "block" }}>{t("Профиль")}</a>
+                  <div className="wallet-item" onClick={() => { setWallet(null); setWalletMenu(false); }}>
+                    {t("Отключить")}
+                  </div>
+                </div>
+              </div>
             ) : (
               <button className="btn btn-primary" onClick={connect}>
                 {t("Подключить кошелёк")}

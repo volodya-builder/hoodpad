@@ -130,6 +130,8 @@ const EN = {
   "Дополнительно": "Advanced",
   "Кошелёк создателя": "Creator wallet",
   "Сайт": "Website",
+  "Назад": "Back",
+  "Отключить": "Disconnect",
   "Продукт": "Product",
   "Правовое": "Legal",
   "Создать": "Create",

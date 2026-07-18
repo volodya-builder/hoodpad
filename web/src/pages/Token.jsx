@@ -228,6 +228,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const mcapUsd = usd(mcapEth * rate);
 
   return (
+    <>
+    <a className="btn back-btn" href="#/">‹ {t("Назад")}</a>
     <div className="token-layout">
       <div>
         <div className="card" style={{ cursor: "default", transform: "none" }}>
@@ -487,6 +489,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         <Chat tokenAddress={tokenAddress} wallet={wallet} onConnect={onConnect} />
       </div>
     </div>
+    </>
   );
 }
 
