@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HoodPad — demo</title>
+<style>
+:root {
+  --bg: #0b0e11; --bg-soft: #12161b; --card: #171c23; --card-hover: #1d232c;
+  --border: #262d38; --text: #eef2f6; --text-dim: #8b95a3;
+  --accent: #00c805; --accent-dim: #00c80522; --red: #ff5b5b; --radius: 14px;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); min-height: 100vh; }
+a { color: inherit; text-decoration: none; }
+.container { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+header { border-bottom: 1px solid var(--border); background: rgba(11,14,17,.85); backdrop-filter: blur(8px); position: sticky; top: 0; z-index: 10; }
+.header-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+.logo { font-size: 20px; font-weight: 800; letter-spacing: -.5px; cursor: pointer; }
+.logo .dot { color: var(--accent); }
+.nav { display: flex; gap: 8px; align-items: center; }
+.btn { border: 1px solid var(--border); background: var(--card); color: var(--text); padding: 10px 18px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .15s ease; }
+.btn:hover { background: var(--card-hover); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #04150a; }
+.btn-primary:hover { background: #21e04a; }
+.btn-danger { background: var(--red); border-color: var(--red); color: #fff; }
+.btn-block { width: 100%; padding: 13px; font-size: 15px; }
+.hero { text-align: center; padding: 56px 0 36px; }
+.hero h1 { font-size: 40px; font-weight: 800; letter-spacing: -1.5px; margin: 0 0 12px; }
+.hero h1 .green { color: var(--accent); }
+.hero p { color: var(--text-dim); font-size: 16px; margin: 0 0 26px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; padding-bottom: 64px; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; cursor: pointer; transition: all .15s ease; }
+.card:hover { background: var(--card-hover); transform: translateY(-2px); }
+.card-title { display: flex; justify-content: space-between; align-items: baseline; }
+.card-title h3 { margin: 0; font-size: 17px; }
+.ticker { color: var(--text-dim); font-size: 13px; font-weight: 600; }
+.stat-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-dim); margin-top: 10px; }
+.stat-row b { color: var(--text); font-weight: 600; }
+.progress { height: 7px; border-radius: 4px; background: var(--bg-soft); overflow: hidden; margin-top: 14px; }
+.progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), #7dff9b); border-radius: 4px; transition: width .4s ease; }
+.badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--accent-dim); color: var(--accent); text-transform: uppercase; letter-spacing: .5px; }
+.panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; max-width: 520px; margin: 32px auto 64px; }
+.panel h2 { margin: 0 0 8px; letter-spacing: -.5px; }
+label { display: block; font-size: 13px; color: var(--text-dim); margin: 16px 0 6px; font-weight: 600; }
+input, textarea { width: 100%; background: var(--bg-soft); border: 1px solid var(--border); color: var(--text); border-radius: 10px; padding: 12px 14px; font-size: 15px; outline: none; }
+input:focus, textarea:focus { border-color: var(--accent); }
+.token-layout { display: grid; grid-template-columns: 1fr 380px; gap: 20px; padding: 32px 0 64px; }
+@media (max-width: 860px) { .token-layout { grid-template-columns: 1fr; } }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 18px; }
+.stat-card { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+.stat-card .k { font-size: 12px; color: var(--text-dim); font-weight: 600; }
+.stat-card .v { font-size: 17px; font-weight: 700; margin-top: 4px; }
+.tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+.tab { flex: 1; text-align: center; padding: 10px; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; background: var(--bg-soft); border: 1px solid var(--border); color: var(--text-dim); }
+.tab.active-buy { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+.tab.active-sell { background: #ff5b5b22; border-color: var(--red); color: var(--red); }
+.quote-box { background: var(--bg-soft); border-radius: 10px; padding: 12px 14px; font-size: 13px; color: var(--text-dim); margin: 14px 0; display: flex; justify-content: space-between; }
+.quote-box b { color: var(--text); }
+.notice { background: var(--accent-dim); border: 1px solid var(--accent); color: var(--accent); border-radius: 10px; padding: 12px 16px; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+.dim { color: var(--text-dim); font-size: 13px; }
+.center { text-align: center; padding: 48px 0; color: var(--text-dim); }
+.demo-banner { background: #ffb01522; border-bottom: 1px solid #ffb015; color: #ffb015; text-align: center; font-size: 13px; font-weight: 600; padding: 7px; }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--card); border: 1px solid var(--accent); color: var(--text); padding: 12px 22px; border-radius: 12px; font-size: 14px; font-weight: 600; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 99; }
+.toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="demo-banner">ДЕМО-РЕЖИМ — блокчейн симулируется в браузере. Ваш демо-баланс: <span id="balTop">10.000</span> ETH</div>
+<header><div class="container header-inner">
+  <a class="logo" onclick="go('home')">hood<span class="dot">pad</span></a>
+  <nav class="nav">
+    <span class="dim">Robinhood Chain</span>
+    <button class="btn" onclick="go('create')">+ Запустить токен</button>
+    <span class="btn" style="font-family:ui-monospace,monospace;font-size:13px">0xVolo…dya</span>
+  </nav>
+</div></header>
+<main class="container" id="main"></main>
+<div class="toast" id="toast"></div>
+
+<script>
+// ------------------------------------------------ simulated chain
+const VIRT = 1.625, TOTAL = 1e9, CAP = 8e8, FEE = 0.01;
+let ethBalance = 10;
+const tokens = [];
+
+function makeToken(name, symbol, desc, creator) {
+  return { name, symbol, desc, creator, eth: 0, sold: 0, graduated: false,
+           migrated: false, myBal: 0, creatorFees: 0, protoFees: 0 };
+}
+// pre-seeded demo tokens with some progress
+function seed(t, ethIn) { // simulate buys without balance
+  const net = ethIn * (1 - FEE);
+  const x = VIRT + t.eth, y = TOTAL - t.sold;
+  const out = y * net / (x + net);
+  t.sold += out; t.eth += net;
+  const fee = ethIn * FEE; t.creatorFees += fee/2; t.protoFees += fee/2;
+}
+(function() {
+  const a = makeToken("Hood Doge", "HDOGE", "Первая собака на Robinhood Chain.", "0x1a2…b3c");
+  seed(a, 4.1);
+  const b = makeToken("Sherwood", "SHER", "Забираем у китов, раздаём комьюнити.", "0x9f4…e21");
+  seed(b, 6.566); b.graduated = b.sold >= CAP * 0.999; if (b.sold > CAP) b.sold = CAP;
+  if (b.eth > 6.5) b.eth = 6.5; b.graduated = true; b.migrated = true;
+  const c = makeToken("Robin Cat", "RCAT", "Кот, который тоже стреляет из лука.", "0x77d…901");
+  seed(c, 0.8);
+  tokens.push(a, b, c);
+})();
+
+const price = t => (VIRT + t.eth) / (TOTAL - t.sold);
+const mcap = t => price(t) * TOTAL;
+const progress = t => Math.min(100, t.sold / CAP * 100);
+
+function quoteBuy(t, ethIn) {
+  const net = ethIn * (1 - FEE);
+  const x = VIRT + t.eth, y = TOTAL - t.sold;
+  return y * net / (x + net);
+}
+function quoteSell(t, tokIn) {
+  const x = VIRT + t.eth, y = TOTAL - t.sold;
+  return (x * tokIn / (y + tokIn)) * (1 - FEE);
+}
+
+function buy(t, ethIn) {
+  if (ethIn <= 0 || ethIn > ethBalance) return toast("Недостаточно ETH");
+  let out = quoteBuy(t, ethIn), spent = ethIn;
+  const remaining = CAP - t.sold;
+  if (out >= remaining) { // partial fill to cap
+    out = remaining;
+    const x = VIRT + t.eth, y = TOTAL - t.sold;
+    const ethNeeded = x * out / (y - out);
+    spent = ethNeeded / (1 - FEE);
+    t.graduated = true;
+  }
+  const net = spent * (1 - FEE), fee = spent - net;
+  t.eth += net; t.sold += out; t.myBal += out;
+  t.creatorFees += fee/2; t.protoFees += fee/2;
+  ethBalance -= spent;
+  toast(`Куплено ${fmt(out,0)} ${t.symbol}` + (t.graduated ? " — ГРАДАЦИЯ! 🎓" : ""));
+  render();
+}
+function sell(t, tokIn) {
+  if (tokIn <= 0 || tokIn > t.myBal) return toast("Недостаточно токенов");
+  const outNet = quoteSell(t, tokIn);
+  const gross = outNet / (1 - FEE), fee = gross - outNet;
+  t.eth -= gross; t.sold -= tokIn; t.myBal -= tokIn;
+  t.creatorFees += fee/2; t.protoFees += fee/2;
+  ethBalance += outNet;
+  toast(`Продано за ${fmt(outNet,4)} ETH`);
+  render();
+}
+function migrate(t) {
+  t.migrated = true;
+  toast("Ликвидность мигрирована на Uniswap V3 и заперта навсегда 🔒");
+  render();
+}
+
+// ------------------------------------------------ ui
+const fmt = (n, d=4) => Number(n).toLocaleString("en-US", { maximumFractionDigits: d });
+let view = { page: "home", idx: 0, tab: "buy" };
+function go(page, idx) { view = { page, idx: idx ?? 0, tab: "buy" }; render(); window.scrollTo(0,0); }
+function toast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg; el.classList.add("show");
+  clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("show"), 2600);
+}
+
+function render() {
+  document.getElementById("balTop").textContent = fmt(ethBalance, 3);
+  const m = document.getElementById("main");
+  if (view.page === "home") m.innerHTML = homeView();
+  else if (view.page === "create") m.innerHTML = createView();
+  else m.innerHTML = tokenView(tokens[view.idx]);
+}
+
+function homeView() {
+  return `
+  <section class="hero">
+    <h1>Запусти токен <span class="green">в одну транзакцию</span></h1>
+    <p>Честный запуск по бондинг-кривой на Robinhood Chain. Без пресейла и командных
+    аллокаций, ликвидность запирается навсегда. Создатель получает 50% комиссий.</p>
+    <button class="btn btn-primary" style="padding:13px 28px" onclick="go('create')">Запустить свой токен</button>
+  </section>
+  <div class="grid">${tokens.map((t, i) => `
+    <div class="card" onclick="go('token', ${i})">
+      <div class="card-title"><h3>${t.name}</h3><span class="ticker">$${t.symbol}</span></div>
+      <div class="stat-row"><span>Капитализация</span><b>${fmt(mcap(t), 2)} ETH</b></div>
+      <div class="stat-row"><span>Собрано</span><b>${fmt(t.eth, 3)} / 6.5 ETH</b></div>
+      ${t.graduated
+        ? `<div style="margin-top:14px"><span class="badge">Graduated · на DEX</span></div>`
+        : `<div class="progress"><div style="width:${progress(t)}%"></div></div>`}
+    </div>`).join("")}
+  </div>`;
+}
+
+function createView() {
+  return `
+  <div class="panel">
+    <h2>Запустить токен</h2>
+    <p class="dim">Сапплай 1 млрд · 80% на кривой · градация на 6.5 ETH ·
+    вы получаете 50% каждой комиссии.</p>
+    <label>Название</label><input id="fName" placeholder="Volodya Coin" maxlength="48" />
+    <label>Тикер</label><input id="fSym" placeholder="VOLO" maxlength="12" />
+    <label>Описание (необязательно)</label><textarea id="fDesc" rows="3" placeholder="О чём этот токен?"></textarea>
+    <label>Первая покупка в ETH (защита от снайперов)</label><input id="fBuy" placeholder="0.1" inputmode="decimal" />
+    <div style="margin-top:24px">
+      <button class="btn btn-primary btn-block" onclick="createToken()">Запустить токен</button>
+    </div>
+  </div>`;
+}
+function createToken() {
+  const name = document.getElementById("fName").value.trim();
+  const sym = document.getElementById("fSym").value.trim().toUpperCase();
+  const desc = document.getElementById("fDesc").value.trim();
+  const first = parseFloat(document.getElementById("fBuy").value) || 0;
+  if (!name || !sym) return toast("Нужны название и тикер");
+  const t = makeToken(name, sym, desc, "0xVolo…dya (вы)");
+  t.mine = true;
+  tokens.unshift(t);
+  toast(`Токен $${sym} запущен! 🚀`);
+  view = { page: "token", idx: 0, tab: "buy" };
+  if (first > 0) buy(t, first); else render();
+  window.scrollTo(0,0);
+}
+
+function tokenView(t) {
+  const p = price(t);
+  return `
+  <div class="token-layout">
+    <div><div class="card" style="cursor:default;transform:none">
+      <div class="card-title">
+        <h3 style="font-size:24px">${t.name} <span class="ticker">$${t.symbol}</span></h3>
+        ${t.graduated ? '<span class="badge">Graduated</span>' : ""}
+      </div>
+      ${t.desc ? `<p class="dim" style="margin-top:10px">${t.desc}</p>` : ""}
+      <div class="stats-grid">
+        <div class="stat-card"><div class="k">Цена</div><div class="v">${p.toExponential(3)} ETH</div></div>
+        <div class="stat-card"><div class="k">Капитализация</div><div class="v">${fmt(mcap(t), 2)} ETH</div></div>
+        <div class="stat-card"><div class="k">Собрано</div><div class="v">${fmt(t.eth, 3)} ETH</div></div>
+        <div class="stat-card"><div class="k">Прогресс кривой</div><div class="v">${fmt(progress(t), 1)}%</div></div>
+      </div>
+      ${!t.graduated ? `<div class="progress" style="margin-top:18px"><div style="width:${progress(t)}%"></div></div>` : ""}
+      <div class="stats-grid" style="margin-top:12px">
+        <div class="stat-card"><div class="k">Ваш баланс</div><div class="v">${fmt(t.myBal, 0)}</div></div>
+        <div class="stat-card"><div class="k">Комиссии создателя</div><div class="v">${fmt(t.creatorFees, 4)} ETH</div></div>
+      </div>
+      <p class="dim" style="margin-top:18px">Создатель: <span style="font-family:ui-monospace,monospace">${t.creator}</span></p>
+    </div></div>
+    <div>${tradePanel(t)}</div>
+  </div>`;
+}
+
+function tradePanel(t) {
+  if (t.graduated && t.migrated) return `
+    <div class="panel" style="margin:0;max-width:none">
+      <div class="notice">Токен градуировал — ликвидность заперта на DEX навсегда. Торгуйте на Uniswap V3.</div>
+    </div>`;
+  if (t.graduated) return `
+    <div class="panel" style="margin:0;max-width:none">
+      <div class="notice">Кривая заполнена! Кто угодно может запустить миграцию ликвидности.</div>
+      <button class="btn btn-primary btn-block" onclick="migrate(tokens[${view.idx}])">Мигрировать ликвидность на DEX</button>
+    </div>`;
+  const isBuy = view.tab === "buy";
+  return `
+  <div class="panel" style="margin:0;max-width:none">
+    <div class="tabs">
+      <div class="tab ${isBuy ? "active-buy" : ""}" onclick="view.tab='buy';render()">Купить</div>
+      <div class="tab ${!isBuy ? "active-sell" : ""}" onclick="view.tab='sell';render()">Продать</div>
+    </div>
+    <label>${isBuy ? "Вы платите (ETH)" : `Вы продаёте (${t.symbol})`}</label>
+    <input id="amt" placeholder="0.0" inputmode="decimal" oninput="updateQuote()" />
+    ${!isBuy ? `<p class="dim" style="margin:6px 0 0">Баланс: ${fmt(t.myBal, 0)}
+      <a href="#" onclick="event.preventDefault();document.getElementById('amt').value=${t.myBal};updateQuote()" style="color:var(--accent)">макс</a></p>` : ""}
+    <div class="quote-box"><span>Вы получите (оценка)</span><b id="quoteOut">—</b></div>
+    <button class="btn btn-block ${isBuy ? "btn-primary" : "btn-danger"}" onclick="doTrade()">
+      ${isBuy ? "Купить" : "Продать"} ${t.symbol}</button>
+    <p class="dim" style="margin-top:12px">Комиссия 1% · создатель получает 50% комиссий</p>
+  </div>`;
+}
+function updateQuote() {
+  const t = tokens[view.idx];
+  const v = parseFloat(document.getElementById("amt").value) || 0;
+  const out = document.getElementById("quoteOut");
+  if (v <= 0) { out.textContent = "—"; return; }
+  out.textContent = view.tab === "buy"
+    ? `${fmt(Math.min(quoteBuy(t, v), CAP - t.sold), 0)} ${t.symbol}`
+    : `${fmt(quoteSell(t, v), 6)} ETH`;
+}
+function doTrade() {
+  const t = tokens[view.idx];
+  const v = parseFloat(document.getElementById("amt").value) || 0;
+  view.tab === "buy" ? buy(t, v) : sell(t, v);
+}
+
+render();
+</script>
+</body>
+</html>
