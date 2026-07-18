@@ -7,6 +7,7 @@ import Profile from "./pages/Profile.jsx";
 import { connectWallet, hasWallet, short, fmt } from "./lib/web3.js";
 import { CHAIN, FACTORY_ADDRESS } from "./lib/config.js";
 import { loadTokens } from "./lib/data.js";
+import { useEthUsd, usd } from "./lib/price.js";
 import { formatEther } from "viem";
 
 function useHashRoute() {
@@ -20,6 +21,7 @@ function useHashRoute() {
 }
 
 function SearchModal({ open, onClose }) {
+  const rate = useEthUsd();
   const [q, setQ] = useState("");
   const [tokens, setTokens] = useState(null);
   useEffect(() => {
@@ -56,7 +58,7 @@ function SearchModal({ open, onClose }) {
               {t.meta.image && <img src={t.meta.image} alt="" />}
               <span className="n">{t.name} <span className="ticker">${t.symbol}</span></span>
               <span className="m">
-                {fmt(Number(formatEther(t.price)) * 1e9, 2)} ETH{t.graduated ? " · 🎯" : ""}
+                {usd(Number(formatEther(t.price)) * 1e9 * rate)}{t.graduated ? " · 🎯" : ""}
               </span>
             </div>
           ))}

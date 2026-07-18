@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { formatEther } from "viem";
 import { publicClient, fmt } from "../lib/web3.js";
+import { useEthUsd, usd } from "../lib/price.js";
 import { factoryAbi, poolAbi, tokenAbi } from "../lib/abi.js";
 import { FACTORY_ADDRESS } from "../lib/config.js";
 
@@ -59,6 +60,7 @@ async function loadTokens() {
 }
 
 function TokenCard({ t }) {
+  const rate = useEthUsd();
   const progress = Number((t.sold * 10000n) / t.cap) / 100;
   const mcapEth = Number(formatEther(t.price)) * 1_000_000_000;
   return (
@@ -70,7 +72,7 @@ function TokenCard({ t }) {
       <div className="tname">{t.name}</div>
       <div className="ttick">${t.symbol}</div>
       <div className="tmc">
-        {fmt(mcapEth, 2)} ETH<span>MC</span>
+        {usd(mcapEth * rate)}<span>MC</span>
       </div>
       <div className="prow">
         <div className="pbar">

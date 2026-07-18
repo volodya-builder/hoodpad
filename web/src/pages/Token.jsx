@@ -4,6 +4,7 @@ import { publicClient, fmt, short } from "../lib/web3.js";
 import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi } from "../lib/abi.js";
 import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
 import { poolTrades } from "../lib/data.js";
+import { useEthUsd, usd } from "../lib/price.js";
 
 const SLIPPAGE_BPS = 300n; // 3%
 
@@ -36,6 +37,7 @@ function MiniChart({ points }) {
 }
 
 export default function TokenPage({ tokenAddress, wallet, onConnect }) {
+  const rate = useEthUsd();
   const [data, setData] = useState(null);
   const [meta, setMeta] = useState({});
   const [tab, setTab] = useState("buy");
@@ -216,6 +218,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
 
   const progress = Number((data.sold * 10000n) / data.cap) / 100;
   const mcapEth = Number(formatEther(data.price)) * 1_000_000_000;
+  const mcapUsd = usd(mcapEth * rate);
 
   return (
     <div className="token-layout">
@@ -273,8 +276,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               <div className="v">{fmt(formatEther(data.price), 9)} ETH</div>
             </div>
             <div className="stat-card">
-              <div className="k">Market cap</div>
-              <div className="v">{fmt(mcapEth, 2)} ETH</div>
+              <div className="k">Капитализация</div>
+              <div className="v">{mcapUsd}</div>
             </div>
             <div className="stat-card">
               <div className="k">Raised</div>
