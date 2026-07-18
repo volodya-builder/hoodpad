@@ -398,6 +398,36 @@ test("on-chain chat: post emits event, length limits enforced", async () => {
   );
 });
 
+test("buyback vote: one vote per wallet per epoch, tally via events", async () => {
+  const poll = await deploy(deployer, "BuybackVote");
+  await write(trader1, poll, "vote", [token.address]);
+  await write(trader2, poll, "vote", [token.address]);
+  await write(creator, poll, "vote", [migrator.address]); // другой «токен» для различия
+
+  // повторный голос в том же раунде — отказ
+  await assert.rejects(write(trader1, poll, "vote", [token.address]), /AlreadyVoted/);
+  // нулевой адрес — отказ
+  await assert.rejects(
+    write(deployer, poll, "vote", ["0x0000000000000000000000000000000000000000"]),
+    /ZeroToken/
+  );
+
+  const { parseAbiItem } = await import("viem");
+  const ep = await read(poll, "epoch");
+  const logs = await pub.getLogs({
+    address: poll.address,
+    event: parseAbiItem("event Vote(address indexed token, address indexed voter, uint256 indexed epoch)"),
+    args: { epoch: ep },
+    fromBlock: 0n,
+  });
+  const tally = {};
+  for (const l of logs) tally[l.args.token] = (tally[l.args.token] ?? 0) + 1;
+  assert.equal(tally[getAddress(token.address)], 2);
+  assert.equal(tally[getAddress(migrator.address)], 1);
+  assert.equal(await read(poll, "voted", [ep, trader1.address]), true);
+  assert.ok((await read(poll, "epochEndsIn")) > 0n);
+});
+
 test("factory admin: config bounds enforced, ownership respected", async () => {
   await assert.rejects(
     write(trader1, factory, "setConfig", [treasury.address, migrator.address, 100, 5000])

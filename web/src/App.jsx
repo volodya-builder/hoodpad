@@ -4,6 +4,7 @@ import Create from "./pages/Create.jsx";
 import TokenPage from "./pages/Token.jsx";
 import Analytics from "./pages/Analytics.jsx";
 import Profile from "./pages/Profile.jsx";
+import Vote from "./pages/Vote.jsx";
 import { connectWallet, hasWallet, short, fmt } from "./lib/web3.js";
 import { CHAIN, FACTORY_ADDRESS } from "./lib/config.js";
 import { loadTokens } from "./lib/data.js";
@@ -123,6 +124,8 @@ export default function App() {
     page = <Create wallet={wallet} onConnect={connect} />;
   } else if (route === "/analytics") {
     page = <Analytics />;
+  } else if (route === "/vote") {
+    page = <Vote wallet={wallet} onConnect={connect} />;
   } else if (route === "/profile") {
     page = <Profile wallet={wallet} onConnect={connect} />;
   } else {
@@ -142,8 +145,9 @@ export default function App() {
             <span className="logo-word">HOOD</span>
           </a>
           <div className="nav-pills">
-            <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/profile") ? "on" : ""}`} href="#/">Обзор</a>
+            <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/profile") && !route.startsWith("/vote") ? "on" : ""}`} href="#/">Обзор</a>
             <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">Аналитика</a>
+            <a className={`nav-pill ${route.startsWith("/vote") ? "on" : ""}`} href="#/vote">Голосование</a>
           </div>
           <nav className="nav">
             <button className="icon-btn" onClick={() => setSearchOpen(true)} title="Поиск (Ctrl+K)">⌕</button>
