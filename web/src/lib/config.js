@@ -42,4 +42,8 @@ export const FACTORY_ADDRESS =
 export const TREASURY_ADDRESS =
   import.meta.env.VITE_TREASURY_ADDRESS ?? "0xd8d4f77d200e5ddf5b44ba2d2f7539aa1d8fc811";
 
+// On-chain chat contract (messages are events; zero = not deployed yet)
+export const CHAT_ADDRESS =
+  import.meta.env.VITE_CHAT_ADDRESS ?? "0x0000000000000000000000000000000000000000";
+
 export const EXPLORER = CHAIN.blockExplorers?.default?.url ?? "";

@@ -337,6 +337,33 @@ test("buyback treasury: fees flow in, ETH leaves only via buyback, burn works", 
   assert.equal(await read(bbToken, "balanceOf", [tre2.address]), 0n);
 });
 
+test("on-chain chat: post emits event, length limits enforced", async () => {
+  const chat = await deploy(deployer, "HoodChat");
+  await write(trader1, chat, "post", [token.address, "Первое сообщение в Шервуде! 🏹"]);
+  await write(trader2, chat, "post", [token.address, "gm"]);
+
+  const { parseAbiItem } = await import("viem");
+  const logs = await pub.getLogs({
+    address: chat.address,
+    event: parseAbiItem(
+      "event Message(address indexed token, address indexed sender, string text, uint256 timestamp)"
+    ),
+    args: { token: token.address },
+    fromBlock: 0n,
+  });
+  assert.equal(logs.length, 2);
+  assert.equal(logs[0].args.text, "Первое сообщение в Шервуде! 🏹");
+  assert.equal(getAddress(logs[0].args.sender), getAddress(trader1.address));
+  assert.ok(logs[0].args.timestamp > 0n);
+
+  // empty and >280 bytes rejected
+  await assert.rejects(write(trader1, chat, "post", [token.address, ""]), /BadLength/);
+  await assert.rejects(
+    write(trader1, chat, "post", [token.address, "x".repeat(281)]),
+    /BadLength/
+  );
+});
+
 test("factory admin: config bounds enforced, ownership respected", async () => {
   await assert.rejects(
     write(trader1, factory, "setConfig", [treasury.address, migrator.address, 100, 5000])

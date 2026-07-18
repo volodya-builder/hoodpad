@@ -5,6 +5,7 @@ import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi } from "../lib
 import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
 import { poolTrades } from "../lib/data.js";
 import { useEthUsd, usd } from "../lib/price.js";
+import Chat from "./Chat.jsx";
 
 const SLIPPAGE_BPS = 300n; // 3%
 
@@ -475,6 +476,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             </div>
           </div>
         )}
+
+        <Chat tokenAddress={tokenAddress} wallet={wallet} onConnect={onConnect} />
       </div>
     </div>
   );
