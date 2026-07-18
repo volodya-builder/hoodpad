@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { formatEther } from "viem";
 import { publicClient, fmt, short } from "../lib/web3.js";
 import { useEthUsd, usd } from "../lib/price.js";
-import { useSplit, timeAgo, loadTokens, tradeEvents } from "../lib/data.js";
+import { timeAgo, loadTokens, tradeEvents } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 
 /** Живая лента последних сделок по всем пулам платформы. */
@@ -143,7 +143,6 @@ function TokenCard({ t, fav, onFav }) {
 
 export default function Home({ onSearch }) {
   const { t } = useLang();
-  const split = useSplit();
   const [gpage, setGpage] = useState(1);
   const GRAD_PER_PAGE = 10;
   const [tokens, setTokens] = useState(null);
@@ -191,12 +190,6 @@ export default function Home({ onSearch }) {
           {t("+ Создать")}
         </a>
       </div>
-      <div className="page-sub">
-        {t("Токены с фиксированным сапплаем на Robinhood Chain")} — {t("запуск в одну транзакцию")},{" "}
-        {split.creator}% {t("создателю")}{split.team > 0 ? `, ${split.team}% ${t("команде")}` : ""},{" "}
-        {split.buyback}% {t("в казну выкупа")}, {t("ликвидность запирается навсегда")}.
-      </div>
-
       {error && <div className="error">{error}</div>}
       {!tokens && !error && <div className="center">{t("Загружаю токены из блокчейна…")}</div>}
 
@@ -218,11 +211,7 @@ export default function Home({ onSearch }) {
             </div>
           </div>
         </div>
-        {grad.length === 0 ? (
-          <div className="center" style={{ padding: "26px 0 14px" }}>
-            {t("Пока никто не градуировал — первым здесь станет токен, собравший 6.5 ETH.")}
-          </div>
-        ) : (
+        {grad.length === 0 ? null : (
           <>
             <div className="tgrid">
               {grad.slice((gpage - 1) * GRAD_PER_PAGE, gpage * GRAD_PER_PAGE)
