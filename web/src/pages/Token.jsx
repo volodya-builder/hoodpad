@@ -307,7 +307,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 : `Sell ${data.symbol}`}
             </button>
             <p className="dim" style={{ marginTop: 12 }}>
-              Fee 1% · slippage tolerance 3% · creator earns 70% of fees
+              Комиссия 1% · слиппедж 3% · 20% создателю, 80% в казну выкупа
             </p>
             {error && <div className="error">{error}</div>}
           </div>

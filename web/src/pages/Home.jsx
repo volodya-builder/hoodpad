@@ -80,7 +80,7 @@ export default function Home() {
         </div>
         <div className="feature-chips">
           <span className="chip">Запуск: <b>0 ETH</b></span>
-          <span className="chip">Создателю: <b>70% комиссий</b></span>
+          <span className="chip">Создателю: <b>20% комиссий</b></span>
           <span className="chip">Ликвидность: <b>заперта навсегда</b></span>
           <span className="chip">Защита от снайперов: <b>встроена</b></span>
         </div>

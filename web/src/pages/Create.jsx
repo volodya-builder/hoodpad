@@ -214,7 +214,7 @@ export default function Create({ wallet, onConnect }) {
             />
             <div className={`hint ${walletOk ? "" : "bad"}`}>
               {walletOk
-                ? "Получает долю создателя в комиссиях (70%) и покупку создателя. Оставьте пустым, чтобы использовать подключённый кошелёк."
+                ? "Получает долю создателя в комиссиях (20%) и покупку создателя. Оставьте пустым, чтобы использовать подключённый кошелёк."
                 : "Неверный адрес: нужен формат 0x… (42 символа)."}
             </div>
 
@@ -243,7 +243,7 @@ export default function Create({ wallet, onConnect }) {
         <div className="preview-ticker">{form.symbol ? `$${form.symbol}` : "тикер"}</div>
         <div className="preview-stats">
           <div className="row"><span className="k">Комиссия запуска</span><span className="v green">0 ETH</span></div>
-          <div className="row"><span className="k">Комиссии с трейдов</span><span className="v">70% создателю / 30% протоколу</span></div>
+          <div className="row"><span className="k">Комиссии с трейдов</span><span className="v">20% создателю / 80% на выкуп</span></div>
           <div className="row"><span className="k">Градация</span><span className="v">6.5 ETH</span></div>
           <div className="row"><span className="k">Ликвидность</span><span className="v">Заперта навсегда</span></div>
           {buyValue > 0 && (
