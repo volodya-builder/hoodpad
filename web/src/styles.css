@@ -577,3 +577,24 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
 .rank-num.rk1 { color: #f7c948; }
 .rank-num.rk2 { color: #c9d1dc; }
 .rank-num.rk3 { color: #cd7f32; }
+
+/* -------- about page -------- */
+.about-page { padding-bottom: 60px; }
+.fact-card { position: relative; padding-left: 58px; }
+.fact-check {
+  position: absolute; left: 18px; top: 22px;
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--gold) 18%, transparent);
+  color: var(--gold); font-weight: 900; font-size: 14px;
+  border: 1px solid color-mix(in srgb, var(--gold) 45%, transparent);
+}
+.fact-title { font-weight: 800; font-size: 15px; }
+.verify-note {
+  font-size: 13px; color: var(--text-dim);
+  border: 1px dashed var(--border); border-radius: var(--radius);
+  padding: 14px 18px; margin-top: 4px;
+}
+.verify-note a { color: var(--gold); font-weight: 700; }
+.cta-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 34px; }
+.cta-row .btn { display: inline-flex; align-items: center; padding: 0 22px; height: 42px; }

@@ -87,6 +87,42 @@ const EN = {
     "A vote is a tiny on-chain transaction (gas costs a fraction of a cent). A new round starts automatically every 7 days.",
   "Голосование скоро появится — контракт готовится к деплою.": "Voting is coming soon — the contract is being deployed.",
   "Нажмите на строку, чтобы увидеть, кто голосовал.": "Click a row to see who voted.",
+  "О нас": "About",
+  "hood — лаунчпад токенов на Robinhood Chain с революционной экономикой: треть всех торговых комиссий уходит в казну выкупа, из которой их невозможно вывести — только выкупать токены платформы. Мы зарабатываем вместе с комьюнити, а не на нём.":
+    "hood is a token launchpad on Robinhood Chain with revolutionary economics: a third of all trading fees flows into a buyback treasury that cannot be withdrawn from — it can only buy back platform tokens. We earn with the community, not off it.",
+  "Куда идут комиссии": "Where the fees go",
+  "Каждая сделка на кривой платит комиссию 1%. Смарт-контракт делит её автоматически:":
+    "Every trade on the curve pays a 1% fee. The smart contract splits it automatically:",
+  "создателю токена": "to the token creator",
+  "Пассивный доход с первой же сделки — стимул строить долгосрочные проекты, а не бросать их.":
+    "Passive income from the very first trade — an incentive to build long-term projects, not abandon them.",
+  "Разработка, инфраструктура и развитие платформы.":
+    "Development, infrastructure and growth of the platform.",
+  "Возвращаются в рынок выкупами токенов платформы. Другого пути у этих денег нет.":
+    "Returned to the market through buybacks of platform tokens. This money has no other way out.",
+  "Казна, из которой нельзя вывести": "A treasury with no exit door",
+  "Мы не просим верить на слово — это гарантирует код. Вот что жёстко зашито в контракте казны:":
+    "We don't ask you to take our word — the code guarantees it. Here is what is hard-wired into the treasury contract:",
+  "Функции вывода не существует": "No withdraw function exists",
+  "В контракте казны нет ни withdraw, ни transfer. Даже владелец платформы физически не может отправить ETH из казны себе на кошелёк — такого кода просто нет.":
+    "The treasury contract has no withdraw and no transfer. Even the platform owner physically cannot send treasury ETH to their own wallet — that code simply does not exist.",
+  "ETH уходит только в пулы hood": "ETH can only go into hood pools",
+  "Единственная функция, тратящая ETH — buyback(). Контракт проверяет через фабрику, что покупка идёт в настоящий пул платформы, а не на произвольный адрес.":
+    "The only ETH-spending function is buyback(). The contract verifies through the factory that the purchase goes into a genuine platform pool, not an arbitrary address.",
+  "Купленное — только держать или сжечь": "Bought tokens: hold or burn only",
+  "Выкупленные токены казна может держать или отправить на dead-адрес навсегда. Продать их или перевести кому-то невозможно — таких функций нет.":
+    "Bought-back tokens can only be held by the treasury or sent to the dead address forever. Selling or transferring them is impossible — those functions don't exist.",
+  "Код заморожен навсегда": "The code is frozen forever",
+  "Контракт не обновляемый: это не прокси, правила нельзя переписать после деплоя. Что вы читаете в эксплорере — то и исполняется.":
+    "The contract is not upgradeable: it is not a proxy, the rules cannot be rewritten after deployment. What you read in the explorer is what executes.",
+  "Проверьте сами — откройте контракт казны в эксплорере:":
+    "Verify it yourself — open the treasury contract in the explorer:",
+  "Контракт казны": "Treasury contract",
+  "Голосование — компас, а не руль": "Voting is a compass, not a steering wheel",
+  "Каждую неделю держатели голосуют, какой токен казне поддержать выкупом: один кошелёк — один голос, всё в блокчейне. Голосование совещательное: итоговое решение всегда принимает команда, а результаты раунда служат рекомендацией и честным ориентиром настроений аудитории. Так казна тратится осмысленно, а комьюнити видит, что его слышат.":
+    "Every week holders vote on which token the treasury should support with a buyback: one wallet — one vote, all on-chain. The vote is advisory: the final decision is always made by the team, and round results serve as a recommendation and an honest gauge of community sentiment. The treasury is spent thoughtfully, and the community sees it is heard.",
+  "Смотреть голосование": "View voting",
+  "Аналитика казны": "Treasury analytics",
   "Пока никто не голосовал за этот токен.": "No one has voted for this token yet.",
   "Кошельки раунда": "Voters this round",
   "Поиск: адрес или тикер…": "Search: address or ticker…",
