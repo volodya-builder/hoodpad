@@ -56,13 +56,13 @@ function SearchModal({ open, onClose }) {
           {tokens !== null && res.length === 0 && (
             <div className="center" style={{ padding: "20px 0" }}>{t("Ничего не найдено")}</div>
           )}
-          {res.map((t) => (
-            <div className="sr-item" key={t.token}
-                 onClick={() => { onClose(); window.location.hash = `#/token/${t.token}`; }}>
-              {t.meta.image && <img src={t.meta.image} alt="" />}
-              <span className="n">{t.name} <span className="ticker">${t.symbol}</span></span>
+          {res.map((r) => (
+            <div className="sr-item" key={r.token}
+                 onClick={() => { onClose(); window.location.hash = `#/token/${r.token}`; }}>
+              {r.meta.image && <img src={r.meta.image} alt="" />}
+              <span className="n">{r.name} <span className="ticker">${r.symbol}</span></span>
               <span className="m">
-                {usd(Number(formatEther(t.price)) * 1e9 * rate)}{t.graduated ? " · 🎯" : ""}
+                {usd(Number(formatEther(r.price)) * 1e9 * rate)}{r.graduated ? " · 🎯" : ""}
               </span>
             </div>
           ))}

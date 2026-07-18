@@ -99,23 +99,23 @@ export default function Profile({ wallet, onConnect }) {
                   <span>{t("Токен")}</span><span>{t("Баланс")}</span><span>{t("Стоимость")}</span>
                   <span>{t("Вложено")}</span><span>PnL</span><span>{t("Кривая")}</span>
                 </div>
-                {state.positions.map((t) => {
-                  const val = Number(formatEther(t.bal)) * Number(formatEther(t.price));
-                  const pnl = val + t.realized - t.invested;
-                  const prog = Number((t.sold * 10000n) / t.cap) / 100;
+                {state.positions.map((p) => {
+                  const val = Number(formatEther(p.bal)) * Number(formatEther(p.price));
+                  const pnl = val + p.realized - p.invested;
+                  const prog = Number((p.sold * 10000n) / p.cap) / 100;
                   return (
-                    <a className="prow6" key={t.token} href={`#/token/${t.token}`} style={{ cursor: "pointer" }}>
+                    <a className="prow6" key={p.token} href={`#/token/${p.token}`} style={{ cursor: "pointer" }}>
                       <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        {t.meta.image && <img src={t.meta.image} style={{ width: 26, height: 26, borderRadius: 7 }} alt="" />}
-                        <b>{t.symbol}</b>
+                        {p.meta.image && <img src={p.meta.image} style={{ width: 26, height: 26, borderRadius: 7 }} alt="" />}
+                        <b>{p.symbol}</b>
                       </span>
-                      <span>{fmt(Number(formatEther(t.bal)), 0)}</span>
+                      <span>{fmt(Number(formatEther(p.bal)), 0)}</span>
                       <span>{fmt(val, 5)} ETH</span>
-                      <span>{fmt(t.invested, 5)} ETH</span>
+                      <span>{fmt(p.invested, 5)} ETH</span>
                       <span className={pnl >= 0 ? "pnl-pos" : "pnl-neg"}>
                         {pnl >= 0 ? "+" : ""}{fmt(pnl, 5)} ETH
                       </span>
-                      <span className="dim">{t.graduated ? "🎯" : fmt(prog, 0) + "%"}</span>
+                      <span className="dim">{p.graduated ? "🎯" : fmt(prog, 0) + "%"}</span>
                     </a>
                   );
                 })}

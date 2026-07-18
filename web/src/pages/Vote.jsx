@@ -129,21 +129,21 @@ export default function Vote({ wallet, onConnect }) {
 
       {state && state.rows.length > 0 && (
         <div className="bottom-card" style={{ marginTop: 18 }}>
-          {state.rows.map((t, i) => {
-            const sharePct = state.total > 0 ? (t.votes / state.total) * 100 : 0;
-            const isMine = state.myVote === t.token.toLowerCase();
+          {state.rows.map((r, i) => {
+            const sharePct = state.total > 0 ? (r.votes / state.total) * 100 : 0;
+            const isMine = state.myVote === r.token.toLowerCase();
             return (
-              <div className="prow6" key={t.token}
+              <div className="prow6" key={r.token}
                    style={{ gridTemplateColumns: "40px 1.6fr 2fr 90px 130px" }}>
                 <span className="dim">{i + 1}</span>
-                <a href={`#/token/${t.token}`}
+                <a href={`#/token/${r.token}`}
                    style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                  {t.meta.image && (
-                    <img src={t.meta.image} style={{ width: 30, height: 30, borderRadius: 8 }} alt="" />
+                  {r.meta.image && (
+                    <img src={r.meta.image} style={{ width: 30, height: 30, borderRadius: 8 }} alt="" />
                   )}
                   <span>
-                    <b>{t.symbol}</b>{" "}
-                    <span className="dim" style={{ fontSize: 12 }}>{t.name}</span>
+                    <b>{r.symbol}</b>{" "}
+                    <span className="dim" style={{ fontSize: 12 }}>{r.name}</span>
                   </span>
                 </a>
                 <span style={{ display: "flex", alignItems: "center", gap: 9 }}>
@@ -155,12 +155,12 @@ export default function Vote({ wallet, onConnect }) {
                     {fmt(sharePct, 0)}%
                   </span>
                 </span>
-                <b style={{ fontVariantNumeric: "tabular-nums" }}>{t.votes}</b>
+                <b style={{ fontVariantNumeric: "tabular-nums" }}>{r.votes}</b>
                 {isMine ? (
                   <span className="badge">{t("ваш голос")}</span>
                 ) : (
                   <button className="btn" disabled={busy || !!state.myVote}
-                          onClick={() => castVote(t.token)}
+                          onClick={() => castVote(r.token)}
                           title={state.myVote ? t("Вы уже голосовали в этом раунде") : ""}>
                     {t("Голосовать")}
                   </button>
