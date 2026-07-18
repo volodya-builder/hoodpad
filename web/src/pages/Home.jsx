@@ -61,7 +61,15 @@ async function loadTokens() {
   return items.reverse(); // newest first
 }
 
-function TokenCard({ t }) {
+function loadFavs() {
+  try { return new Set(JSON.parse(localStorage.getItem("hood_favs") || "[]")); }
+  catch (e) { return new Set(); }
+}
+function saveFavs(s) {
+  try { localStorage.setItem("hood_favs", JSON.stringify([...s])); } catch (e) { /* ignore */ }
+}
+
+function TokenCard({ t, fav, onFav }) {
   const { t: tr } = useLang();
   const rate = useEthUsd();
   const progress = Number((t.sold * 10000n) / t.cap) / 100;
@@ -71,6 +79,11 @@ function TokenCard({ t }) {
       <div className="timg">
         {t.meta.image ? <img src={t.meta.image} alt="" /> : "🖼️"}
         {t.graduated && <span className="grad-chip">{tr("Градуировал")}</span>}
+        <button className={`fav-btn ${fav ? "on" : ""}`}
+                title={tr(fav ? "Убрать из избранного" : "В избранное")}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onFav(t.token); }}>
+          {fav ? "★" : "☆"}
+        </button>
       </div>
       <div className="tname">{t.name}</div>
       <div className="ttick">${t.symbol}</div>
@@ -99,6 +112,16 @@ export default function Home({ onSearch }) {
   const [tokens, setTokens] = useState(null);
   const [error, setError] = useState("");
   const [sort, setSort] = useState("new");
+  const [favs, setFavs] = useState(loadFavs);
+
+  const toggleFav = (addr) => {
+    setFavs((prev) => {
+      const next = new Set(prev);
+      if (next.has(addr)) next.delete(addr); else next.add(addr);
+      saveFavs(next);
+      return next;
+    });
+  };
 
   useEffect(() => {
     let alive = true;
@@ -112,7 +135,8 @@ export default function Home({ onSearch }) {
   }, []);
 
   const bySort = (arr) => {
-    const a = [...arr];
+    let a = [...arr];
+    if (sort === "fav") a = a.filter((x) => favs.has(x.token));
     if (sort === "mcap") a.sort((x, y) => Number(y.price - x.price));
     if (sort === "raised") a.sort((x, y) => Number(y.reserve - x.reserve));
     return a; // "new": loader already returns newest first
@@ -158,7 +182,7 @@ export default function Home({ onSearch }) {
           <>
             <div className="tgrid">
               {grad.slice((gpage - 1) * GRAD_PER_PAGE, gpage * GRAD_PER_PAGE)
-                   .map((t2) => <TokenCard key={t2.token} t={t2} />)}
+                   .map((t2) => <TokenCard key={t2.token} t={t2} fav={favs.has(t2.token)} onFav={toggleFav} />)}
             </div>
             {grad.length > GRAD_PER_PAGE && (
               <div className="pager">
@@ -184,7 +208,7 @@ export default function Home({ onSearch }) {
           </div>
         </div>
         <div className="pill-group">
-          {[["new", t("Новые")], ["raised", t("Недавние покупки")], ["mcap", t("Капитализация")]].map(([k, lbl]) => (
+          {[["new", t("Новые")], ["raised", t("Недавние покупки")], ["mcap", t("Капитализация")], ["fav", "★ " + t("Избранное")]].map(([k, lbl]) => (
             <div key={k} className={`fpill ${sort === k ? "on" : ""}`} onClick={() => setSort(k)}>
               {lbl}
             </div>
@@ -193,12 +217,18 @@ export default function Home({ onSearch }) {
       </div>
       {live.length === 0 ? (
         <div className="center" style={{ paddingBottom: 60 }}>
-          {t("Токенов пока нет — станьте первым.")}{" "}
-          <a href="#/create" style={{ color: "var(--gold)" }}>{t("Запустить токен →")}</a>
+          {sort === "fav" ? (
+            t("Пока нет избранных — нажмите ☆ на карточке токена.")
+          ) : (
+            <>
+              {t("Токенов пока нет — станьте первым.")}{" "}
+              <a href="#/create" style={{ color: "var(--gold)" }}>{t("Запустить токен →")}</a>
+            </>
+          )}
         </div>
       ) : (
         <div className="tgrid" style={{ paddingBottom: 60 }}>
-          {live.map((t2) => <TokenCard key={t2.token} t={t2} />)}
+          {live.map((t2) => <TokenCard key={t2.token} t={t2} fav={favs.has(t2.token)} onFav={toggleFav} />)}
         </div>
       )}
     </>

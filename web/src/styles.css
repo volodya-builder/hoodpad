@@ -608,3 +608,32 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
   color: var(--text-dim); font-size: 12px; text-decoration: none;
 }
 .mini-btn:hover { color: var(--gold); border-color: var(--gold); }
+
+/* -------- token page: holders + favorites -------- */
+.holder-row {
+  display: grid; grid-template-columns: 26px minmax(0, 1.4fr) 1fr 64px;
+  gap: 12px; align-items: center; padding: 9px 0;
+  border-bottom: 1px solid var(--border); font-size: 13px;
+}
+.holder-row:last-child { border-bottom: none; }
+.hr-who { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
+.hr-who a { color: var(--text); }
+.hr-who a:hover { color: var(--gold); }
+.hr-badge { font-size: 10px; padding: 2px 8px; }
+.hr-bar { height: 6px; border-radius: 4px; background: var(--border); overflow: hidden; display: block; }
+.hr-bar span { display: block; height: 100%; border-radius: 4px; background: var(--gold); }
+.hr-pct { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-dim); }
+
+.timg { position: relative; }
+.fav-btn {
+  position: absolute; top: 10px; right: 10px; z-index: 2;
+  width: 32px; height: 32px; border-radius: 9px; cursor: pointer;
+  background: rgba(10, 11, 9, .55); backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, .18);
+  color: #fff; font-size: 16px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .15s, transform .1s;
+}
+.tcard:hover .fav-btn { opacity: 1; }
+.fav-btn.on { opacity: 1; color: #f7c948; border-color: rgba(247, 201, 72, .5); }
+.fav-btn:hover { transform: scale(1.1); }

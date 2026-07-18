@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { parseEther, formatEther } from "viem";
 import { publicClient, fmt, short } from "../lib/web3.js";
 import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi } from "../lib/abi.js";
@@ -53,6 +53,40 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [history, setHistory] = useState(null); // { trades, points }
   const [extra, setExtra] = useState({});       // creatorFees, treasuryOwner, treasuryHeld, burned
   const [bbAmt, setBbAmt] = useState("");
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  // ETH → доллары мелким шрифтом
+  const dollars = (e) => {
+    const v = e * rate, a = Math.abs(v);
+    if (a > 0 && a < 0.01) return "<$0.01";
+    return (v < 0 ? "-" : "") + (a >= 1e3 ? usd(a) : "$" + a.toFixed(2));
+  };
+
+  // Топ держателей: восстанавливаем балансы из событий сделок
+  const holders = useMemo(() => {
+    if (!history || !data) return null;
+    const m = {};
+    for (const tr of history.trades) {
+      const a = tr.addr.toLowerCase();
+      m[a] = (m[a] ?? 0) + (tr.side === "buy" ? tr.tokens : -tr.tokens);
+    }
+    const TOTAL = 1e9;
+    const unsold = Math.max(0, TOTAL - Number(formatEther(data.sold)));
+    const list = Object.entries(m)
+      .filter(([, v]) => v > 1e-6)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([a, v]) => ({ addr: a, bal: v, pct: (v / TOTAL) * 100 }));
+    return { list, unsold, unsoldPct: (unsold / TOTAL) * 100 };
+  }, [history, data]);
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 1500);
+    } catch (e) { /* clipboard unavailable */ }
+  }
 
   const load = useCallback(async () => {
     const pool = await publicClient.readContract({
@@ -341,6 +375,16 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             {" · "}{t("Создатель:")} <span className="mono">{short(data.creator)}</span>
             {extra.createdAt ? <> {" · "}{t("Запущен")} {timeAgo(extra.createdAt)}</> : null}
           </p>
+
+          <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
+            <button className="btn" onClick={copyLink}>
+              {copiedLink ? `✓ ${t("Ссылка скопирована!")}` : `⧉ ${t("Скопировать ссылку")}`}
+            </button>
+            <a className="btn" target="_blank" rel="noreferrer"
+               href={`https://x.com/intent/tweet?text=${encodeURIComponent(`$${data.symbol} — ${data.name} · hood`)}&url=${encodeURIComponent(window.location.href)}`}>
+              𝕏 {t("Поделиться")}
+            </a>
+          </div>
         </div>
 
         <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
@@ -359,7 +403,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               <span className={tr.side === "buy" ? "side-buy" : "side-sell"}>
                 {t(tr.side === "buy" ? "Купил" : "Продал")}
               </span>
-              <span>{fmt(tr.eth, 5)} ETH</span>
+              <span>{fmt(tr.eth, 5)} ETH <span className="usd-sub">({dollars(tr.eth)})</span></span>
               <span>{fmt(tr.tokens, 0)}</span>
               <a className="mono" href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer">
                 {short(tr.addr)}
@@ -367,6 +411,44 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               <span className="dim">{t("блок")} {String(tr.block)}</span>
             </div>
           ))}
+        </div>
+
+        <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
+          <div className="card-title"><h3>{t("Топ держателей")}</h3></div>
+          {!holders && <div className="dim" style={{ padding: "14px 0" }}>{t("Читаю события…")}</div>}
+          {holders && (
+            <div style={{ marginTop: 6 }}>
+              <div className="holder-row">
+                <span className="hr-rank dim">—</span>
+                <span className="hr-who">📈 {t("Бондинг-кривая")}</span>
+                <span className="hr-bar"><span style={{ width: `${Math.min(holders.unsoldPct, 100)}%` }} /></span>
+                <span className="hr-pct">{fmt(holders.unsoldPct, 1)}%</span>
+              </div>
+              {holders.list.map((h, i) => {
+                const isCre = h.addr === data.creator.toLowerCase();
+                const isTre = h.addr === TREASURY_ADDRESS.toLowerCase();
+                const isMe = wallet && h.addr === wallet.account.toLowerCase();
+                return (
+                  <div className="holder-row" key={h.addr}>
+                    <span className="hr-rank dim">{i + 1}</span>
+                    <span className="hr-who">
+                      <a className="mono" href={`${EXPLORER}/address/${h.addr}`} target="_blank" rel="noreferrer">
+                        {short(h.addr)}
+                      </a>
+                      {isCre && <span className="badge hr-badge">🏹 {t("Создатель")}</span>}
+                      {isTre && <span className="badge hr-badge">🏦 {t("Казна")}</span>}
+                      {isMe && <span className="badge hr-badge">{t("Вы")}</span>}
+                    </span>
+                    <span className="hr-bar"><span style={{ width: `${Math.min(h.pct * 4, 100)}%` }} /></span>
+                    <span className="hr-pct">{fmt(h.pct, 2)}%</span>
+                  </div>
+                );
+              })}
+              {holders.list.length === 0 && (
+                <div className="dim" style={{ padding: "8px 0" }}>{t("Пока нет сделок.")}</div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
