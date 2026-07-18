@@ -15,7 +15,20 @@ export function parseMeta(uri) {
 
 const PAGE = 96n;
 
+// Кэш списка токенов: переключение вкладок мгновенное, данные
+// дотягиваются в фоне (TTL 15с). Параллельные вызовы дедуплицируются.
+let _tok = { v: null, t: 0, p: null };
+
 export async function loadTokens() {
+  if (_tok.v && Date.now() - _tok.t < 15_000) return _tok.v;
+  if (_tok.p) return _tok.p;
+  _tok.p = _loadTokensFresh()
+    .then((v) => { _tok = { v, t: Date.now(), p: null }; return v; })
+    .catch((e) => { _tok.p = null; if (_tok.v) return _tok.v; throw e; });
+  return _tok.p;
+}
+
+async function _loadTokensFresh() {
   const count = await publicClient.readContract({
     address: FACTORY_ADDRESS, abi: factoryAbi, functionName: "tokenCount",
   });
@@ -54,7 +67,20 @@ export const tradeEvents = parseAbi([
 ]);
 
 /** All trades of a pool, oldest first, replayed into price points. */
+const _trades = new Map(); // pool -> { v, t, p }
+
 export async function poolTrades(pool) {
+  const c = _trades.get(pool);
+  if (c?.v && Date.now() - c.t < 15_000) return c.v;
+  if (c?.p) return c.p;
+  const p = _poolTradesFresh(pool)
+    .then((v) => { _trades.set(pool, { v, t: Date.now(), p: null }); return v; })
+    .catch((e) => { _trades.set(pool, { ...(c ?? {}), p: null }); if (c?.v) return c.v; throw e; });
+  _trades.set(pool, { ...(c ?? {}), p });
+  return p;
+}
+
+async function _poolTradesFresh(pool) {
   const logs = await publicClient.getLogs({
     address: pool, events: tradeEvents, fromBlock: 0n, toBlock: "latest",
   });

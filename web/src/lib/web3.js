@@ -9,7 +9,9 @@ import { CHAIN } from "./config.js";
 
 export const publicClient = createPublicClient({
   chain: CHAIN,
-  transport: http(),
+  // batch: true склеивает параллельные eth_call в пакетные JSON-RPC запросы —
+  // вместо десятков HTTP-запросов уходит несколько.
+  transport: http(undefined, { batch: true }),
 });
 
 // ---------------------------------------------------------------- providers
