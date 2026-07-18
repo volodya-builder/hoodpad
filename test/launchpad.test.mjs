@@ -141,7 +141,7 @@ test("launch with initial creator buy in the same tx", async () => {
   assert.equal(bal, expected);
 });
 
-test("buy: quoted amount matches, fees accrue 50/50", async () => {
+test("buy: quoted amount matches, fees accrue 70/30", async () => {
   const ethIn = parseEther("0.5");
   const quoted = await read(pool, "quoteBuy", [ethIn]);
   const balBefore = await read(token, "balanceOf", [trader1.address]);
@@ -152,8 +152,9 @@ test("buy: quoted amount matches, fees accrue 50/50", async () => {
   assert.equal(balAfter - balBefore, quoted);
 
   const fee = (ethIn * FEE_BPS) / 10000n;
-  assert.equal(await read(pool, "creatorFeesAccrued"), fee / 2n);
-  assert.equal(await read(pool, "protocolFeesAccrued"), fee - fee / 2n);
+  const creatorCut = (fee * 7000n) / 10000n;
+  assert.equal(await read(pool, "creatorFeesAccrued"), creatorCut);
+  assert.equal(await read(pool, "protocolFeesAccrued"), fee - creatorCut);
   assert.equal(await read(pool, "ethReserve"), ethIn - fee);
 });
 

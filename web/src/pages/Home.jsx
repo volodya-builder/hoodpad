@@ -69,7 +69,7 @@ export default function Home() {
         <p>
           Fair-launch bonding curves on Robinhood Chain. No presale, no team
           allocation, liquidity locked forever at graduation. Creators earn
-          50% of trading fees.
+          70% of trading fees.
         </p>
         <a className="btn btn-primary" href="#/create" style={{ padding: "13px 28px" }}>
           Launch your token
