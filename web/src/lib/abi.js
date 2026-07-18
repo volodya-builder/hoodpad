@@ -6,6 +6,8 @@ export const factoryAbi = parseAbi([
   "function tokens(uint256 offset, uint256 limit) view returns (address[])",
   "function poolOf(address token) view returns (address)",
   "function feeBps() view returns (uint16)",
+  "function creatorFeeShareBps() view returns (uint16)",
+  "function treasury() view returns (address)",
   "event TokenCreated(address indexed token, address indexed pool, address indexed creator, string name, string symbol, string metadataURI)",
 ]);
 
@@ -52,4 +54,8 @@ export const tokenAbi = parseAbi([
   "function balanceOf(address) view returns (uint256)",
   "function approve(address spender, uint256 value) returns (bool)",
   "function allowance(address owner, address spender) view returns (uint256)",
+]);
+
+export const splitterAbi = parseAbi([
+  "function teamBps() view returns (uint16)",
 ]);

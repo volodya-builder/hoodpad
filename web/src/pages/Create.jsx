@@ -3,6 +3,7 @@ import { parseEther, formatEther, decodeEventLog } from "viem";
 import { publicClient } from "../lib/web3.js";
 import { factoryAbi } from "../lib/abi.js";
 import { FACTORY_ADDRESS } from "../lib/config.js";
+import { useSplit } from "../lib/data.js";
 
 // Max developer buy: 5% of supply bought at launch.
 // gross ETH = (VIRT * s / (TOTAL - s)) / (1 - fee), s = 50M, VIRT = 1.625
@@ -29,6 +30,7 @@ function fileToDataUrl(file) {
 }
 
 export default function Create({ wallet, onConnect }) {
+  const split = useSplit();
   const [form, setForm] = useState({
     name: "", symbol: "", description: "", x: "", telegram: "", initialBuy: "",
     creatorWallet: "", website: "",
@@ -214,7 +216,7 @@ export default function Create({ wallet, onConnect }) {
             />
             <div className={`hint ${walletOk ? "" : "bad"}`}>
               {walletOk
-                ? "Получает долю создателя в комиссиях (40%) и покупку создателя. Оставьте пустым, чтобы использовать подключённый кошелёк."
+                ? "Получает долю создателя в комиссиях ({split.creator}%) и покупку создателя. Оставьте пустым, чтобы использовать подключённый кошелёк."
                 : "Неверный адрес: нужен формат 0x… (42 символа)."}
             </div>
 
@@ -243,7 +245,7 @@ export default function Create({ wallet, onConnect }) {
         <div className="preview-ticker">{form.symbol ? `$${form.symbol}` : "тикер"}</div>
         <div className="preview-stats">
           <div className="row"><span className="k">Комиссия запуска</span><span className="v green">0 ETH</span></div>
-          <div className="row"><span className="k">Комиссии с трейдов</span><span className="v">40% создателю / 20% команде / 40% выкуп</span></div>
+          <div className="row"><span className="k">Комиссии с трейдов</span><span className="v">{split.creator}% / {split.team}% / {split.buyback}%</span></div>
           <div className="row"><span className="k">Градация</span><span className="v">6.5 ETH</span></div>
           <div className="row"><span className="k">Ликвидность</span><span className="v">Заперта навсегда</span></div>
           {buyValue > 0 && (

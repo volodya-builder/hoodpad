@@ -6,6 +6,7 @@ import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
 import { poolTrades } from "../lib/data.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import Chat from "./Chat.jsx";
+import { useSplit } from "../lib/data.js";
 
 const SLIPPAGE_BPS = 300n; // 3%
 
@@ -39,6 +40,7 @@ function MiniChart({ points }) {
 
 export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const rate = useEthUsd();
+  const split = useSplit();
   const [data, setData] = useState(null);
   const [meta, setMeta] = useState({});
   const [tab, setTab] = useState("buy");
@@ -432,7 +434,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 : `Sell ${data.symbol}`}
             </button>
             <p className="dim" style={{ marginTop: 12 }}>
-              Комиссия 1% · слиппедж 3% · 40% создателю · 20% команде · 40% на выкуп
+              Комиссия 1% · слиппедж 3% · {split.creator}% создателю{split.team > 0 ? ` · ${split.team}% команде` : ""} · {split.buyback}% на выкуп
             </p>
             {error && <div className="error">{error}</div>}
           </div>

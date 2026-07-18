@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { formatEther } from "viem";
 import { publicClient, fmt } from "../lib/web3.js";
 import { useEthUsd, usd } from "../lib/price.js";
+import { useSplit } from "../lib/data.js";
 import { factoryAbi, poolAbi, tokenAbi } from "../lib/abi.js";
 import { FACTORY_ADDRESS } from "../lib/config.js";
 
@@ -89,6 +90,7 @@ function TokenCard({ t }) {
 }
 
 export default function Home({ onSearch }) {
+  const split = useSplit();
   const [tokens, setTokens] = useState(null);
   const [error, setError] = useState("");
   const [sort, setSort] = useState("new");
@@ -125,8 +127,8 @@ export default function Home({ onSearch }) {
       </div>
       <div className="page-sub">
         Токены с фиксированным сапплаем на Robinhood Chain — запуск в одну
-        транзакцию, 40% комиссий создателю, 20% команде, 40% в казну выкупа,
-        ликвидность запирается навсегда.
+        транзакцию, {split.creator}% комиссий создателю{split.team > 0 ? `, ${split.team}% команде` : ""},
+        {" "}{split.buyback}% в казну выкупа, ликвидность запирается навсегда.
       </div>
 
       {error && <div className="error">{error}</div>}

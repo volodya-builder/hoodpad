@@ -1,4 +1,5 @@
 import { parseAbi } from "viem";
+import { useEffect, useState } from "react";
 import { publicClient } from "./web3.js";
 import { factoryAbi, poolAbi, tokenAbi } from "./abi.js";
 import { FACTORY_ADDRESS } from "./config.js";
@@ -79,4 +80,40 @@ export async function poolTrades(pool) {
     points.push({ i: trades.length, mcap: price * TOTAL });
   }
   return { trades: trades.reverse(), points };
+}
+
+
+// ---------------------------------------------------------------- fee split
+import { splitterAbi } from "./abi.js";
+
+let splitCache = null;
+export async function loadSplit() {
+  if (splitCache) return splitCache;
+  try {
+    const [shareBps, treasury] = await Promise.all([
+      publicClient.readContract({ address: FACTORY_ADDRESS, abi: factoryAbi, functionName: "creatorFeeShareBps" }),
+      publicClient.readContract({ address: FACTORY_ADDRESS, abi: factoryAbi, functionName: "treasury" }),
+    ]);
+    const creator = Number(shareBps) / 100;
+    let team = 0;
+    try {
+      const teamBps = await publicClient.readContract({
+        address: treasury, abi: splitterAbi, functionName: "teamBps",
+      });
+      team = ((100 - creator) * Number(teamBps)) / 10000;
+    } catch (e) { /* treasury is not a splitter -> everything goes to buyback */ }
+    const buyback = 100 - creator - team;
+    splitCache = {
+      creator: Math.round(creator), team: Math.round(team), buyback: Math.round(buyback),
+    };
+  } catch (e) {
+    splitCache = { creator: 50, team: 20, buyback: 30 };
+  }
+  return splitCache;
+}
+
+export function useSplit() {
+  const [split, setSplit] = useState({ creator: 50, team: 20, buyback: 30 });
+  useEffect(() => { loadSplit().then(setSplit).catch(() => {}); }, []);
+  return split;
 }
