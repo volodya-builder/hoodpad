@@ -337,6 +337,40 @@ test("buyback treasury: fees flow in, ETH leaves only via buyback, burn works", 
   assert.equal(await read(bbToken, "balanceOf", [tre2.address]), 0n);
 });
 
+test("fee splitter: 40/20/40 — creator 40%, team 1/3 of rest, buyback 2/3", async () => {
+  // fresh stack: factory -> treasury(buyback) -> splitter(team=trader2, 3333 bps)
+  const fac3 = await deploy(deployer, "LaunchpadFactory", [deployer.address, migrator.address]);
+  const bb = await deploy(deployer, "BuybackTreasury", [fac3.address]);
+  const split = await deploy(deployer, "FeeSplitter", [trader2.address, bb.address, 3333]);
+  await write(deployer, fac3, "setConfig", [split.address, migrator.address, 100, 4000]);
+
+  const rcpt = await write(creator, fac3, "createToken",
+    ["Split Coin", "SPL", "ipfs://spl", "0x0000000000000000000000000000000000000000"]);
+  const created = rcpt.logs
+    .map((l) => { try { return decodeEventLog({ abi: fac3.abi, data: l.data, topics: l.topics }); } catch { return null; } })
+    .find((e) => e && e.eventName === "TokenCreated");
+  const pool3 = { address: created.args.pool, abi: ART("BondingCurvePool").abi };
+
+  // trade 2 ETH -> fee 0.02: creator 40% = 0.008; protocol 0.012
+  await write(trader1, pool3, "buy", [0n, trader1.address], parseEther("2"));
+  const fee = (parseEther("2") * 100n) / 10000n;
+  assert.equal(await read(pool3, "creatorFeesAccrued"), (fee * 4000n) / 10000n);
+  const proto = fee - (fee * 4000n) / 10000n;
+  assert.equal(await read(pool3, "protocolFeesAccrued"), proto);
+
+  // push protocol share through the splitter
+  const teamBefore = await pub.getBalance({ address: trader2.address });
+  await write(trader1, pool3, "claimProtocolFees");
+  const teamAfter = await pub.getBalance({ address: trader2.address });
+  const bbBal = await pub.getBalance({ address: bb.address });
+
+  const expectTeam = (proto * 3333n) / 10000n;
+  assert.equal(teamAfter - teamBefore, expectTeam, "team share wrong");
+  assert.equal(bbBal, proto - expectTeam, "buyback share wrong");
+  // sanity: effective split of the whole fee ≈ 40/20/40
+  assert.ok((proto - expectTeam) * 10000n / fee >= 3999n, "buyback ≥ ~40% of fee");
+});
+
 test("on-chain chat: post emits event, length limits enforced", async () => {
   const chat = await deploy(deployer, "HoodChat");
   await write(trader1, chat, "post", [token.address, "Первое сообщение в Шервуде! 🏹"]);
