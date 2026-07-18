@@ -180,10 +180,13 @@ export async function loadCreationTimes(addrs) {
 }
 
 export function timeAgo(ms) {
+  let en = false;
+  try { en = localStorage.getItem("hood_lang") === "en"; } catch (e) { /* ignore */ }
   const s = Math.max(0, (Date.now() - ms) / 1000);
-  if (s < 15) return "только что";
-  if (s < 60) return `${Math.floor(s)}с назад`;
-  if (s < 3600) return `${Math.floor(s / 60)}м назад`;
-  if (s < 86400) return `${Math.floor(s / 3600)}ч назад`;
-  return `${Math.floor(s / 86400)}д назад`;
+  const ago = en ? "ago" : "назад";
+  if (s < 15) return en ? "just now" : "только что";
+  if (s < 60) return `${Math.floor(s)}${en ? "s" : "с"} ${ago}`;
+  if (s < 3600) return `${Math.floor(s / 60)}${en ? "m" : "м"} ${ago}`;
+  if (s < 86400) return `${Math.floor(s / 3600)}${en ? "h" : "ч"} ${ago}`;
+  return `${Math.floor(s / 86400)}${en ? "d" : "д"} ${ago}`;
 }

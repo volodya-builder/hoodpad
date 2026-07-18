@@ -7,12 +7,13 @@ import { poolTrades } from "../lib/data.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import Chat from "./Chat.jsx";
 import { useSplit, loadCreationTimes, timeAgo } from "../lib/data.js";
+import { useLang } from "../lib/i18n.jsx";
 
 const SLIPPAGE_BPS = 300n; // 3%
 
 function MiniChart({ points }) {
   if (!points || points.length < 2) {
-    return <div className="dim" style={{ padding: "20px 0" }}>График появится после первых сделок.</div>;
+    return <div className="dim" style={{ padding: "20px 0" }}>{window.__hoodT ? window.__hoodT("График появится после первых сделок.") : "График появится после первых сделок."}</div>;
   }
   const W = 640, H = 180, PADB = 6, PADT = 8;
   let mn = Infinity, mx = -Infinity;
@@ -39,6 +40,7 @@ function MiniChart({ points }) {
 }
 
 export default function TokenPage({ tokenAddress, wallet, onConnect }) {
+  const { t } = useLang();
   const rate = useEthUsd();
   const split = useSplit();
   const [data, setData] = useState(null);
@@ -219,7 +221,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     }
   }
 
-  if (!data) return <div className="center">{error || "Loading token…"}</div>;
+  if (!data) return <div className="center">{error || t("Загружаю…")}</div>;
 
   const progress = Number((data.sold * 10000n) / data.cap) / 100;
   const mcapEth = Number(formatEther(data.price)) * 1_000_000_000;
@@ -277,19 +279,19 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
 
           <div className="stats-grid">
             <div className="stat-card">
-              <div className="k">Price</div>
+              <div className="k">{t("Цена")}</div>
               <div className="v">{fmt(formatEther(data.price), 9)} ETH</div>
             </div>
             <div className="stat-card">
-              <div className="k">Капитализация</div>
+              <div className="k">{t("Капитализация")}</div>
               <div className="v">{mcapUsd}</div>
             </div>
             <div className="stat-card">
-              <div className="k">Raised</div>
+              <div className="k">{t("Собрано")}</div>
               <div className="v">{fmt(formatEther(data.reserve), 3)} ETH</div>
             </div>
             <div className="stat-card">
-              <div className="k">Curve progress</div>
+              <div className="k">{t("До градации")}</div>
               <div className="v">{fmt(progress, 1)}%</div>
             </div>
           </div>
@@ -302,14 +304,14 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
 
           <div className="stats-grid" style={{ marginTop: 12 }}>
             <div className="stat-card">
-              <div className="k">Комиссии создателя</div>
+              <div className="k">{t("Комиссии создателя")}</div>
               <div className="v" style={{ color: "var(--gold)" }}>
                 {fmt(formatEther(extra.creatorFees ?? 0n), 5)} ETH
               </div>
             </div>
             {extra.burned > 0n && (
               <div className="stat-card">
-                <div className="k">Сожжено казной</div>
+                <div className="k">{t("Сожжено казной")}</div>
                 <div className="v">{fmt(formatEther(extra.burned), 0)}</div>
               </div>
             )}
@@ -321,46 +323,46 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               disabled={busy}
               onClick={() => sendTx(data.pool, poolExtraAbi, "claimCreatorFees", [wallet.account])}
             >
-              Забрать комиссии создателя
+              {t("Забрать комиссии создателя")}
             </button>
           )}
 
           <p className="dim" style={{ marginTop: 18 }}>
-            Токен:{" "}
+            {t("Токен:")}{" "}
             <a className="mono" href={`${EXPLORER}/address/${tokenAddress}`} target="_blank" rel="noreferrer">
               {short(tokenAddress)}
             </a>
-            {" · "}Пул:{" "}
+            {" · "}{t("Пул:")}{" "}
             <a className="mono" href={`${EXPLORER}/address/${data.pool}`} target="_blank" rel="noreferrer">
               {short(data.pool)}
             </a>
-            {" · "}Создатель: <span className="mono">{short(data.creator)}</span>
-            {extra.createdAt ? <> {" · "}Запущен {timeAgo(extra.createdAt)}</> : null}
+            {" · "}{t("Создатель:")} <span className="mono">{short(data.creator)}</span>
+            {extra.createdAt ? <> {" · "}{t("Запущен")} {timeAgo(extra.createdAt)}</> : null}
           </p>
         </div>
 
         <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
-          <div className="card-title"><h3>Капитализация по сделкам</h3></div>
+          <div className="card-title"><h3>{t("Капитализация по сделкам")}</h3></div>
           <MiniChart points={history?.points} />
         </div>
 
         <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
-          <div className="card-title"><h3>Сделки из блокчейна</h3></div>
-          {!history && <div className="dim" style={{ padding: "14px 0" }}>Читаю события…</div>}
+          <div className="card-title"><h3>{t("Сделки из блокчейна")}</h3></div>
+          {!history && <div className="dim" style={{ padding: "14px 0" }}>{t("Читаю события…")}</div>}
           {history && history.trades.length === 0 && (
-            <div className="dim" style={{ padding: "14px 0" }}>Пока нет сделок.</div>
+            <div className="dim" style={{ padding: "14px 0" }}>{t("Пока нет сделок.")}</div>
           )}
           {history && history.trades.slice(0, 12).map((tr, i) => (
             <div className="trow" key={i}>
               <span className={tr.side === "buy" ? "side-buy" : "side-sell"}>
-                {tr.side === "buy" ? "Купил" : "Продал"}
+                {t(tr.side === "buy" ? "Купил" : "Продал")}
               </span>
               <span>{fmt(tr.eth, 5)} ETH</span>
               <span>{fmt(tr.tokens, 0)}</span>
               <a className="mono" href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer">
                 {short(tr.addr)}
               </a>
-              <span className="dim">блок {String(tr.block)}</span>
+              <span className="dim">{t("блок")} {String(tr.block)}</span>
             </div>
           ))}
         </div>
@@ -371,16 +373,16 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           data.migrated ? (
             <div className="panel" style={{ margin: 0, maxWidth: "none" }}>
               <div className="notice">
-                This token graduated — liquidity is locked on the DEX. Trade it there.
+                {t("Токен градуировал — торговля на DEX. Кривая закрыта.")}
               </div>
             </div>
           ) : (
             <div className="panel" style={{ margin: 0, maxWidth: "none" }}>
               <div className="notice">
-                Curve complete! Anyone can trigger the liquidity migration.
+                {t("Кривая заполнена! Кто угодно может запустить миграцию.")}
               </div>
               <button className="btn btn-primary btn-block" onClick={migrate} disabled={busy}>
-                {busy ? "Migrating…" : "Migrate liquidity to DEX"}
+                {busy ? t("Мигрирую…") : t("Мигрировать на DEX")}
               </button>
               {error && <div className="error">{error}</div>}
             </div>
@@ -389,14 +391,14 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           <div className="panel" style={{ margin: 0, maxWidth: "none" }}>
             <div className="tabs">
               <div className={`tab ${tab === "buy" ? "active-buy" : ""}`} onClick={() => { setTab("buy"); setAmount(""); }}>
-                Buy
+                {t("Купить")}
               </div>
               <div className={`tab ${tab === "sell" ? "active-sell" : ""}`} onClick={() => { setTab("sell"); setAmount(""); }}>
-                Sell
+                {t("Продать")}
               </div>
             </div>
 
-            <label>{tab === "buy" ? "You pay (ETH)" : `You sell (${data.symbol})`}</label>
+            <label>{tab === "buy" ? t("Вы платите (ETH)") : `${t("Вы продаёте")} (${data.symbol})`}</label>
             <input
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
@@ -405,16 +407,16 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             />
             {tab === "sell" && wallet && (
               <p className="dim" style={{ margin: "6px 0 0" }}>
-                Balance: {fmt(formatEther(data.balance), 2)}{" "}
+                {t("Баланс:")} {fmt(formatEther(data.balance), 2)}{" "}
                 <a href="#/" onClick={(e) => { e.preventDefault(); setAmount(formatEther(data.balance)); }}>
-                  max
+                  {t("макс")}
                 </a>
               </p>
             )}
 
             {quote && (
               <div className="quote-box">
-                <span>You receive (est.)</span>
+                <span>{t("Вы получите (оценка)")}</span>
                 <b>
                   {tab === "buy"
                     ? `${fmt(formatEther(quote.value), 2)} ${data.symbol}`
@@ -429,15 +431,15 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               disabled={busy || (!quote && !!wallet)}
             >
               {busy
-                ? "Confirming…"
+                ? t("Подтверждаю…")
                 : !wallet
-                ? "Connect wallet"
+                ? t("Подключить кошелёк")
                 : tab === "buy"
-                ? `Buy ${data.symbol}`
-                : `Sell ${data.symbol}`}
+                ? `${t("Купить")} ${data.symbol}`
+                : `${t("Продать")} ${data.symbol}`}
             </button>
             <p className="dim" style={{ marginTop: 12 }}>
-              Комиссия 1% · слиппедж 3% · {split.creator}% создателю{split.team > 0 ? ` · ${split.team}% команде` : ""} · {split.buyback}% на выкуп
+              {t("Комиссия 1%")} · {t("слиппедж 3%")} · {split.creator}% {t("создателю")}{split.team > 0 ? ` · ${split.team}% ${t("команде")}` : ""} · {split.buyback}% {t("на выкуп")}
             </p>
             {error && <div className="error">{error}</div>}
           </div>
@@ -446,11 +448,11 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         {isTreasuryOwner && !data.graduated && (
           <div className="panel" style={{ margin: "18px 0 0", maxWidth: "none" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <b style={{ fontSize: 14 }}>Выкуп из казны</b>
+              <b style={{ fontSize: 14 }}>{t("Выкуп из казны")}</b>
               <TreasuryBalance />
             </div>
             <p className="dim" style={{ margin: "8px 0 10px" }}>
-              Режим владельца платформы: казна купит этот токен с рынка.
+              {t("Режим владельца платформы: казна купит этот токен с рынка.")}
             </p>
             <div style={{ display: "flex", gap: 8 }}>
               <input
@@ -465,17 +467,17 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 disabled={busy || !bbAmt}
                 onClick={() => sendTx(TREASURY_ADDRESS, treasuryAbi, "buyback", [tokenAddress, parseEther(bbAmt), 0n])}
               >
-                Выкупить
+                {t("Выкупить")}
               </button>
             </div>
             <div className="dim" style={{ marginTop: 8, display: "flex", justifyContent: "space-between" }}>
-              <span>В казне: {fmt(formatEther(extra.treasuryHeld ?? 0n), 0)} {data.symbol}</span>
+              <span>{t("В казне:")} {fmt(formatEther(extra.treasuryHeld ?? 0n), 0)} {data.symbol}</span>
               {(extra.treasuryHeld ?? 0n) > 0n && (
                 <a
                   style={{ color: "var(--red)", cursor: "pointer" }}
                   onClick={() => sendTx(TREASURY_ADDRESS, treasuryAbi, "burn", [tokenAddress, extra.treasuryHeld])}
                 >
-                  Сжечь 🔥
+                  {t("Сжечь 🔥")}
                 </a>
               )}
             </div>
@@ -496,5 +498,5 @@ function TreasuryBalance() {
       .then((b) => alive && setBal(b)).catch(() => {});
     return () => { alive = false; };
   }, []);
-  return <span className="dim">{bal === null ? "…" : `${fmt(formatEther(bal), 5)} ETH доступно`}</span>;
+  return <span className="dim">{bal === null ? "…" : `${fmt(formatEther(bal), 5)} ${window.__hoodT ? window.__hoodT("ETH доступно") : "ETH доступно"}`}</span>;
 }

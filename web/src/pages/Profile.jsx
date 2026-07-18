@@ -4,8 +4,10 @@ import { publicClient, fmt, short } from "../lib/web3.js";
 import { tokenAbi } from "../lib/abi.js";
 import { EXPLORER } from "../lib/config.js";
 import { loadTokens, poolTrades } from "../lib/data.js";
+import { useLang } from "../lib/i18n.jsx";
 
 export default function Profile({ wallet, onConnect }) {
+  const { t } = useLang();
   const [state, setState] = useState(null);
   const [error, setError] = useState("");
 
@@ -54,8 +56,8 @@ export default function Profile({ wallet, onConnect }) {
   if (!wallet) {
     return (
       <div className="center" style={{ paddingTop: 80 }}>
-        Подключите кошелёк, чтобы увидеть профиль.{" "}
-        <a style={{ color: "var(--gold)", cursor: "pointer" }} onClick={onConnect}>Подключить →</a>
+        {t("Подключите кошелёк, чтобы увидеть профиль.")}{" "}
+        <a style={{ color: "var(--gold)", cursor: "pointer" }} onClick={onConnect}>{t("Подключить →")}</a>
       </div>
     );
   }
@@ -65,37 +67,37 @@ export default function Profile({ wallet, onConnect }) {
       <div className="pf-head">
         <div className="pf-ava">🏹</div>
         <div>
-          <div className="page-title" style={{ margin: 0 }}>Профиль</div>
+          <div className="page-title" style={{ margin: 0 }}>{t("Профиль")}</div>
           <div className="dim mono">
-            {short(wallet.account)} · баланс {state ? fmt(Number(formatEther(state.ethBal)), 4) : "…"} ETH
+            {short(wallet.account)} · {t("баланс")} {state ? fmt(Number(formatEther(state.ethBal)), 4) : "…"} ETH
           </div>
         </div>
         {state && (
           <div style={{ marginLeft: "auto" }} className="about-stat">
-            <div className="k">Общий PnL</div>
+            <div className="k">{t("Общий PnL")}</div>
             <div className="v" style={{ color: state.totPnl >= 0 ? "var(--leaf)" : "var(--red)" }}>
               {state.totPnl >= 0 ? "+" : ""}{fmt(state.totPnl, 5)} ETH
             </div>
             <div className="s">
-              позиции {fmt(state.totVal, 5)} · вложено {fmt(state.totInv, 5)} · реализовано {fmt(state.totReal, 5)}
+              {t("позиции")} {fmt(state.totVal, 5)} · {t("вложено")} {fmt(state.totInv, 5)} · {t("реализовано")} {fmt(state.totReal, 5)}
             </div>
           </div>
         )}
       </div>
 
       {error && <div className="error">{error}</div>}
-      {!state && !error && <div className="center">Читаю блокчейн…</div>}
+      {!state && !error && <div className="center">{t("Читаю блокчейн…")}</div>}
 
       {state && (
         <>
           <div className="bottom-card" style={{ marginTop: 0 }}>
-            <div className="bt-tabs"><div className="bt-tab on">Мои позиции</div></div>
-            {state.positions.length === 0 && <div className="center">Пока нет позиций.</div>}
+            <div className="bt-tabs"><div className="bt-tab on">{t("Мои позиции")}</div></div>
+            {state.positions.length === 0 && <div className="center">{t("Пока нет позиций.")}</div>}
             {state.positions.length > 0 && (
               <>
                 <div className="prow6 hdr">
-                  <span>Токен</span><span>Баланс</span><span>Стоимость</span>
-                  <span>Вложено</span><span>PnL</span><span>Кривая</span>
+                  <span>{t("Токен")}</span><span>{t("Баланс")}</span><span>{t("Стоимость")}</span>
+                  <span>{t("Вложено")}</span><span>PnL</span><span>{t("Кривая")}</span>
                 </div>
                 {state.positions.map((t) => {
                   const val = Number(formatEther(t.bal)) * Number(formatEther(t.price));
@@ -122,17 +124,17 @@ export default function Profile({ wallet, onConnect }) {
           </div>
 
           <div className="bottom-card">
-            <div className="bt-tabs"><div className="bt-tab on">Мои сделки</div></div>
-            {state.myTrades.length === 0 && <div className="center">Сделок пока нет.</div>}
+            <div className="bt-tabs"><div className="bt-tab on">{t("Мои сделки")}</div></div>
+            {state.myTrades.length === 0 && <div className="center">{t("Сделок пока нет.")}</div>}
             {state.myTrades.length > 0 && (
               <>
                 <div className="trow hdr">
-                  <span>Тип</span><span>ETH</span><span>Токены</span><span>Токен</span><span>Блок</span>
+                  <span>{t("Тип")}</span><span>ETH</span><span>{t("Токены")}</span><span>{t("Токен")}</span><span>{t("Блок")}</span>
                 </div>
                 {state.myTrades.map((tr, i) => (
                   <a className="trow" key={i} href={`#/token/${tr.token}`} style={{ cursor: "pointer" }}>
                     <span className={tr.side === "buy" ? "side-buy" : "side-sell"}>
-                      {tr.side === "buy" ? "Купил" : "Продал"}
+                      {t(tr.side === "buy" ? "Купил" : "Продал")}
                     </span>
                     <span>{fmt(tr.eth, 5)}</span>
                     <span>{fmt(tr.tokens, 0)}</span>

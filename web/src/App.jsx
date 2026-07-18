@@ -9,6 +9,7 @@ import { connectWallet, hasWallet, short, fmt } from "./lib/web3.js";
 import { CHAIN, FACTORY_ADDRESS } from "./lib/config.js";
 import { loadTokens } from "./lib/data.js";
 import { useEthUsd, usd } from "./lib/price.js";
+import { useLang } from "./lib/i18n.jsx";
 import { formatEther } from "viem";
 
 function useHashRoute() {
@@ -22,6 +23,7 @@ function useHashRoute() {
 }
 
 function SearchModal({ open, onClose }) {
+  const { t } = useLang();
   const rate = useEthUsd();
   const [q, setQ] = useState("");
   const [tokens, setTokens] = useState(null);
@@ -42,16 +44,16 @@ function SearchModal({ open, onClose }) {
           autoFocus
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Поиск токена по имени или тикеру…"
+          placeholder={t("Поиск токена по имени или тикеру…")}
           onKeyDown={(e) => {
             if (e.key === "Escape") onClose();
             if (e.key === "Enter" && res[0]) { onClose(); window.location.hash = `#/token/${res[0].token}`; }
           }}
         />
         <div className="sr-list">
-          {tokens === null && <div className="center" style={{ padding: "20px 0" }}>Загружаю…</div>}
+          {tokens === null && <div className="center" style={{ padding: "20px 0" }}>{t("Загружаю…")}</div>}
           {tokens !== null && res.length === 0 && (
-            <div className="center" style={{ padding: "20px 0" }}>Ничего не найдено</div>
+            <div className="center" style={{ padding: "20px 0" }}>{t("Ничего не найдено")}</div>
           )}
           {res.map((t) => (
             <div className="sr-item" key={t.token}
@@ -70,6 +72,7 @@ function SearchModal({ open, onClose }) {
 }
 
 export default function App() {
+  const { lang, t, setLang } = useLang();
   const route = useHashRoute();
   const [wallet, setWallet] = useState(null); // { account, walletClient }
   const [searchOpen, setSearchOpen] = useState(false);
@@ -145,22 +148,25 @@ export default function App() {
             <span className="logo-word">HOOD</span>
           </a>
           <div className="nav-pills">
-            <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/profile") && !route.startsWith("/vote") ? "on" : ""}`} href="#/">Обзор</a>
-            <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">Аналитика</a>
-            <a className={`nav-pill ${route.startsWith("/vote") ? "on" : ""}`} href="#/vote">Голосование</a>
+            <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/profile") && !route.startsWith("/vote") ? "on" : ""}`} href="#/">{t("Обзор")}</a>
+            <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>
+            <a className={`nav-pill ${route.startsWith("/vote") ? "on" : ""}`} href="#/vote">{t("Голосование")}</a>
           </div>
           <nav className="nav">
             <button className="icon-btn" onClick={() => setSearchOpen(true)} title="Поиск (Ctrl+K)">⌕</button>
+            <button className="icon-btn" onClick={() => setLang(lang === "en" ? "ru" : "en")}
+                    title="Язык / Language" style={{ width: "auto", padding: "0 13px", fontSize: 12, fontWeight: 800 }}>
+              {lang === "en" ? "RU" : "EN"}
+            </button>
             <button className="icon-btn" onClick={() => setTheme(theme === "light" ? "" : "light")} title="Сменить тему">
               {theme === "light" ? "☾" : "☀"}
             </button>
-            <span className="net-pill">{CHAIN.name}</span>
-            <a className="btn" href="#/create">+ Запустить токен</a>
+            <a className="btn" href="#/create">{t("+ Запустить токен")}</a>
             {wallet ? (
               <a className="btn mono" href="#/profile" title="Профиль">{short(wallet.account)}</a>
             ) : (
               <button className="btn btn-primary" onClick={connect}>
-                Подключить кошелёк
+                {t("Подключить кошелёк")}
               </button>
             )}
           </nav>

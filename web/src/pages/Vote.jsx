@@ -3,6 +3,7 @@ import { parseAbi, parseAbiItem } from "viem";
 import { publicClient, fmt, short } from "../lib/web3.js";
 import { VOTE_ADDRESS } from "../lib/config.js";
 import { loadTokens } from "../lib/data.js";
+import { useLang } from "../lib/i18n.jsx";
 
 const voteAbi = parseAbi([
   "function vote(address token)",
@@ -24,6 +25,7 @@ function countdown(sec) {
 }
 
 export default function Vote({ wallet, onConnect }) {
+  const { t } = useLang();
   const [state, setState] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -85,34 +87,31 @@ export default function Vote({ wallet, onConnect }) {
   if (!enabled) {
     return (
       <div className="center" style={{ paddingTop: 80 }}>
-        Голосование скоро появится — контракт готовится к деплою.
+        {t("Голосование скоро появится — контракт готовится к деплою.")}
       </div>
     );
   }
 
   return (
     <>
-      <div className="page-title">Голосование за выкуп</div>
+      <div className="page-title">{t("Голосование за выкуп")}</div>
       <div className="page-sub">
-        Каждую неделю комьюнити подсказывает казне, какой токен поддержать
-        выкупом: один кошелёк — один голос за раунд, всё в блокчейне.
-        Итоговое решение о выкупе принимает платформа — голосование
-        совещательное.
+        {t("Каждую неделю комьюнити подсказывает казне, какой токен поддержать выкупом: один кошелёк — один голос за раунд, всё в блокчейне. Итоговое решение о выкупе принимает платформа — голосование совещательное.")}
       </div>
 
       {state && (
         <div className="about-card" style={{ marginTop: 0 }}>
           <div className="about-stat">
-            <div className="k">Голосов в раунде</div>
+            <div className="k">{t("Голосов в раунде")}</div>
             <div className="v">{state.total}</div>
           </div>
           <div className="about-stat">
-            <div className="k">До конца раунда</div>
+            <div className="k">{t("До конца раунда")}</div>
             <div className="v">{countdown(state.endsIn)}</div>
           </div>
           {state.myVote && (
             <div className="about-stat">
-              <div className="k">Ваш голос</div>
+              <div className="k">{t("Ваш голос")}</div>
               <div className="v" style={{ fontSize: 18 }}>
                 {state.rows.find((r) => r.token.toLowerCase() === state.myVote)?.symbol ?? short(state.myVote)} ✓
               </div>
@@ -122,10 +121,10 @@ export default function Vote({ wallet, onConnect }) {
       )}
 
       {error && <div className="error">{error}</div>}
-      {!state && !error && <div className="center">Читаю блокчейн…</div>}
+      {!state && !error && <div className="center">{t("Читаю блокчейн…")}</div>}
 
       {state && state.rows.length === 0 && (
-        <div className="center">Нет токенов на кривой — голосовать пока не за кого.</div>
+        <div className="center">{t("Нет токенов на кривой — голосовать пока не за кого.")}</div>
       )}
 
       {state && state.rows.length > 0 && (
@@ -158,12 +157,12 @@ export default function Vote({ wallet, onConnect }) {
                 </span>
                 <b style={{ fontVariantNumeric: "tabular-nums" }}>{t.votes}</b>
                 {isMine ? (
-                  <span className="badge">ваш голос</span>
+                  <span className="badge">{t("ваш голос")}</span>
                 ) : (
                   <button className="btn" disabled={busy || !!state.myVote}
                           onClick={() => castVote(t.token)}
-                          title={state.myVote ? "Вы уже голосовали в этом раунде" : ""}>
-                    Голосовать
+                          title={state.myVote ? t("Вы уже голосовали в этом раунде") : ""}>
+                    {t("Голосовать")}
                   </button>
                 )}
               </div>
@@ -173,8 +172,7 @@ export default function Vote({ wallet, onConnect }) {
       )}
 
       <div className="ana-note">
-        Голос — маленькая транзакция в сети (газ — доли цента). Новый раунд
-        начинается автоматически каждые 7 дней.
+        {t("Голос — маленькая транзакция в сети (газ — доли цента). Новый раунд начинается автоматически каждые 7 дней.")}
       </div>
     </>
   );

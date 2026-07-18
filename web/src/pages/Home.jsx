@@ -3,6 +3,7 @@ import { formatEther } from "viem";
 import { publicClient, fmt } from "../lib/web3.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { useSplit, timeAgo } from "../lib/data.js";
+import { useLang } from "../lib/i18n.jsx";
 import { factoryAbi, poolAbi, tokenAbi } from "../lib/abi.js";
 import { FACTORY_ADDRESS } from "../lib/config.js";
 
@@ -61,6 +62,7 @@ async function loadTokens() {
 }
 
 function TokenCard({ t }) {
+  const { t: tr } = useLang();
   const rate = useEthUsd();
   const progress = Number((t.sold * 10000n) / t.cap) / 100;
   const mcapEth = Number(formatEther(t.price)) * 1_000_000_000;
@@ -68,7 +70,7 @@ function TokenCard({ t }) {
     <a className="tcard" href={`#/token/${t.token}`}>
       <div className="timg">
         {t.meta.image ? <img src={t.meta.image} alt="" /> : "🖼️"}
-        {t.graduated && <span className="grad-chip">Градуировал</span>}
+        {t.graduated && <span className="grad-chip">{tr("Градуировал")}</span>}
       </div>
       <div className="tname">{t.name}</div>
       <div className="ttick">${t.symbol}</div>
@@ -90,6 +92,7 @@ function TokenCard({ t }) {
 }
 
 export default function Home({ onSearch }) {
+  const { t } = useLang();
   const split = useSplit();
   const [tokens, setTokens] = useState(null);
   const [error, setError] = useState("");
@@ -117,26 +120,19 @@ export default function Home({ onSearch }) {
 
   return (
     <>
-      <div className="search-row">
-        <div className="big-search" onClick={onSearch}>
-          ⌕ Поиск токенов <span className="kbd">Ctrl K</span>
-        </div>
-        <a className="btn btn-primary" style={{ padding: "0 26px", display: "flex", alignItems: "center" }} href="#/create">
-          + Создать
-        </a>
-      </div>
+      <div className="page-title" style={{ marginTop: 34 }}>{t("Обзор")}</div>
       <div className="page-sub">
-        Токены с фиксированным сапплаем на Robinhood Chain — запуск в одну
-        транзакцию, {split.creator}% комиссий создателю{split.team > 0 ? `, ${split.team}% команде` : ""},
-        {" "}{split.buyback}% в казну выкупа, ликвидность запирается навсегда.
+        {t("Токены с фиксированным сапплаем на Robinhood Chain")} — {t("запуск в одну транзакцию")},{" "}
+        {split.creator}% {t("создателю")}{split.team > 0 ? `, ${split.team}% ${t("команде")}` : ""},{" "}
+        {split.buyback}% {t("в казну выкупа")}, {t("ликвидность запирается навсегда")}.
       </div>
 
       {error && <div className="error">{error}</div>}
-      {!tokens && !error && <div className="center">Загружаю токены из блокчейна…</div>}
+      {!tokens && !error && <div className="center">{t("Загружаю токены из блокчейна…")}</div>}
       {tokens && tokens.length === 0 && (
         <div className="center">
-          Токенов пока нет — станьте первым.{" "}
-          <a href="#/create" style={{ color: "var(--gold)" }}>Запустить токен →</a>
+          {t("Токенов пока нет — станьте первым.")}{" "}
+          <a href="#/create" style={{ color: "var(--gold)" }}>{t("Запустить токен →")}</a>
         </div>
       )}
 
@@ -145,10 +141,10 @@ export default function Home({ onSearch }) {
           <div className="sec-head">
             <div>
               <h2 className="sec-h2">
-                Градуировали <span className="count-chip">{grad.length}</span>
+                {t("Градуировали")} <span className="count-chip">{grad.length}</span>
               </h2>
               <div className="page-sub" style={{ margin: "7px 0 0" }}>
-                Прошли порог градации — ликвидность заперта на DEX.
+                {t("Прошли порог градации — ликвидность заперта на DEX.")}
               </div>
             </div>
           </div>
@@ -163,14 +159,14 @@ export default function Home({ onSearch }) {
           <div className="sec-head">
             <div>
               <h2 className="sec-h2">
-                На кривой <span className="count-chip">{live.length}</span>
+                {t("На кривой")} <span className="count-chip">{live.length}</span>
               </h2>
               <div className="page-sub" style={{ margin: "7px 0 0" }}>
-                Летят к градации — сбор 6.5 ETH.
+                {t("Летят к градации — сбор 6.5 ETH.")}
               </div>
             </div>
             <div className="pill-group">
-              {[["new", "Новые"], ["raised", "Недавние покупки"], ["mcap", "Капитализация"]].map(([k, lbl]) => (
+              {[["new", t("Новые")], ["raised", t("Недавние покупки")], ["mcap", t("Капитализация")]].map(([k, lbl]) => (
                 <div key={k} className={`fpill ${sort === k ? "on" : ""}`} onClick={() => setSort(k)}>
                   {lbl}
                 </div>

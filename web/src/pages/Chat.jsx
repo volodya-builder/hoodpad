@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { short } from "../lib/web3.js";
 import { CHAT_DB_URL } from "../lib/config.js";
+import { useLang } from "../lib/i18n.jsx";
 
 // Обычный (офчейн) чат поверх Firebase Realtime Database REST API.
 // Без SDK: GET для чтения, POST для отправки, поллинг раз в 4 секунды.
@@ -27,6 +28,7 @@ function guestName() {
 }
 
 export default function Chat({ tokenAddress, wallet }) {
+  const { t } = useLang();
   const [msgs, setMsgs] = useState(null);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -91,8 +93,8 @@ export default function Chat({ tokenAddress, wallet }) {
   if (!enabled) {
     return (
       <div className="chat-panel" style={{ marginTop: 18 }}>
-        <div className="chat-head"><h3>Чат</h3></div>
-        <div className="chat-sub">Скоро: подключаем хранилище сообщений.</div>
+        <div className="chat-head"><h3>{t("Чат")}</h3></div>
+        <div className="chat-sub">{t("Скоро: подключаем хранилище сообщений.")}</div>
       </div>
     );
   }
@@ -100,13 +102,13 @@ export default function Chat({ tokenAddress, wallet }) {
   return (
     <div className="chat-panel" style={{ marginTop: 18 }}>
       <div className="chat-head">
-        <h3>Чат</h3>
+        <h3>{t("Чат")}</h3>
         <span className="chat-count">{msgs?.length ?? "…"}</span>
       </div>
-      <div className="chat-sub">Писать могут все — кошелёк не обязателен.</div>
+      <div className="chat-sub">{t("Писать могут все — кошелёк не обязателен.")}</div>
       <div className="chat-list" ref={listRef}>
-        {msgs === null && <div className="dim">Загружаю…</div>}
-        {msgs?.length === 0 && <div className="dim">Пока тихо — напишите первым.</div>}
+        {msgs === null && <div className="dim">{t("Загружаю…")}</div>}
+        {msgs?.length === 0 && <div className="dim">{t("Пока тихо — напишите первым.")}</div>}
         {msgs?.map((m) => (
           <div className="chat-msg" key={m.key}>
             <div className="chat-ava">{m.w ? "🏹" : "👤"}</div>
@@ -122,7 +124,7 @@ export default function Chat({ tokenAddress, wallet }) {
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Сообщение…"
+          placeholder={t("Сообщение…")}
           maxLength={280}
           onKeyDown={(e) => e.key === "Enter" && send()}
         />
