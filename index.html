@@ -563,7 +563,8 @@ html[data-theme="light"] .forest { opacity: .28; }
 
 <script>
 // ------------------------------------------------ simulated chain
-const VIRT = 1.625, TOTAL = 1e9, CAP = 8e8, FEE = 0.01, CREATOR_SHARE = 0.7;
+const VIRT = 1.625, TOTAL = 1e9, CAP = 8e8, FEE = 0.01, CREATOR_SHARE = 0.2;
+const treasury = { eth: 0, received: 0, spent: 0, holdings: {}, burned: {}, buybacks: [] };
 const MAX_DEV_BUY_TOKENS = TOTAL * 0.05;
 const MAX_DEV_BUY_ETH = (VIRT * MAX_DEV_BUY_TOKENS / (TOTAL - MAX_DEV_BUY_TOKENS)) / (1 - FEE);
 let ethBalance = 10;
@@ -671,6 +672,8 @@ function quoteSell(t, tokIn) {
 function applyFee(t, fee) {
   t.creatorFees += fee * CREATOR_SHARE;
   t.protoFees += fee * (1 - CREATOR_SHARE);
+  treasury.eth += fee * (1 - CREATOR_SHARE);
+  treasury.received += fee * (1 - CREATOR_SHARE);
 }
 function buy(t, ethIn, silent) {
   if (ethIn <= 0 || ethIn > ethBalance) { toast("Недостаточно ETH"); return false; }
@@ -718,6 +721,33 @@ function vol24(t) {
   const cut = Date.now() - 86400e3;
   return t.trades.reduce((s, tr) => tr.t >= cut ? s + tr.eth : s, 0);
 }
+function doBuyback(t, ethAmt) {
+  if (ethAmt <= 0) return toast("Введите сумму выкупа");
+  if (ethAmt > treasury.eth) return toast("В казне недостаточно ETH");
+  if (t.graduated) return toast("Токен градуировал — выкуп на DEX добавим после интеграции");
+  const net = ethAmt * (1 - FEE);
+  const x = VIRT + t.eth, y = TOTAL - t.sold;
+  let out = y * net / (x + net);
+  const remaining = CAP - t.sold;
+  if (out >= remaining) { out = remaining; t.graduated = true; }
+  t.eth += net; t.sold += out;
+  applyFee(t, ethAmt - net);
+  treasury.eth -= ethAmt; treasury.spent += ethAmt;
+  treasury.holdings[t.symbol] = (treasury.holdings[t.symbol] || 0) + out;
+  treasury.buybacks.unshift({ sym: t.symbol, eth: ethAmt, tokens: out, t: Date.now() });
+  record(t, "buy", ethAmt, out, "Казна hoodpad", Date.now());
+  toast(`Выкуплено ${fmt(out,0)} ${t.symbol} за ${fmt(ethAmt,4)} ETH`);
+  render();
+}
+function doBurn(t) {
+  const held = treasury.holdings[t.symbol] || 0;
+  if (held <= 0) return toast("В казне нет этого токена");
+  treasury.burned[t.symbol] = (treasury.burned[t.symbol] || 0) + held;
+  treasury.holdings[t.symbol] = 0;
+  t.burned = (t.burned || 0) + held;
+  toast(`Сожжено ${fmt(held,0)} ${t.symbol} 🔥`);
+  render();
+}
 function migrate(t) {
   t.migrated = true;
   toast("Ликвидность мигрирована на Uniswap V3 и заперта навсегда 🔒");
@@ -728,10 +758,30 @@ function migrate(t) {
 let lang = "ru";
 try { lang = localStorage.getItem("hp_lang") || "ru"; } catch (e) {}
 const EN_PAIRS = [
+  ["Режим владельца платформы: выберите сумму — казна выкупит этот токен с рынка.", "Platform-owner mode: enter an amount — the treasury will buy this token from the market."],
+  ["Токен градуировал — выкуп на DEX добавим после интеграции", "Token graduated — DEX buybacks arrive with the integration"],
+  ["получено", "received"],
+  ["потрачено на выкуп", "spent on buybacks"],
+  ["токенов уничтожено навсегда", "tokens destroyed forever"],
+  ["выкупов", "buybacks"],
+  ["Выкуплено и сожжено", "Bought back & burned"],
+  ["Казна выкупа", "Buyback treasury"],
+  ["Выкуп из казны", "Treasury buyback"],
+  ["ETH доступно", "ETH available"],
+  ["В казне недостаточно ETH", "Not enough ETH in the treasury"],
+  ["В казне нет этого токена", "The treasury holds none of this token"],
+  ["Введите сумму выкупа", "Enter a buyback amount"],
+  ["В казне:", "Treasury holds:"],
+  ["Сжечь 🔥", "Burn 🔥"],
+  ["Сожжено навсегда:", "Burned forever:"],
+  ["Сожжено", "Burned"],
+  ["Выкуплено", "Bought back"],
+  ["Выкупить", "Buy back"],
+  ["Казна hoodpad", "hoodpad treasury"],
   ["ДЕМО-РЕЖИМ — блокчейн симулируется в браузере · Ваш демо-баланс:", "DEMO MODE — the blockchain is simulated in your browser · Your demo balance:"],
   ["Токены, прошедшие порог градации — ликвидность заперта на DEX.", "Tokens that cleared the graduation threshold — liquidity locked on the DEX."],
   ["Токены, летящие к градации на Robinhood Chain — сбор 6.5 ETH.", "Tokens climbing toward graduation on Robinhood Chain — 6.5 ETH raise."],
-  ["Получает долю создателя в комиссиях (70%) и покупку создателя. Оставьте пустым, чтобы использовать подключённый кошелёк.", "Receives the creator share of trading fees (70%) and the developer buy. Leave blank to use your connected wallet."],
+  ["Получает долю создателя в комиссиях (20%) и покупку создателя. Оставьте пустым, чтобы использовать подключённый кошелёк.", "Receives the creator share of trading fees (70%) and the developer buy. Leave blank to use your connected wallet."],
   ["Я понимаю, что выбранное изображение будет опубликовано и станет\n        частью неизменяемых метаданных токена.", "I understand the selected image will be published and become part of the token's immutable metadata."],
   ["Транзакции отправляются вашим кошельком и необратимы. Токены волатильны и могут\n    полностью обесцениться. hoodpad не хранит активы, не даёт гарантий и финансовых советов.", "Transactions are submitted by your wallet and may be irreversible. Tokens are volatile and can lose all value. hoodpad does not custody assets and gives no warranties or financial advice."],
   ["Запускайте и исследуйте токены с фиксированным\n    сапплаем на Robinhood Chain. Все транзакции отправляет ваш кошелёк — hoodpad не хранит активы.", "Launch and explore fixed-supply tokens on Robinhood Chain. Every transaction is submitted by your wallet — hoodpad does not custody assets."],
@@ -750,8 +800,8 @@ const EN_PAIRS = [
   ["Кошелёк создателя: неверный адрес", "Creator wallet: invalid address"],
   ["Покупка создателя ограничена", "Developer buy is capped at"],
   ["Независимая отчётность по рынкам hoodpad на Robinhood Chain.", "Independent reporting for hoodpad markets on Robinhood Chain."],
-  ["70% всех комиссий — правило Шервуда", "70% of all fees — the Sherwood rule"],
-  ["70% комиссий — создателю. Ликвидность запирается навсегда.", "70% of fees go to the creator. Liquidity locks forever."],
+  ["20% всех комиссий — с первого трейда", "20% of all fees — from the very first trade"],
+  ["20% комиссий — создателю, 80% — в казну выкупа. Ликвидность запирается навсегда.", "70% of fees go to the creator. Liquidity locks forever."],
   ["градаций · доля градаций", "graduations · graduation rate"],
   ["Вы ещё не запускали токены.", "You have not launched any tokens yet."],
   ["Пока нет позиций — купите первый токен.", "No positions yet — buy your first token."],
@@ -780,16 +830,16 @@ const EN_PAIRS = [
   ["Выплачено создателям", "Paid to creators"],
   ["Запуски токенов", "Token launches"],
   ["Заработано создателем", "Creator earnings"],
-  ["70% всех комиссий", "70% of all fees"],
+  ["20% всех комиссий", "20% of all fees"],
   ["Объём за всё время", "All-time volume"],
   ["Объём торгов", "Trading volume"],
   ["Объём 24ч", "24h volume"],
-  ["Комиссия 1% · создатель получает 70%", "1% fee · creator gets 70%"],
+  ["Комиссия 1% · 20% создателю · 80% в казну выкупа", "1% fee · 20% to creator · 80% to buyback treasury"],
   ["Комиссии с трейдов", "Trading fees"],
   ["Комиссия запуска: 0 ETH", "Launch fee: 0 ETH"],
   ["Комиссия запуска", "Launch fee"],
-  ["70% создателю / 30% протоколу", "70% creator / 30% protocol"],
-  ["Комиссии создателя (70%)", "Creator fees (70%)"],
+  ["20% создателю / 80% на выкуп", "70% creator / 30% protocol"],
+  ["Комиссии создателя (20%)", "Creator fees (70%)"],
   ["Мигрировать на DEX", "Migrate to DEX"],
   ["Последние сделки", "Recent trades"],
   ["Недавние покупки", "Recent buys"],
@@ -1169,7 +1219,17 @@ function analyticsView() {
     <div class="ana-card">
       <div class="k">Выплачено создателям</div>
       <div class="v" style="color:var(--gold)">${fmt(creatorPaid, 4)} ETH</div>
-      <div class="s">70% всех комиссий — правило Шервуда</div>
+      <div class="s">20% всех комиссий — с первого трейда</div>
+    </div>
+    <div class="ana-card">
+      <div class="k">Казна выкупа</div>
+      <div class="v" style="color:var(--gold)">${fmt(treasury.eth, 4)} ETH</div>
+      <div class="s">получено ${fmt(treasury.received, 4)} · потрачено на выкуп ${fmt(treasury.spent, 4)}</div>
+    </div>
+    <div class="ana-card">
+      <div class="k">Выкуплено и сожжено</div>
+      <div class="v">${fmt(Object.values(treasury.burned).reduce((a, b) => a + b, 0), 0)}</div>
+      <div class="s">токенов уничтожено навсегда · ${treasury.buybacks.length} выкупов</div>
     </div>
   </div>
   <div class="ana-note">Данные — из событий демо-симуляции. В продакшене: индексация
@@ -1299,7 +1359,7 @@ function createView() {
       <div class="adv-body" id="advBody">
         <label>Кошелёк создателя</label>
         <input id="fWallet" placeholder="0xVolo…dya (подключённый)" spellcheck="false" oninput="syncPreview()" />
-        <div class="hint" id="hWallet">Получает долю создателя в комиссиях (70%) и покупку создателя. Оставьте пустым, чтобы использовать подключённый кошелёк.</div>
+        <div class="hint" id="hWallet">Получает долю создателя в комиссиях (20%) и покупку создателя. Оставьте пустым, чтобы использовать подключённый кошелёк.</div>
         <label>Сайт</label>
         <input id="fSite" placeholder="https://example.com" inputmode="url" />
       </div>
@@ -1386,7 +1446,7 @@ function syncPreview() {
   const okW = wv === "" || /^0x[0-9a-fA-F]{40}$/.test(wv);
   hW.classList.toggle("bad", !okW);
   hW.textContent = tr(okW
-    ? "Получает долю создателя в комиссиях (70%) и покупку создателя. Оставьте пустым, чтобы использовать подключённый кошелёк."
+    ? "Получает долю создателя в комиссиях (20%) и покупку создателя. Оставьте пустым, чтобы использовать подключённый кошелёк."
     : "Неверный адрес: нужен формат 0x… (42 символа).");
   // validation hints
   const hSym = document.getElementById("hSym");
@@ -1539,12 +1599,12 @@ function tokenView(t) {
   <div class="about-card">
     <div style="max-width:440px">
       <h3>О токене</h3>
-      <div class="dim">${t.desc ? esc(t.desc) + " · " : ""}70% комиссий — создателю. Ликвидность запирается навсегда.</div>
+      <div class="dim">${t.desc ? esc(t.desc) + " · " : ""}20% комиссий — создателю, 80% — в казну выкупа. Ликвидность запирается навсегда.</div>
     </div>
     <div class="about-stat">
       <div class="k">Заработано создателем</div>
       <div class="v">${fmt(t.creatorFees, 4)} ETH</div>
-      <div class="s">70% всех комиссий · ${esc(t.creator)}</div>
+      <div class="s">20% всех комиссий · ${esc(t.creator)}</div>
     </div>
     <div class="about-links">${links}</div>
   </div>
@@ -1601,7 +1661,23 @@ function tokenView(t) {
       <div style="margin-top:14px">
         <button class="btn btn-primary btn-block" id="swapCta" onclick="execSwap()" disabled>Введите сумму</button>
       </div>
-      <p class="dim" style="margin:12px 0 0">Комиссия 1% · создатель получает 70%</p>`}
+      <p class="dim" style="margin:12px 0 0">Комиссия 1% · 20% создателю · 80% в казну выкупа</p>`}
+      <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <b style="font-size:13.5px">Выкуп из казны</b>
+          <span class="dim">${fmt(treasury.eth, 4)} ETH доступно</span>
+        </div>
+        <p class="dim" style="margin:6px 0 10px">Режим владельца платформы: выберите сумму — казна выкупит этот токен с рынка.</p>
+        <div style="display:flex;gap:8px">
+          <input id="bbAmt" placeholder="0.05" inputmode="decimal" style="flex:1" />
+          <button class="btn" onclick="doBuyback(tokens[view.idx], parseFloat(document.getElementById('bbAmt').value)||0)">Выкупить</button>
+        </div>
+        <div class="dim" style="margin-top:8px;display:flex;justify-content:space-between">
+          <span>В казне: ${fmt(treasury.holdings[t.symbol] || 0, 0)} ${esc(t.symbol)}</span>
+          ${(treasury.holdings[t.symbol] || 0) > 0 ? `<a style="color:var(--red);cursor:pointer" onclick="doBurn(tokens[view.idx])">Сжечь 🔥</a>` : ""}
+        </div>
+        ${t.burned ? `<div class="dim" style="margin-top:4px">Сожжено навсегда: <b style="color:var(--gold)">${fmt(t.burned, 0)}</b></div>` : ""}
+      </div>
     </div>
 
     <!-- chart panel -->
@@ -1629,7 +1705,7 @@ function tokenView(t) {
       ${!t.graduated ? `<div style="margin-top:10px">${arrowProgress(progress(t))}</div>` : ""}
     </div>
 
-    <!-- chat -->
+    <!-- buyback panel (platform owner = you, in demo) -->
     <div class="chat-panel">
       <div class="chat-head"><h3>Чат</h3><span class="chat-count">${t.chat.length}</span></div>
       <div class="chat-sub">Писать могут все — холд не нужен. Будьте взаимно вежливы.</div>
