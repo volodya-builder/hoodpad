@@ -44,6 +44,6 @@ export const TREASURY_ADDRESS =
 
 // On-chain chat contract (messages are events; zero = not deployed yet)
 export const CHAT_ADDRESS =
-  import.meta.env.VITE_CHAT_ADDRESS ?? "0x0000000000000000000000000000000000000000";
+  import.meta.env.VITE_CHAT_ADDRESS ?? "0xbaf4de9b8f35c384058d31e2730a3146c0d1af3c";
 
 export const EXPLORER = CHAIN.blockExplorers?.default?.url ?? "";
