@@ -6,7 +6,7 @@ import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
 import { poolTrades } from "../lib/data.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import Chat from "./Chat.jsx";
-import { useSplit } from "../lib/data.js";
+import { useSplit, loadCreationTimes, timeAgo } from "../lib/data.js";
 
 const SLIPPAGE_BPS = 300n; // 3%
 
@@ -98,15 +98,17 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   // trades + chart from on-chain events; treasury/creator extras
   const loadExtras = useCallback(async () => {
     if (!data?.pool) return;
-    const [h, creatorFees, treasuryOwner, treasuryHeld, burned] = await Promise.all([
+    const [h, creatorFees, treasuryOwner, treasuryHeld, burned, createdMap] = await Promise.all([
       poolTrades(data.pool),
       publicClient.readContract({ address: data.pool, abi: poolExtraAbi, functionName: "creatorFeesAccrued" }),
       publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "owner" }).catch(() => null),
       publicClient.readContract({ address: tokenAddress, abi: tokenAbi, functionName: "balanceOf", args: [TREASURY_ADDRESS] }).catch(() => 0n),
       publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "burnedOf", args: [tokenAddress] }).catch(() => 0n),
+      loadCreationTimes().catch(() => ({})),
     ]);
     setHistory(h);
-    setExtra({ creatorFees, treasuryOwner, treasuryHeld, burned });
+    setExtra({ creatorFees, treasuryOwner, treasuryHeld, burned,
+               createdAt: createdMap[tokenAddress.toLowerCase()] });
   }, [data?.pool, tokenAddress]);
 
   useEffect(() => {
@@ -333,6 +335,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               {short(data.pool)}
             </a>
             {" · "}Создатель: <span className="mono">{short(data.creator)}</span>
+            {extra.createdAt ? <> {" · "}Запущен {timeAgo(extra.createdAt)}</> : null}
           </p>
         </div>
 

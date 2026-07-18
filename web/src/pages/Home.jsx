@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { formatEther } from "viem";
 import { publicClient, fmt } from "../lib/web3.js";
 import { useEthUsd, usd } from "../lib/price.js";
-import { useSplit } from "../lib/data.js";
+import { useSplit, timeAgo } from "../lib/data.js";
 import { factoryAbi, poolAbi, tokenAbi } from "../lib/abi.js";
 import { FACTORY_ADDRESS } from "../lib/config.js";
 
@@ -83,7 +83,7 @@ function TokenCard({ t }) {
       </div>
       <div className="tmeta">
         <span className="mono">{t.token.slice(0, 6)}…{t.token.slice(-4)}</span>
-        <span>{fmt(Number(formatEther(t.reserve)), 3)} / 6.5 ETH</span>
+        <span>{t.createdAt ? timeAgo(t.createdAt) : `${fmt(Number(formatEther(t.reserve)), 3)} / 6.5 ETH`}</span>
       </div>
     </a>
   );

@@ -1,4 +1,4 @@
-import { parseAbi } from "viem";
+import { parseAbi, parseAbiItem } from "viem";
 import { useEffect, useState } from "react";
 import { publicClient } from "./web3.js";
 import { factoryAbi, poolAbi, tokenAbi } from "./abi.js";
@@ -24,6 +24,7 @@ export async function loadTokens() {
   const addrs = await publicClient.readContract({
     address: FACTORY_ADDRESS, abi: factoryAbi, functionName: "tokens", args: [offset, PAGE],
   });
+  const createdAt = await loadCreationTimes().catch(() => ({}));
   const items = await Promise.all(
     addrs.map(async (token) => {
       const pool = await publicClient.readContract({
@@ -39,7 +40,8 @@ export async function loadTokens() {
         publicClient.readContract({ address: pool, abi: poolAbi, functionName: "ethReserve" }),
         publicClient.readContract({ address: pool, abi: poolAbi, functionName: "graduated" }),
       ]);
-      return { token, pool, name, symbol, price, sold, cap, reserve, graduated, meta: parseMeta(uri) };
+      return { token, pool, name, symbol, price, sold, cap, reserve, graduated,
+               meta: parseMeta(uri), createdAt: createdAt[token.toLowerCase()] };
     })
   );
   return items.reverse();
@@ -116,4 +118,37 @@ export function useSplit() {
   const [split, setSplit] = useState({ creator: 50, team: 20, buyback: 30 });
   useEffect(() => { loadSplit().then(setSplit).catch(() => {}); }, []);
   return split;
+}
+
+
+// ---------------------------------------------------------------- creation times
+const createdEvent = parseAbiItem(
+  "event TokenCreated(address indexed token, address indexed pool, address indexed creator, string name, string symbol, string metadataURI)"
+);
+const blockTsCache = new Map();
+
+export async function loadCreationTimes() {
+  const logs = await publicClient.getLogs({
+    address: FACTORY_ADDRESS, event: createdEvent, fromBlock: 0n, toBlock: "latest",
+  });
+  const out = {};
+  for (const l of logs) {
+    let ts = blockTsCache.get(l.blockNumber);
+    if (ts === undefined) {
+      const b = await publicClient.getBlock({ blockNumber: l.blockNumber });
+      ts = Number(b.timestamp) * 1000;
+      blockTsCache.set(l.blockNumber, ts);
+    }
+    out[l.args.token.toLowerCase()] = ts;
+  }
+  return out;
+}
+
+export function timeAgo(ms) {
+  const s = Math.max(0, (Date.now() - ms) / 1000);
+  if (s < 15) return "только что";
+  if (s < 60) return `${Math.floor(s)}с назад`;
+  if (s < 3600) return `${Math.floor(s / 60)}м назад`;
+  if (s < 86400) return `${Math.floor(s / 3600)}ч назад`;
+  return `${Math.floor(s / 86400)}д назад`;
 }
