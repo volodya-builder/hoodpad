@@ -371,6 +371,41 @@ footer { border-top: 1px solid #1f201d; padding: 34px 0 40px; margin-top: 20px; 
 .toast.show { opacity: 1; }
 ::selection { background: #b9c94b55; }
 
+/* ---------------- big token cards (image-first) */
+.search-row { display: flex; gap: 12px; margin: 26px 0 22px; }
+.big-search { flex: 1; display: flex; align-items: center; gap: 11px; padding: 15px 18px; border-radius: 14px; background: var(--card); border: 1px solid var(--border); color: var(--text-dim); cursor: pointer; font-size: 14.5px; font-weight: 600; }
+.big-search:hover { border-color: var(--border-gold); }
+.big-search .kbd { margin-left: auto; }
+.count-chip { display: inline-block; font-size: 12px; font-weight: 800; padding: 3px 11px; border-radius: 999px; background: var(--gold-dim); color: var(--gold); vertical-align: middle; margin-left: 8px; }
+.grad-wrap {
+  border: 1px solid #3c3e2a; border-radius: 20px; padding: 26px 26px 18px; margin-bottom: 30px;
+  background: radial-gradient(700px 260px at 25% -40px, #b9c94b14, transparent 70%), var(--card);
+  box-shadow: 0 0 40px -22px #b9c94b55;
+}
+.sec-h2 { font-size: 26px; font-weight: 800; margin: 0; letter-spacing: -.4px; }
+.sec-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+.tgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+.tcard { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 15px; padding: 11px; cursor: pointer; transition: all .16s ease; }
+.tcard:hover { transform: translateY(-2px); border-color: #3a3b33; box-shadow: 0 12px 30px -18px #000c; }
+.timg { position: relative; width: 100%; aspect-ratio: 1/1; border-radius: 11px; overflow: hidden; background: var(--card); display: flex; align-items: center; justify-content: center; font-size: 40px; color: var(--text-dim); }
+.timg img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.grad-chip { position: absolute; top: 8px; left: 8px; font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 999px; background: #00000099; backdrop-filter: blur(5px); color: #fff; }
+.tname { font-weight: 800; font-size: 15.5px; margin-top: 12px; letter-spacing: -.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ttick { color: var(--text-dim); font-size: 12.5px; font-weight: 700; margin-top: 2px; }
+.tmc { margin-top: 9px; font-size: 14.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.tmc span { color: var(--text-dim); font-weight: 700; font-size: 10.5px; margin-left: 3px; }
+.prow { display: flex; align-items: center; gap: 9px; margin-top: 10px; }
+.prow .pbar { flex: 1; margin: 0; }
+.prow .pv { font-size: 12px; color: var(--text-dim); font-weight: 700; font-variant-numeric: tabular-nums; }
+.tmeta { display: flex; justify-content: space-between; margin-top: 10px; font-size: 11.5px; color: var(--text-dim); }
+.pager { display: flex; justify-content: center; align-items: center; gap: 6px; margin: 20px 0 4px; }
+.pg { min-width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 9px; font-size: 13px; font-weight: 700; color: var(--text-dim); cursor: pointer; border: 1px solid transparent; }
+.pg:hover { color: var(--text); }
+.pg.on { background: var(--text); color: var(--bg); }
+.pg.nav { border-color: var(--border); background: var(--card); }
+html[data-theme="light"] .tcard { background: #ffffff; }
+html[data-theme="light"] .grad-wrap { background: radial-gradient(700px 260px at 25% -40px, #6e7a1c14, transparent 70%), var(--card); box-shadow: none; }
+
 /* ---------------- nav pills / header controls */
 .nav-pills { display: flex; background: #111210; border: 1px solid var(--border); border-radius: 999px; padding: 3px; gap: 3px; }
 .nav-pill { padding: 7px 16px; border-radius: 999px; font-size: 13.5px; font-weight: 800; color: var(--text-dim); cursor: pointer; transition: all .15s; }
@@ -478,9 +513,7 @@ html[data-theme="light"] .forest { opacity: .28; }
     <div class="nav-pill" id="npAna" onclick="go('analytics')">Аналитика</div>
   </div>
   <nav class="nav">
-    <button class="icon-btn" onclick="openSearch()" title="Поиск (Ctrl+K)">⌕</button>
     <button class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Сменить тему">☀</button>
-    <button class="btn" onclick="go('create')">+ Запустить токен</button>
     <div class="wallet-wrap">
       <span class="btn mono" style="font-size:13px;cursor:pointer" onclick="toggleWalletMenu(event)">0xVolo…dya ▾</span>
       <div class="wallet-menu" id="walletMenu">
@@ -543,7 +576,7 @@ const YOU = "0xVolo…dya";
 function makeToken(name, symbol, desc, creator, img, x, tg) {
   return { name, symbol, desc, creator, img: img || "", x: x || "", tg: tg || "", site: "",
            eth: 0, sold: 0, graduated: false, migrated: false, myBal: 0,
-           creatorFees: 0, protoFees: 0, myCost: 0, myRealized: 0, mine: false,
+           creatorFees: 0, protoFees: 0, myCost: 0, myRealized: 0, mine: false, addr: randAddr(),
            createdAt: Date.now(), history: [], trades: [], holders: {}, chat: [], ath: 0 };
 }
 function randAddr() {
@@ -608,7 +641,17 @@ function seedToken(t, targetEth, hoursAgo, chatSeeds) {
   b.graduated = true; b.migrated = true;
   const c = makeToken("Robin Cat", "RCAT", "Кот, который тоже стреляет из лука.", "0x77d…901", emojiImg("🐱","#2a231c"), "robincat");
   seedToken(c, 0.8, 7, ["мяу 🐱", "тихо копим до мишени"]);
-  tokens.push(a, b, c);
+  const d = makeToken("Golden Cube", "CUBE", "Куб. Золотой. Что ещё нужно.", "0x4b8…c02", emojiImg("🎲","#2c2a18"));
+  seedToken(d, 2.3, 14, ["кубик крутится — сапплай мутится"]);
+  const e = makeToken("Aria of the Wood", "ARIA", "Лучница зелёного леса.", "0xe19…77a", emojiImg("🧝","#1f2a1c"), "ariawood", "ariawood");
+  seedToken(e, 5.9, 39, ["почти у цели 🏹", "осталось меньше эфира, чем кажется"]);
+  const f = makeToken("Hood Frog", "HFROG", "Ква. Но в капюшоне.", "0x902…d4f", emojiImg("🐸","#1c2c20"));
+  seedToken(f, 0.35, 3, ["ква"]);
+  const g = makeToken("Merry Men", "MERRY", "Весёлые ребята делят добычу поровну.", "0x6c1…09e", emojiImg("🍺","#2a2418"), "merrymen");
+  seedToken(g, 6.6, 90, ["градация была быстрой", "холд до луны"]);
+  g.sold = Math.min(g.sold, CAP); g.eth = Math.min(g.eth, 6.5);
+  g.graduated = true; g.migrated = true;
+  tokens.push(a, b, c, d, e, f, g);
 })();
 
 function price(t) { return (VIRT + t.eth) / (TOTAL - t.sold); }
@@ -683,10 +726,10 @@ function migrate(t) {
 const fmt = (n, d=4) => Number(n).toLocaleString("en-US", { maximumFractionDigits: d });
 const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 let view = { page: "home", idx: 0, dir: "buy", tf: "1Ч", btab: "trades", slip: 1,
-             sort: "recent", win: "all", anaTf: "all" };
+             sort: "recent", win: "all", anaTf: "all", gpage: 1 };
 let draft = { consent: false, img: "", advOpen: false };
 function go(page, idx) {
-  const keep = { sort: view.sort, win: view.win, anaTf: view.anaTf };
+  const keep = { sort: view.sort, win: view.win, anaTf: view.anaTf, gpage: view.gpage || 1 };
   view = { page, idx: idx ?? 0, dir: "buy", tf: "1Ч", btab: "trades", slip: 1, ...keep };
   if (page === "create") draft = { consent: false, img: "", advOpen: false };
   closeSearch();
@@ -770,27 +813,31 @@ function arrowProgress(pct) {
 
 function homeView() {
   return `
-  <div class="page-title" style="margin-top:34px">Обзор</div>
-  <div class="page-sub">Токены с фиксированным сапплаем на Robinhood Chain — запуск в одну
-  транзакцию, 70% комиссий создателю, ликвидность запирается навсегда.</div>
+  <div class="search-row">
+    <div class="big-search" onclick="openSearch()">⌕ Поиск токенов <span class="kbd">Ctrl K</span></div>
+    <button class="btn btn-primary" style="padding:0 26px" onclick="go('create')">+ Создать</button>
+  </div>
   ${exploreSection()}`;
 }
 
 function tokenCard(t, i) {
+  const p = progress(t);
   return `
-    <div class="card" onclick="go('token', ${i})">
-      <div class="card-title">
-        ${t.img ? `<img class="card-img" src="${t.img}" alt="">` : ""}
-        <h3>${esc(t.name)}</h3><span class="ticker">$${esc(t.symbol)}</span>
+    <div class="tcard" onclick="go('token', ${i})">
+      <div class="timg">
+        ${t.img ? `<img src="${t.img}" alt="">` : "🖼️"}
+        ${t.graduated ? `<span class="grad-chip">Градуировал</span>` : ""}
       </div>
-      <div class="stat-row"><span>Капитализация</span><b>${fmt(mcap(t), 2)} ETH</b></div>
-      <div class="stat-row"><span>Объём ${view.win === "all" ? "за всё время" : view.win === "24h" ? "24ч" : "7д"}</span><b>${fmt(volWin(t), 3)} ETH</b></div>
-      <div class="stat-row"><span>Собрано</span><b>${fmt(t.eth, 3)} / 6.5 ETH</b></div>
-      ${t.graduated
-        ? `<div style="margin-top:15px"><span class="badge">Градуировал · на DEX</span></div>`
-        : arrowProgress(progress(t))}
+      <div class="tname">${esc(t.name)}</div>
+      <div class="ttick">$${esc(t.symbol)}</div>
+      <div class="tmc">${fmt(mcap(t), 2)} ETH<span>MC</span></div>
+      <div class="prow">${arrowProgress(p)}<span class="pv">${fmt(p, 0)}%</span></div>
+      <div class="tmeta"><span class="mono">${esc(t.addr)}</span><span>${fmtAgo(t.createdAt)} назад</span></div>
     </div>`;
 }
+
+const GRAD_PER_PAGE = 10;
+function setGpage(p) { view.gpage = p; render(); }
 
 function exploreSection() {
   const idx = tokens.map((t, i) => ({ t, i }));
@@ -806,12 +853,37 @@ function exploreSection() {
     `<div class="fpill ${view.sort === k ? "on" : ""}" onclick="view.sort='${k}';render()">${lbl}</div>`;
   const winPill = (k, lbl) =>
     `<div class="fpill ${view.win === k ? "on" : ""}" onclick="view.win='${k}';render()">${lbl}</div>`;
+
+  // graduated pagination
+  const pages = Math.max(1, Math.ceil(grad.length / GRAD_PER_PAGE));
+  const gp = Math.min(view.gpage || 1, pages);
+  const gradSlice = grad.slice((gp - 1) * GRAD_PER_PAGE, gp * GRAD_PER_PAGE);
+  const pager = pages > 1 ? `
+    <div class="pager">
+      <div class="pg nav" onclick="setGpage(${Math.max(1, gp - 1)})">‹</div>
+      ${Array.from({ length: pages }, (_, k) => k + 1).map(p =>
+        `<div class="pg ${p === gp ? "on" : ""}" onclick="setGpage(${p})">${p}</div>`).join("")}
+      <div class="pg nav" onclick="setGpage(${Math.min(pages, gp + 1)})">›</div>
+    </div>` : "";
+
   return `
-  <div class="section-head">
-    <h2>Токены на кривой</h2>
-    <span class="dim">градация при сборе 6.5 ETH</span>
-  </div>
-  <div class="filter-row">
+  ${grad.length ? `
+  <div class="grad-wrap">
+    <div class="sec-head">
+      <div>
+        <h2 class="sec-h2">Градуировали <span class="count-chip">${grad.length}</span></h2>
+        <div class="page-sub" style="margin:7px 0 0">Токены, прошедшие порог градации — ликвидность заперта на DEX.</div>
+      </div>
+    </div>
+    <div class="tgrid">${gradSlice.map(x => tokenCard(x.t, x.i)).join("")}</div>
+    ${pager}
+  </div>` : ""}
+
+  <div class="sec-head">
+    <div>
+      <h2 class="sec-h2">Обзор <span class="count-chip">${live.length} на кривой</span></h2>
+      <div class="page-sub" style="margin:7px 0 0">Токены, летящие к градации на Robinhood Chain — сбор 6.5 ETH.</div>
+    </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <div class="pill-group">
         ${sortPill("recent", "Недавние покупки")}${sortPill("new", "Новые")}${sortPill("mcap", "Капитализация")}
@@ -820,15 +892,8 @@ function exploreSection() {
         ${winPill("all", "Всё")}${winPill("24h", "24ч")}${winPill("7d", "7д")}
       </div>
     </div>
-    <div class="search-fake" onclick="openSearch()">⌕ Поиск токена <span class="kbd">Ctrl K</span></div>
   </div>
-  <div class="grid" style="padding-bottom:26px">${live.map(x => tokenCard(x.t, x.i)).join("") || '<div class="center">Нет активных токенов — запустите первый!</div>'}</div>
-  ${grad.length ? `
-  <div class="section-head" style="margin-top:8px">
-    <h2>Градуировали</h2>
-    <span class="dim">ликвидность заперта на DEX</span>
-  </div>
-  <div class="grid">${grad.map(x => tokenCard(x.t, x.i)).join("")}</div>` : ""}`;
+  <div class="tgrid" style="padding-bottom:60px">${live.map(x => tokenCard(x.t, x.i)).join("") || '<div class="center">Нет активных токенов — запустите первый!</div>'}</div>`;
 }
 
 // ------------------------------------------------ analytics page
@@ -940,7 +1005,7 @@ function profileView() {
 
   <div class="bottom-card">
     <div class="bt-tabs"><div class="bt-tab on">Мои запуски</div></div>
-    ${launched.length ? `<div class="grid" style="padding-bottom:6px">${launched.map(x => tokenCard(x.t, x.i)).join("")}</div>`
+    ${launched.length ? `<div class="tgrid" style="padding-bottom:6px">${launched.map(x => tokenCard(x.t, x.i)).join("")}</div>`
       : `<div class="center">Вы ещё не запускали токены. <a style="color:var(--gold);cursor:pointer" onclick="go('create')">Запустить первый →</a></div>`}
   </div>
 
@@ -1246,7 +1311,7 @@ function tokenView(t) {
     t.site ? `<a class="btn" style="padding:8px 14px;font-size:13px" href="${esc(t.site)}" target="_blank">🌐 Сайт</a>` : "",
     t.x ? `<a class="btn" style="padding:8px 14px;font-size:13px" href="https://x.com/${esc(t.x)}" target="_blank">𝕏 ${esc(t.x)}</a>` : "",
     t.tg ? `<a class="btn" style="padding:8px 14px;font-size:13px" href="https://t.me/${esc(t.tg)}" target="_blank">✈️ Telegram</a>` : "",
-    `<button class="btn" style="padding:8px 14px;font-size:13px" onclick="toast('Контракт: 0x7a3f…d21c (демо)')">📄 Контракт</button>`,
+    `<button class="btn" style="padding:8px 14px;font-size:13px" onclick="toast('Контракт: ' + tokens[view.idx].addr + ' (демо)')">📄 Контракт</button>`,
     `<button class="btn" style="padding:8px 14px;font-size:13px" onclick="toast(${t.migrated ? "'Пул: Uniswap V3 (демо)'" : "'Пул появится после градации'"})">💧 Пул</button>`,
   ].filter(Boolean).join("");
 
