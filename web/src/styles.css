@@ -515,3 +515,13 @@ footer { flex-shrink: 0; margin-top: auto; }
 @media (max-width: 620px) {
   .footer-inner { grid-template-columns: 1fr; gap: 28px; }
 }
+
+/* -------- analytics: period tabs + mini bar charts -------- */
+.ana-tabs { margin: 18px 0 2px; }
+.ana-bars {
+  display: flex; align-items: flex-end; gap: 5px;
+  height: 92px; margin-top: 20px; padding-bottom: 2px;
+  border-bottom: 2px dashed var(--border);
+}
+.ana-bar { flex: 1; min-height: 3px; border-radius: 3px 3px 0 0; background: var(--border); opacity: .55; }
+.ana-bar.on { background: linear-gradient(180deg, var(--gold) 0%, color-mix(in srgb, var(--gold) 55%, #000) 100%); opacity: 1; }

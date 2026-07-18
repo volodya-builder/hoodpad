@@ -1,81 +1,199 @@
-import React, { useEffect, useState } from "react";
-import { formatEther } from "viem";
+import React, { useEffect, useMemo, useState } from "react";
+import { formatEther, parseAbiItem } from "viem";
 import { publicClient, fmt } from "../lib/web3.js";
 import { treasuryAbi, poolExtraAbi } from "../lib/abi.js";
 import { TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
-import { loadTokens, poolTrades } from "../lib/data.js";
+import { loadTokens, poolTrades, useSplit } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
+
+const PERIODS = [
+  ["24h", "24ч", 86400],
+  ["week", "Неделя", 7 * 86400],
+  ["month", "Месяц", 30 * 86400],
+  ["all", "Всё время", 0],
+];
+
+const PERIOD_LABEL = {
+  "24h": "за 24 часа", week: "за неделю", month: "за месяц", all: "за всё время",
+};
+
+const buybackEvent = parseAbiItem(
+  "event Buyback(address indexed token, address indexed pool, uint256 ethIn, uint256 tokensOut)"
+);
+
+/** Мини-гистограмма как на карточках аналитики. */
+function Bars({ data }) {
+  const max = Math.max(...data, 0);
+  return (
+    <div className="ana-bars">
+      {data.map((v, i) => (
+        <div
+          key={i}
+          className={`ana-bar ${v > 0 ? "on" : ""}`}
+          style={{ height: max > 0 && v > 0 ? `${Math.max(6, (v / max) * 100)}%` : "3px" }}
+        />
+      ))}
+    </div>
+  );
+}
 
 export default function Analytics() {
   const { t } = useLang();
-  const [stats, setStats] = useState(null);
+  const split = useSplit();
+  const [raw, setRaw] = useState(null);
   const [error, setError] = useState("");
+  const [period, setPeriod] = useState("all");
 
   useEffect(() => {
     let alive = true;
     (async () => {
       const tokens = await loadTokens();
-      const all = await Promise.all(tokens.map(async (t) => {
+
+      // Все сделки всех пулов + доля создателя конкретного пула на каждой сделке.
+      const all = await Promise.all(tokens.map(async (tk) => {
         const [h, shareBps] = await Promise.all([
-          poolTrades(t.pool).catch(() => ({ trades: [] })),
-          publicClient.readContract({ address: t.pool, abi: poolExtraAbi, functionName: "creatorFeeShareBps" }).catch(() => 2000),
+          poolTrades(tk.pool).catch(() => ({ trades: [] })),
+          publicClient.readContract({ address: tk.pool, abi: poolExtraAbi, functionName: "creatorFeeShareBps" }).catch(() => 2000),
         ]);
-        return { ...h, shareBps: Number(shareBps) };
+        return h.trades.map((tr) => ({ ...tr, shareBps: Number(shareBps) }));
       }));
-      const trades = all.flatMap((h) => h.trades);
-      const volume = trades.reduce((s, tr) => s + tr.eth + tr.fee, 0);
-      const fees = trades.reduce((s, tr) => s + tr.fee, 0);
-      const creatorPaidExact = all.reduce((s, h) =>
-        s + h.trades.reduce((x, tr) => x + tr.fee, 0) * (h.shareBps / 10000), 0);
+      const trades = all.flat();
+
+      // Оценка времени каждой сделки: интерполяция по номерам блоков
+      // (2 RPC-вызова вместо сотен getBlock).
+      let now = Date.now();
+      if (trades.length > 0) {
+        const blocks = trades.map((tr) => Number(tr.block));
+        const minB = Math.min(...blocks);
+        const [latest, oldest] = await Promise.all([
+          publicClient.getBlock(),
+          publicClient.getBlock({ blockNumber: BigInt(minB) }),
+        ]);
+        const span = Number(latest.number) - minB;
+        const avg = span > 0
+          ? (Number(latest.timestamp) - Number(oldest.timestamp)) / span
+          : 0;
+        for (const tr of trades) {
+          tr.ts = (Number(oldest.timestamp) + (Number(tr.block) - minB) * avg) * 1000;
+        }
+        now = Number(latest.timestamp) * 1000;
+      }
+
+      // Казна: баланс, счётчики, сколько токенов куплено и сожжено.
       const [treBal, received, spent] = await Promise.all([
         publicClient.getBalance({ address: TREASURY_ADDRESS }),
         publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "totalReceived" }).catch(() => 0n),
         publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "totalSpent" }).catch(() => 0n),
       ]);
+      const bb = await Promise.all(tokens.map((tk) => Promise.all([
+        publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "boughtOf", args: [tk.token] }).catch(() => 0n),
+        publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "burnedOf", args: [tk.token] }).catch(() => 0n),
+      ])));
+      const bought = bb.reduce((s, [b]) => s + Number(formatEther(b)), 0);
+      const burned = bb.reduce((s, [, x]) => s + Number(formatEther(x)), 0);
+      const buybackCount = await publicClient
+        .getLogs({ address: TREASURY_ADDRESS, event: buybackEvent, fromBlock: 0n, toBlock: "latest" })
+        .then((l) => l.length)
+        .catch(() => null);
+
       if (!alive) return;
-      setStats({
-        volume, fees, tradesCount: trades.length,
+      setRaw({
+        trades, now,
         launches: tokens.length,
-        grads: tokens.filter((t) => t.graduated).length,
-        creatorPaid: creatorPaidExact,
-        treBal, received, spent,
+        grads: tokens.filter((tk) => tk.graduated).length,
+        treBal, received, spent, bought, burned, buybackCount,
       });
     })().catch((e) => alive && setError(e.shortMessage || e.message));
     return () => { alive = false; };
   }, []);
 
+  const stats = useMemo(() => {
+    if (!raw) return null;
+    const secs = PERIODS.find(([k]) => k === period)[2];
+    const cutoff = secs > 0 ? raw.now - secs * 1000 : 0;
+    const filtered = raw.trades.filter((tr) => !cutoff || (tr.ts ?? 0) >= cutoff);
+
+    const volume = filtered.reduce((s, tr) => s + tr.eth + tr.fee, 0);
+    const creatorPaid = filtered.reduce((s, tr) => s + tr.fee * (tr.shareBps / 10000), 0);
+
+    // 14 корзин для мини-графиков.
+    const N = 14;
+    const t0 = cutoff || (filtered.length
+      ? Math.min(...filtered.map((tr) => tr.ts ?? raw.now))
+      : raw.now - 86400 * 1000);
+    const w = Math.max(1, (raw.now - t0) / N);
+    const volBars = Array(N).fill(0);
+    const cntBars = Array(N).fill(0);
+    for (const tr of filtered) {
+      const i = Math.min(N - 1, Math.max(0, Math.floor(((tr.ts ?? raw.now) - t0) / w)));
+      volBars[i] += tr.eth + tr.fee;
+      cntBars[i] += 1;
+    }
+    return { volume, creatorPaid, count: filtered.length, volBars, cntBars };
+  }, [raw, period]);
+
+  const gradRate = raw && raw.launches > 0
+    ? Math.round((raw.grads / raw.launches) * 100) : 0;
+
   return (
     <>
       <div className="page-title">{t("Аналитика протокола")}</div>
       <div className="page-sub">{t("Все цифры читаются напрямую из контрактов hood в Robinhood Chain.")}</div>
+
+      <div className="pill-group ana-tabs">
+        {PERIODS.map(([k, lbl]) => (
+          <div key={k} className={`fpill ${period === k ? "on" : ""}`} onClick={() => setPeriod(k)}>
+            {t(lbl)}
+          </div>
+        ))}
+      </div>
+
       {error && <div className="error">{error}</div>}
       {!stats && !error && <div className="center">{t("Читаю блокчейн…")}</div>}
-      {stats && (
+
+      {stats && raw && (
         <div className="ana-grid">
           <div className="ana-card">
             <div className="k">{t("Объём торгов")}</div>
             <div className="v">{fmt(stats.volume, 4)} ETH</div>
-            <div className="s">{stats.tradesCount} {t("сделок за всё время")}</div>
+            <div className="s">{stats.count} {t("сделок")} · {t(PERIOD_LABEL[period])}</div>
+            <Bars data={stats.volBars} />
+          </div>
+          <div className="ana-card">
+            <div className="k">{t("Сделки")}</div>
+            <div className="v">{stats.count}</div>
+            <div className="s">{t(PERIOD_LABEL[period])}</div>
+            <Bars data={stats.cntBars} />
           </div>
           <div className="ana-card">
             <div className="k">{t("Запуски токенов")}</div>
-            <div className="v">{stats.launches}</div>
-            <div className="s">{stats.grads} {t("градаций")}</div>
+            <div className="v">{raw.launches}</div>
+            <div className="s">
+              {raw.grads} {t("градаций")} · {t("доля градаций")} {gradRate}%
+            </div>
           </div>
           <div className="ana-card">
             <div className="k">{t("Выплачено создателям")}</div>
             <div className="v" style={{ color: "var(--gold)" }}>{fmt(stats.creatorPaid, 5)} ETH</div>
-            <div className="s">{t("доля создателя каждого пула — с первого трейда")}</div>
+            <div className="s">{split.creator}% {t("всех комиссий — с первого трейда")}</div>
           </div>
           <div className="ana-card">
             <div className="k">{t("Казна выкупа")}</div>
-            <div className="v" style={{ color: "var(--gold)" }}>{fmt(Number(formatEther(stats.treBal)), 5)} ETH</div>
+            <div className="v" style={{ color: "var(--gold)" }}>{fmt(Number(formatEther(raw.treBal)), 5)} ETH</div>
             <div className="s">
-              {t("получено")} {fmt(Number(formatEther(stats.received)), 5)} · {t("выкуплено на")} {fmt(Number(formatEther(stats.spent)), 5)}
+              {t("получено")} {fmt(Number(formatEther(raw.received)), 5)} · {t("выкуплено на")} {fmt(Number(formatEther(raw.spent)), 5)}
               {" · "}
               <a href={`${EXPLORER}/address/${TREASURY_ADDRESS}`} target="_blank" rel="noreferrer" style={{ color: "var(--gold)" }}>
                 {t("контракт")}
               </a>
+            </div>
+          </div>
+          <div className="ana-card">
+            <div className="k">{t("Выкуплено и сожжено")}</div>
+            <div className="v">{fmt(raw.burned, 0)}</div>
+            <div className="s">
+              {t("токенов сожжено навсегда")} · {t("куплено казной")} {fmt(raw.bought, 0)}
+              {raw.buybackCount !== null && <> · {raw.buybackCount} {t("выкупов")}</>}
             </div>
           </div>
         </div>
