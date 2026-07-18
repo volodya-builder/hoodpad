@@ -563,7 +563,7 @@ html[data-theme="light"] .forest { opacity: .28; }
 
 <script>
 // ------------------------------------------------ simulated chain
-const VIRT = 1.625, TOTAL = 1e9, CAP = 8e8, FEE = 0.01, CREATOR_SHARE = 0.4, TEAM_SHARE = 0.2;
+const VIRT = 1.625, TOTAL = 1e9, CAP = 8e8, FEE = 0.01, CREATOR_SHARE = 0.5, TEAM_SHARE = 0.2;
 const treasury = { eth: 0, received: 0, spent: 0, holdings: {}, burned: {}, buybacks: [] };
 let teamEarned = 0;
 const MAX_DEV_BUY_TOKENS = TOTAL * 0.05;
@@ -797,7 +797,7 @@ const EN_PAIRS = [
   ["ДЕМО-РЕЖИМ — блокчейн симулируется в браузере · Ваш демо-баланс:", "DEMO MODE — the blockchain is simulated in your browser · Your demo balance:"],
   ["Токены, прошедшие порог градации — ликвидность заперта на DEX.", "Tokens that cleared the graduation threshold — liquidity locked on the DEX."],
   ["Токены, летящие к градации на Robinhood Chain — сбор 6.5 ETH.", "Tokens climbing toward graduation on Robinhood Chain — 6.5 ETH raise."],
-  ["Получает долю создателя в комиссиях (40%) и покупку создателя. Оставьте пустым, чтобы использовать подключённый кошелёк.", "Receives the creator share of trading fees (70%) and the developer buy. Leave blank to use your connected wallet."],
+  ["Получает долю создателя в комиссиях (50%) и покупку создателя. Оставьте пустым, чтобы использовать подключённый кошелёк.", "Receives the creator share of trading fees (70%) and the developer buy. Leave blank to use your connected wallet."],
   ["Я понимаю, что выбранное изображение будет опубликовано и станет\n        частью неизменяемых метаданных токена.", "I understand the selected image will be published and become part of the token's immutable metadata."],
   ["Транзакции отправляются вашим кошельком и необратимы. Токены волатильны и могут\n    полностью обесцениться. hood не хранит активы, не даёт гарантий и финансовых советов.", "Transactions are submitted by your wallet and may be irreversible. Tokens are volatile and can lose all value. hood does not custody assets and gives no warranties or financial advice."],
   ["Запускайте и исследуйте токены с фиксированным\n    сапплаем на Robinhood Chain. Все транзакции отправляет ваш кошелёк — hood не хранит активы.", "Launch and explore fixed-supply tokens on Robinhood Chain. Every transaction is submitted by your wallet — hood does not custody assets."],
@@ -816,8 +816,8 @@ const EN_PAIRS = [
   ["Кошелёк создателя: неверный адрес", "Creator wallet: invalid address"],
   ["Покупка создателя ограничена", "Developer buy is capped at"],
   ["Независимая отчётность по рынкам hood на Robinhood Chain.", "Independent reporting for hood markets on Robinhood Chain."],
-  ["40% всех комиссий — с первого трейда", "40% of all fees — from the very first trade"],
-  ["40% комиссий — создателю, 20% — команде, 40% — в казну выкупа. Ликвидность запирается навсегда.", "70% of fees go to the creator. Liquidity locks forever."],
+  ["50% всех комиссий — с первого трейда", "50% of all fees — from the very first trade"],
+  ["50% комиссий — создателю, 20% — команде, 30% — в казну выкупа. Ликвидность запирается навсегда.", "70% of fees go to the creator. Liquidity locks forever."],
   ["градаций · доля градаций", "graduations · graduation rate"],
   ["Вы ещё не запускали токены.", "You have not launched any tokens yet."],
   ["Пока нет позиций — купите первый токен.", "No positions yet — buy your first token."],
@@ -846,16 +846,16 @@ const EN_PAIRS = [
   ["Выплачено создателям", "Paid to creators"],
   ["Запуски токенов", "Token launches"],
   ["Заработано создателем", "Creator earnings"],
-  ["40% всех комиссий", "40% of all fees"],
+  ["50% всех комиссий", "50% of all fees"],
   ["Объём за всё время", "All-time volume"],
   ["Объём торгов", "Trading volume"],
   ["Объём 24ч", "24h volume"],
-  ["Комиссия 1% · 40% создателю · 20% команде · 40% на выкуп", "1% fee · 40% creator · 20% team · 40% buyback"],
+  ["Комиссия 1% · 50% создателю · 20% команде · 30% на выкуп", "1% fee · 50% creator · 20% team · 30% buyback"],
   ["Комиссии с трейдов", "Trading fees"],
   ["Комиссия запуска: 0 ETH", "Launch fee: 0 ETH"],
   ["Комиссия запуска", "Launch fee"],
-  ["40% / 20% / 40%", "70% creator / 30% protocol"],
-  ["Комиссии создателя (40%)", "Creator fees (70%)"],
+  ["50% / 20% / 30%", "70% creator / 30% protocol"],
+  ["Комиссии создателя (50%)", "Creator fees (70%)"],
   ["Мигрировать на DEX", "Migrate to DEX"],
   ["Последние сделки", "Recent trades"],
   ["Недавние покупки", "Recent buys"],
@@ -1235,7 +1235,7 @@ function analyticsView() {
     <div class="ana-card">
       <div class="k">Выплачено создателям</div>
       <div class="v" style="color:var(--gold)">${fmt(creatorPaid, 4)} ETH</div>
-      <div class="s">40% всех комиссий — с первого трейда</div>
+      <div class="s">50% всех комиссий — с первого трейда</div>
     </div>
     <div class="ana-card">
       <div class="k">Казна выкупа</div>
@@ -1380,7 +1380,7 @@ function createView() {
       <div class="adv-body" id="advBody">
         <label>Кошелёк создателя</label>
         <input id="fWallet" placeholder="0xVolo…dya (подключённый)" spellcheck="false" oninput="syncPreview()" />
-        <div class="hint" id="hWallet">Получает долю создателя в комиссиях (40%) и покупку создателя. Оставьте пустым, чтобы использовать подключённый кошелёк.</div>
+        <div class="hint" id="hWallet">Получает долю создателя в комиссиях (50%) и покупку создателя. Оставьте пустым, чтобы использовать подключённый кошелёк.</div>
         <label>Сайт</label>
         <input id="fSite" placeholder="https://example.com" inputmode="url" />
       </div>
@@ -1467,7 +1467,7 @@ function syncPreview() {
   const okW = wv === "" || /^0x[0-9a-fA-F]{40}$/.test(wv);
   hW.classList.toggle("bad", !okW);
   hW.textContent = tr(okW
-    ? "Получает долю создателя в комиссиях (40%) и покупку создателя. Оставьте пустым, чтобы использовать подключённый кошелёк."
+    ? "Получает долю создателя в комиссиях (50%) и покупку создателя. Оставьте пустым, чтобы использовать подключённый кошелёк."
     : "Неверный адрес: нужен формат 0x… (42 символа).");
   // validation hints
   const hSym = document.getElementById("hSym");
@@ -1620,12 +1620,12 @@ function tokenView(t) {
   <div class="about-card">
     <div style="max-width:440px">
       <h3>О токене</h3>
-      <div class="dim">${t.desc ? esc(t.desc) + " · " : ""}40% комиссий — создателю, 20% — команде, 40% — в казну выкупа. Ликвидность запирается навсегда.</div>
+      <div class="dim">${t.desc ? esc(t.desc) + " · " : ""}50% комиссий — создателю, 20% — команде, 30% — в казну выкупа. Ликвидность запирается навсегда.</div>
     </div>
     <div class="about-stat">
       <div class="k">Заработано создателем</div>
       <div class="v">${fmt(t.creatorFees, 4)} ETH</div>
-      <div class="s">40% всех комиссий · ${esc(t.creator)}</div>
+      <div class="s">50% всех комиссий · ${esc(t.creator)}</div>
     </div>
     <div class="about-links">${links}</div>
   </div>
@@ -1682,7 +1682,7 @@ function tokenView(t) {
       <div style="margin-top:14px">
         <button class="btn btn-primary btn-block" id="swapCta" onclick="execSwap()" disabled>Введите сумму</button>
       </div>
-      <p class="dim" style="margin:12px 0 0">Комиссия 1% · 40% создателю · 20% команде · 40% на выкуп</p>`}
+      <p class="dim" style="margin:12px 0 0">Комиссия 1% · 50% создателю · 20% команде · 30% на выкуп</p>`}
       <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <b style="font-size:13.5px">Выкуп из казны</b>

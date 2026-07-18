@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>hood — смена распределения комиссий (40/20/40)</title>
+<title>hood — распределение комиссий</title>
 <style>
 :root { --bg:#0d0e0c; --card:#161715; --border:#282923; --text:#f1f2ed; --dim:#9b9e94;
         --acc:#b9c94b; --red:#e05c5c; font-family:"Manrope",-apple-system,sans-serif; }
@@ -19,23 +19,29 @@ h1 { font-size:23px; margin:0 0 6px }
 .btn:disabled { opacity:.4; cursor:not-allowed }
 .mono { font-family:ui-monospace,monospace; font-size:12.5px; word-break:break-all }
 input { width:100%; background:#111210; border:1px solid var(--border); color:var(--text);
-        border-radius:10px; padding:12px 14px; font-size:14px; font-family:ui-monospace,monospace; }
+        border-radius:10px; padding:12px 14px; font-size:15px; font-family:inherit; }
 label { display:block; font-size:12px; color:var(--dim); font-weight:700; margin:14px 0 6px; text-transform:uppercase; letter-spacing:.4px }
+.row3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px }
 a { color:var(--acc) }
+.sum { font-size:13px; font-weight:700; margin-top:10px }
 .result { background:#111210; border:1px solid #3c3e2a; border-radius:12px; padding:16px; margin-top:14px; display:none }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Новое распределение комиссий: 40 / 20 / 40</h1>
-  <p class="dim">40% — создателю токена · 20% — команде · 40% — в казну выкупа.
-  Две транзакции с кошелька-владельца фабрики: деплой разветвителя и применение настроек.
-  Действует для токенов, запущенных после изменения.</p>
+  <h1>Распределение комиссий hood</h1>
+  <p class="dim">Задайте проценты (в сумме 100) и примените — 2 транзакции с кошелька-владельца.
+  Действует для токенов, запущенных после изменения. Общая комиссия с трейда — 1%.</p>
 
   <div class="card">
-    <label>Кошелёк команды (получает 20%)</label>
-    <input id="teamAddr" placeholder="0x…" spellcheck="false" />
-    <div class="dim" style="margin-top:6px">По умолчанию — подключённый кошелёк; можно вписать любой другой (например, отдельный для команды).</div>
+    <div class="row3">
+      <div><label>Создателю, %</label><input id="pCreator" type="number" min="0" max="100" value="50" /></div>
+      <div><label>Команде, %</label><input id="pTeam" type="number" min="0" max="100" value="20" /></div>
+      <div><label>На выкуп, %</label><input id="pBuyback" type="number" min="0" max="100" value="30" /></div>
+    </div>
+    <div class="sum" id="sumLine">Сумма: 100%</div>
+    <label>Кошелёк команды</label>
+    <input id="teamAddr" placeholder="по умолчанию — подключённый кошелёк" spellcheck="false" style="font-family:ui-monospace,monospace" />
     <div style="margin-top:16px">
       <button class="btn btn-primary" id="goBtn">Подключить и применить (2 транзакции)</button>
     </div>
@@ -43,21 +49,19 @@ a { color:var(--acc) }
   </div>
 
   <div class="result" id="result">
-    <b style="color:var(--acc)">Распределение обновлено ✓</b>
-    <div class="dim" style="margin:8px 0 4px">Разветвитель комиссий (новая «казна» фабрики):</div>
+    <b style="color:var(--acc)">Готово ✓</b>
+    <div class="dim" style="margin:8px 0 4px">Новый разветвитель комиссий:</div>
     <div class="mono" id="splitAddr"></div>
-    <div class="dim" style="margin-top:10px">Новые токены: комиссия 1% → 40% создателю, 20% команде, 40% на выкуп.</div>
+    <div class="dim" id="finalLine" style="margin-top:10px"></div>
   </div>
-  <p class="dim" style="margin-top:14px">админ v1 · без внешних зависимостей</p>
+  <p class="dim" style="margin-top:14px">админ v2 · проценты настраиваются · без внешних зависимостей</p>
 </div>
 <script>
 "use strict";
 var BYTECODE = "0x60e060405234801561001057600080fd5b5060405161055038038061055083398101604081905261002f91610108565b6001600160a01b0383161580159061004f57506001600160a01b03821615155b61008c5760405162461bcd60e51b81526020600482015260096024820152683d32b9379030b2323960b91b60448201526064015b60405180910390fd5b6127108161ffff1611156100cd5760405162461bcd60e51b81526020600482015260086024820152676270733e3130302560c01b6044820152606401610083565b6001600160a01b03928316608052911660a05261ffff1660c052610156565b80516001600160a01b038116811461010357600080fd5b919050565b60008060006060848603121561011d57600080fd5b610126846100ec565b9250610134602085016100ec565b9150604084015161ffff8116811461014b57600080fd5b809150509250925092565b60805160a05160c0516103b861019860003960008181604a01526102b101526000818161015701526102f80152600081816094015261026001526103b86000f3fe6080604052600436106100385760003560e01c806385f2aef21461024e578063aab8d7de1461029f578063f8ec6911146102e657600080fd5b3661024957600061271061007061ffff7f00000000000000000000000000000000000000000000000000000000000000001634610330565b61007a919061034d565b90506000610088823461036f565b9050811561014d5760007f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03168360405160006040518083038185875af1925050503d80600081146100fd576040519150601f19603f3d011682016040523d82523d6000602084013e610102565b606091505b505090508061014b5760405162461bcd60e51b815260206004820152601060248201526f1d19585b481cd95b990819985a5b195960821b60448201526064015b60405180910390fd5b505b801561020e5760007f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03168260405160006040518083038185875af1925050503d80600081146101c0576040519150601f19603f3d011682016040523d82523d6000602084013e6101c5565b606091505b505090508061020c5760405162461bcd60e51b8152602060048201526013602482015272189d5e589858dac81cd95b990819985a5b1959606a1b6044820152606401610142565b505b60408051838152602081018390527fb20b10d17e0e2505af41fd37a6a1b46824a76d7d940afce430c7ee4aba19a959910160405180910390a1005b600080fd5b34801561025a57600080fd5b506102827f000000000000000000000000000000000000000000000000000000000000000081565b6040516001600160a01b0390911681526020015b60405180910390f35b3480156102ab57600080fd5b506102d37f000000000000000000000000000000000000000000000000000000000000000081565b60405161ffff9091168152602001610296565b3480156102f257600080fd5b506102827f000000000000000000000000000000000000000000000000000000000000000081565b634e487b7160e01b600052601160045260246000fd5b80820281158282048414176103475761034761031a565b92915050565b60008261036a57634e487b7160e01b600052601260045260246000fd5b500490565b818103818111156103475761034761031a56fea264697066735822122006ec52ea19a55f79f75c359cf36fe9826e29de24b945868cb41b8e666e3901b064736f6c634300081c0033";
 var FACTORY = "0x22079e9f1c5acd14a1d3f1c41fd9798b33775518";
 var BUYBACK = "0xd8d4f77d200e5ddf5b44ba2d2f7539aa1d8fc811";
-var TEAM_BPS = 3333;          // 1/3 от протокольных 60% = 20% от комиссии
-var CREATOR_BPS = 4000;       // 40% создателю
-var FEE_BPS = 100;            // комиссия 1%
+var FEE_BPS = 100;
 var SEL_SETCONFIG = "0x8f29b869";
 var SEL_MIGRATOR = "0x7cd07e47";
 var CHAIN_HEX = "0xb626";
@@ -80,6 +84,23 @@ function pad32(v) {
   if (typeof v === "string") return v.replace(/^0x/, "").toLowerCase().padStart(64, "0");
   return v.toString(16).padStart(64, "0");
 }
+function vals() {
+  return {
+    c: parseInt(document.getElementById("pCreator").value) || 0,
+    t: parseInt(document.getElementById("pTeam").value) || 0,
+    b: parseInt(document.getElementById("pBuyback").value) || 0,
+  };
+}
+function syncSum() {
+  var v = vals(), s = v.c + v.t + v.b;
+  var el = document.getElementById("sumLine");
+  el.textContent = "Сумма: " + s + "%";
+  el.style.color = s === 100 ? "var(--acc)" : "var(--red)";
+}
+["pCreator","pTeam","pBuyback"].forEach(function (id) {
+  document.getElementById(id).addEventListener("input", syncSum);
+});
+syncSum();
 async function waitReceipt(pr, hash) {
   for (var i = 0; i < 180; i++) {
     var r = await pr.request({ method: "eth_getTransactionReceipt", params: [hash] });
@@ -91,6 +112,9 @@ async function waitReceipt(pr, hash) {
 document.getElementById("goBtn").onclick = async function () {
   var btn = this; btn.disabled = true;
   try {
+    var v = vals();
+    if (v.c + v.t + v.b !== 100) throw new Error("Проценты должны давать в сумме 100");
+    if (v.c > 100) throw new Error("Создателю не может быть больше 100%");
     var pr = pick();
     if (!pr) { st('<span style="color:var(--red)">Кошелёк не найден</span>'); btn.disabled = false; return; }
     st("Запрашиваю доступ…");
@@ -101,27 +125,32 @@ document.getElementById("goBtn").onclick = async function () {
       await pr.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CHAIN_HEX }] });
     }
     var teamEl = document.getElementById("teamAddr");
-    if (!teamEl.value.trim()) teamEl.value = acc;
-    var team = teamEl.value.trim();
+    var team = teamEl.value.trim() || acc;
     if (!/^0x[0-9a-fA-F]{40}$/.test(team)) throw new Error("Неверный адрес кошелька команды");
 
-    st("1/2: деплой разветвителя — подтвердите в MetaMask (проверьте иконку, если окно не всплыло)…");
+    var creatorBps = v.c * 100;
+    var rest = v.t + v.b;
+    var teamBps = rest === 0 ? 0 : Math.round(v.t / rest * 10000);
+
+    st("1/2: деплой разветвителя (" + v.t + "/" + v.b + " от остатка) — подтвердите в MetaMask…");
     var h1 = await pr.request({ method: "eth_sendTransaction", params: [{
-      from: acc, data: BYTECODE + pad32(team) + pad32(BUYBACK) + pad32(TEAM_BPS) }] });
+      from: acc, data: BYTECODE + pad32(team) + pad32(BUYBACK) + pad32(teamBps) }] });
     var r1 = await waitReceipt(pr, h1);
     var splitter = r1.contractAddress;
 
-    st("Читаю адрес мигратора из фабрики…");
+    st("Читаю адрес мигратора…");
     var migRaw = await pr.request({ method: "eth_call", params: [{ to: FACTORY, data: SEL_MIGRATOR }, "latest"] });
     var migrator = "0x" + migRaw.slice(-40);
 
-    st("2/2: применяю настройки (setConfig 40/20/40) — подтвердите…");
-    var data = SEL_SETCONFIG + pad32(splitter) + pad32(migrator) + pad32(FEE_BPS) + pad32(CREATOR_BPS);
+    st("2/2: применяю настройки — подтвердите…");
+    var data = SEL_SETCONFIG + pad32(splitter) + pad32(migrator) + pad32(FEE_BPS) + pad32(creatorBps);
     var h2 = await pr.request({ method: "eth_sendTransaction", params: [{ from: acc, to: FACTORY, data: data }] });
     await waitReceipt(pr, h2);
 
     st('<b style="color:var(--acc)">Готово ✓</b>');
     document.getElementById("splitAddr").textContent = splitter;
+    document.getElementById("finalLine").textContent =
+      "Новые токены: " + v.c + "% создателю · " + v.t + "% команде · " + v.b + "% на выкуп.";
     document.getElementById("result").style.display = "block";
   } catch (e) {
     st('<span style="color:var(--red)">Ошибка: ' + (e && e.message ? e.message : String(e)) + "</span>");
