@@ -46,4 +46,7 @@ export const TREASURY_ADDRESS =
 export const CHAT_ADDRESS =
   import.meta.env.VITE_CHAT_ADDRESS ?? "0xbaf4de9b8f35c384058d31e2730a3146c0d1af3c";
 
+// Off-chain chat storage: Firebase Realtime Database URL
+export const CHAT_DB_URL = (import.meta.env.VITE_CHAT_DB_URL ?? "").replace(/\/$/, "");
+
 export const EXPLORER = CHAIN.blockExplorers?.default?.url ?? "";
