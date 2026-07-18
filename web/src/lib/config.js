@@ -48,7 +48,7 @@ export const CHAT_ADDRESS =
 
 // Weekly advisory buyback poll (zero = not deployed yet)
 export const VOTE_ADDRESS =
-  import.meta.env.VITE_VOTE_ADDRESS ?? "0x0000000000000000000000000000000000000000";
+  import.meta.env.VITE_VOTE_ADDRESS ?? "0xa1936b527e198a4e46ed0f9e2410d6ef2c428d14";
 
 // Off-chain chat storage: Firebase Realtime Database URL
 export const CHAT_DB_URL = (import.meta.env.VITE_CHAT_DB_URL ?? "https://hood-chat-4b664-default-rtdb.europe-west1.firebasedatabase.app").replace(/\/$/, "");
