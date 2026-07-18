@@ -24,7 +24,7 @@ export async function loadTokens() {
   const addrs = await publicClient.readContract({
     address: FACTORY_ADDRESS, abi: factoryAbi, functionName: "tokens", args: [offset, PAGE],
   });
-  const createdAt = await loadCreationTimes().catch(() => ({}));
+  const createdAt = await loadCreationTimes(addrs).catch(() => ({}));
   const items = await Promise.all(
     addrs.map(async (token) => {
       const pool = await publicClient.readContract({
@@ -122,24 +122,59 @@ export function useSplit() {
 
 
 // ---------------------------------------------------------------- creation times
+// Основной источник — API эксплорера Blockscout (транзакция создания контракта),
+// кэш в localStorage навсегда (время запуска неизменно). Фолбэк — события фабрики.
+import { EXPLORER } from "./config.js";
+
 const createdEvent = parseAbiItem(
   "event TokenCreated(address indexed token, address indexed pool, address indexed creator, string name, string symbol, string metadataURI)"
 );
-const blockTsCache = new Map();
 
-export async function loadCreationTimes() {
-  const logs = await publicClient.getLogs({
-    address: FACTORY_ADDRESS, event: createdEvent, fromBlock: 0n, toBlock: "latest",
-  });
+function cacheGet(addr) {
+  try { const v = localStorage.getItem("hood_created_" + addr); return v ? Number(v) : null; }
+  catch (e) { return null; }
+}
+function cacheSet(addr, ts) {
+  try { localStorage.setItem("hood_created_" + addr, String(ts)); } catch (e) { /* ignore */ }
+}
+
+async function creationTimeViaExplorer(addr) {
+  const a = await fetch(`${EXPLORER}/api/v2/addresses/${addr}`).then((r) => r.json());
+  const tx = a.creation_tx_hash || a.creation_transaction_hash;
+  if (!tx) return null;
+  const t = await fetch(`${EXPLORER}/api/v2/transactions/${tx}`).then((r) => r.json());
+  return t.timestamp ? new Date(t.timestamp).getTime() : null;
+}
+
+export async function loadCreationTimes(addrs) {
   const out = {};
-  for (const l of logs) {
-    let ts = blockTsCache.get(l.blockNumber);
-    if (ts === undefined) {
-      const b = await publicClient.getBlock({ blockNumber: l.blockNumber });
-      ts = Number(b.timestamp) * 1000;
-      blockTsCache.set(l.blockNumber, ts);
-    }
-    out[l.args.token.toLowerCase()] = ts;
+  const missing = [];
+  for (const addr of addrs) {
+    const k = addr.toLowerCase();
+    const c = cacheGet(k);
+    if (c) out[k] = c; else missing.push(k);
+  }
+  await Promise.all(missing.map(async (k) => {
+    try {
+      const ts = await creationTimeViaExplorer(k);
+      if (ts) { out[k] = ts; cacheSet(k, ts); }
+    } catch (e) { console.warn("creation time (explorer) failed:", k, e); }
+  }));
+  // фолбэк для тех, кого эксплорер не отдал — события фабрики
+  const still = addrs.map((a) => a.toLowerCase()).filter((k) => !out[k]);
+  if (still.length) {
+    try {
+      const logs = await publicClient.getLogs({
+        address: FACTORY_ADDRESS, event: createdEvent, fromBlock: 0n, toBlock: "latest",
+      });
+      for (const l of logs) {
+        const k = l.args.token.toLowerCase();
+        if (!still.includes(k) || out[k]) continue;
+        const b = await publicClient.getBlock({ blockNumber: l.blockNumber });
+        out[k] = Number(b.timestamp) * 1000;
+        cacheSet(k, out[k]);
+      }
+    } catch (e) { console.warn("creation time (logs) failed:", e); }
   }
   return out;
 }

@@ -104,7 +104,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "owner" }).catch(() => null),
       publicClient.readContract({ address: tokenAddress, abi: tokenAbi, functionName: "balanceOf", args: [TREASURY_ADDRESS] }).catch(() => 0n),
       publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "burnedOf", args: [tokenAddress] }).catch(() => 0n),
-      loadCreationTimes().catch(() => ({})),
+      loadCreationTimes([tokenAddress]).catch(() => ({})),
     ]);
     setHistory(h);
     setExtra({ creatorFees, treasuryOwner, treasuryHeld, burned,
