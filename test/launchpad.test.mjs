@@ -169,7 +169,7 @@ test("launch with custom creator wallet: fees and dev buy go to it", async () =>
   assert.equal(getAddress(await read(poolC, "creator")), getAddress(trader2.address));
 });
 
-test("buy: quoted amount matches, fees accrue 70/30", async () => {
+test("buy: quoted amount matches, fees accrue 20/80", async () => {
   const ethIn = parseEther("0.5");
   const quoted = await read(pool, "quoteBuy", [ethIn]);
   const balBefore = await read(token, "balanceOf", [trader1.address]);
@@ -180,7 +180,7 @@ test("buy: quoted amount matches, fees accrue 70/30", async () => {
   assert.equal(balAfter - balBefore, quoted);
 
   const fee = (ethIn * FEE_BPS) / 10000n;
-  const creatorCut = (fee * 7000n) / 10000n;
+  const creatorCut = (fee * 2000n) / 10000n;
   assert.equal(await read(pool, "creatorFeesAccrued"), creatorCut);
   assert.equal(await read(pool, "protocolFeesAccrued"), fee - creatorCut);
   assert.equal(await read(pool, "ethReserve"), ethIn - fee);
@@ -288,6 +288,53 @@ test("fees: creator and protocol claims pay out", async () => {
   // pool now holds nothing but dust
   const poolBal = await pub.getBalance({ address: pool.address });
   assert.ok(poolBal < 1000n, `pool retains ${poolBal} wei`);
+});
+
+test("buyback treasury: fees flow in, ETH leaves only via buyback, burn works", async () => {
+  // fresh factory wired to a BuybackTreasury
+  const tre = await deploy(deployer, "BuybackTreasury", [
+    "0x0000000000000000000000000000000000000001", // placeholder, re-deployed below
+  ]);
+  const fac2 = await deploy(deployer, "LaunchpadFactory", [tre.address, migrator.address]);
+  const tre2 = await deploy(deployer, "BuybackTreasury", [fac2.address]);
+  await write(deployer, fac2, "setConfig", [tre2.address, migrator.address, 100, 2000]);
+
+  const rcpt = await write(creator, fac2, "createToken",
+    ["Buyback Coin", "BB", "ipfs://bb", "0x0000000000000000000000000000000000000000"]);
+  const created = rcpt.logs
+    .map((l) => { try { return decodeEventLog({ abi: fac2.abi, data: l.data, topics: l.topics }); } catch { return null; } })
+    .find((e) => e && e.eventName === "TokenCreated");
+  const bbToken = { address: created.args.token, abi: ART("LaunchToken").abi };
+  const bbPool = { address: created.args.pool, abi: ART("BondingCurvePool").abi };
+
+  // trade to generate fees, then push protocol share (80%) to the treasury
+  await write(trader1, bbPool, "buy", [0n, trader1.address], parseEther("2"));
+  const pAcc = await read(bbPool, "protocolFeesAccrued");
+  const fee = (parseEther("2") * 100n) / 10000n;
+  assert.equal(pAcc, fee - (fee * 2000n) / 10000n, "protocol share must be 80%");
+  await write(trader1, bbPool, "claimProtocolFees");
+  const treBal = await pub.getBalance({ address: tre2.address });
+  assert.equal(treBal, pAcc, "treasury did not receive the 80% share");
+
+  // only the owner can buy back; buyback pulls tokens into the treasury
+  await assert.rejects(
+    write(trader1, tre2, "buyback", [bbToken.address, treBal, 0n])
+  );
+  await write(deployer, tre2, "buyback", [bbToken.address, treBal, 0n]);
+  const bought = await read(tre2, "boughtOf", [bbToken.address]);
+  assert.ok(bought > 0n, "no tokens bought back");
+  assert.equal(await read(bbToken, "balanceOf", [tre2.address]), bought);
+  assert.equal(await pub.getBalance({ address: tre2.address }), 0n);
+  assert.equal(await read(tre2, "totalSpent"), treBal);
+
+  // burn: tokens land on the dead address, stats update
+  await write(deployer, tre2, "burn", [bbToken.address, bought]);
+  assert.equal(
+    await read(bbToken, "balanceOf", ["0x000000000000000000000000000000000000dEaD"]),
+    bought
+  );
+  assert.equal(await read(tre2, "burnedOf", [bbToken.address]), bought);
+  assert.equal(await read(bbToken, "balanceOf", [tre2.address]), 0n);
 });
 
 test("factory admin: config bounds enforced, ownership respected", async () => {

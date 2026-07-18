@@ -70,6 +70,20 @@ async function main() {
 
   const factory = await deploy("LaunchpadFactory", [treasury, migrator]);
 
+  // Buyback treasury: 80% of fees flow here; ETH can only leave via buybacks.
+  const buyback = await deploy("BuybackTreasury", [factory]);
+  {
+    const art = ART("LaunchpadFactory");
+    const hash = await wallet.writeContract({
+      address: factory,
+      abi: art.abi,
+      functionName: "setConfig",
+      args: [buyback, migrator, 100, 2000], // 1% fee: 20% creator / 80% buyback
+    });
+    await pubc.waitForTransactionReceipt({ hash });
+    console.log(`Factory wired: treasury=BuybackTreasury, split 20/80`);
+  }
+
   console.log("\n--- next steps ---");
   console.log(`echo 'VITE_FACTORY_ADDRESS=${factory}' >> web/.env`);
   console.log(`echo 'VITE_NETWORK=${chainId === 4663 ? "mainnet" : chainId === 46630 ? "testnet" : "local"}' >> web/.env`);

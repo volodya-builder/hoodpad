@@ -17,7 +17,8 @@ import {BondingCurvePool} from "./BondingCurvePool.sol";
 ///           total supply : 1,000,000,000 tokens
 ///           on the curve : 800,000,000 (80%)
 ///           DEX reserve  : 200,000,000 (20%) + ~6.5 ETH, locked forever
-///           trade fee    : 1%, split 70/30 creator / protocol
+///           trade fee    : 1% — 20% to the creator, 80% to the buyback
+///                          treasury (ETH there can only buy tokens back)
 contract LaunchpadFactory is Ownable {
     // ------------------------------------------------------------- config
     uint256 public constant TOTAL_SUPPLY = 1_000_000_000e18;
@@ -25,7 +26,8 @@ contract LaunchpadFactory is Ownable {
     uint256 public constant VIRTUAL_ETH  = 1.625 ether; // -> graduates at 6.5 ETH
 
     uint16 public feeBps = 100;              // 1% per trade
-    uint16 public creatorFeeShareBps = 7000; // creator gets 70% of fees
+    uint16 public creatorFeeShareBps = 2000; // creator 20%; the other 80% goes
+                                             // to the BuybackTreasury (set as `treasury`)
 
     address public treasury;
     address public migrator;
