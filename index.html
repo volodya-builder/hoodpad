@@ -24,7 +24,7 @@ header { border-bottom: 1px solid var(--border); background: rgba(11,14,17,.85);
 .btn:hover { background: var(--card-hover); }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 .btn-primary { background: var(--accent); border-color: var(--accent); color: #04150a; }
-.btn-primary:hover { background: #21e04a; }
+.btn-primary:hover:not(:disabled) { background: #21e04a; }
 .btn-danger { background: var(--red); border-color: var(--red); color: #fff; }
 .btn-block { width: 100%; padding: 13px; font-size: 15px; }
 .hero { text-align: center; padding: 56px 0 36px; }
@@ -34,19 +34,64 @@ header { border-bottom: 1px solid var(--border); background: rgba(11,14,17,.85);
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; padding-bottom: 64px; }
 .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; cursor: pointer; transition: all .15s ease; }
 .card:hover { background: var(--card-hover); transform: translateY(-2px); }
-.card-title { display: flex; justify-content: space-between; align-items: baseline; }
-.card-title h3 { margin: 0; font-size: 17px; }
+.card-title { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.card-title h3 { margin: 0; font-size: 17px; flex: 1; }
+.card-img { width: 42px; height: 42px; border-radius: 10px; object-fit: cover; background: var(--bg-soft); }
 .ticker { color: var(--text-dim); font-size: 13px; font-weight: 600; }
 .stat-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-dim); margin-top: 10px; }
 .stat-row b { color: var(--text); font-weight: 600; }
 .progress { height: 7px; border-radius: 4px; background: var(--bg-soft); overflow: hidden; margin-top: 14px; }
 .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), #7dff9b); border-radius: 4px; transition: width .4s ease; }
 .badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--accent-dim); color: var(--accent); text-transform: uppercase; letter-spacing: .5px; }
-.panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; max-width: 520px; margin: 32px auto 64px; }
-.panel h2 { margin: 0 0 8px; letter-spacing: -.5px; }
+.panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+.panel h2 { margin: 0 0 8px; letter-spacing: -.5px; font-size: 26px; }
 label { display: block; font-size: 13px; color: var(--text-dim); margin: 16px 0 6px; font-weight: 600; }
-input, textarea { width: 100%; background: var(--bg-soft); border: 1px solid var(--border); color: var(--text); border-radius: 10px; padding: 12px 14px; font-size: 15px; outline: none; }
+input, textarea { width: 100%; background: var(--bg-soft); border: 1px solid var(--border); color: var(--text); border-radius: 10px; padding: 12px 14px; font-size: 15px; outline: none; font-family: inherit; }
 input:focus, textarea:focus { border-color: var(--accent); }
+.hint { font-size: 11.5px; color: var(--text-dim); margin-top: 5px; }
+.hint.bad { color: var(--red); }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 560px) { .field-row { grid-template-columns: 1fr; } }
+.prefix-input { display: flex; align-items: center; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 10px; }
+.prefix-input:focus-within { border-color: var(--accent); }
+.prefix-input span { padding: 0 0 0 14px; color: var(--text-dim); font-size: 14px; white-space: nowrap; }
+.prefix-input input { border: none; background: transparent; padding-left: 4px; }
+.prefix-input input:focus { border: none; }
+/* create page */
+.create-layout { display: grid; grid-template-columns: 1fr 340px; gap: 20px; padding: 32px 0 64px; align-items: start; }
+@media (max-width: 900px) { .create-layout { grid-template-columns: 1fr; } }
+.back-btn { margin-top: 24px; display: inline-flex; align-items: center; gap: 6px; }
+.check-row { display: flex; align-items: flex-start; gap: 9px; font-size: 12.5px; color: var(--text-dim); margin: 8px 0 10px; cursor: pointer; line-height: 1.45; }
+.check-row input { width: 15px; height: 15px; margin: 1px 0 0; accent-color: var(--accent); flex: none; }
+.upload-box { border: 1.5px dashed var(--border); border-radius: 12px; padding: 18px; display: flex; align-items: center; gap: 14px; cursor: pointer; color: var(--text-dim); font-size: 14px; font-weight: 600; transition: all .15s; min-height: 76px; }
+.upload-box:hover { border-color: var(--text-dim); }
+.upload-box.ready { border-color: var(--accent); color: var(--text); }
+.upload-box.disabled { opacity: .5; cursor: not-allowed; }
+.upload-thumb { width: 46px; height: 46px; border-radius: 10px; background: var(--bg-soft); display: flex; align-items: center; justify-content: center; font-size: 20px; flex: none; overflow: hidden; }
+.upload-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.suffix-input { display: flex; align-items: center; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 10px; }
+.suffix-input:focus-within { border-color: var(--accent); }
+.suffix-input input { border: none; background: transparent; }
+.suffix-input input:focus { border: none; }
+.suffix-input b { padding-right: 14px; font-size: 14px; }
+.adv-toggle { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-top: 1px solid var(--border); margin-top: 22px; cursor: pointer; font-weight: 700; font-size: 15px; }
+.adv-toggle .chev { transition: transform .2s; color: var(--text-dim); }
+.adv-toggle.open .chev { transform: rotate(180deg); }
+.adv-body { display: none; padding-bottom: 6px; }
+.adv-body.open { display: block; }
+.due-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--text-dim); padding: 12px 0 16px; border-top: 1px solid var(--border); margin-top: 18px; }
+/* preview card */
+.preview-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; position: sticky; top: 84px; }
+.preview-img { width: 96px; height: 96px; border-radius: 18px; background: var(--bg-soft); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 34px; color: var(--text-dim); overflow: hidden; }
+.preview-img img { width: 100%; height: 100%; object-fit: cover; }
+.preview-name { font-size: 22px; font-weight: 800; margin-top: 16px; letter-spacing: -.5px; word-break: break-word; }
+.preview-ticker { color: var(--text-dim); font-size: 14px; font-weight: 600; margin-top: 2px; }
+.preview-stats { margin-top: 20px; border-top: 1px solid var(--border); }
+.preview-stats .row { display: flex; justify-content: space-between; font-size: 13px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.preview-stats .k { color: var(--text-dim); }
+.preview-stats .v { font-weight: 700; }
+.preview-stats .v.green { color: var(--accent); }
+/* token page */
 .token-layout { display: grid; grid-template-columns: 1fr 380px; gap: 20px; padding: 32px 0 64px; }
 @media (max-width: 860px) { .token-layout { grid-template-columns: 1fr; } }
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 18px; }
@@ -65,6 +110,7 @@ input:focus, textarea:focus { border-color: var(--accent); }
 .demo-banner { background: #ffb01522; border-bottom: 1px solid #ffb015; color: #ffb015; text-align: center; font-size: 13px; font-weight: 600; padding: 7px; }
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--card); border: 1px solid var(--accent); color: var(--text); padding: 12px 22px; border-radius: 12px; font-size: 14px; font-weight: 600; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 99; }
 .toast.show { opacity: 1; }
+.token-head-img { width: 64px; height: 64px; border-radius: 14px; object-fit: cover; background: var(--bg-soft); }
 </style>
 </head>
 <body>
@@ -79,32 +125,39 @@ input:focus, textarea:focus { border-color: var(--accent); }
 </div></header>
 <main class="container" id="main"></main>
 <div class="toast" id="toast"></div>
+<input type="file" id="fileInput" accept="image/*" style="display:none" />
 
 <script>
 // ------------------------------------------------ simulated chain
-const VIRT = 1.625, TOTAL = 1e9, CAP = 8e8, FEE = 0.01;
+const VIRT = 1.625, TOTAL = 1e9, CAP = 8e8, FEE = 0.01, CREATOR_SHARE = 0.7;
+const MAX_DEV_BUY_TOKENS = TOTAL * 0.05; // 5% of supply
+// ETH (gross, incl. fee) needed to buy 5% at launch: e = x*s/(y-s), gross = e/(1-fee)
+const MAX_DEV_BUY_ETH = (VIRT * MAX_DEV_BUY_TOKENS / (TOTAL - MAX_DEV_BUY_TOKENS)) / (1 - FEE);
 let ethBalance = 10;
 const tokens = [];
 
-function makeToken(name, symbol, desc, creator) {
-  return { name, symbol, desc, creator, eth: 0, sold: 0, graduated: false,
-           migrated: false, myBal: 0, creatorFees: 0, protoFees: 0 };
+const emojiImg = (e, bg) => "data:image/svg+xml," + encodeURIComponent(
+  `<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96'><rect width='96' height='96' rx='20' fill='${bg}'/><text x='48' y='62' font-size='44' text-anchor='middle'>${e}</text></svg>`);
+
+function makeToken(name, symbol, desc, creator, img, x, tg) {
+  return { name, symbol, desc, creator, img: img || "", x: x || "", tg: tg || "",
+           eth: 0, sold: 0, graduated: false, migrated: false, myBal: 0,
+           creatorFees: 0, protoFees: 0 };
 }
-// pre-seeded demo tokens with some progress
-function seed(t, ethIn) { // simulate buys without balance
+function seed(t, ethIn) {
   const net = ethIn * (1 - FEE);
   const x = VIRT + t.eth, y = TOTAL - t.sold;
   const out = y * net / (x + net);
   t.sold += out; t.eth += net;
-  const fee = ethIn * FEE; t.creatorFees += fee/2; t.protoFees += fee/2;
+  const fee = ethIn * FEE; t.creatorFees += fee * CREATOR_SHARE; t.protoFees += fee * (1 - CREATOR_SHARE);
 }
 (function() {
-  const a = makeToken("Hood Doge", "HDOGE", "Первая собака на Robinhood Chain.", "0x1a2…b3c");
+  const a = makeToken("Hood Doge", "HDOGE", "Первая собака на Robinhood Chain.", "0x1a2…b3c", emojiImg("🐕","#1c2a1e"), "hooddoge", "hooddoge");
   seed(a, 4.1);
-  const b = makeToken("Sherwood", "SHER", "Забираем у китов, раздаём комьюнити.", "0x9f4…e21");
-  seed(b, 6.566); b.graduated = b.sold >= CAP * 0.999; if (b.sold > CAP) b.sold = CAP;
-  if (b.eth > 6.5) b.eth = 6.5; b.graduated = true; b.migrated = true;
-  const c = makeToken("Robin Cat", "RCAT", "Кот, который тоже стреляет из лука.", "0x77d…901");
+  const b = makeToken("Sherwood", "SHER", "Забираем у китов, раздаём комьюнити.", "0x9f4…e21", emojiImg("🏹","#25301b"));
+  seed(b, 6.566); b.sold = Math.min(b.sold, CAP); b.eth = Math.min(b.eth, 6.5);
+  b.graduated = true; b.migrated = true;
+  const c = makeToken("Robin Cat", "RCAT", "Кот, который тоже стреляет из лука.", "0x77d…901", emojiImg("🐱","#2a231c"), "robincat");
   seed(c, 0.8);
   tokens.push(a, b, c);
 })();
@@ -122,31 +175,33 @@ function quoteSell(t, tokIn) {
   const x = VIRT + t.eth, y = TOTAL - t.sold;
   return (x * tokIn / (y + tokIn)) * (1 - FEE);
 }
-
-function buy(t, ethIn) {
-  if (ethIn <= 0 || ethIn > ethBalance) return toast("Недостаточно ETH");
+function applyFee(t, fee) {
+  t.creatorFees += fee * CREATOR_SHARE;
+  t.protoFees += fee * (1 - CREATOR_SHARE);
+}
+function buy(t, ethIn, silent) {
+  if (ethIn <= 0 || ethIn > ethBalance) { toast("Недостаточно ETH"); return false; }
   let out = quoteBuy(t, ethIn), spent = ethIn;
   const remaining = CAP - t.sold;
-  if (out >= remaining) { // partial fill to cap
+  if (out >= remaining) {
     out = remaining;
     const x = VIRT + t.eth, y = TOTAL - t.sold;
-    const ethNeeded = x * out / (y - out);
-    spent = ethNeeded / (1 - FEE);
+    spent = (x * out / (y - out)) / (1 - FEE);
     t.graduated = true;
   }
-  const net = spent * (1 - FEE), fee = spent - net;
+  const net = spent * (1 - FEE);
   t.eth += net; t.sold += out; t.myBal += out;
-  t.creatorFees += fee/2; t.protoFees += fee/2;
+  applyFee(t, spent - net);
   ethBalance -= spent;
-  toast(`Куплено ${fmt(out,0)} ${t.symbol}` + (t.graduated ? " — ГРАДАЦИЯ! 🎓" : ""));
-  render();
+  if (!silent) { toast(`Куплено ${fmt(out,0)} ${t.symbol}` + (t.graduated ? " — ГРАДАЦИЯ! 🎓" : "")); render(); }
+  return true;
 }
 function sell(t, tokIn) {
   if (tokIn <= 0 || tokIn > t.myBal) return toast("Недостаточно токенов");
   const outNet = quoteSell(t, tokIn);
-  const gross = outNet / (1 - FEE), fee = gross - outNet;
+  const gross = outNet / (1 - FEE);
   t.eth -= gross; t.sold -= tokIn; t.myBal -= tokIn;
-  t.creatorFees += fee/2; t.protoFees += fee/2;
+  applyFee(t, gross - outNet);
   ethBalance += outNet;
   toast(`Продано за ${fmt(outNet,4)} ETH`);
   render();
@@ -159,19 +214,24 @@ function migrate(t) {
 
 // ------------------------------------------------ ui
 const fmt = (n, d=4) => Number(n).toLocaleString("en-US", { maximumFractionDigits: d });
+const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 let view = { page: "home", idx: 0, tab: "buy" };
-function go(page, idx) { view = { page, idx: idx ?? 0, tab: "buy" }; render(); window.scrollTo(0,0); }
+let draft = { consent: false, img: "", advOpen: false };
+function go(page, idx) {
+  view = { page, idx: idx ?? 0, tab: "buy" };
+  if (page === "create") draft = { consent: false, img: "", advOpen: false };
+  render(); window.scrollTo(0,0);
+}
 function toast(msg) {
   const el = document.getElementById("toast");
   el.textContent = msg; el.classList.add("show");
   clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("show"), 2600);
 }
-
 function render() {
   document.getElementById("balTop").textContent = fmt(ethBalance, 3);
   const m = document.getElementById("main");
   if (view.page === "home") m.innerHTML = homeView();
-  else if (view.page === "create") m.innerHTML = createView();
+  else if (view.page === "create") { m.innerHTML = createView(); wireCreate(); }
   else m.innerHTML = tokenView(tokens[view.idx]);
 }
 
@@ -180,12 +240,15 @@ function homeView() {
   <section class="hero">
     <h1>Запусти токен <span class="green">в одну транзакцию</span></h1>
     <p>Честный запуск по бондинг-кривой на Robinhood Chain. Без пресейла и командных
-    аллокаций, ликвидность запирается навсегда. Создатель получает 50% комиссий.</p>
+    аллокаций, ликвидность запирается навсегда. Создатель получает 70% комиссий.</p>
     <button class="btn btn-primary" style="padding:13px 28px" onclick="go('create')">Запустить свой токен</button>
   </section>
   <div class="grid">${tokens.map((t, i) => `
     <div class="card" onclick="go('token', ${i})">
-      <div class="card-title"><h3>${t.name}</h3><span class="ticker">$${t.symbol}</span></div>
+      <div class="card-title">
+        ${t.img ? `<img class="card-img" src="${t.img}" alt="">` : ""}
+        <h3>${esc(t.name)}</h3><span class="ticker">$${esc(t.symbol)}</span>
+      </div>
       <div class="stat-row"><span>Капитализация</span><b>${fmt(mcap(t), 2)} ETH</b></div>
       <div class="stat-row"><span>Собрано</span><b>${fmt(t.eth, 3)} / 6.5 ETH</b></div>
       ${t.graduated
@@ -195,46 +258,211 @@ function homeView() {
   </div>`;
 }
 
+// ------------------------------------------------ create page (Pons-style)
 function createView() {
   return `
-  <div class="panel">
-    <h2>Запустить токен</h2>
-    <p class="dim">Сапплай 1 млрд · 80% на кривой · градация на 6.5 ETH ·
-    вы получаете 50% каждой комиссии.</p>
-    <label>Название</label><input id="fName" placeholder="Volodya Coin" maxlength="48" />
-    <label>Тикер</label><input id="fSym" placeholder="VOLO" maxlength="12" />
-    <label>Описание (необязательно)</label><textarea id="fDesc" rows="3" placeholder="О чём этот токен?"></textarea>
-    <label>Первая покупка в ETH (защита от снайперов)</label><input id="fBuy" placeholder="0.1" inputmode="decimal" />
-    <div style="margin-top:24px">
-      <button class="btn btn-primary btn-block" onclick="createToken()">Запустить токен</button>
+  <button class="btn back-btn" onclick="go('home')">‹ Назад</button>
+  <div class="create-layout">
+    <div class="panel">
+      <h2>Запустить токен</h2>
+
+      <div class="field-row">
+        <div>
+          <label>Название</label>
+          <input id="fName" placeholder="Название токена" maxlength="32" oninput="syncPreview()" />
+          <div class="hint" id="hName">Буквы, цифры и пробелы. Максимум 32 символа.</div>
+        </div>
+        <div>
+          <label>Тикер</label>
+          <input id="fSym" placeholder="СИМВОЛ" maxlength="10" oninput="this.value=this.value.toUpperCase();syncPreview()" />
+          <div class="hint" id="hSym">Буквы и цифры. Максимум 10 символов.</div>
+        </div>
+      </div>
+
+      <label>Описание</label>
+      <textarea id="fDesc" rows="3" placeholder="Короткое описание токена" oninput="syncPreview()"></textarea>
+
+      <label>Картинка токена</label>
+      <label class="check-row">
+        <input type="checkbox" id="fConsent" onchange="draft.consent=this.checked;syncUpload()" />
+        <span>Я понимаю, что выбранное изображение будет опубликовано и станет
+        частью неизменяемых метаданных токена.</span>
+      </label>
+      <div class="upload-box disabled" id="uploadBox" onclick="pickImage()">
+        <div class="upload-thumb" id="uploadThumb">🖼️</div>
+        <span id="uploadLabel">Сначала подтвердите публикацию</span>
+      </div>
+
+      <div class="field-row">
+        <div>
+          <label>Профиль X</label>
+          <div class="prefix-input"><span>x.com/</span><input id="fX" placeholder="handle" oninput="syncPreview()" /></div>
+        </div>
+        <div>
+          <label>Telegram</label>
+          <div class="prefix-input"><span>t.me/</span><input id="fTg" placeholder="community" oninput="syncPreview()" /></div>
+        </div>
+      </div>
+
+      <label>Покупка создателя</label>
+      <div class="suffix-input">
+        <input id="fBuy" placeholder="0.00" inputmode="decimal" oninput="syncPreview()" />
+        <b>ETH</b>
+      </div>
+      <div class="hint" id="hBuy">Макс ${fmt(MAX_DEV_BUY_ETH, 4)} ETH · 5% сапплая. Исполняется в той же транзакции — защита от снайперов.</div>
+
+      <div class="adv-toggle" id="advToggle" onclick="draft.advOpen=!draft.advOpen;syncAdv()">
+        <span>Дополнительно</span><span class="chev">▾</span>
+      </div>
+      <div class="adv-body" id="advBody">
+        <div class="preview-stats" style="border:none;margin:0">
+          <div class="row"><span class="k">Сапплай</span><span class="v">1 000 000 000 (фикс.)</span></div>
+          <div class="row"><span class="k">На кривой</span><span class="v">80% · 800M</span></div>
+          <div class="row"><span class="k">Резерв DEX</span><span class="v">20% · 200M</span></div>
+          <div class="row"><span class="k">Комиссия трейда</span><span class="v">1%</span></div>
+          <div class="row"><span class="k">Контракт токена</span><span class="v">без минта и владельца</span></div>
+        </div>
+      </div>
+
+      <div class="due-row">
+        <span>Uniswap V3 после градации · ликвидность запирается навсегда</span>
+        <span><b style="color:var(--accent)">Комиссия запуска: 0 ETH</b></span>
+      </div>
+
+      <button class="btn btn-primary btn-block" id="ctaBtn" onclick="createToken()">Добавьте картинку токена</button>
     </div>
+
+    <aside class="preview-card">
+      <div class="preview-img" id="pImg">🖼️</div>
+      <div class="preview-name" id="pName">Ваш токен</div>
+      <div class="preview-ticker" id="pTicker">тикер</div>
+      <div class="preview-stats">
+        <div class="row"><span class="k">Комиссия запуска</span><span class="v green">0 ETH</span></div>
+        <div class="row"><span class="k">Комиссии с трейдов</span><span class="v">70% создателю / 30% протоколу</span></div>
+        <div class="row"><span class="k">Градация</span><span class="v">6.5 ETH</span></div>
+        <div class="row"><span class="k">Ликвидность</span><span class="v">Заперта навсегда</span></div>
+        <div class="row" id="pBuyRow" style="display:none"><span class="k">Ваша покупка</span><span class="v" id="pBuyVal"></span></div>
+      </div>
+    </aside>
   </div>`;
+}
+
+function wireCreate() {
+  const fi = document.getElementById("fileInput");
+  fi.value = "";
+  fi.onchange = () => {
+    const f = fi.files[0];
+    if (!f) return;
+    const img = new Image();
+    const url = URL.createObjectURL(f);
+    img.onload = () => {
+      // downscale to 128px, store as data URL (in the real dApp this goes into token metadata)
+      const c = document.createElement("canvas");
+      const s = Math.min(img.width, img.height);
+      c.width = 128; c.height = 128;
+      c.getContext("2d").drawImage(img, (img.width-s)/2, (img.height-s)/2, s, s, 0, 0, 128, 128);
+      draft.img = c.toDataURL("image/jpeg", 0.85);
+      URL.revokeObjectURL(url);
+      syncUpload(); syncPreview();
+    };
+    img.src = url;
+  };
+  syncUpload(); syncAdv(); syncPreview();
+}
+function pickImage() {
+  if (!draft.consent) return toast("Сначала поставьте галочку согласия");
+  document.getElementById("fileInput").click();
+}
+function syncUpload() {
+  const box = document.getElementById("uploadBox");
+  const lbl = document.getElementById("uploadLabel");
+  const th = document.getElementById("uploadThumb");
+  if (!box) return;
+  box.classList.toggle("disabled", !draft.consent);
+  box.classList.toggle("ready", !!draft.img);
+  if (draft.img) { th.innerHTML = `<img src="${draft.img}">`; lbl.textContent = "Картинка загружена — нажмите, чтобы заменить"; }
+  else { th.textContent = "🖼️"; lbl.textContent = draft.consent ? "Выбрать картинку токена" : "Сначала подтвердите публикацию"; }
+  syncCta();
+}
+function syncAdv() {
+  document.getElementById("advToggle")?.classList.toggle("open", draft.advOpen);
+  document.getElementById("advBody")?.classList.toggle("open", draft.advOpen);
+}
+function syncPreview() {
+  const name = document.getElementById("fName").value.trim();
+  const sym = document.getElementById("fSym").value.trim();
+  const buyV = parseFloat(document.getElementById("fBuy").value) || 0;
+  document.getElementById("pName").textContent = name || "Ваш токен";
+  document.getElementById("pTicker").textContent = sym ? "$" + sym : "тикер";
+  document.getElementById("pImg").innerHTML = draft.img ? `<img src="${draft.img}">` : "🖼️";
+  const row = document.getElementById("pBuyRow");
+  if (buyV > 0) {
+    row.style.display = "flex";
+    document.getElementById("pBuyVal").textContent =
+      `${fmt(buyV,4)} ETH ≈ ${fmt(Math.min(quoteBuy({eth:0,sold:0}, buyV), TOTAL),0)} токенов`;
+  } else row.style.display = "none";
+  // validation hints
+  const hSym = document.getElementById("hSym");
+  const okSym = /^[A-Z0-9]*$/.test(sym);
+  hSym.classList.toggle("bad", !okSym);
+  hSym.textContent = okSym ? "Буквы и цифры. Максимум 10 символов." : "Только буквы и цифры!";
+  const hBuy = document.getElementById("hBuy");
+  const okBuy = buyV <= MAX_DEV_BUY_ETH;
+  hBuy.classList.toggle("bad", !okBuy);
+  hBuy.textContent = okBuy
+    ? `Макс ${fmt(MAX_DEV_BUY_ETH, 4)} ETH · 5% сапплая. Исполняется в той же транзакции — защита от снайперов.`
+    : `Больше лимита: максимум ${fmt(MAX_DEV_BUY_ETH, 4)} ETH (5% сапплая).`;
+  syncCta();
+}
+function syncCta() {
+  const btn = document.getElementById("ctaBtn");
+  if (!btn) return;
+  const name = document.getElementById("fName").value.trim();
+  const sym = document.getElementById("fSym").value.trim();
+  const buyV = parseFloat(document.getElementById("fBuy").value) || 0;
+  if (!draft.img) btn.textContent = "Добавьте картинку токена";
+  else if (!name || !sym) btn.textContent = "Укажите название и тикер";
+  else btn.textContent = buyV > 0
+    ? `Запустить токен и купить на ${fmt(buyV,4)} ETH`
+    : "Запустить токен";
 }
 function createToken() {
   const name = document.getElementById("fName").value.trim();
   const sym = document.getElementById("fSym").value.trim().toUpperCase();
   const desc = document.getElementById("fDesc").value.trim();
+  const xh = document.getElementById("fX").value.trim();
+  const tg = document.getElementById("fTg").value.trim();
   const first = parseFloat(document.getElementById("fBuy").value) || 0;
+  if (!draft.img) return toast("Добавьте картинку токена");
   if (!name || !sym) return toast("Нужны название и тикер");
-  const t = makeToken(name, sym, desc, "0xVolo…dya (вы)");
+  if (!/^[A-Z0-9]{1,10}$/.test(sym)) return toast("Тикер: только буквы и цифры, до 10 символов");
+  if (first > MAX_DEV_BUY_ETH) return toast(`Покупка создателя ограничена ${fmt(MAX_DEV_BUY_ETH,4)} ETH (5% сапплая)`);
+  const t = makeToken(name, sym, desc, "0xVolo…dya (вы)", draft.img, xh, tg);
   t.mine = true;
   tokens.unshift(t);
   toast(`Токен $${sym} запущен! 🚀`);
   view = { page: "token", idx: 0, tab: "buy" };
-  if (first > 0) buy(t, first); else render();
-  window.scrollTo(0,0);
+  if (first > 0) buy(t, first, true);
+  render(); window.scrollTo(0,0);
 }
 
+// ------------------------------------------------ token page
 function tokenView(t) {
   const p = price(t);
+  const links = [
+    t.x ? `<a href="https://x.com/${esc(t.x)}" target="_blank" style="color:var(--accent)">x.com/${esc(t.x)}</a>` : "",
+    t.tg ? `<a href="https://t.me/${esc(t.tg)}" target="_blank" style="color:var(--accent)">t.me/${esc(t.tg)}</a>` : "",
+  ].filter(Boolean).join(" · ");
   return `
   <div class="token-layout">
     <div><div class="card" style="cursor:default;transform:none">
       <div class="card-title">
-        <h3 style="font-size:24px">${t.name} <span class="ticker">$${t.symbol}</span></h3>
+        ${t.img ? `<img class="token-head-img" src="${t.img}" alt="">` : ""}
+        <h3 style="font-size:24px">${esc(t.name)} <span class="ticker">$${esc(t.symbol)}</span></h3>
         ${t.graduated ? '<span class="badge">Graduated</span>' : ""}
       </div>
-      ${t.desc ? `<p class="dim" style="margin-top:10px">${t.desc}</p>` : ""}
+      ${t.desc ? `<p class="dim" style="margin-top:10px">${esc(t.desc)}</p>` : ""}
+      ${links ? `<p class="dim" style="margin-top:6px">${links}</p>` : ""}
       <div class="stats-grid">
         <div class="stat-card"><div class="k">Цена</div><div class="v">${p.toExponential(3)} ETH</div></div>
         <div class="stat-card"><div class="k">Капитализация</div><div class="v">${fmt(mcap(t), 2)} ETH</div></div>
@@ -244,9 +472,9 @@ function tokenView(t) {
       ${!t.graduated ? `<div class="progress" style="margin-top:18px"><div style="width:${progress(t)}%"></div></div>` : ""}
       <div class="stats-grid" style="margin-top:12px">
         <div class="stat-card"><div class="k">Ваш баланс</div><div class="v">${fmt(t.myBal, 0)}</div></div>
-        <div class="stat-card"><div class="k">Комиссии создателя</div><div class="v">${fmt(t.creatorFees, 4)} ETH</div></div>
+        <div class="stat-card"><div class="k">Комиссии создателя (70%)</div><div class="v">${fmt(t.creatorFees, 4)} ETH</div></div>
       </div>
-      <p class="dim" style="margin-top:18px">Создатель: <span style="font-family:ui-monospace,monospace">${t.creator}</span></p>
+      <p class="dim" style="margin-top:18px">Создатель: <span style="font-family:ui-monospace,monospace">${esc(t.creator)}</span></p>
     </div></div>
     <div>${tradePanel(t)}</div>
   </div>`;
@@ -254,29 +482,29 @@ function tokenView(t) {
 
 function tradePanel(t) {
   if (t.graduated && t.migrated) return `
-    <div class="panel" style="margin:0;max-width:none">
+    <div class="panel">
       <div class="notice">Токен градуировал — ликвидность заперта на DEX навсегда. Торгуйте на Uniswap V3.</div>
     </div>`;
   if (t.graduated) return `
-    <div class="panel" style="margin:0;max-width:none">
+    <div class="panel">
       <div class="notice">Кривая заполнена! Кто угодно может запустить миграцию ликвидности.</div>
       <button class="btn btn-primary btn-block" onclick="migrate(tokens[${view.idx}])">Мигрировать ликвидность на DEX</button>
     </div>`;
   const isBuy = view.tab === "buy";
   return `
-  <div class="panel" style="margin:0;max-width:none">
+  <div class="panel">
     <div class="tabs">
       <div class="tab ${isBuy ? "active-buy" : ""}" onclick="view.tab='buy';render()">Купить</div>
       <div class="tab ${!isBuy ? "active-sell" : ""}" onclick="view.tab='sell';render()">Продать</div>
     </div>
-    <label>${isBuy ? "Вы платите (ETH)" : `Вы продаёте (${t.symbol})`}</label>
+    <label>${isBuy ? "Вы платите (ETH)" : `Вы продаёте (${esc(t.symbol)})`}</label>
     <input id="amt" placeholder="0.0" inputmode="decimal" oninput="updateQuote()" />
     ${!isBuy ? `<p class="dim" style="margin:6px 0 0">Баланс: ${fmt(t.myBal, 0)}
       <a href="#" onclick="event.preventDefault();document.getElementById('amt').value=${t.myBal};updateQuote()" style="color:var(--accent)">макс</a></p>` : ""}
     <div class="quote-box"><span>Вы получите (оценка)</span><b id="quoteOut">—</b></div>
     <button class="btn btn-block ${isBuy ? "btn-primary" : "btn-danger"}" onclick="doTrade()">
-      ${isBuy ? "Купить" : "Продать"} ${t.symbol}</button>
-    <p class="dim" style="margin-top:12px">Комиссия 1% · создатель получает 50% комиссий</p>
+      ${isBuy ? "Купить" : "Продать"} ${esc(t.symbol)}</button>
+    <p class="dim" style="margin-top:12px">Комиссия 1% · создатель получает 70% комиссий</p>
   </div>`;
 }
 function updateQuote() {
