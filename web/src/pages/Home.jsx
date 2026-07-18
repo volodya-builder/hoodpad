@@ -94,6 +94,8 @@ function TokenCard({ t }) {
 export default function Home({ onSearch }) {
   const { t } = useLang();
   const split = useSplit();
+  const [gpage, setGpage] = useState(1);
+  const GRAD_PER_PAGE = 10;
   const [tokens, setTokens] = useState(null);
   const [error, setError] = useState("");
   const [sort, setSort] = useState("new");
@@ -136,54 +138,68 @@ export default function Home({ onSearch }) {
 
       {error && <div className="error">{error}</div>}
       {!tokens && !error && <div className="center">{t("Загружаю токены из блокчейна…")}</div>}
-      {tokens && tokens.length === 0 && (
-        <div className="center">
+
+      <div className="grad-wrap">
+        <div className="sec-head">
+          <div>
+            <h2 className="sec-h2">
+              {t("Градуировали")} <span className="count-chip">{grad.length}</span>
+            </h2>
+            <div className="page-sub" style={{ margin: "7px 0 0" }}>
+              {t("Прошли порог градации — ликвидность заперта на DEX.")}
+            </div>
+          </div>
+        </div>
+        {grad.length === 0 ? (
+          <div className="center" style={{ padding: "26px 0 14px" }}>
+            {t("Пока никто не градуировал — первым здесь станет токен, собравший 6.5 ETH.")}
+          </div>
+        ) : (
+          <>
+            <div className="tgrid">
+              {grad.slice((gpage - 1) * GRAD_PER_PAGE, gpage * GRAD_PER_PAGE)
+                   .map((t2) => <TokenCard key={t2.token} t={t2} />)}
+            </div>
+            {grad.length > GRAD_PER_PAGE && (
+              <div className="pager">
+                <div className="pg nav" onClick={() => setGpage(Math.max(1, gpage - 1))}>‹</div>
+                {Array.from({ length: Math.ceil(grad.length / GRAD_PER_PAGE) }, (_, k) => k + 1).map((p) => (
+                  <div key={p} className={`pg ${p === gpage ? "on" : ""}`} onClick={() => setGpage(p)}>{p}</div>
+                ))}
+                <div className="pg nav"
+                     onClick={() => setGpage(Math.min(Math.ceil(grad.length / GRAD_PER_PAGE), gpage + 1))}>›</div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      <div className="sec-head">
+        <div>
+          <h2 className="sec-h2">
+            {t("Обзор")} <span className="count-chip">{tokens?.length ?? 0} {t("запущено")}</span>
+          </h2>
+          <div className="page-sub" style={{ margin: "7px 0 0" }}>
+            {t("Токены, летящие к градации на Robinhood Chain.")}
+          </div>
+        </div>
+        <div className="pill-group">
+          {[["new", t("Новые")], ["raised", t("Недавние покупки")], ["mcap", t("Капитализация")]].map(([k, lbl]) => (
+            <div key={k} className={`fpill ${sort === k ? "on" : ""}`} onClick={() => setSort(k)}>
+              {lbl}
+            </div>
+          ))}
+        </div>
+      </div>
+      {live.length === 0 ? (
+        <div className="center" style={{ paddingBottom: 60 }}>
           {t("Токенов пока нет — станьте первым.")}{" "}
           <a href="#/create" style={{ color: "var(--gold)" }}>{t("Запустить токен →")}</a>
         </div>
-      )}
-
-      {grad.length > 0 && (
-        <div className="grad-wrap">
-          <div className="sec-head">
-            <div>
-              <h2 className="sec-h2">
-                {t("Градуировали")} <span className="count-chip">{grad.length}</span>
-              </h2>
-              <div className="page-sub" style={{ margin: "7px 0 0" }}>
-                {t("Прошли порог градации — ликвидность заперта на DEX.")}
-              </div>
-            </div>
-          </div>
-          <div className="tgrid">
-            {grad.map((t) => <TokenCard key={t.token} t={t} />)}
-          </div>
+      ) : (
+        <div className="tgrid" style={{ paddingBottom: 60 }}>
+          {live.map((t2) => <TokenCard key={t2.token} t={t2} />)}
         </div>
-      )}
-
-      {live.length > 0 && (
-        <>
-          <div className="sec-head">
-            <div>
-              <h2 className="sec-h2">
-                {t("На кривой")} <span className="count-chip">{live.length}</span>
-              </h2>
-              <div className="page-sub" style={{ margin: "7px 0 0" }}>
-                {t("Летят к градации — сбор 6.5 ETH.")}
-              </div>
-            </div>
-            <div className="pill-group">
-              {[["new", t("Новые")], ["raised", t("Недавние покупки")], ["mcap", t("Капитализация")]].map(([k, lbl]) => (
-                <div key={k} className={`fpill ${sort === k ? "on" : ""}`} onClick={() => setSort(k)}>
-                  {lbl}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="tgrid" style={{ paddingBottom: 60 }}>
-            {live.map((t) => <TokenCard key={t.token} t={t} />)}
-          </div>
-        </>
       )}
     </>
   );
