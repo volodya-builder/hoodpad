@@ -1,0 +1,41 @@
+import { defineChain } from "viem";
+
+// ---------------------------------------------------------------- chains
+export const robinhoodMainnet = defineChain({
+  id: 4663,
+  name: "Robinhood Chain",
+  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+  rpcUrls: { default: { http: ["https://rpc.mainnet.chain.robinhood.com"] } },
+  blockExplorers: {
+    default: { name: "Blockscout", url: "https://robinhoodchain.blockscout.com" },
+  },
+});
+
+export const robinhoodTestnet = defineChain({
+  id: 46630,
+  name: "Robinhood Chain Testnet",
+  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+  rpcUrls: { default: { http: ["https://rpc.testnet.chain.robinhood.com"] } },
+  blockExplorers: {
+    default: { name: "Blockscout", url: "https://explorer.testnet.chain.robinhood.com" },
+  },
+});
+
+// Local hardhat node for development
+export const localChain = defineChain({
+  id: 31337,
+  name: "Local",
+  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+  rpcUrls: { default: { http: ["http://127.0.0.1:8545"] } },
+});
+
+// Active network: switch to robinhoodMainnet for production.
+const NETWORK = import.meta.env.VITE_NETWORK ?? "testnet";
+export const CHAIN =
+  NETWORK === "mainnet" ? robinhoodMainnet : NETWORK === "local" ? localChain : robinhoodTestnet;
+
+// Set after deployment (scripts/deploy.js prints it).
+export const FACTORY_ADDRESS =
+  import.meta.env.VITE_FACTORY_ADDRESS ?? "0x0000000000000000000000000000000000000000";
+
+export const EXPLORER = CHAIN.blockExplorers?.default?.url ?? "";
