@@ -38,4 +38,8 @@ export const CHAIN =
 export const FACTORY_ADDRESS =
   import.meta.env.VITE_FACTORY_ADDRESS ?? "0x0000000000000000000000000000000000000000";
 
+// Buyback treasury (80% of fees; ETH can only leave via buybacks)
+export const TREASURY_ADDRESS =
+  import.meta.env.VITE_TREASURY_ADDRESS ?? "0xd8d4f77d200e5ddf5b44ba2d2f7539aa1d8fc811";
+
 export const EXPLORER = CHAIN.blockExplorers?.default?.url ?? "";

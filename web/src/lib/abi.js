@@ -27,6 +27,23 @@ export const poolAbi = parseAbi([
   "function claimCreatorFees(address to)",
 ]);
 
+export const treasuryAbi = parseAbi([
+  "function owner() view returns (address)",
+  "function buyback(address token, uint256 ethAmount, uint256 minTokensOut) returns (uint256)",
+  "function burn(address token, uint256 amount)",
+  "function totalReceived() view returns (uint256)",
+  "function totalSpent() view returns (uint256)",
+  "function boughtOf(address) view returns (uint256)",
+  "function burnedOf(address) view returns (uint256)",
+]);
+
+export const poolExtraAbi = parseAbi([
+  "function creatorFeesAccrued() view returns (uint256)",
+  "function protocolFeesAccrued() view returns (uint256)",
+  "function claimCreatorFees(address to)",
+  "function claimProtocolFees()",
+]);
+
 export const tokenAbi = parseAbi([
   "function name() view returns (string)",
   "function symbol() view returns (string)",

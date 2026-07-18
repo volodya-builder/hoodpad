@@ -2,8 +2,12 @@ import React, { useEffect, useState, useCallback } from "react";
 import Home from "./pages/Home.jsx";
 import Create from "./pages/Create.jsx";
 import TokenPage from "./pages/Token.jsx";
-import { connectWallet, hasWallet, short } from "./lib/web3.js";
+import Analytics from "./pages/Analytics.jsx";
+import Profile from "./pages/Profile.jsx";
+import { connectWallet, hasWallet, short, fmt } from "./lib/web3.js";
 import { CHAIN, FACTORY_ADDRESS } from "./lib/config.js";
+import { loadTokens } from "./lib/data.js";
+import { formatEther } from "viem";
 
 function useHashRoute() {
   const [hash, setHash] = useState(window.location.hash || "#/");
@@ -15,9 +19,76 @@ function useHashRoute() {
   return hash.replace(/^#/, "");
 }
 
+function SearchModal({ open, onClose }) {
+  const [q, setQ] = useState("");
+  const [tokens, setTokens] = useState(null);
+  useEffect(() => {
+    if (!open) return;
+    setQ("");
+    loadTokens().then(setTokens).catch(() => setTokens([]));
+  }, [open]);
+  if (!open) return null;
+  const res = (tokens ?? []).filter(
+    (t) => !q || t.name.toLowerCase().includes(q.toLowerCase()) ||
+           t.symbol.toLowerCase().includes(q.toLowerCase())
+  ).slice(0, 8);
+  return (
+    <div className="modal-back open" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="search-modal">
+        <input
+          autoFocus
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Поиск токена по имени или тикеру…"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") onClose();
+            if (e.key === "Enter" && res[0]) { onClose(); window.location.hash = `#/token/${res[0].token}`; }
+          }}
+        />
+        <div className="sr-list">
+          {tokens === null && <div className="center" style={{ padding: "20px 0" }}>Загружаю…</div>}
+          {tokens !== null && res.length === 0 && (
+            <div className="center" style={{ padding: "20px 0" }}>Ничего не найдено</div>
+          )}
+          {res.map((t) => (
+            <div className="sr-item" key={t.token}
+                 onClick={() => { onClose(); window.location.hash = `#/token/${t.token}`; }}>
+              {t.meta.image && <img src={t.meta.image} alt="" />}
+              <span className="n">{t.name} <span className="ticker">${t.symbol}</span></span>
+              <span className="m">
+                {fmt(Number(formatEther(t.price)) * 1e9, 2)} ETH{t.graduated ? " · 🎯" : ""}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const route = useHashRoute();
   const [wallet, setWallet] = useState(null); // { account, walletClient }
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [theme, setTheme] = useState(() => {
+    try { return localStorage.getItem("hood_theme") || ""; } catch (e) { return ""; }
+  });
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem("hood_theme", theme); } catch (e) { /* ignore */ }
+  }, [theme]);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault(); setSearchOpen(true);
+      }
+      if (e.key === "Escape") setSearchOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
 
   const connect = useCallback(async () => {
     try {
@@ -48,8 +119,12 @@ export default function App() {
     page = <TokenPage tokenAddress={route.split("/token/")[1]} wallet={wallet} onConnect={connect} />;
   } else if (route === "/create") {
     page = <Create wallet={wallet} onConnect={connect} />;
+  } else if (route === "/analytics") {
+    page = <Analytics />;
+  } else if (route === "/profile") {
+    page = <Profile wallet={wallet} onConnect={connect} />;
   } else {
-    page = <Home />;
+    page = <Home onSearch={() => setSearchOpen(true)} />;
   }
 
   return (
@@ -58,20 +133,28 @@ export default function App() {
         <div className="container header-inner">
           <a className="logo" href="#/" aria-label="hood">
             <svg width="32" height="32" viewBox="0 0 64 64">
-      <rect width="64" height="64" rx="14" fill="#f5f5f2"/>
-      <path d="M32 8.6 C30 8.6 27.6 11 25.4 14.2 C20.4 21.4 15.2 31.6 13.2 41 C12.2 45.4 12.7 48.7 15.3 50.5 C17.9 52.2 23 51.3 32 51.3 C41 51.3 46.1 52.2 48.7 50.5 C51.3 48.7 51.8 45.4 50.8 41 C48.8 31.6 43.6 21.4 38.6 14.2 C36.4 11 34 8.6 32 8.6 Z" fill="#4a4d51"/>
-      <path d="M32 25 C26.6 28.6 20.6 35.4 20.1 42.6 C19.8 46 21 48.4 22.5 50.2 C23.6 51.6 24 53 25.4 54.1 C27.2 55.4 29.4 55.8 32 55.8 C34.6 55.8 36.8 55.4 38.6 54.1 C40 53 40.4 51.6 41.5 50.2 C43 48.4 44.2 46 43.9 42.6 C43.4 35.4 37.4 28.6 32 25 Z" fill="#101112" stroke="#f5f5f2" strokeWidth="2.1"/>
-    </svg>
+              <rect width="64" height="64" rx="14" fill="#f5f5f2" />
+              <path d="M32 8.6 C30 8.6 27.6 11 25.4 14.2 C20.4 21.4 15.2 31.6 13.2 41 C12.2 45.4 12.7 48.7 15.3 50.5 C17.9 52.2 23 51.3 32 51.3 C41 51.3 46.1 52.2 48.7 50.5 C51.3 48.7 51.8 45.4 50.8 41 C48.8 31.6 43.6 21.4 38.6 14.2 C36.4 11 34 8.6 32 8.6 Z" fill="#4a4d51" />
+              <path d="M32 25 C26.6 28.6 20.6 35.4 20.1 42.6 C19.8 46 21 48.4 22.5 50.2 C23.6 51.6 24 53 25.4 54.1 C27.2 55.4 29.4 55.8 32 55.8 C34.6 55.8 36.8 55.4 38.6 54.1 C40 53 40.4 51.6 41.5 50.2 C43 48.4 44.2 46 43.9 42.6 C43.4 35.4 37.4 28.6 32 25 Z" fill="#101112" stroke="#f5f5f2" strokeWidth="2.1" />
+            </svg>
             <span className="logo-word">HOOD</span>
           </a>
+          <div className="nav-pills">
+            <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/profile") ? "on" : ""}`} href="#/">Обзор</a>
+            <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">Аналитика</a>
+          </div>
           <nav className="nav">
+            <button className="icon-btn" onClick={() => setSearchOpen(true)} title="Поиск (Ctrl+K)">⌕</button>
+            <button className="icon-btn" onClick={() => setTheme(theme === "light" ? "" : "light")} title="Сменить тему">
+              {theme === "light" ? "☾" : "☀"}
+            </button>
             <span className="net-pill">{CHAIN.name}</span>
-            <a className="btn" href="#/create">+ Launch token</a>
+            <a className="btn" href="#/create">+ Запустить токен</a>
             {wallet ? (
-              <span className="btn mono">{short(wallet.account)}</span>
+              <a className="btn mono" href="#/profile" title="Профиль">{short(wallet.account)}</a>
             ) : (
               <button className="btn btn-primary" onClick={connect}>
-                Connect wallet
+                Подключить кошелёк
               </button>
             )}
           </nav>
@@ -80,12 +163,13 @@ export default function App() {
       <main className="container">
         {factoryMissing && (
           <div className="error" style={{ marginTop: 16 }}>
-            Factory address is not configured. Deploy the contracts and set
-            VITE_FACTORY_ADDRESS in web/.env
+            Адрес фабрики не настроен. Задеплойте контракты и укажите
+            VITE_FACTORY_ADDRESS.
           </div>
         )}
         {page}
       </main>
+      <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   );
 }

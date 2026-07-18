@@ -1,10 +1,39 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { parseEther, formatEther } from "viem";
 import { publicClient, fmt, short } from "../lib/web3.js";
-import { factoryAbi, poolAbi, tokenAbi } from "../lib/abi.js";
-import { FACTORY_ADDRESS, EXPLORER } from "../lib/config.js";
+import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi } from "../lib/abi.js";
+import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
+import { poolTrades } from "../lib/data.js";
 
 const SLIPPAGE_BPS = 300n; // 3%
+
+function MiniChart({ points }) {
+  if (!points || points.length < 2) {
+    return <div className="dim" style={{ padding: "20px 0" }}>График появится после первых сделок.</div>;
+  }
+  const W = 640, H = 180, PADB = 6, PADT = 8;
+  let mn = Infinity, mx = -Infinity;
+  points.forEach((p) => { mn = Math.min(mn, p.mcap); mx = Math.max(mx, p.mcap); });
+  if (mx - mn < mx * 0.02) { mx *= 1.01; mn *= 0.99; }
+  const X = (i) => (i / (points.length - 1)) * (W - 8) + 4;
+  const Y = (v) => PADT + (1 - (v - mn) / (mx - mn)) * (H - PADT - PADB);
+  const line = points.map((p, i) => `${i ? "L" : "M"}${X(i).toFixed(1)} ${Y(p.mcap).toFixed(1)}`).join(" ");
+  const area = `${line} L${X(points.length - 1).toFixed(1)} ${H - PADB} L4 ${H - PADB} Z`;
+  const last = points[points.length - 1];
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", display: "block", marginTop: 8 }}>
+      <defs>
+        <linearGradient id="tokAreaG" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#b9c94b" stopOpacity=".25" />
+          <stop offset="1" stopColor="#b9c94b" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill="url(#tokAreaG)" />
+      <path d={line} fill="none" stroke="#b9c94b" strokeWidth="2" strokeLinejoin="round" />
+      <circle cx={X(points.length - 1)} cy={Y(last.mcap)} r="4" fill="#dcea5c" stroke="#0d0e0c" strokeWidth="2" />
+    </svg>
+  );
+}
 
 export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [data, setData] = useState(null);
@@ -14,6 +43,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [quote, setQuote] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [history, setHistory] = useState(null); // { trades, points }
+  const [extra, setExtra] = useState({});       // creatorFees, treasuryOwner, treasuryHeld, burned
+  const [bbAmt, setBbAmt] = useState("");
 
   const load = useCallback(async () => {
     const pool = await publicClient.readContract({
@@ -57,6 +89,44 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     const id = setInterval(() => load().catch(() => {}), 12000);
     return () => clearInterval(id);
   }, [load]);
+
+  // trades + chart from on-chain events; treasury/creator extras
+  const loadExtras = useCallback(async () => {
+    if (!data?.pool) return;
+    const [h, creatorFees, treasuryOwner, treasuryHeld, burned] = await Promise.all([
+      poolTrades(data.pool),
+      publicClient.readContract({ address: data.pool, abi: poolExtraAbi, functionName: "creatorFeesAccrued" }),
+      publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "owner" }).catch(() => null),
+      publicClient.readContract({ address: tokenAddress, abi: tokenAbi, functionName: "balanceOf", args: [TREASURY_ADDRESS] }).catch(() => 0n),
+      publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "burnedOf", args: [tokenAddress] }).catch(() => 0n),
+    ]);
+    setHistory(h);
+    setExtra({ creatorFees, treasuryOwner, treasuryHeld, burned });
+  }, [data?.pool, tokenAddress]);
+
+  useEffect(() => {
+    loadExtras().catch(() => {});
+    const id = setInterval(() => loadExtras().catch(() => {}), 20000);
+    return () => clearInterval(id);
+  }, [loadExtras]);
+
+  const isTreasuryOwner =
+    wallet && extra.treasuryOwner &&
+    wallet.account.toLowerCase() === extra.treasuryOwner.toLowerCase();
+  const isCreator =
+    wallet && data?.creator &&
+    wallet.account.toLowerCase() === data.creator.toLowerCase();
+
+  async function sendTx(address, abi, functionName, args = [], value) {
+    setError(""); setBusy(true);
+    try {
+      const hash = await wallet.walletClient.writeContract({ address, abi, functionName, args, value });
+      await publicClient.waitForTransactionReceipt({ hash });
+      await load(); await loadExtras();
+    } catch (err) {
+      setError(err.shortMessage || err.message);
+    } finally { setBusy(false); }
+  }
 
   // live quote
   useEffect(() => {
@@ -222,17 +292,68 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             </div>
           )}
 
+          <div className="stats-grid" style={{ marginTop: 12 }}>
+            <div className="stat-card">
+              <div className="k">Комиссии создателя (20%)</div>
+              <div className="v" style={{ color: "var(--gold)" }}>
+                {fmt(formatEther(extra.creatorFees ?? 0n), 5)} ETH
+              </div>
+            </div>
+            {extra.burned > 0n && (
+              <div className="stat-card">
+                <div className="k">Сожжено казной</div>
+                <div className="v">{fmt(formatEther(extra.burned), 0)}</div>
+              </div>
+            )}
+          </div>
+          {isCreator && (extra.creatorFees ?? 0n) > 0n && (
+            <button
+              className="btn"
+              style={{ marginTop: 12 }}
+              disabled={busy}
+              onClick={() => sendTx(data.pool, poolExtraAbi, "claimCreatorFees", [wallet.account])}
+            >
+              Забрать комиссии создателя
+            </button>
+          )}
+
           <p className="dim" style={{ marginTop: 18 }}>
-            Token:{" "}
+            Токен:{" "}
             <a className="mono" href={`${EXPLORER}/address/${tokenAddress}`} target="_blank" rel="noreferrer">
               {short(tokenAddress)}
             </a>
-            {" · "}Pool:{" "}
+            {" · "}Пул:{" "}
             <a className="mono" href={`${EXPLORER}/address/${data.pool}`} target="_blank" rel="noreferrer">
               {short(data.pool)}
             </a>
-            {" · "}Creator: <span className="mono">{short(data.creator)}</span>
+            {" · "}Создатель: <span className="mono">{short(data.creator)}</span>
           </p>
+        </div>
+
+        <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
+          <div className="card-title"><h3>Капитализация по сделкам</h3></div>
+          <MiniChart points={history?.points} />
+        </div>
+
+        <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
+          <div className="card-title"><h3>Сделки из блокчейна</h3></div>
+          {!history && <div className="dim" style={{ padding: "14px 0" }}>Читаю события…</div>}
+          {history && history.trades.length === 0 && (
+            <div className="dim" style={{ padding: "14px 0" }}>Пока нет сделок.</div>
+          )}
+          {history && history.trades.slice(0, 12).map((tr, i) => (
+            <div className="trow" key={i}>
+              <span className={tr.side === "buy" ? "side-buy" : "side-sell"}>
+                {tr.side === "buy" ? "Купил" : "Продал"}
+              </span>
+              <span>{fmt(tr.eth, 5)} ETH</span>
+              <span>{fmt(tr.tokens, 0)}</span>
+              <a className="mono" href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer">
+                {short(tr.addr)}
+              </a>
+              <span className="dim">блок {String(tr.block)}</span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -312,7 +433,57 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             {error && <div className="error">{error}</div>}
           </div>
         )}
+
+        {isTreasuryOwner && !data.graduated && (
+          <div className="panel" style={{ margin: "18px 0 0", maxWidth: "none" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <b style={{ fontSize: 14 }}>Выкуп из казны</b>
+              <TreasuryBalance />
+            </div>
+            <p className="dim" style={{ margin: "8px 0 10px" }}>
+              Режим владельца платформы: казна купит этот токен с рынка.
+            </p>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                value={bbAmt}
+                onChange={(e) => setBbAmt(e.target.value)}
+                placeholder="0.001"
+                inputMode="decimal"
+                style={{ flex: 1 }}
+              />
+              <button
+                className="btn"
+                disabled={busy || !bbAmt}
+                onClick={() => sendTx(TREASURY_ADDRESS, treasuryAbi, "buyback", [tokenAddress, parseEther(bbAmt), 0n])}
+              >
+                Выкупить
+              </button>
+            </div>
+            <div className="dim" style={{ marginTop: 8, display: "flex", justifyContent: "space-between" }}>
+              <span>В казне: {fmt(formatEther(extra.treasuryHeld ?? 0n), 0)} {data.symbol}</span>
+              {(extra.treasuryHeld ?? 0n) > 0n && (
+                <a
+                  style={{ color: "var(--red)", cursor: "pointer" }}
+                  onClick={() => sendTx(TREASURY_ADDRESS, treasuryAbi, "burn", [tokenAddress, extra.treasuryHeld])}
+                >
+                  Сжечь 🔥
+                </a>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
+}
+
+function TreasuryBalance() {
+  const [bal, setBal] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    publicClient.getBalance({ address: TREASURY_ADDRESS })
+      .then((b) => alive && setBal(b)).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  return <span className="dim">{bal === null ? "…" : `${fmt(formatEther(bal), 5)} ETH доступно`}</span>;
 }

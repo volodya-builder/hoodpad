@@ -86,9 +86,10 @@ function TokenCard({ t }) {
   );
 }
 
-export default function Home() {
+export default function Home({ onSearch }) {
   const [tokens, setTokens] = useState(null);
   const [error, setError] = useState("");
+  const [sort, setSort] = useState("new");
 
   useEffect(() => {
     let alive = true;
@@ -101,12 +102,25 @@ export default function Home() {
     return () => { alive = false; clearInterval(id); };
   }, []);
 
-  const live = tokens?.filter((t) => !t.graduated) ?? [];
-  const grad = tokens?.filter((t) => t.graduated) ?? [];
+  const bySort = (arr) => {
+    const a = [...arr];
+    if (sort === "mcap") a.sort((x, y) => Number(y.price - x.price));
+    if (sort === "raised") a.sort((x, y) => Number(y.reserve - x.reserve));
+    return a; // "new": loader already returns newest first
+  };
+  const live = bySort(tokens?.filter((t) => !t.graduated) ?? []);
+  const grad = bySort(tokens?.filter((t) => t.graduated) ?? []);
 
   return (
     <>
-      <div className="page-title" style={{ marginTop: 34 }}>Обзор</div>
+      <div className="search-row">
+        <div className="big-search" onClick={onSearch}>
+          ⌕ Поиск токенов <span className="kbd">Ctrl K</span>
+        </div>
+        <a className="btn btn-primary" style={{ padding: "0 26px", display: "flex", alignItems: "center" }} href="#/create">
+          + Создать
+        </a>
+      </div>
       <div className="page-sub">
         Токены с фиксированным сапплаем на Robinhood Chain — запуск в одну
         транзакцию, 20% комиссий создателю, 80% в казну выкупа, ликвидность
@@ -150,6 +164,13 @@ export default function Home() {
               <div className="page-sub" style={{ margin: "7px 0 0" }}>
                 Летят к градации — сбор 6.5 ETH.
               </div>
+            </div>
+            <div className="pill-group">
+              {[["new", "Новые"], ["raised", "Недавние покупки"], ["mcap", "Капитализация"]].map(([k, lbl]) => (
+                <div key={k} className={`fpill ${sort === k ? "on" : ""}`} onClick={() => setSort(k)}>
+                  {lbl}
+                </div>
+              ))}
             </div>
           </div>
           <div className="tgrid" style={{ paddingBottom: 60 }}>
