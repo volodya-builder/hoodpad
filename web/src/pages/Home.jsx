@@ -1,74 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { formatEther } from "viem";
-import { publicClient, fmt, short } from "../lib/web3.js";
+import { fmt } from "../lib/web3.js";
 import { useEthUsd, usd } from "../lib/price.js";
-import { timeAgo, loadTokens, tradeEvents } from "../lib/data.js";
+import { timeAgo, loadTokens } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
-
-/** Живая лента последних сделок по всем пулам платформы. */
-function LiveFeed({ tokens }) {
-  const { t } = useLang();
-  const [items, setItems] = useState(null);
-
-  useEffect(() => {
-    if (!tokens || tokens.length === 0) return;
-    let alive = true;
-    const byPool = {};
-    tokens.forEach((tk) => { byPool[tk.pool.toLowerCase()] = { sym: tk.symbol, token: tk.token }; });
-    const pools = tokens.map((tk) => tk.pool);
-
-    async function pull() {
-      const logs = await publicClient.getLogs({
-        address: pools, events: tradeEvents, fromBlock: 0n, toBlock: "latest",
-      });
-      if (logs.length === 0) { if (alive) setItems([]); return; }
-      logs.sort((a, b) => Number(b.blockNumber - a.blockNumber) || (b.logIndex - a.logIndex));
-      const top = logs.slice(0, 12);
-      const minB = Number(top[top.length - 1].blockNumber);
-      const [latest, oldest] = await Promise.all([
-        publicClient.getBlock(),
-        publicClient.getBlock({ blockNumber: BigInt(minB) }),
-      ]);
-      const span = Number(latest.number) - minB;
-      const avg = span > 0 ? (Number(latest.timestamp) - Number(oldest.timestamp)) / span : 0;
-      const list = top.map((l) => {
-        const isBuy = l.eventName === "Buy";
-        const info = byPool[l.address.toLowerCase()] ?? {};
-        return {
-          side: isBuy ? "buy" : "sell",
-          addr: isBuy ? l.args.buyer : l.args.seller,
-          eth: Number(isBuy ? l.args.ethIn : l.args.ethOut) / 1e18,
-          sym: info.sym, token: info.token,
-          ts: (Number(oldest.timestamp) + (Number(l.blockNumber) - minB) * avg) * 1000,
-          key: l.transactionHash + String(l.logIndex),
-        };
-      }).filter((x) => x.token);
-      if (alive) setItems(list);
-    }
-    pull().catch(() => {});
-    const id = setInterval(() => pull().catch(() => {}), 15000);
-    return () => { alive = false; clearInterval(id); };
-  }, [tokens]);
-
-  if (!items || items.length === 0) return null;
-  return (
-    <div className="feed-strip">
-      <span className="feed-label">⚡ {t("Лента сделок")}</span>
-      <div className="feed-scroll">
-        {items.map((x) => (
-          <a className="feed-chip" key={x.key} href={`#/token/${x.token}`}>
-            <span className={x.side === "buy" ? "side-buy" : "side-sell"}>{x.side === "buy" ? "▲" : "▼"}</span>
-            <span className="mono dim">{short(x.addr)}</span>
-            <span>{t(x.side === "buy" ? "купил" : "продал")}</span>
-            <b>${x.sym}</b>
-            <span>{t("за")} {fmt(x.eth, 4)} ETH</span>
-            <span className="dim">· {timeAgo(x.ts)}</span>
-          </a>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 /** Король горы — самый близкий к градации токен. */
 function KingCard({ king }) {
@@ -193,7 +128,6 @@ export default function Home({ onSearch }) {
       {error && <div className="error">{error}</div>}
       {!tokens && !error && <div className="center">{t("Загружаю токены из блокчейна…")}</div>}
 
-      <LiveFeed tokens={tokens} />
       <KingCard
         king={(tokens ?? [])
           .filter((x) => !x.graduated && x.reserve > 0n)

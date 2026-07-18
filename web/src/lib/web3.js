@@ -56,6 +56,26 @@ export async function connectWallet() {
   return { account, walletClient, provider };
 }
 
+/** Тихое восстановление сессии после перезагрузки страницы: без попапов,
+ *  через eth_accounts. Возвращает null, если кошелёк не давал доступ. */
+export async function reconnectWallet() {
+  // EIP-6963 объявления приходят асинхронно — подождём провайдера
+  for (let i = 0; i < 10 && !pickProvider(); i++) {
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  const provider = pickProvider();
+  if (!provider) return null;
+  const accs = await provider.request({ method: "eth_accounts" });
+  if (!accs || accs.length === 0) return null;
+  try { await ensureChain(provider); } catch (e) { /* не блокируем восстановление */ }
+  const walletClient = createWalletClient({
+    account: accs[0],
+    chain: CHAIN,
+    transport: custom(provider),
+  });
+  return { account: accs[0], walletClient, provider };
+}
+
 export async function ensureChain(provider) {
   provider = provider || pickProvider();
   const current = await provider.request({ method: "eth_chainId" });

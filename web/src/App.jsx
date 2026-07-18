@@ -7,7 +7,7 @@ import Profile from "./pages/Profile.jsx";
 import Vote from "./pages/Vote.jsx";
 import About from "./pages/About.jsx";
 import { Privacy, Terms } from "./pages/Legal.jsx";
-import { connectWallet, hasWallet, short, fmt } from "./lib/web3.js";
+import { connectWallet, reconnectWallet, hasWallet, short, fmt } from "./lib/web3.js";
 import { CHAIN, FACTORY_ADDRESS } from "./lib/config.js";
 import { loadTokens } from "./lib/data.js";
 import { useEthUsd, usd } from "./lib/price.js";
@@ -108,9 +108,22 @@ export default function App() {
     try {
       const w = await connectWallet();
       setWallet(w);
+      try { localStorage.setItem("hood_wallet", "1"); } catch (e) { /* ignore */ }
     } catch (e) {
       alert(e.shortMessage || e.message);
     }
+  }, []);
+
+  // Автовосстановление сессии кошелька после перезагрузки страницы
+  useEffect(() => {
+    let alive = true;
+    try {
+      if (localStorage.getItem("hood_wallet") !== "1") return;
+    } catch (e) { return; }
+    reconnectWallet()
+      .then((w) => { if (alive && w) setWallet(w); })
+      .catch(() => {});
+    return () => { alive = false; };
   }, []);
 
   useEffect(() => {
@@ -184,7 +197,10 @@ export default function App() {
                 <div className={`wallet-menu ${walletMenu ? "open" : ""}`}>
                   <a className="wallet-item" href="#/profile" onClick={() => setWalletMenu(false)}
                      style={{ display: "block" }}>{t("Профиль")}</a>
-                  <div className="wallet-item" onClick={() => { setWallet(null); setWalletMenu(false); }}>
+                  <div className="wallet-item" onClick={() => {
+                    setWallet(null); setWalletMenu(false);
+                    try { localStorage.removeItem("hood_wallet"); } catch (e) { /* ignore */ }
+                  }}>
                     {t("Отключить")}
                   </div>
                 </div>
