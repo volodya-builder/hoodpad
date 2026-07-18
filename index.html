@@ -568,6 +568,17 @@ const treasury = { eth: 0, received: 0, spent: 0, holdings: {}, burned: {}, buyb
 const MAX_DEV_BUY_TOKENS = TOTAL * 0.05;
 const MAX_DEV_BUY_ETH = (VIRT * MAX_DEV_BUY_TOKENS / (TOTAL - MAX_DEV_BUY_TOKENS)) / (1 - FEE);
 let ethBalance = 10;
+let ETH_USD = 3800;
+fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd")
+  .then(r => r.json()).then(j => { if (j?.ethereum?.usd) { ETH_USD = j.ethereum.usd; render(); } })
+  .catch(() => {});
+function usdFmt(ethVal) {
+  const n = ethVal * ETH_USD, a = Math.abs(n);
+  if (a >= 1e9) return "$" + (n/1e9).toFixed(2) + "B";
+  if (a >= 1e6) return "$" + (n/1e6).toFixed(2) + "M";
+  if (a >= 1e3) return "$" + (n/1e3).toFixed(1) + "k";
+  return "$" + n.toFixed(2);
+}
 const tokens = [];
 
 const emojiImg = (e, bg) => "data:image/svg+xml," + encodeURIComponent(
@@ -1035,7 +1046,7 @@ function renderSearch() {
     <div class="sr-item" onclick="closeSearch();go('token',${i})">
       ${t.img ? `<img src="${t.img}">` : ""}
       <span class="n">${esc(t.name)} <span class="ticker">$${esc(t.symbol)}</span></span>
-      <span class="m">${fmt(mcap(t), 2)} ETH${t.graduated ? " · 🎯" : ""}</span>
+      <span class="m">${usdFmt(mcap(t))}${t.graduated ? " · 🎯" : ""}</span>
     </div>`).join("") || '<div class="center" style="padding:20px 0">Ничего не найдено</div>');
 }
 document.addEventListener("keydown", (e) => {
@@ -1098,7 +1109,7 @@ function tokenCard(t, i) {
       </div>
       <div class="tname">${esc(t.name)}</div>
       <div class="ttick">$${esc(t.symbol)}</div>
-      <div class="tmc">${fmt(mcap(t), 2)} ETH<span>MC</span></div>
+      <div class="tmc">${usdFmt(mcap(t))}<span>MC</span></div>
       <div class="prow">${arrowProgress(p)}<span class="pv">${fmt(p, 0)}%</span></div>
       <div class="tmeta"><span class="mono">${esc(t.addr)}</span><span>${fmtAgo(t.createdAt)} назад</span></div>
     </div>`;
@@ -1525,7 +1536,7 @@ function chartSvg(t) {
   window._chartPts = px;
   const line = px.map((p, i) => (i ? "L" : "M") + p.x.toFixed(1) + " " + p.y.toFixed(1)).join(" ");
   const area = line + ` L${px[px.length-1].x.toFixed(1)} ${H-PADB} L${px[0].x.toFixed(1)} ${H-PADB} Z`;
-  const capOf = p => fmt(p * TOTAL, 2);
+  const capOf = p => usdFmt(p * TOTAL);
   const grid = [pmax, (pmax+pmin)/2, pmin].map(p =>
     `<line x1="0" x2="${W-PADR}" y1="${Y(p).toFixed(1)}" y2="${Y(p).toFixed(1)}" stroke="#24251f" stroke-dasharray="3 5"/>` +
     `<text x="${W-PADR+8}" y="${(Y(p)+4).toFixed(1)}" fill="#9b9e94" font-size="11" font-family="Manrope">${capOf(p)}</text>`
@@ -1573,7 +1584,7 @@ function wireChart() {
     tip.style.display = "block";
     tip.style.left = (best.x / 660 * r.width) + "px";
     tip.style.top = (best.y / 250 * r.height) + "px";
-    tip.innerHTML = tr(`${fmt(best.p * TOTAL, 2)} ETH <span class="t">кап · ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}</span>`);
+    tip.innerHTML = tr(`${usdFmt(best.p * TOTAL)} <span class="t">кап · ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}</span>`);
   };
   wrap.onmouseleave = () => {
     tip.style.display = "none"; cv.setAttribute("opacity", "0"); dot.setAttribute("opacity", "0");
@@ -1683,15 +1694,15 @@ function tokenView(t) {
     <!-- chart panel -->
     <div class="chart-panel">
       <div class="chart-stats">
-        <div class="cs"><div class="k">Капитализация</div><div class="v">${fmt(mcap(t), 2)} ETH</div></div>
+        <div class="cs"><div class="k">Капитализация</div><div class="v">${usdFmt(mcap(t))}</div></div>
         <div class="cs"><div class="k">Ликвидность</div><div class="v">${fmt(t.eth, 3)} ETH</div></div>
         <div class="cs"><div class="k">Объём 24ч</div><div class="v">${fmt(vol24(t), 3)} ETH</div></div>
-        <div class="cs"><div class="k">ATH</div><div class="v">${fmt(t.ath, 2)} ETH</div></div>
+        <div class="cs"><div class="k">ATH</div><div class="v">${usdFmt(t.ath)}</div></div>
         <div class="cs"><div class="k">До градации</div><div class="v">${t.graduated ? "100%" : fmt(progress(t), 1) + "%"}</div></div>
       </div>
       <div class="chart-head">
         <div>
-          <div class="big-cap">${fmt(mcap(t), 2)} ETH</div>
+          <div class="big-cap">${usdFmt(mcap(t))}</div>
           <div class="chg ${chg >= 0 ? "up" : "down"}">${chg >= 0 ? "+" : ""}${fmt(chg, 2)}% · ${esc(view.tf)}</div>
         </div>
         <div class="tf-row">${Object.keys(TFS).map(k =>
