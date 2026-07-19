@@ -36,12 +36,22 @@ async function main() {
   const { createPublicClient, createWalletClient, http } = require("viem");
   const { privateKeyToAccount } = require("viem/accounts");
 
-  const RPC_URL = process.env.RPC_URL;
-  const PRIVATE_KEY = process.env.PRIVATE_KEY;
+  // Настройки: из переменных окружения ИЛИ из локального deploy-config.json
+  let cfg = {};
+  try { cfg = JSON.parse(fs.readFileSync(path.join(__dirname, "deploy-config.json"), "utf8")); } catch (e) {}
+  const RPC_URL = process.env.RPC_URL || cfg.rpcUrl;
+  let PRIVATE_KEY = process.env.PRIVATE_KEY || cfg.privateKey;
   if (!RPC_URL || !PRIVATE_KEY) {
-    console.error("Нужны переменные RPC_URL и PRIVATE_KEY");
+    console.error("Нет настроек: заполни deploy-config.json (privateKey, rpcUrl) или задай PRIVATE_KEY/RPC_URL.");
     process.exit(1);
   }
+  PRIVATE_KEY = String(PRIVATE_KEY).replace(/["'\s]/g, "");
+  if (!PRIVATE_KEY.startsWith("0x")) PRIVATE_KEY = "0x" + PRIVATE_KEY;
+  if (!/^0x[0-9a-fA-F]{64}$/.test(PRIVATE_KEY)) {
+    console.error(`Приватный ключ выглядит неверно: ${PRIVATE_KEY.length - 2} hex-символов вместо 64.`);
+    process.exit(1);
+  }
+  process.env.TEAM_WALLET = process.env.TEAM_WALLET || cfg.teamWallet || "";
   const POSITION_MANAGER = process.env.POSITION_MANAGER || MAINNET.positionManager;
   const WETH = process.env.WETH || MAINNET.weth;
 
