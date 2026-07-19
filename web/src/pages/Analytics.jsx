@@ -41,11 +41,14 @@ function Bars({ data }) {
   );
 }
 
+// Память вкладки между заходами
+let _anaRaw = null;
+
 export default function Analytics() {
   const { t } = useLang();
   const split = useSplit();
   const rate = useEthUsd();
-  const [raw, setRaw] = useState(null);
+  const [raw, setRaw] = useState(_anaRaw);
   const [error, setError] = useState("");
   const [period, setPeriod] = useState("all");
 
@@ -130,12 +133,13 @@ export default function Analytics() {
         .catch(() => null);
 
       if (!alive) return;
-      setRaw({
+      _anaRaw = {
         trades, now,
         launches: tokens.length,
         grads: tokens.filter((tk) => tk.graduated).length,
         treBal, received, spent, bought, burned, buybackCount, leaders,
-      });
+      };
+      setRaw(_anaRaw);
     })().catch((e) => alive && setError(e.shortMessage || e.message));
     return () => { alive = false; };
   }, []);

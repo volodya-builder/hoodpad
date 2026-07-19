@@ -2,18 +2,17 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { parseAbi, parseAbiItem } from "viem";
 import { publicClient, fmt, short } from "../lib/web3.js";
 import { VOTE_ADDRESS, EXPLORER } from "../lib/config.js";
-import { loadTokens, timeAgo } from "../lib/data.js";
+import { loadTokens, timeAgo, subgraphVotes } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 
 const voteAbi = parseAbi([
   "function vote(address token)",
-  "function epoch() view returns (uint256)",
-  "function epochEndsIn() view returns (uint256)",
-  "function voted(uint256, address) view returns (bool)",
 ]);
 const voteEvent = parseAbiItem(
   "event Vote(address indexed token, address indexed voter, uint256 indexed epoch)"
 );
+
+const EPOCH_LEN = 7 * 86400; // как в контракте: block.timestamp / 7 days
 
 function countdown(sec) {
   let en = false;
@@ -27,62 +26,61 @@ function countdown(sec) {
   return `${m}${M}`;
 }
 
+// Память вкладки между заходами: повторное открытие — мгновенное.
+let _voteState = null;
+
 export default function Vote({ wallet, onConnect }) {
   const { t } = useLang();
-  const [state, setState] = useState(null);
+  const [state, setState] = useState(_voteState);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [expanded, setExpanded] = useState(null); // token addr, раскрытый список голосов
-  const [q, setQ] = useState("");                 // фильтр: адрес или тикер
-  const [ftoken, setFtoken] = useState("all");    // фильтр: конкретный токен
+  const [expanded, setExpanded] = useState(null);
+  const [q, setQ] = useState("");
+  const [ftoken, setFtoken] = useState("all");
 
   const enabled = VOTE_ADDRESS !== "0x0000000000000000000000000000000000000000";
 
   const load = useCallback(async () => {
     if (!enabled) return;
-    const [tokens, ep, endsIn] = await Promise.all([
-      loadTokens(),
-      publicClient.readContract({ address: VOTE_ADDRESS, abi: voteAbi, functionName: "epoch" }),
-      publicClient.readContract({ address: VOTE_ADDRESS, abi: voteAbi, functionName: "epochEndsIn" }),
-    ]);
-    const logs = await publicClient.getLogs({
-      address: VOTE_ADDRESS, event: voteEvent, args: { epoch: ep },
-      fromBlock: 0n, toBlock: "latest",
-    });
+    // Эпоха и таймер считаются локально — ровно та же формула, что в контракте
+    const nowSec = Math.floor(Date.now() / 1000);
+    const ep = BigInt(Math.floor(nowSec / EPOCH_LEN));
+    const endsIn = EPOCH_LEN - (nowSec % EPOCH_LEN);
 
-    // Время каждого голоса: интерполяция по блокам (2 RPC-вызова).
-    let votes = logs.map((l) => ({
-      voter: l.args.voter,
-      token: l.args.token.toLowerCase(),
-      block: Number(l.blockNumber),
-      ts: null,
-    }));
-    if (votes.length > 0) {
-      const minB = Math.min(...votes.map((v) => v.block));
-      const [latest, oldest] = await Promise.all([
-        publicClient.getBlock(),
-        publicClient.getBlock({ blockNumber: BigInt(minB) }),
-      ]);
-      const span = Number(latest.number) - minB;
-      const avg = span > 0
-        ? (Number(latest.timestamp) - Number(oldest.timestamp)) / span
-        : 0;
-      for (const v of votes) {
-        v.ts = (Number(oldest.timestamp) + (v.block - minB) * avg) * 1000;
+    const tokens = await loadTokens();
+
+    let votes;
+    try {
+      votes = await subgraphVotes(ep); // индексатор: один быстрый запрос
+    } catch (e) {
+      // запасной путь: события из блокчейна
+      const logs = await publicClient.getLogs({
+        address: VOTE_ADDRESS, event: voteEvent, args: { epoch: ep },
+        fromBlock: 0n, toBlock: "latest",
+      });
+      votes = logs.map((l) => ({
+        voter: l.args.voter, token: l.args.token.toLowerCase(),
+        block: Number(l.blockNumber), ts: null,
+      }));
+      if (votes.length > 0) {
+        try {
+          const minB = Math.min(...votes.map((v) => v.block));
+          const [latest, oldest] = await Promise.all([
+            publicClient.getBlock(),
+            publicClient.getBlock({ blockNumber: BigInt(minB) }),
+          ]);
+          const span = Number(latest.number) - minB;
+          const avg = span > 0 ? (Number(latest.timestamp) - Number(oldest.timestamp)) / span : 0;
+          for (const v of votes) {
+            v.ts = (Number(oldest.timestamp) + (v.block - minB) * avg) * 1000;
+          }
+        } catch (e2) { /* останутся номера блоков */ }
       }
+      votes.sort((a, b) => b.block - a.block);
     }
-    votes.sort((a, b) => b.block - a.block); // новые сверху
 
     const tally = {};
     for (const v of votes) tally[v.token] = (tally[v.token] ?? 0) + 1;
-
-    let myVote = null;
-    if (wallet) {
-      const mine = votes.find(
-        (v) => v.voter.toLowerCase() === wallet.account.toLowerCase()
-      );
-      if (mine) myVote = mine.token;
-    }
 
     const symByAddr = {};
     for (const tk of tokens) symByAddr[tk.token.toLowerCase()] = tk.symbol;
@@ -91,14 +89,25 @@ export default function Vote({ wallet, onConnect }) {
       .filter((tk) => !tk.graduated)
       .map((tk) => ({ ...tk, votes: tally[tk.token.toLowerCase()] ?? 0 }))
       .sort((a, b) => b.votes - a.votes);
-    setState({ rows, votes, symByAddr, total: votes.length, endsIn: Number(endsIn), myVote, ep });
-  }, [wallet, enabled]);
+
+    const next = { rows, votes, symByAddr, total: votes.length, endsIn, ep };
+    _voteState = next;
+    setState(next);
+  }, [enabled]);
 
   useEffect(() => {
     load().catch((e) => setError(e.shortMessage || e.message));
     const id = setInterval(() => load().catch(() => {}), 15000);
     return () => clearInterval(id);
   }, [load]);
+
+  const myVote = useMemo(() => {
+    if (!wallet || !state) return null;
+    const mine = state.votes.find(
+      (v) => v.voter.toLowerCase() === wallet.account.toLowerCase()
+    );
+    return mine ? mine.token : null;
+  }, [state, wallet]);
 
   async function castVote(token) {
     setError("");
@@ -110,12 +119,12 @@ export default function Vote({ wallet, onConnect }) {
       });
       await publicClient.waitForTransactionReceipt({ hash });
       await load();
+      setTimeout(() => load().catch(() => {}), 3000); // индексатор догоняет за секунды
     } catch (e) {
       setError(e.shortMessage || e.message);
     } finally { setBusy(false); }
   }
 
-  // Боковой список: фильтр по адресу/тикеру + по конкретному токену.
   const filteredVotes = useMemo(() => {
     if (!state) return [];
     const needle = q.trim().toLowerCase();
@@ -152,11 +161,11 @@ export default function Vote({ wallet, onConnect }) {
             <div className="k">{t("До конца раунда")}</div>
             <div className="v">{countdown(state.endsIn)}</div>
           </div>
-          {state.myVote && (
+          {myVote && (
             <div className="about-stat">
               <div className="k">{t("Ваш голос")}</div>
               <div className="v" style={{ fontSize: 18 }}>
-                {state.rows.find((r) => r.token.toLowerCase() === state.myVote)?.symbol ?? short(state.myVote)} ✓
+                {state.rows.find((r) => r.token.toLowerCase() === myVote)?.symbol ?? short(myVote)} ✓
               </div>
             </div>
           )}
@@ -177,10 +186,10 @@ export default function Vote({ wallet, onConnect }) {
             {state.rows.map((r, i) => {
               const addr = r.token.toLowerCase();
               const sharePct = state.total > 0 ? (r.votes / state.total) * 100 : 0;
-              const isMine = state.myVote === addr;
+              const isMine = myVote === addr;
               const isOpen = expanded === addr;
               const voters = isOpen ? state.votes.filter((v) => v.token === addr) : [];
-              const rank = r.votes > 0 && i < 3 ? i + 1 : 0; // топ-3 — медальные рамки
+              const rank = r.votes > 0 && i < 3 ? i + 1 : 0;
               return (
                 <React.Fragment key={r.token}>
                   <div className="prow6 vote-row"
@@ -212,9 +221,9 @@ export default function Vote({ wallet, onConnect }) {
                     {isMine ? (
                       <span className="badge">{t("ваш голос")}</span>
                     ) : (
-                      <button className="btn" disabled={busy || !!state.myVote}
+                      <button className="btn" disabled={busy || !!myVote}
                               onClick={(e) => { e.stopPropagation(); castVote(r.token); }}
-                              title={state.myVote ? t("Вы уже голосовали в этом раунде") : ""}>
+                              title={myVote ? t("Вы уже голосовали в этом раунде") : ""}>
                         {t("Голосовать")}
                       </button>
                     )}

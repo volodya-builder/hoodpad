@@ -57,6 +57,23 @@ async function _loadTokensSubgraph() {
   });
 }
 
+export async function subgraphVotes(epoch) {
+  const d = await gql(`{ voteCasts(first: 1000, orderBy: timestamp, orderDirection: desc,
+    where: { epoch: "${epoch.toString()}" }) { token voter timestamp } }`);
+  if (!d?.voteCasts) throw new Error("no voteCasts");
+  return d.voteCasts.map((v) => ({
+    voter: v.voter, token: v.token.toLowerCase(),
+    ts: Number(v.timestamp) * 1000, block: 0,
+  }));
+}
+
+export async function subgraphTreasuryOps() {
+  const d = await gql(`{ treasuryOps(first: 1000, orderBy: timestamp, orderDirection: desc) {
+    kind from token ethAmount tokenAmount timestamp tx } }`);
+  if (!d?.treasuryOps) throw new Error("no treasuryOps");
+  return d.treasuryOps;
+}
+
 // Кэш списка токенов в режиме stale-while-revalidate: страница ВСЕГДА
 // получает данные мгновенно (пусть и чуть устаревшие), а свежие
 // подтягиваются в фоне. Кэш переживает перезагрузку через localStorage.
