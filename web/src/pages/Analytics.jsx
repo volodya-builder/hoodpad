@@ -245,39 +245,9 @@ export default function Analytics() {
       )}
 
       {raw?.leaders && (raw.leaders.creators.length > 0 || raw.leaders.traders.length > 0) && (
-        <div className="lb-grid">
-          <div className="bottom-card" style={{ marginTop: 0 }}>
-            <div className="bt-tabs"><div className="bt-tab on">🏆 {t("Топ создателей")}</div></div>
-            {raw.leaders.creators.length === 0 && <div className="center">{t("Пока пусто.")}</div>}
-            {raw.leaders.creators.map(([addr, c], i) => (
-              <a className="lb-row" key={addr} href={`${EXPLORER}/address/${addr}`} target="_blank" rel="noreferrer">
-                <span className={i < 3 ? `rank-num rk${i + 1}` : "dim"}>{i + 1}</span>
-                <span className="lb-who">
-                  <span className="mono">{short(addr)}</span>
-                  <span className="lb-syms">{c.symbols.map((s) => `$${s}`).join(" ")}</span>
-                </span>
-                <span className="lb-val" style={{ color: "var(--gold)" }}>
-                  {fmtEth(c.earned)} ETH <span className="usd-sub">({usd(c.earned * rate)})</span>
-                </span>
-              </a>
-            ))}
-          </div>
-          <div className="bottom-card" style={{ marginTop: 0 }}>
-            <div className="bt-tabs"><div className="bt-tab on">⚡ {t("Топ трейдеров")}</div></div>
-            {raw.leaders.traders.length === 0 && <div className="center">{t("Пока пусто.")}</div>}
-            {raw.leaders.traders.map(([addr, x], i) => (
-              <a className="lb-row" key={addr} href={`${EXPLORER}/address/${addr}`} target="_blank" rel="noreferrer">
-                <span className={i < 3 ? `rank-num rk${i + 1}` : "dim"}>{i + 1}</span>
-                <span className="lb-who">
-                  <span className="mono">{short(addr)}</span>
-                  <span className="lb-syms">{x.count} {t("сделок")}</span>
-                </span>
-                <span className="lb-val">
-                  {fmtEth(x.volume)} ETH <span className="usd-sub">({usd(x.volume * rate)})</span>
-                </span>
-              </a>
-            ))}
-          </div>
+        <div className="ana-note" style={{ marginBottom: 0 }}>
+          🏆 {t("Топ создателей и трейдеров теперь в разделе")}{" "}
+          <a href="#/leaderboard" style={{ color: "var(--gold)" }}>{t("Лидеры")} →</a>
         </div>
       )}
 

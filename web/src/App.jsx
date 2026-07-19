@@ -3,6 +3,7 @@ import Home from "./pages/Home.jsx";
 import Create from "./pages/Create.jsx";
 import TokenPage from "./pages/Token.jsx";
 import Analytics from "./pages/Analytics.jsx";
+import Leaderboard from "./pages/Leaderboard.jsx";
 import Profile from "./pages/Profile.jsx";
 import Vote from "./pages/Vote.jsx";
 import About from "./pages/About.jsx";
@@ -267,6 +268,8 @@ export default function App() {
     page = <Create wallet={wallet} onConnect={connect} />;
   } else if (route === "/analytics") {
     page = <Analytics />;
+  } else if (route === "/leaderboard") {
+    page = <Leaderboard />;
   } else if (route === "/vote") {
     page = <Vote wallet={wallet} onConnect={connect} />;
   } else if (route === "/treasury") {
@@ -295,8 +298,9 @@ export default function App() {
             <span className="logo-word">HOOD</span>
           </a>
           <div className={`nav-pills ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(false)}>
-            <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/profile") && !route.startsWith("/vote") && !route.startsWith("/treasury") && !route.startsWith("/about") ? "on" : ""}`} href="#/">{t("Обзор")}</a>
+            <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/leaderboard") && !route.startsWith("/profile") && !route.startsWith("/vote") && !route.startsWith("/treasury") && !route.startsWith("/about") ? "on" : ""}`} href="#/">{t("Обзор")}</a>
             <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>
+            <a className={`nav-pill ${route.startsWith("/leaderboard") ? "on" : ""}`} href="#/leaderboard">{t("Лидеры")}</a>
             <a className={`nav-pill ${route.startsWith("/vote") ? "on" : ""}`} href="#/vote">{t("Голосование")}</a>
             <a className={`nav-pill ${route.startsWith("/treasury") ? "on" : ""}`} href="#/treasury">{t("Казна")}</a>
             <a className={`nav-pill ${route.startsWith("/about") ? "on" : ""}`} href="#/about">{t("О нас")}</a>
