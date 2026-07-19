@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hood — верификация контрактов (мейннет)</title>
+<style>
+  body{background:#0b0b0b;color:#e8e8e3;font-family:system-ui,Segoe UI,Roboto,sans-serif;max-width:820px;margin:0 auto;padding:28px 20px 80px;line-height:1.55}
+  h1{font-size:26px;font-weight:600;letter-spacing:-.3px}
+  h2{font-size:15px;text-transform:uppercase;letter-spacing:1px;color:#9a9a90;margin:28px 0 10px}
+  .card{background:#151514;border:1px solid #262624;border-radius:14px;padding:16px 18px;margin:12px 0}
+  .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;word-break:break-all}
+  .name{font-weight:600;font-size:16px}
+  a{color:#c8f42b}
+  .step{background:#101a05;border:1px solid #23350c;border-radius:12px;padding:14px 18px;margin:8px 0}
+  code{background:#000;padding:2px 7px;border-radius:6px;font-size:13px}
+  .btn{display:inline-block;margin-top:8px;background:#c8f42b;color:#101100;padding:8px 16px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px}
+</style></head><body>
+<h1>Верификация контрактов hood — мейннет Robinhood Chain</h1>
+<p>Сеть: <b>Robinhood Chain Mainnet</b> · Эксплорер: robinhoodchain.blockscout.com</p>
+
+<h2>Как верифицировать (для каждого контракта одинаково)</h2>
+<div class="step">
+1. Скачай файл <a href="./verification-input-mainnet.json" download>verification-input-mainnet.json</a> (это исходники всех контрактов одним файлом).<br>
+2. У каждого контракта ниже нажми «Открыть форму верификации».<br>
+3. В форме выбери способ: <b>Solidity (Standard JSON input)</b>.<br>
+4. Compiler version: <code>v0.8.28+commit.7893614a</code><br>
+5. Загрузи скачанный <code>verification-input-mainnet.json</code>.<br>
+6. Contract name — впиши точное имя из карточки (например <code>LaunchpadFactory</code>).<br>
+7. Аргументы конструктора Blockscout определит сам. Нажми Verify.
+</div>
+
+<h2>Контракты</h2>
+
+<div class="card">
+  <div class="name">LaunchpadFactory</div>
+  <div class="mono">0xb09683cdd8e1dae93e37163eb4e6dd925d4104f9</div>
+  <a class="btn" href="https://robinhoodchain.blockscout.com/address/0xb09683cdd8e1dae93e37163eb4e6dd925d4104f9/contract-verification" target="_blank">Открыть форму верификации →</a>
+</div>
+
+<div class="card">
+  <div class="name">BuybackTreasury</div>
+  <div class="mono">0xe5544c837f8dfd6b7e082435f7a1d646692239d3</div>
+  <a class="btn" href="https://robinhoodchain.blockscout.com/address/0xe5544c837f8dfd6b7e082435f7a1d646692239d3/contract-verification" target="_blank">Открыть форму верификации →</a>
+</div>
+
+<div class="card">
+  <div class="name">FeeSplitter</div>
+  <div class="mono">0xda6658e97d90ac17d796a05bb0b19e493809fc09</div>
+  <a class="btn" href="https://robinhoodchain.blockscout.com/address/0xda6658e97d90ac17d796a05bb0b19e493809fc09/contract-verification" target="_blank">Открыть форму верификации →</a>
+</div>
+
+<div class="card">
+  <div class="name">BuybackVote</div>
+  <div class="mono">0xf663b704929b8c0562f6e1ae5c0387ad264d4ef3</div>
+  <a class="btn" href="https://robinhoodchain.blockscout.com/address/0xf663b704929b8c0562f6e1ae5c0387ad264d4ef3/contract-verification" target="_blank">Открыть форму верификации →</a>
+</div>
+
+<div class="card">
+  <div class="name">UniswapV3Migrator</div>
+  <div class="mono">0x04926fe870e831414d1b394390d06b5c9af57d10</div>
+  <a class="btn" href="https://robinhoodchain.blockscout.com/address/0x04926fe870e831414d1b394390d06b5c9af57d10/contract-verification" target="_blank">Открыть форму верификации →</a>
+</div>
+
+<p style="color:#9a9a90;margin-top:30px">Если у контракта форма недоступна (уже верифицирован или Blockscout не даёт standard-json) — напиши Клоду, разберёмся точечно. Настройки компилятора: optimizer on, runs 200, evmVersion paris.</p>
+</body></html>
