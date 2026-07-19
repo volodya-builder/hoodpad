@@ -342,12 +342,12 @@ export default function App() {
         {page}
       </main>
       <footer>
-        <div className="container footer-inner">
-          <div style={{ maxWidth: 300 }}>
-            <div className="footer-tag">hood</div>
-            <div className="dim" style={{ marginTop: 10 }}>{t("Запускайте и исследуйте токены с фиксированным сапплаем на Robinhood Chain. Ваш кошелёк подписывает каждую транзакцию. hood не хранит активы.")}</div>
-          </div>
-          <div className="footer-cols">
+        <div className="container">
+          <div className="footer-inner">
+            <div className="footer-brand">
+              <div className="footer-tag">hood</div>
+              <div className="dim" style={{ marginTop: 12, lineHeight: 1.55 }}>{t("Запускайте и исследуйте токены с фиксированным сапплаем на Robinhood Chain. Ваш кошелёк подписывает каждую транзакцию. hood не хранит активы.")}</div>
+            </div>
             <div className="fcol">
               <h4>{t("Продукт")}</h4>
               <a href="#/">{t("Обзор")}</a>
@@ -362,17 +362,20 @@ export default function App() {
               <h4>{t("Правовое")}</h4>
               <a href="#/privacy">{t("Политика конфиденциальности")}</a>
               <a href="#/terms">{t("Условия использования")}</a>
+              <a href="mailto:contact@hoodandarrow.com">contact@hoodandarrow.com</a>
             </div>
             <div className="fcol">
-              <h4>{t("Контакты")}</h4>
-              <a href="mailto:contact@hoodandarrow.com">contact@hoodandarrow.com</a>
-              <a className="x-link" href="https://x.com/hoodandarrow" target="_blank" rel="noreferrer">𝕏 @hoodandarrow</a>
+              <h4>{t("Риск-нотис")}</h4>
+              <div className="dim" style={{ lineHeight: 1.55 }}>
+                {t("Транзакции отправляются вашим кошельком и необратимы. Токены волатильны и могут полностью обесцениться. hood не хранит активы, не даёт гарантий и финансовых советов.")}
+              </div>
             </div>
           </div>
-          <div className="footer-note">
-            <h4 style={{ fontSize: "11.5px", textTransform: "uppercase", color: "var(--text-dim)", letterSpacing: 1, margin: "0 0 11px" }}>{t("Риск-нотис")}</h4>
-            {t("Транзакции отправляются вашим кошельком и необратимы. Токены волатильны и могут полностью обесцениться. hood не хранит активы, не даёт гарантий и финансовых советов.")}
-            <div className="dim" style={{ marginTop: 14 }}>© 2026 hood · Robinhood Chain<DataSourceBadge /></div>
+          <div className="footer-bottom">
+            <span className="dim">© 2026 hood · Robinhood Chain<DataSourceBadge /></span>
+            <a className="x-chip" href="https://x.com/hoodandarrow" target="_blank" rel="noreferrer">
+              @hoodandarrow <span className="x-box">𝕏</span>
+            </a>
           </div>
         </div>
       </footer>
