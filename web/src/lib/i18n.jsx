@@ -121,8 +121,40 @@ const EN = {
   "Голосование — компас, а не руль": "Voting is a compass, not a steering wheel",
   "Каждую неделю держатели голосуют, какой токен казне поддержать выкупом: один кошелёк — один голос, всё в блокчейне. Голосование совещательное: итоговое решение всегда принимает команда, а результаты раунда служат рекомендацией и честным ориентиром настроений аудитории. Так казна тратится осмысленно, а комьюнити видит, что его слышат.":
     "Every week holders vote on which token the treasury should support with a buyback: one wallet — one vote, all on-chain. The vote is advisory: the final decision is always made by the team, and round results serve as a recommendation and an honest gauge of community sentiment. The treasury is spent thoughtfully, and the community sees it is heard.",
+  "Контакты": "Contacts",
+  "Сортировать": "Sort",
+  "Забрать все": "Claim all",
+  "Поиск: тикер или адрес…": "Search: ticker or address…",
+  "Заберёт комиссии со всех токенов — по одной транзакции на каждый": "Claims fees from all tokens — one transaction per token",
   "Смотреть голосование": "View voting",
   "Аналитика казны": "Treasury analytics",
+  "Как работает hood": "How hood works",
+  "Запуск за секунды": "Launch in seconds",
+  "Имя, тикер, картинка — и токен живёт в блокчейне. Без кода и без предпродаж.":
+    "Name, ticker, image — and the token lives on-chain. No code, no presales.",
+  "Честная кривая": "A fair curve",
+  "Цена растёт по математической кривой. Ранние покупатели платят меньше — всё прозрачно.":
+    "Price grows along a mathematical curve. Early buyers pay less — fully transparent.",
+  "Градация на DEX": "Graduation to DEX",
+  "Собрав 6.5 ETH, токен уходит на DEX с навсегда запертой ликвидностью.":
+    "After raising 6.5 ETH the token moves to a DEX with liquidity locked forever.",
+  "Комиссии работают": "Fees at work",
+  "1% с каждой сделки делится между создателем, командой и казной выкупа.":
+    "1% of every trade is split between the creator, the team and the buyback treasury.",
+  "Голосование направляет казну": "Voting steers the treasury",
+  "Ваш голос напрямую влияет на то, куда пойдут деньги казны: каждую неделю комьюнити выбирает, какие токены поддержать выкупом. Один кошелёк — один голос, всё записано в блокчейне.":
+    "Your vote directly influences where the treasury money goes: every week the community picks which tokens to support with buybacks. One wallet — one vote, all recorded on-chain.",
+  "Вы голосуете": "You vote",
+  "Раз в неделю выбираете токен, который казна должна поддержать. Голос — маленькая транзакция в сети.":
+    "Once a week you pick the token the treasury should support. A vote is a tiny on-chain transaction.",
+  "Казна слышит": "The treasury listens",
+  "Итоги раунда видны всем в блокчейне — это главный ориентир, куда направить выкупы.":
+    "Round results are visible to everyone on-chain — the main guide for where buybacks go.",
+  "Команда исполняет": "The team executes",
+  "Итоговое решение о выкупе принимает команда — это защита от накруток и манипуляций голосованием.":
+    "The final buyback decision is made by the team — protection against vote manipulation and sybil attacks.",
+  "Каждый выкуп и сжигание видны на вкладке «Казна» и отмечаются прямо на графиках токенов — вы всегда можете проверить, что голоса не ушли в пустоту.":
+    "Every buyback and burn is visible on the Treasury tab and marked right on token charts — you can always verify the votes didn't go into the void.",
   "Пока никто не голосовал за этот токен.": "No one has voted for this token yet.",
   "Кошельки раунда": "Voters this round",
   "Поиск: адрес или тикер…": "Search: address or ticker…",

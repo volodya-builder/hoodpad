@@ -9,7 +9,7 @@ import About from "./pages/About.jsx";
 import Treasury from "./pages/Treasury.jsx";
 import Admin from "./pages/Admin.jsx";
 import { Privacy, Terms } from "./pages/Legal.jsx";
-import { connectWallet, reconnectWallet, hasWallet, short, fmt, publicClient } from "./lib/web3.js";
+import { connectWallet, reconnectWallet, hasWallet, short, fmt, fmtEth, publicClient } from "./lib/web3.js";
 import { CHAIN, FACTORY_ADDRESS, TREASURY_ADDRESS } from "./lib/config.js";
 import { treasuryAbi } from "./lib/abi.js";
 import { dataSource } from "./lib/data.js";
@@ -297,7 +297,7 @@ export default function App() {
                 <button className="btn mono" onClick={() => setWalletMenu(!walletMenu)}>
                   {hdrBal !== null && (
                     <span style={{ color: "var(--gold)", marginRight: 8 }}>
-                      {fmt(Number(formatEther(hdrBal)), 4)} ETH
+                      {fmtEth(Number(formatEther(hdrBal)))} ETH
                     </span>
                   )}
                   {short(wallet.account)} ▾
@@ -358,6 +358,11 @@ export default function App() {
               <h4>{t("Правовое")}</h4>
               <a href="#/privacy">{t("Политика конфиденциальности")}</a>
               <a href="#/terms">{t("Условия использования")}</a>
+            </div>
+            <div className="fcol">
+              <h4>{t("Контакты")}</h4>
+              <a href="mailto:contact@hoodandarrow.com">contact@hoodandarrow.com</a>
+              <a href="https://x.com/hoodandarrow" target="_blank" rel="noreferrer">@hoodandarrow</a>
             </div>
           </div>
           <div className="footer-note">

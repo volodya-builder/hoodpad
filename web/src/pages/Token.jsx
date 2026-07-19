@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { parseEther, formatEther } from "viem";
-import { publicClient, fmt, short } from "../lib/web3.js";
+import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi } from "../lib/abi.js";
 import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
 import { poolTrades } from "../lib/data.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import Chat from "./Chat.jsx";
-import { useSplit, loadCreationTimes, timeAgo } from "../lib/data.js";
+import { useSplit, loadCreationTimes, timeAgo, useClock } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 
 const SLIPPAGE_CHOICES = [0.5, 1, 3, 5]; // %
@@ -173,6 +173,7 @@ function MiniChart({ points, rate, marks }) {
 }
 
 export default function TokenPage({ tokenAddress, wallet, onConnect }) {
+  useClock(5000);
   const { t } = useLang();
   const rate = useEthUsd();
   const split = useSplit();
@@ -530,32 +531,33 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <p className="dim" style={{ marginTop: 10 }}>{meta.description}</p>
           )}
           {(meta.x || meta.telegram || meta.website) && (
-            <p className="dim" style={{ marginTop: 6 }}>
-              {[
-                meta.x && (
-                  <a key="x" href={`https://x.com/${meta.x}`} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>
-                    x.com/{meta.x}
-                  </a>
-                ),
-                meta.telegram && (
-                  <a key="tg" href={`https://t.me/${meta.telegram}`} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>
-                    t.me/{meta.telegram}
-                  </a>
-                ),
-                meta.website && (
-                  <a key="web" href={meta.website} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>
-                    {meta.website.replace(/^https?:\/\//, "")}
-                  </a>
-                ),
-              ]
-                .filter(Boolean)
-                .map((el, i) => (
-                  <React.Fragment key={i}>
-                    {i > 0 && " · "}
-                    {el}
-                  </React.Fragment>
-                ))}
-            </p>
+            <div className="soc-row">
+              {meta.x && (
+                <a className="soc-btn" title="X (Twitter)" target="_blank" rel="noreferrer"
+                   href={/^https?:\/\//.test(meta.x) ? meta.x : `https://x.com/${meta.x.replace(/^@/, "")}`}>
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+                    <path d="M18.9 1.2h3.7l-8.1 9.3L24 22.8h-7.5l-5.9-7.7-6.7 7.7H.2l8.7-9.9L0 1.2h7.7l5.3 7 5.9-7zm-1.3 19.4h2L6.6 3.3H4.4l13.2 17.3z"/>
+                  </svg>
+                </a>
+              )}
+              {meta.telegram && (
+                <a className="soc-btn" title="Telegram" target="_blank" rel="noreferrer"
+                   href={/^https?:\/\//.test(meta.telegram) ? meta.telegram : `https://t.me/${meta.telegram.replace(/^@/, "")}`}>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                    <path d="M21.9 3.4 18.6 20c-.2 1.1-.9 1.4-1.8.9l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5.1L18.1 6.5c.4-.4-.1-.6-.6-.2L6 13.5l-4.9-1.5c-1.1-.3-1.1-1.1.2-1.6L20.4 2c.9-.3 1.7.2 1.5 1.4z"/>
+                  </svg>
+                </a>
+              )}
+              {meta.website && (
+                <a className="soc-btn" title={t("Сайт")} target="_blank" rel="noreferrer"
+                   href={/^https?:\/\//.test(meta.website) ? meta.website : `https://${meta.website}`}>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <circle cx="12" cy="12" r="9"/>
+                    <path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9S14.5 18.4 12 21M12 3C9.5 5.6 8.2 8.7 8.2 12s1.3 6.4 3.8 9"/>
+                  </svg>
+                </a>
+              )}
+            </div>
           )}
           {meta.image && (
             <img
@@ -569,7 +571,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           <div className="stats-grid">
             <div className="stat-card">
               <div className="k">{t("Цена")}</div>
-              <div className="v">{fmt(formatEther(data.price), 9)} ETH</div>
+              <div className="v">{fmtEth(formatEther(data.price))} ETH</div>
             </div>
             <div className="stat-card">
               <div className="k">{t("Капитализация")}</div>
@@ -577,7 +579,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             </div>
             <div className="stat-card">
               <div className="k">{t("Собрано")}</div>
-              <div className="v">{fmt(formatEther(data.reserve), 3)} ETH</div>
+              <div className="v">{fmtEth(formatEther(data.reserve))} ETH</div>
             </div>
             <div className="stat-card">
               <div className="k">{t("До градации")}</div>
@@ -595,7 +597,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <div className="stat-card">
               <div className="k">{t("Комиссии создателя")}</div>
               <div className="v" style={{ color: "var(--gold)" }}>
-                {fmt(formatEther(extra.creatorFees ?? 0n), 5)} ETH
+                {fmtEth(formatEther(extra.creatorFees ?? 0n))} ETH
               </div>
             </div>
             {extra.burned > 0n && (
@@ -669,8 +671,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               )}
             </div>
             <div className="tk-cells">
-              <div className="tk-cell"><span>{t("Собрано")}</span><b>{fmt(formatEther(data.reserve), 3)} ETH</b></div>
-              <div className="tk-cell"><span>{t("Объём 24ч")}</span><b>{tokStats ? fmt(tokStats.vol24, 4) : "0"} ETH</b></div>
+              <div className="tk-cell"><span>{t("Собрано")}</span><b>{fmtEth(formatEther(data.reserve))} ETH</b></div>
+              <div className="tk-cell"><span>{t("Объём 24ч")}</span><b>{tokStats ? fmtEth(tokStats.vol24) : "0"} ETH</b></div>
               <div className="tk-cell"><span>ATH</span><b>{tokStats ? usd(tokStats.ath * rate) : "—"}</b></div>
             </div>
           </div>
@@ -697,7 +699,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               <span className={tr.side === "buy" ? "side-buy" : "side-sell"}>
                 {t(tr.side === "buy" ? "Купил" : "Продал")}
               </span>
-              <span>{fmt(tr.eth, 5)} ETH <span className="usd-sub">({dollars(tr.eth)})</span></span>
+              <span>{fmtEth(tr.eth)} ETH <span className="usd-sub">({dollars(tr.eth)})</span></span>
               <span>{fmt(tr.tokens, 0)}</span>
               <a className="mono" href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer">
                 {short(tr.addr)}
@@ -807,7 +809,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 <div className="slider-row" style={{ marginTop: 10 }}>
                   <span className="dim">
                     {tab === "buy"
-                      ? `${t("От баланса")} ${fmt(Number(formatEther(data.walletEth ?? 0n)), 4)} ETH`
+                      ? `${t("От баланса")} ${fmtEth(Number(formatEther(data.walletEth ?? 0n)))} ETH`
                       : `${t("От баланса")} ${fmt(Number(formatEther(data.balance)), 0)} ${data.symbol}`}
                   </span>
                   <b style={{ color: tab === "buy" ? "var(--gold)" : "var(--red)" }}>{tradePct}%</b>
@@ -903,7 +905,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 <b>
                   {tab === "buy"
                     ? `${fmt(formatEther(quote.value), 2)} ${data.symbol}`
-                    : `${fmt(formatEther(quote.value), 6)} ETH`}
+                    : `${fmtEth(formatEther(quote.value))} ETH`}
                 </b>
               </div>
             )}
@@ -948,5 +950,5 @@ function TreasuryBalance() {
       .then((b) => alive && setBal(b)).catch(() => {});
     return () => { alive = false; };
   }, []);
-  return <span className="dim">{bal === null ? "…" : `${fmt(formatEther(bal), 5)} ${window.__hoodT ? window.__hoodT("ETH доступно") : "ETH доступно"}`}</span>;
+  return <span className="dim">{bal === null ? "…" : `${fmtEth(formatEther(bal))} ${window.__hoodT ? window.__hoodT("ETH доступно") : "ETH доступно"}`}</span>;
 }

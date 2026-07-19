@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { formatEther, parseAbiItem } from "viem";
-import { publicClient, fmt, short } from "../lib/web3.js";
+import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { parseAbi } from "viem";
 import { treasuryAbi, poolExtraAbi } from "../lib/abi.js";
 
@@ -192,7 +192,7 @@ export default function Analytics() {
         <div className="ana-grid">
           <div className="ana-card">
             <div className="k">{t("Объём торгов")}</div>
-            <div className="v">{fmt(stats.volume, 4)} ETH</div>
+            <div className="v">{fmtEth(stats.volume)} ETH</div>
             <div className="s">{stats.count} {t("сделок")} · {t(PERIOD_LABEL[period])}</div>
             <Bars data={stats.volBars} />
           </div>
@@ -211,14 +211,14 @@ export default function Analytics() {
           </div>
           <div className="ana-card">
             <div className="k">{t("Выплачено создателям")}</div>
-            <div className="v" style={{ color: "var(--gold)" }}>{fmt(stats.creatorPaid, 5)} ETH</div>
+            <div className="v" style={{ color: "var(--gold)" }}>{fmtEth(stats.creatorPaid)} ETH</div>
             <div className="s">{split.creator}% {t("всех комиссий — с первого трейда")}</div>
           </div>
           <div className="ana-card">
             <div className="k">{t("Казна выкупа")}</div>
-            <div className="v" style={{ color: "var(--gold)" }}>{fmt(Number(formatEther(raw.treBal)), 5)} ETH</div>
+            <div className="v" style={{ color: "var(--gold)" }}>{fmtEth(Number(formatEther(raw.treBal)))} ETH</div>
             <div className="s">
-              {t("получено")} {fmt(Number(formatEther(raw.received)), 5)} · {t("выкуплено на")} {fmt(Number(formatEther(raw.spent)), 5)}
+              {t("получено")} {fmtEth(Number(formatEther(raw.received)))} · {t("выкуплено на")} {fmtEth(Number(formatEther(raw.spent)))}
               {" · "}
               <a href={`${EXPLORER}/address/${TREASURY_ADDRESS}`} target="_blank" rel="noreferrer" style={{ color: "var(--gold)" }}>
                 {t("контракт")}
@@ -249,7 +249,7 @@ export default function Analytics() {
                   <span className="lb-syms">{c.symbols.map((s) => `$${s}`).join(" ")}</span>
                 </span>
                 <span className="lb-val" style={{ color: "var(--gold)" }}>
-                  {fmt(c.earned, 5)} ETH <span className="usd-sub">({usd(c.earned * rate)})</span>
+                  {fmtEth(c.earned)} ETH <span className="usd-sub">({usd(c.earned * rate)})</span>
                 </span>
               </a>
             ))}
@@ -265,7 +265,7 @@ export default function Analytics() {
                   <span className="lb-syms">{x.count} {t("сделок")}</span>
                 </span>
                 <span className="lb-val">
-                  {fmt(x.volume, 4)} ETH <span className="usd-sub">({usd(x.volume * rate)})</span>
+                  {fmtEth(x.volume)} ETH <span className="usd-sub">({usd(x.volume * rate)})</span>
                 </span>
               </a>
             ))}

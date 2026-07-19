@@ -965,3 +965,40 @@ html[data-theme="light"] .tos-ico { background: #ffffff; }
 }
 .ch-chip .cbuy { background: var(--gold); color: #101100; }
 .ch-chip .cburn { background: #c2502e; color: #fff; }
+
+/* --- соцкнопки токена --- */
+.soc-row { display: flex; gap: 8px; margin-top: 10px; }
+.soc-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 10px;
+  background: rgba(255,255,255,.05); border: 1px solid var(--border);
+  color: var(--dim); transition: all .15s ease;
+}
+.soc-btn:hover {
+  color: #101100; background: var(--gold); border-color: var(--gold);
+  transform: translateY(-1px); box-shadow: 0 4px 14px rgba(200,244,43,.25);
+}
+[data-theme="light"] .soc-btn { background: rgba(0,0,0,.04); }
+[data-theme="light"] .soc-btn:hover { background: var(--gold); }
+
+/* --- шаги на «О нас» --- */
+.step-card { position: relative; padding-top: 18px; }
+.step-num {
+  width: 26px; height: 26px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  background: var(--gold); color: #101100; font-weight: 800; font-size: 13px; margin-bottom: 10px;
+}
+
+/* --- сортируемые заголовки таблиц --- */
+.sort-h { cursor: pointer; user-select: none; transition: color .15s; }
+.sort-h:hover { color: var(--text); }
+.sort-h i { font-style: normal; font-size: 9px; opacity: .5; }
+.sort-h.on { color: var(--gold); }
+.sort-h.on i { opacity: 1; }
+
+/* --- поиск в таблицах профиля --- */
+.tbl-search {
+  background: rgba(255,255,255,.05); border: 1px solid var(--border); border-radius: 10px;
+  color: var(--text); padding: 7px 12px; font-size: 13px; width: 220px; outline: none;
+}
+.tbl-search:focus { border-color: var(--gold); }
+[data-theme="light"] .tbl-search { background: rgba(0,0,0,.04); }

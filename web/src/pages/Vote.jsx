@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { parseAbi, parseAbiItem } from "viem";
 import { publicClient, fmt, short } from "../lib/web3.js";
 import { VOTE_ADDRESS, EXPLORER } from "../lib/config.js";
-import { loadTokens, timeAgo, subgraphVotes } from "../lib/data.js";
+import { loadTokens, timeAgo, subgraphVotes, useClock } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 
 const voteAbi = parseAbi([
@@ -31,6 +31,7 @@ let _voteState = null;
 
 export default function Vote({ wallet, onConnect }) {
   const { t } = useLang();
+  useClock(5000);
   const [state, setState] = useState(_voteState);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -159,7 +160,7 @@ export default function Vote({ wallet, onConnect }) {
           </div>
           <div className="about-stat">
             <div className="k">{t("До конца раунда")}</div>
-            <div className="v">{countdown(state.endsIn)}</div>
+            <div className="v">{countdown(EPOCH_LEN - (Math.floor(Date.now() / 1000) % EPOCH_LEN))}</div>
           </div>
           {myVote && (
             <div className="about-stat">
@@ -189,7 +190,7 @@ export default function Vote({ wallet, onConnect }) {
               const isMine = myVote === addr;
               const isOpen = expanded === addr;
               const voters = isOpen ? state.votes.filter((v) => v.token === addr) : [];
-              const rank = r.votes > 0 && i < 3 ? i + 1 : 0;
+              const rank = i < 3 && state.total > 0 ? i + 1 : 0;
               return (
                 <React.Fragment key={r.token}>
                   <div className="prow6 vote-row"

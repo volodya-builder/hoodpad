@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { formatEther } from "viem";
-import { publicClient, fmt, short } from "../lib/web3.js";
+import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { tokenAbi, poolAbi } from "../lib/abi.js";
 import { EXPLORER } from "../lib/config.js";
 import { loadTokens, poolTrades } from "../lib/data.js";
@@ -15,6 +15,33 @@ export default function Profile({ wallet, onConnect }) {
   const [copied, setCopied] = useState(false);
   const [claiming, setClaiming] = useState("");
   const [reload, setReload] = useState(0);
+  // сортировки таблиц: запуски / позиции / сделки
+  const [lsort, setLsort] = useState({ key: null, dir: -1 });
+  const [psort, setPsort] = useState({ key: null, dir: -1 });
+  const [trsort, setTrsort] = useState({ key: null, dir: -1 });
+  const [lq, setLq] = useState("");           // поиск по «Моим запускам»
+  const [caCopied, setCaCopied] = useState(""); // какой адрес только что скопирован
+
+  const copyCA = (addr) => {
+    try { navigator.clipboard.writeText(addr); } catch (e) { /* ignore */ }
+    setCaCopied(addr);
+    setTimeout(() => setCaCopied(""), 1200);
+  };
+
+  const SortH = ({ sort, setSort, k, label }) => (
+    <span
+      className={`sort-h ${sort.key === k ? "on" : ""}`}
+      onClick={() => setSort((s) => ({ key: k, dir: s.key === k ? -s.dir : -1 }))}
+      title={t("Сортировать")}
+    >
+      {label} <i>{sort.key === k ? (sort.dir === 1 ? "▲" : "▼") : "↕"}</i>
+    </span>
+  );
+
+  const sortRows = (rows, sort, valFn) => {
+    if (!sort.key) return rows;
+    return [...rows].sort((a, b) => (valFn(b, sort.key) - valFn(a, sort.key)) * -sort.dir);
+  };
 
   // ETH → "(~$X)" рядом с каждой суммой
   const dollars = (e) => {
@@ -95,6 +122,24 @@ export default function Profile({ wallet, onConnect }) {
     } finally { setClaiming(""); }
   }
 
+  // Забрать комиссии со всех токенов сразу (по транзакции на пул)
+  async function claimAll() {
+    setError("");
+    setClaiming("__all__");
+    try {
+      const withFees = state.launched.filter((tk) => tk.feesAccrued > 0n);
+      for (const tk of withFees) {
+        const hash = await wallet.walletClient.writeContract({
+          address: tk.pool, abi: poolAbi, functionName: "claimCreatorFees", args: [wallet.account],
+        });
+        await publicClient.waitForTransactionReceipt({ hash });
+      }
+      setReload((x) => x + 1);
+    } catch (e) {
+      setError(e.shortMessage || e.message);
+    } finally { setClaiming(""); }
+  }
+
   if (!wallet) {
     return (
       <div className="center" style={{ paddingTop: 80 }}>
@@ -118,7 +163,7 @@ export default function Profile({ wallet, onConnect }) {
             <a className="mini-btn" href={`${EXPLORER}/address/${wallet.account}`} target="_blank" rel="noreferrer"
                title={t("Открыть в эксплорере")}>↗</a>
             <span>
-              · {t("баланс")} {state ? <>{fmt(Number(formatEther(state.ethBal)), 4)} ETH {U(Number(formatEther(state.ethBal)))}</> : "…"}
+              · {t("баланс")} {state ? <>{fmtEth(Number(formatEther(state.ethBal)))} ETH {U(Number(formatEther(state.ethBal)))}</> : "…"}
             </span>
           </div>
         </div>
@@ -133,48 +178,91 @@ export default function Profile({ wallet, onConnect }) {
             <div className="ana-card">
               <div className="k">{t("Общий PnL")}</div>
               <div className="v" style={{ color: state.totPnl >= 0 ? "var(--leaf)" : "var(--red)", fontSize: 24 }}>
-                {state.totPnl >= 0 ? "+" : ""}{fmt(state.totPnl, 5)} ETH
+                {state.totPnl >= 0 ? "+" : ""}{fmtEth(state.totPnl)} ETH
               </div>
               <div className="s">{dollars(state.totPnl)} · {state.tradesCount} {t("сделок")}</div>
             </div>
             <div className="ana-card">
               <div className="k">{t("Стоимость позиций")}</div>
-              <div className="v" style={{ fontSize: 24 }}>{fmt(state.totVal, 5)} ETH</div>
+              <div className="v" style={{ fontSize: 24 }}>{fmtEth(state.totVal)} ETH</div>
               <div className="s">{dollars(state.totVal)} · {state.positions.length} {t("позиций")}</div>
             </div>
             <div className="ana-card">
               <div className="k">{t("Вложено")}</div>
-              <div className="v" style={{ fontSize: 24 }}>{fmt(state.totInv, 5)} ETH</div>
+              <div className="v" style={{ fontSize: 24 }}>{fmtEth(state.totInv)} ETH</div>
               <div className="s">{dollars(state.totInv)}</div>
             </div>
             <div className="ana-card">
               <div className="k">{t("Реализовано")}</div>
-              <div className="v" style={{ fontSize: 24 }}>{fmt(state.totReal, 5)} ETH</div>
+              <div className="v" style={{ fontSize: 24 }}>{fmtEth(state.totReal)} ETH</div>
               <div className="s">{dollars(state.totReal)}</div>
             </div>
           </div>
 
           {state.launched.length > 0 && (
             <div className="bottom-card" style={{ marginTop: 18 }}>
-              <div className="bt-tabs"><div className="bt-tab on">{t("Мои запуски")}</div></div>
-              <div className="prow6 hdr" style={{ gridTemplateColumns: "1.6fr 1fr 1fr 1.4fr 120px" }}>
-                <span>{t("Токен")}</span><span>{t("Капитализация")}</span><span>{t("Кривая")}</span>
-                <span>{t("Комиссии к выплате")}</span><span></span>
+              <div className="bt-tabs" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <div className="bt-tab on">{t("Мои запуски")}</div>
+                <input
+                  className="tbl-search"
+                  value={lq}
+                  onChange={(e) => setLq(e.target.value)}
+                  placeholder={t("Поиск: тикер или адрес…")}
+                  spellCheck={false}
+                />
+                {(() => {
+                  const claimable = state.launched.reduce((s, tk) => s + Number(formatEther(tk.feesAccrued)), 0);
+                  return (
+                    <button className="btn btn-primary" style={{ marginLeft: "auto" }}
+                            disabled={claimable <= 0 || claiming === "__all__"}
+                            onClick={claimAll}
+                            title={t("Заберёт комиссии со всех токенов — по одной транзакции на каждый")}>
+                      {claiming === "__all__" ? "…" : <>{t("Забрать все")} · {fmtEth(claimable)} ETH {U(claimable)}</>}
+                    </button>
+                  );
+                })()}
               </div>
-              {state.launched.map((tk) => {
+              <div className="prow6 hdr" style={{ gridTemplateColumns: "1.6fr 1fr 1fr 1.4fr 120px" }}>
+                <span>{t("Токен")}</span>
+                <SortH sort={lsort} setSort={setLsort} k="mcap" label={t("Капитализация")} />
+                <SortH sort={lsort} setSort={setLsort} k="curve" label={t("Кривая")} />
+                <SortH sort={lsort} setSort={setLsort} k="fees" label={t("Комиссии к выплате")} />
+                <span></span>
+              </div>
+              {sortRows(
+                state.launched.filter((tk) => {
+                  const needle = lq.trim().toLowerCase();
+                  if (!needle) return true;
+                  return tk.symbol.toLowerCase().includes(needle)
+                    || tk.name.toLowerCase().includes(needle)
+                    || tk.token.toLowerCase().includes(needle);
+                }),
+                lsort,
+                (tk, k) =>
+                  k === "mcap" ? Number(tk.price)
+                  : k === "curve" ? Number((tk.sold * 10000n) / tk.cap)
+                  : Number(tk.feesAccrued)
+              ).map((tk) => {
                 const mcapEth = Number(formatEther(tk.price)) * 1e9;
                 const prog = Number((tk.sold * 10000n) / tk.cap) / 100;
                 const fees = Number(formatEther(tk.feesAccrued));
                 return (
                   <div className="prow6" key={tk.token} style={{ gridTemplateColumns: "1.6fr 1fr 1fr 1.4fr 120px" }}>
-                    <a href={`#/token/${tk.token}`} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      {tk.meta.image && <img src={tk.meta.image} style={{ width: 26, height: 26, borderRadius: 7 }} alt="" />}
-                      <b>{tk.symbol}</b>
-                    </a>
+                    <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <a href={`#/token/${tk.token}`} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {tk.meta.image && <img src={tk.meta.image} style={{ width: 26, height: 26, borderRadius: 7 }} alt="" />}
+                        <b>{tk.symbol}</b>
+                      </a>
+                      <span className="mono addr-copy" style={{ fontSize: 11.5 }}
+                            title={t("Скопировать адрес")}
+                            onClick={(e) => { e.preventDefault(); copyCA(tk.token); }}>
+                        {short(tk.token)} {caCopied === tk.token ? "✓" : "⧉"}
+                      </span>
+                    </span>
                     <span>{usd(mcapEth * rate)}</span>
                     <span className="dim">{tk.graduated ? "🎯" : fmt(prog, 0) + "%"}</span>
                     <span style={{ color: fees > 0 ? "var(--gold)" : "inherit" }}>
-                      {fmt(fees, 5)} ETH {U(fees)}
+                      {fmtEth(fees)} ETH {U(fees)}
                     </span>
                     <span>
                       <button className="btn" disabled={fees <= 0 || claiming === tk.token}
@@ -189,15 +277,34 @@ export default function Profile({ wallet, onConnect }) {
           )}
 
           <div className="bottom-card" style={{ marginTop: 18 }}>
-            <div className="bt-tabs"><div className="bt-tab on">{t("Мои позиции")}</div></div>
+            <div className="bt-tabs" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <div className="bt-tab on">{t("Мои позиции")}</div>
+              <span style={{ marginLeft: "auto", fontSize: 14 }}>
+                {t("Общий PnL")}:{" "}
+                <b className={state.totPnl >= 0 ? "pnl-pos" : "pnl-neg"}>
+                  {state.totPnl >= 0 ? "+" : ""}{fmtEth(state.totPnl)} ETH {U(state.totPnl)}
+                </b>
+              </span>
+            </div>
             {state.positions.length === 0 && <div className="center">{t("Пока нет позиций.")}</div>}
             {state.positions.length > 0 && (
               <>
                 <div className="prow6 hdr">
-                  <span>{t("Токен")}</span><span>{t("Баланс")}</span><span>{t("Стоимость")}</span>
-                  <span>{t("Вложено")}</span><span>PnL</span><span>{t("Кривая")}</span>
+                  <span>{t("Токен")}</span>
+                  <SortH sort={psort} setSort={setPsort} k="bal" label={t("Баланс")} />
+                  <SortH sort={psort} setSort={setPsort} k="val" label={t("Стоимость")} />
+                  <SortH sort={psort} setSort={setPsort} k="inv" label={t("Вложено")} />
+                  <SortH sort={psort} setSort={setPsort} k="pnl" label="PnL" />
+                  <SortH sort={psort} setSort={setPsort} k="curve" label={t("Кривая")} />
                 </div>
-                {state.positions.map((p) => {
+                {sortRows(state.positions, psort, (p, k) => {
+                  const val = Number(formatEther(p.bal)) * Number(formatEther(p.price));
+                  return k === "bal" ? Number(formatEther(p.bal))
+                    : k === "val" ? val
+                    : k === "inv" ? p.invested
+                    : k === "pnl" ? val + p.realized - p.invested
+                    : Number((p.sold * 10000n) / p.cap);
+                }).map((p) => {
                   const val = Number(formatEther(p.bal)) * Number(formatEther(p.price));
                   const pnl = val + p.realized - p.invested;
                   const prog = Number((p.sold * 10000n) / p.cap) / 100;
@@ -206,12 +313,17 @@ export default function Profile({ wallet, onConnect }) {
                       <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         {p.meta.image && <img src={p.meta.image} style={{ width: 26, height: 26, borderRadius: 7 }} alt="" />}
                         <b>{p.symbol}</b>
+                        <span className="mono addr-copy" style={{ fontSize: 11.5 }}
+                              title={t("Скопировать адрес")}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); copyCA(p.token); }}>
+                          {short(p.token)} {caCopied === p.token ? "✓" : "⧉"}
+                        </span>
                       </span>
                       <span>{fmt(Number(formatEther(p.bal)), 0)}</span>
-                      <span>{fmt(val, 5)} ETH {U(val)}</span>
-                      <span>{fmt(p.invested, 5)} ETH {U(p.invested)}</span>
+                      <span>{fmtEth(val)} ETH {U(val)}</span>
+                      <span>{fmtEth(p.invested)} ETH {U(p.invested)}</span>
                       <span className={pnl >= 0 ? "pnl-pos" : "pnl-neg"}>
-                        {pnl >= 0 ? "+" : ""}{fmt(pnl, 5)} ETH {U(pnl)}
+                        {pnl >= 0 ? "+" : ""}{fmtEth(pnl)} ETH {U(pnl)}
                       </span>
                       <span className="dim">{p.graduated ? "🎯" : fmt(prog, 0) + "%"}</span>
                     </a>
@@ -227,16 +339,22 @@ export default function Profile({ wallet, onConnect }) {
             {state.myTrades.length > 0 && (
               <>
                 <div className="trow hdr">
-                  <span>{t("Тип")}</span><span>ETH</span><span>{t("Токены")}</span><span>{t("Токен")}</span><span>{t("Блок")}</span>
+                  <span>{t("Тип")}</span>
+                  <span>{t("Токен")}</span>
+                  <SortH sort={trsort} setSort={setTrsort} k="eth" label="ETH" />
+                  <SortH sort={trsort} setSort={setTrsort} k="tokens" label={t("Токены")} />
+                  <SortH sort={trsort} setSort={setTrsort} k="block" label={t("Блок")} />
                 </div>
-                {state.myTrades.map((tr, i) => (
+                {sortRows(state.myTrades, trsort, (tr, k) =>
+                  k === "eth" ? tr.eth : k === "tokens" ? tr.tokens : Number(tr.block)
+                ).map((tr, i) => (
                   <a className="trow" key={i} href={`#/token/${tr.token}`} style={{ cursor: "pointer" }}>
                     <span className={tr.side === "buy" ? "side-buy" : "side-sell"}>
                       {t(tr.side === "buy" ? "Купил" : "Продал")}
                     </span>
-                    <span>{fmt(tr.eth, 5)} {U(tr.eth)}</span>
-                    <span>{fmt(tr.tokens, 0)}</span>
                     <span><b>{tr.sym}</b></span>
+                    <span>{fmtEth(tr.eth)} {U(tr.eth)}</span>
+                    <span>{fmt(tr.tokens, 0)}</span>
                     <span className="dim">{String(tr.block)}</span>
                   </a>
                 ))}

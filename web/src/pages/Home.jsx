@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { formatEther } from "viem";
-import { fmt } from "../lib/web3.js";
+import { fmt, fmtEth } from "../lib/web3.js";
 import { useEthUsd, usd } from "../lib/price.js";
-import { timeAgo, loadTokens } from "../lib/data.js";
+import { timeAgo, loadTokens, useClock } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 
 function loadFavs() {
@@ -50,7 +50,7 @@ function TokenCard({ t, fav, onFav }) {
         <span className="mono addr-copy" title={tr("Скопировать адрес")} onClick={copyCA}>
           {t.token.slice(0, 6)}…{t.token.slice(-4)} {cp ? "✓" : "⧉"}
         </span>
-        <span>{t.createdAt ? timeAgo(t.createdAt) : `${fmt(Number(formatEther(t.reserve)), 3)} / 6.5 ETH`}</span>
+        <span>{t.createdAt ? timeAgo(t.createdAt) : `${fmtEth(Number(formatEther(t.reserve)))} / 6.5 ETH`}</span>
       </div>
     </a>
   );
@@ -58,6 +58,7 @@ function TokenCard({ t, fav, onFav }) {
 
 export default function Home({ onSearch }) {
   const { t } = useLang();
+  useClock(1000); // «Nс назад» на карточках тикает каждую секунду
   const [gpage, setGpage] = useState(1);
   const GRAD_PER_PAGE = 10;
   const [tokens, setTokens] = useState(null);

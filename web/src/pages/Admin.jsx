@@ -1,15 +1,16 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { formatEther, parseEther } from "viem";
-import { publicClient, fmt, short } from "../lib/web3.js";
+import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { treasuryAbi, tokenAbi, poolExtraAbi } from "../lib/abi.js";
 import { TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
-import { loadTokens, subgraphVotes, subgraphTreasuryOps, timeAgo } from "../lib/data.js";
+import { loadTokens, subgraphVotes, subgraphTreasuryOps, timeAgo, useClock } from "../lib/data.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { useLang } from "../lib/i18n.jsx";
 
 const EPOCH_LEN = 7 * 86400;
 
 export default function Admin({ wallet, onConnect }) {
+  useClock(5000);
   const { t } = useLang();
   const rate = useEthUsd();
   const [owner, setOwner] = useState(null);
@@ -170,23 +171,23 @@ export default function Admin({ wallet, onConnect }) {
           <div className="ana-grid" style={{ margin: "18px 0 8px" }}>
             <div className="ana-card">
               <div className="k">{t("Баланс казны")}</div>
-              <div className="v" style={{ color: "var(--gold)", fontSize: 24 }}>{fmt(balEth, 5)} ETH</div>
+              <div className="v" style={{ color: "var(--gold)", fontSize: 24 }}>{fmtEth(balEth)} ETH</div>
               <div className="s">{dollars(balEth)}</div>
             </div>
             <div className="ana-card">
               <div className="k">{t("Получено за всё время")}</div>
-              <div className="v" style={{ fontSize: 24 }}>{fmt(Number(formatEther(data.received)), 5)} ETH</div>
+              <div className="v" style={{ fontSize: 24 }}>{fmtEth(Number(formatEther(data.received)))} ETH</div>
               <div className="s">{dollars(Number(formatEther(data.received)))}</div>
             </div>
             <div className="ana-card">
               <div className="k">{t("Потрачено на выкупы")}</div>
-              <div className="v" style={{ fontSize: 24 }}>{fmt(Number(formatEther(data.spent)), 5)} ETH</div>
+              <div className="v" style={{ fontSize: 24 }}>{fmtEth(Number(formatEther(data.spent)))} ETH</div>
               <div className="s">{dollars(Number(formatEther(data.spent)))}</div>
             </div>
             <div className="ana-card">
               <div className="k">{t("Несобранные комиссии в пулах")}</div>
               <div className="v" style={{ fontSize: 24, color: data.unclaimed > 0n ? "var(--gold)" : "inherit" }}>
-                {fmt(Number(formatEther(data.unclaimed)), 6)} ETH
+                {fmtEth(Number(formatEther(data.unclaimed)))} ETH
               </div>
               <div className="s" style={{ marginTop: 8 }}>
                 <button className="btn" disabled={busy || data.unclaimed === 0n} onClick={claimAll}>
@@ -230,7 +231,7 @@ export default function Admin({ wallet, onConnect }) {
                     </div>
                   </span>
                   <span className="dim">🗳 {tk.voteCount} {t("голосов")}</span>
-                  <span className="dim">{fmt(Number(formatEther(tk.reserve)), 3)} ETH</span>
+                  <span className="dim">{fmtEth(Number(formatEther(tk.reserve)))} ETH</span>
                   <span className="dim">
                     {tk.held > 0n ? `${fmt(Number(formatEther(tk.held)), 0)} ${t("в казне")}` : "—"}
                   </span>
@@ -334,7 +335,7 @@ export default function Admin({ wallet, onConnect }) {
                       <span className="dim" style={{ fontSize: 12 }}>
                         {o.kind === "burned"
                           ? `${fmt(Number(o.tokenAmount) / 1e18, 0)}`
-                          : `${fmt(Number(o.ethAmount) / 1e18, 5)} ETH`}
+                          : `${fmtEth(Number(o.ethAmount) / 1e18)} ETH`}
                       </span>
                       <span className="when">{timeAgo(Number(o.timestamp) * 1000)}</span>
                     </a>

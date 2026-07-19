@@ -88,10 +88,38 @@ try {
   if (rawLs) { _tok.v = JSON.parse(rawLs, bigReviver); _tok.t = 0; } // t=0 → сразу обновится в фоне
 } catch (e) { /* ignore */ }
 
+// Свежесозданные токены: показываем мгновенно, не дожидаясь индексатора.
+// Держим в этом списке, пока токен не появится в «свежих» данных.
+const _pending = new Map(); // tokenLower -> row
+
+export function injectNewToken({ token, pool, name, symbol, uri, creator }) {
+  const key = token.toLowerCase();
+  const row = {
+    token, pool, name, symbol,
+    price: (VIRT_WEI * 10n ** 18n) / TOTAL_WEI,
+    sold: 0n, cap: CAP_WEI, reserve: 0n, graduated: false,
+    meta: parseMeta(uri), createdAt: Date.now(), creator,
+  };
+  _pending.set(key, row);
+  const cur = _tok.v ?? [];
+  if (!cur.some((r) => r.token.toLowerCase() === key)) {
+    _tok = { ..._tok, v: [row, ...cur] };
+    try { localStorage.setItem(TOK_LS, JSON.stringify(_tok.v, bigReplacer)); } catch (e) { /* ignore */ }
+  }
+  // подталкиваем фоновые обновления, пока индексатор догоняет
+  setTimeout(() => refreshTokens().catch(() => {}), 3000);
+  setTimeout(() => refreshTokens().catch(() => {}), 8000);
+}
+
 function refreshTokens() {
   if (_tok.p) return _tok.p;
   _tok.p = _loadTokensFresh()
     .then((v) => {
+      // не теряем свежесозданные токены, которых индексатор ещё не видит
+      for (const [k, row] of _pending) {
+        if (v.some((r) => r.token.toLowerCase() === k)) _pending.delete(k);
+        else v = [row, ...v];
+      }
       _tok = { v, t: Date.now(), p: null };
       try { localStorage.setItem(TOK_LS, JSON.stringify(v, bigReplacer)); } catch (e) { /* ignore */ }
       return v;
@@ -339,6 +367,16 @@ export async function loadCreationTimes(addrs) {
     } catch (e) { console.warn("creation time (logs) failed:", e); }
   }
   return out;
+}
+
+/** Тикающие часы: перерисовывает компонент раз в `every` мс,
+ *  чтобы надписи вида «39с назад» шли в реальном времени. */
+export function useClock(every = 1000) {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((x) => x + 1), every);
+    return () => clearInterval(id);
+  }, [every]);
 }
 
 export function timeAgo(ms) {

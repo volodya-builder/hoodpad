@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { formatEther, parseAbiItem } from "viem";
-import { publicClient, fmt, short } from "../lib/web3.js";
+import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { treasuryAbi } from "../lib/abi.js";
 import { TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
-import { loadTokens, timeAgo, subgraphTreasuryOps } from "../lib/data.js";
+import { loadTokens, timeAgo, subgraphTreasuryOps, useClock } from "../lib/data.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { useLang } from "../lib/i18n.jsx";
 
@@ -15,6 +15,7 @@ const evBurned = parseAbiItem("event Burned(address indexed token, uint256 amoun
 let _tresState = null;
 
 export default function Treasury() {
+  useClock(5000);
   const { t } = useLang();
   const rate = useEthUsd();
   const [state, setState] = useState(_tresState);
@@ -134,18 +135,18 @@ export default function Treasury() {
             <div className="ana-card">
               <div className="k">{t("Баланс казны")}</div>
               <div className="v" style={{ color: "var(--gold)", fontSize: 26 }}>
-                {fmt(Number(formatEther(state.bal)), 5)} ETH
+                {fmtEth(Number(formatEther(state.bal)))} ETH
               </div>
               <div className="s">{dollars(Number(formatEther(state.bal)))}</div>
             </div>
             <div className="ana-card">
               <div className="k">{t("Получено за всё время")}</div>
-              <div className="v" style={{ fontSize: 26 }}>{fmt(Number(formatEther(state.received)), 5)} ETH</div>
+              <div className="v" style={{ fontSize: 26 }}>{fmtEth(Number(formatEther(state.received)))} ETH</div>
               <div className="s">{dollars(Number(formatEther(state.received)))}</div>
             </div>
             <div className="ana-card">
               <div className="k">{t("Потрачено на выкупы")}</div>
-              <div className="v" style={{ fontSize: 26 }}>{fmt(Number(formatEther(state.spent)), 5)} ETH</div>
+              <div className="v" style={{ fontSize: 26 }}>{fmtEth(Number(formatEther(state.spent)))} ETH</div>
               <div className="s">{dollars(Number(formatEther(state.spent)))}</div>
             </div>
             <div className="ana-card">
@@ -173,7 +174,7 @@ export default function Treasury() {
                   <span>
                     {r.kind === "burn"
                       ? <>{fmt(r.tokens, 0)} <b>${r.sym}</b></>
-                      : <>{fmt(r.eth, 5)} ETH <span className="usd-sub">({dollars(r.eth)})</span></>}
+                      : <>{fmtEth(r.eth)} ETH <span className="usd-sub">({dollars(r.eth)})</span></>}
                   </span>
                   <span className="dim">
                     {r.kind === "in" && <span className="mono">{short(r.who)}</span>}

@@ -1,21 +1,63 @@
 import { useEffect, useState } from "react";
 
-// ETH/USD с публичного API, кэш 60с, фолбэк если API недоступен
+// ETH/USD: несколько источников + память в localStorage.
+// Зашитый фолбэк используется ТОЛЬКО при самом первом запуске без сети —
+// как только получен живой курс, он запоминается и прыжков больше нет.
+const LS_KEY = "hood_ethusd_v1";
+const FALLBACK = 1850;
+
 let cached = { v: null, t: 0 };
-const FALLBACK = 3800;
+try {
+  const saved = JSON.parse(localStorage.getItem(LS_KEY) || "null");
+  if (saved?.v) cached = { v: saved.v, t: 0 }; // t=0 → обновится в фоне
+} catch (e) { /* ignore */ }
+
+const SOURCES = [
+  async () => {
+    const j = await (await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd",
+      { signal: AbortSignal.timeout(5000) }
+    )).json();
+    return j?.ethereum?.usd;
+  },
+  async () => {
+    const j = await (await fetch(
+      "https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT",
+      { signal: AbortSignal.timeout(5000) }
+    )).json();
+    return parseFloat(j?.price);
+  },
+  async () => {
+    const j = await (await fetch(
+      "https://api.coinbase.com/v2/prices/ETH-USD/spot",
+      { signal: AbortSignal.timeout(5000) }
+    )).json();
+    return parseFloat(j?.data?.amount);
+  },
+];
+
+let _pending = null;
 
 export async function ethUsd() {
   if (cached.v && Date.now() - cached.t < 60_000) return cached.v;
-  try {
-    const r = await fetch(
-      "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd",
-      { signal: AbortSignal.timeout(5000) }
-    );
-    const j = await r.json();
-    if (j?.ethereum?.usd) cached = { v: j.ethereum.usd, t: Date.now() };
-  } catch (e) { /* keep cache/fallback */ }
-  if (!cached.v) cached = { v: FALLBACK, t: Date.now() };
-  return cached.v;
+  if (_pending) return _pending;
+  _pending = (async () => {
+    for (const src of SOURCES) {
+      try {
+        const v = await src();
+        if (v && isFinite(v) && v > 0) {
+          cached = { v, t: Date.now() };
+          try { localStorage.setItem(LS_KEY, JSON.stringify({ v })); } catch (e) { /* ignore */ }
+          return v;
+        }
+      } catch (e) { /* следующий источник */ }
+    }
+    // все источники легли — держим последний известный курс, не прыгаем
+    if (!cached.v) cached = { v: FALLBACK, t: Date.now() };
+    else cached.t = Date.now(); // не долбим API каждый рендер
+    return cached.v;
+  })();
+  try { return await _pending; } finally { _pending = null; }
 }
 
 export function useEthUsd() {

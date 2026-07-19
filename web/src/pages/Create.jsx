@@ -3,26 +3,66 @@ import { parseEther, formatEther, decodeEventLog } from "viem";
 import { publicClient } from "../lib/web3.js";
 import { factoryAbi } from "../lib/abi.js";
 import { FACTORY_ADDRESS } from "../lib/config.js";
-import { useSplit } from "../lib/data.js";
+import { useSplit, injectNewToken } from "../lib/data.js";
 
 // Max developer buy: 5% of supply bought at launch.
 // gross ETH = (VIRT * s / (TOTAL - s)) / (1 - fee), s = 50M, VIRT = 1.625
 const MAX_DEV_BUY_ETH = 1.625 * 0.05e9 / 0.95e9 / 0.99; // ≈ 0.0864
 
-/** Downscale an image file to a 128px JPEG data URL (kept small enough
- *  to live on-chain inside the token's metadata URI). */
+/** Downscale an image file to a square data URL (kept small enough to live
+ *  on-chain inside the token's metadata URI).
+ *  512px WebP with a stepped (2x-per-pass) downscale — sharp on retina cards,
+ *  no JPEG mush on flat meme graphics. Falls back to smaller sizes if the
+ *  result would bloat the tx calldata too much. */
+const IMG_SIZE = 512;
+const IMG_BUDGET = 120_000; // max data-URL chars (~90KB binary) per image
+
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
-      const c = document.createElement("canvas");
-      const s = Math.min(img.width, img.height);
-      c.width = 128;
-      c.height = 128;
-      c.getContext("2d").drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 128, 128);
       URL.revokeObjectURL(url);
-      resolve(c.toDataURL("image/jpeg", 0.85));
+      // 1) crop to centered square
+      const s = Math.min(img.width, img.height);
+      let cur = document.createElement("canvas");
+      cur.width = cur.height = s;
+      let cx = cur.getContext("2d");
+      cx.imageSmoothingQuality = "high";
+      cx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, s, s);
+      // 2) stepped downscale (halve until близко к цели) — без «лесенки»
+      let size = s;
+      while (size / 2 >= IMG_SIZE) {
+        size = Math.floor(size / 2);
+        const next = document.createElement("canvas");
+        next.width = next.height = size;
+        const nx = next.getContext("2d");
+        nx.imageSmoothingQuality = "high";
+        nx.drawImage(cur, 0, 0, size, size);
+        cur = next;
+      }
+      // 3) финальный размер + подбор формата/качества под бюджет
+      const attempts = [
+        [IMG_SIZE, "image/webp", 0.90],
+        [IMG_SIZE, "image/webp", 0.80],
+        [IMG_SIZE, "image/jpeg", 0.85], // Safari без WebP-энкодера вернёт png → пропустит
+        [256, "image/webp", 0.85],
+        [256, "image/jpeg", 0.85],
+        [128, "image/jpeg", 0.85],
+      ];
+      let fallback = "";
+      for (const [dim, mime, q] of attempts) {
+        const c = document.createElement("canvas");
+        c.width = c.height = dim;
+        const dx = c.getContext("2d");
+        dx.imageSmoothingQuality = "high";
+        dx.drawImage(cur, 0, 0, dim, dim);
+        const out = c.toDataURL(mime, q);
+        if (!out.startsWith(`data:${mime}`)) continue; // формат не поддержан
+        if (!fallback) fallback = out;
+        if (out.length <= IMG_BUDGET) return resolve(out);
+      }
+      resolve(fallback || cur.toDataURL("image/jpeg", 0.8));
     };
     img.onerror = reject;
     img.src = url;
@@ -104,6 +144,15 @@ export default function Create({ wallet, onConnect }) {
           }
         })
         .find((ev) => ev && ev.eventName === "TokenCreated");
+      // мгновенно кладём токен в кэш — карточка видна сразу, без ожидания индексатора
+      injectNewToken({
+        token: created.args.token,
+        pool: created.args.pool,
+        name: form.name.trim(),
+        symbol: form.symbol.trim(),
+        uri,
+        creator: wallet.account,
+      });
       window.location.hash = `#/token/${created.args.token}`;
     } catch (err) {
       setError(err.shortMessage || err.message);

@@ -36,7 +36,7 @@ export const CHAIN =
 
 // Set after deployment (scripts/deploy.js prints it).
 export const FACTORY_ADDRESS =
-  import.meta.env.VITE_FACTORY_ADDRESS ?? "0x0000000000000000000000000000000000000000";
+  import.meta.env.VITE_FACTORY_ADDRESS ?? "0x22079e9f1c5acd14a1d3f1c41fd9798b33775518";
 
 // Buyback treasury (80% of fees; ETH can only leave via buybacks)
 export const TREASURY_ADDRESS =

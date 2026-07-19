@@ -120,3 +120,23 @@ export function fmt(n, digits = 4) {
   if (x !== 0 && Math.abs(x) < 10 ** -digits) return `<${10 ** -digits}`;
   return x.toLocaleString("en-US", { maximumFractionDigits: digits });
 }
+
+// Компактная запись мелких чисел в крипто-стиле: 0.000000002 → 0.0₈2
+const SUBS = "₀₁₂₃₄₅₆₇₈₉";
+const toSub = (n) => String(n).split("").map((d) => SUBS[+d]).join("");
+
+export function fmtEth(n) {
+  const x = Number(n);
+  if (!isFinite(x) || x === 0) return "0";
+  const a = Math.abs(x);
+  const sign = x < 0 ? "-" : "";
+  if (a >= 1000) return sign + a.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  if (a >= 1) return sign + a.toLocaleString("en-US", { maximumFractionDigits: 3 });
+  if (a >= 0.001) return sign + a.toLocaleString("en-US", { maximumFractionDigits: 4 });
+  // мелочь: считаем нули после запятой и сжимаем их в нижний индекс
+  const zeros = Math.ceil(-Math.log10(a) - 1e-9) - 1; // 0.00015 → 3 нуля
+  let digits = String(Math.round(a * 10 ** (zeros + 3))).replace(/0+$/, "");
+  if (digits === "") digits = "1";
+  if (zeros <= 2) return sign + a.toLocaleString("en-US", { maximumFractionDigits: zeros + 3 });
+  return `${sign}0.0${toSub(zeros)}${digits}`;
+}
