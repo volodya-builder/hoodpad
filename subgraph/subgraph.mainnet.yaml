@@ -1,0 +1,89 @@
+# МЕЙННЕТ-манифест. Заполнить *_FROM_DEPLOY адресами из mainnet-addresses.txt
+# и DEPLOY_START_BLOCK (блок деплоя фабрики). Сеть у Goldsky уточнить: robinhood / robinhood-mainnet.
+specVersion: 0.0.5
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: LaunchpadFactory
+    network: robinhood
+    source:
+      address: "FACTORY_ADDRESS_FROM_DEPLOY"
+      abi: LaunchpadFactory
+      startBlock: DEPLOY_START_BLOCK
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities: [Token, Protocol]
+      abis:
+        - name: LaunchpadFactory
+          file: ./abis/LaunchpadFactory.json
+      eventHandlers:
+        - event: TokenCreated(indexed address,indexed address,indexed address,string,string,string)
+          handler: handleTokenCreated
+      file: ./src/factory.ts
+  - kind: ethereum
+    name: BuybackTreasury
+    network: robinhood
+    source:
+      address: "TREASURY_ADDRESS_FROM_DEPLOY"
+      abi: BuybackTreasury
+      startBlock: DEPLOY_START_BLOCK
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities: [TreasuryOp, Protocol]
+      abis:
+        - name: BuybackTreasury
+          file: ./abis/BuybackTreasury.json
+      eventHandlers:
+        - event: Received(indexed address,uint256)
+          handler: handleReceived
+        - event: Buyback(indexed address,indexed address,uint256,uint256)
+          handler: handleBuyback
+        - event: Burned(indexed address,uint256)
+          handler: handleBurned
+      file: ./src/treasury.ts
+  - kind: ethereum
+    name: BuybackVote
+    network: robinhood
+    source:
+      address: "VOTE_ADDRESS_FROM_DEPLOY"
+      abi: BuybackVote
+      startBlock: DEPLOY_START_BLOCK
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities: [VoteCast]
+      abis:
+        - name: BuybackVote
+          file: ./abis/BuybackVote.json
+      eventHandlers:
+        - event: Vote(indexed address,indexed address,indexed uint256)
+          handler: handleVote
+      file: ./src/vote.ts
+templates:
+  - kind: ethereum
+    name: BondingCurvePool
+    network: robinhood
+    source:
+      abi: BondingCurvePool
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities: [Token, Trade, Protocol]
+      abis:
+        - name: BondingCurvePool
+          file: ./abis/BondingCurvePool.json
+      eventHandlers:
+        - event: Buy(indexed address,uint256,uint256,uint256)
+          handler: handleBuy
+        - event: Sell(indexed address,uint256,uint256,uint256)
+          handler: handleSell
+        - event: Graduated(uint256,uint256)
+          handler: handleGraduated
+      file: ./src/pool.ts
