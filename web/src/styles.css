@@ -34,7 +34,9 @@ body {
     var(--bg);
 }
 a { color: inherit; text-decoration: none; }
-.container { max-width: 1240px; margin: 0 auto; padding: 0 28px; }
+.container { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+/* шапку оставляем широкой — ей так просторнее */
+header .container { max-width: 1240px; padding: 0 28px; }
 
 /* ---------------- header */
 header {
