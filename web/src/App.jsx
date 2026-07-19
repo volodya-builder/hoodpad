@@ -103,6 +103,7 @@ export default function App() {
     return () => document.removeEventListener("click", close);
   }, []);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem("hood_theme") || ""; } catch (e) { return ""; }
   });
@@ -182,6 +183,9 @@ export default function App() {
 
   // Прогрев кэша данных сразу при загрузке приложения
   useEffect(() => { loadTokens().catch(() => {}); }, []);
+
+  // Закрываем мобильное меню при смене страницы
+  useEffect(() => { setMenuOpen(false); }, [route]);
 
   // Автовосстановление сессии кошелька после перезагрузки страницы
   useEffect(() => {
@@ -269,7 +273,7 @@ export default function App() {
                  style={{ borderRadius: 9, display: "block" }} />
             <span className="logo-word">HOOD</span>
           </a>
-          <div className="nav-pills">
+          <div className={`nav-pills ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(false)}>
             <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/profile") && !route.startsWith("/vote") && !route.startsWith("/treasury") && !route.startsWith("/about") ? "on" : ""}`} href="#/">{t("Обзор")}</a>
             <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>
             <a className={`nav-pill ${route.startsWith("/vote") ? "on" : ""}`} href="#/vote">{t("Голосование")}</a>
@@ -277,6 +281,9 @@ export default function App() {
             <a className={`nav-pill ${route.startsWith("/about") ? "on" : ""}`} href="#/about">{t("О нас")}</a>
           </div>
           <nav className="nav">
+            <button className={`icon-btn burger ${menuOpen ? "on" : ""}`} onClick={() => setMenuOpen(!menuOpen)} title={t("Меню")} aria-label="menu">
+              {menuOpen ? "✕" : "☰"}
+            </button>
             <button className="icon-btn" onClick={() => setSearchOpen(true)} title="Поиск (Ctrl+K)">⌕</button>
             <a className={`icon-btn ${route.startsWith("/profile") ? "on" : ""}`} href="#/profile" title={t("Профиль")}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"

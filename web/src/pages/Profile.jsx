@@ -61,26 +61,35 @@ export default function Profile({ wallet, onConnect }) {
       const me = wallet.account.toLowerCase();
       const [tokens, ethBal] = await Promise.all([
         loadTokens(),
-        publicClient.getBalance({ address: wallet.account }),
+        publicClient.getBalance({ address: wallet.account }).catch(() => 0n),
       ]);
-      const enriched = await Promise.all(tokens.map(async (tk) => {
-        const [bal, hist, creator, feesAccrued] = await Promise.all([
-          publicClient.readContract({
-            address: tk.token, abi: tokenAbi, functionName: "balanceOf", args: [wallet.account],
-          }),
-          poolTrades(tk.pool).catch(() => ({ trades: [] })),
-          publicClient.readContract({ address: tk.pool, abi: poolAbi, functionName: "creator" }).catch(() => null),
-          publicClient.readContract({ address: tk.pool, abi: poolAbi, functionName: "creatorFeesAccrued" }).catch(() => 0n),
-        ]);
-        const mine = hist.trades.filter((tr) => tr.addr.toLowerCase() === me);
-        const invested = mine.filter((x) => x.side === "buy").reduce((s, x) => s + x.eth + x.fee, 0);
-        const realized = mine.filter((x) => x.side === "sell").reduce((s, x) => s + x.eth, 0);
-        return {
-          ...tk, bal, mine, invested, realized,
-          isMine: creator && creator.toLowerCase() === me,
-          feesAccrued,
-        };
-      }));
+      // грузим токены пачками, чтобы не завалить RPC десятками запросов сразу
+      const CHUNK = 5;
+      const enriched = [];
+      for (let i = 0; i < tokens.length; i += CHUNK) {
+        const part = await Promise.all(tokens.slice(i, i + CHUNK).map(async (tk) => {
+          const [bal, hist, creatorRpc, feesAccrued] = await Promise.all([
+            publicClient.readContract({
+              address: tk.token, abi: tokenAbi, functionName: "balanceOf", args: [wallet.account],
+            }).catch(() => 0n),
+            poolTrades(tk.pool).catch(() => ({ trades: [] })),
+            // creator из субграфа, если есть — экономим RPC-вызов
+            tk.creator ? Promise.resolve(tk.creator)
+              : publicClient.readContract({ address: tk.pool, abi: poolAbi, functionName: "creator" }).catch(() => null),
+            publicClient.readContract({ address: tk.pool, abi: poolAbi, functionName: "creatorFeesAccrued" }).catch(() => 0n),
+          ]);
+          const mine = hist.trades.filter((tr) => tr.addr.toLowerCase() === me);
+          const invested = mine.filter((x) => x.side === "buy").reduce((s, x) => s + x.eth + x.fee, 0);
+          const realized = mine.filter((x) => x.side === "sell").reduce((s, x) => s + x.eth, 0);
+          return {
+            ...tk, bal, mine, invested, realized,
+            isMine: creatorRpc && creatorRpc.toLowerCase() === me,
+            feesAccrued,
+          };
+        }));
+        enriched.push(...part);
+        if (!alive) return;
+      }
       if (!alive) return;
       const positions = enriched.filter((tk) => tk.bal > 0n || tk.mine.length > 0);
       const launched = enriched.filter((tk) => tk.isMine);
