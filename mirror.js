@@ -362,6 +362,22 @@ async function tick() {
   console.log("pons-mirror запускается…");
   console.log("Кошелёк бота:", account.address);
   await discoverPonsFactory();
+
+  // Тестовый режим:  node mirror.js test 0xАДРЕС_ТОКЕНА_PONS
+  // — зеркалит указанный токен немедленно и выходит.
+  if (process.argv[2] === "test" && process.argv[3]) {
+    const addr = process.argv[3];
+    console.log(`Тест: читаю токен Pons ${addr}…`);
+    const tok = await readPonsToken(addr);
+    if (!tok) { console.error("✘ Это не ERC-20 токен в сети " + state.ponsSide); process.exit(1); }
+    console.log(`  Имя: ${tok.name} ($${tok.symbol})`);
+    console.log(`  Картинка: ${tok.meta.image ? tok.meta.image.slice(0, 60) : "(нет)"}`);
+    console.log(`🚀 Зеркалю на hood…`);
+    const hash = await launchOnHood(tok);
+    console.log(`✔ Запущен: ${hash}`);
+    console.log(`  Смотрите на https://hoodandarrow.com`);
+    process.exit(0);
+  }
   const bal = await hoodPub.getBalance({ address: account.address });
   console.log(`Баланс бота: ${Number(bal) / 1e18} ETH (тестнет hood)`);
   if (bal === 0n) console.warn("⚠ Баланс 0 — пополните кошелёк бота тестовым ETH, иначе запуски не пройдут.");
