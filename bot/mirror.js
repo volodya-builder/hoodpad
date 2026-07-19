@@ -26,9 +26,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CFG_PATH = path.join(__dirname, "config.json");
 const CFG = fs.existsSync(CFG_PATH) ? JSON.parse(fs.readFileSync(CFG_PATH, "utf8")) : {};
 // приватный ключ — из переменной окружения (GitHub Secret), НЕ из файла
-if (process.env.MIRROR_PRIVATE_KEY) CFG.privateKey = process.env.MIRROR_PRIVATE_KEY.trim();
+if (process.env.MIRROR_PRIVATE_KEY) CFG.privateKey = process.env.MIRROR_PRIVATE_KEY;
 if (!CFG.privateKey) {
   console.error("Нет приватного ключа: задайте секрет MIRROR_PRIVATE_KEY или config.json");
+  process.exit(1);
+}
+// нормализуем: убираем пробелы/кавычки/переносы, добавляем 0x при необходимости
+CFG.privateKey = String(CFG.privateKey).replace(/["'\s]/g, "");
+if (!CFG.privateKey.startsWith("0x")) CFG.privateKey = "0x" + CFG.privateKey;
+if (!/^0x[0-9a-fA-F]{64}$/.test(CFG.privateKey)) {
+  console.error(`Приватный ключ выглядит неверно: длина ${CFG.privateKey.length - 2} hex-символов вместо 64. Проверьте секрет MIRROR_PRIVATE_KEY.`);
   process.exit(1);
 }
 
