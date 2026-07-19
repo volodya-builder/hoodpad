@@ -93,6 +93,9 @@ export default function App() {
   const [wallet, setWallet] = useState(null); // { account, walletClient }
   const [isOwner, setIsOwner] = useState(false);
   const [hdrBal, setHdrBal] = useState(null);
+  const [tosOpen, setTosOpen] = useState(false);
+  const [tosA, setTosA] = useState(false);
+  const [tosB, setTosB] = useState(false);
   const [walletMenu, setWalletMenu] = useState(false);
   useEffect(() => {
     const close = (e) => { if (!e.target.closest(".wallet-wrap")) setWalletMenu(false); };
@@ -120,15 +123,43 @@ export default function App() {
     return () => document.removeEventListener("keydown", onKey);
   }, []);
 
+  const tosAccepted = (acc) => {
+    try {
+      const m = JSON.parse(localStorage.getItem("hood_tos_v1") || "{}");
+      return !!m[acc.toLowerCase()];
+    } catch (e) { return false; }
+  };
+
+  const requireTos = useCallback((acc) => {
+    if (!tosAccepted(acc)) { setTosA(false); setTosB(false); setTosOpen(true); }
+  }, []);
+
   const connect = useCallback(async () => {
     try {
       const w = await connectWallet();
       setWallet(w);
       try { localStorage.setItem("hood_wallet", "1"); } catch (e) { /* ignore */ }
+      requireTos(w.account);
     } catch (e) {
       alert(e.shortMessage || e.message);
     }
-  }, []);
+  }, [requireTos]);
+
+  const acceptTos = () => {
+    if (!wallet) return;
+    try {
+      const m = JSON.parse(localStorage.getItem("hood_tos_v1") || "{}");
+      m[wallet.account.toLowerCase()] = true;
+      localStorage.setItem("hood_tos_v1", JSON.stringify(m));
+    } catch (e) { /* ignore */ }
+    setTosOpen(false);
+  };
+
+  const declineTos = () => {
+    setTosOpen(false);
+    setWallet(null);
+    try { localStorage.removeItem("hood_wallet"); } catch (e) { /* ignore */ }
+  };
 
   // Прогрев кэша данных сразу при загрузке приложения
   useEffect(() => { loadTokens().catch(() => {}); }, []);
@@ -140,7 +171,7 @@ export default function App() {
       if (localStorage.getItem("hood_wallet") !== "1") return;
     } catch (e) { return; }
     reconnectWallet()
-      .then((w) => { if (alive && w) setWallet(w); })
+      .then((w) => { if (alive && w) { setWallet(w); requireTos(w.account); } })
       .catch(() => {});
     return () => { alive = false; };
   }, []);
@@ -318,6 +349,41 @@ export default function App() {
         </div>
       </footer>
       <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
+      {tosOpen && wallet && (
+        <div className="modal-back open">
+          <div className="tos-modal">
+            <div className="tos-hero"><div className="tos-ico">🤝</div></div>
+            <div className="tos-body">
+              <h2 className="tos-title">
+                {t("Ознакомьтесь и примите")} <span className="tos-chip">{t("Обязательно")}</span>
+              </h2>
+              <p className="dim" style={{ lineHeight: 1.6, margin: "10px 0 18px" }}>
+                {t("Прежде чем использовать hood с этим кошельком, примите актуальные Условия использования и Политику конфиденциальности. Вы также подтверждаете, что не находитесь в юрисдикции, где использование запрещено.")}
+              </p>
+              <label className="tos-check">
+                <input type="checkbox" checked={tosA} onChange={(e) => setTosA(e.target.checked)} />
+                <span>
+                  {t("Я прочитал и принимаю")}{" "}
+                  <a href="#/terms" target="_blank" rel="noreferrer">{t("Условия использования")}</a>.
+                </span>
+              </label>
+              <label className="tos-check">
+                <input type="checkbox" checked={tosB} onChange={(e) => setTosB(e.target.checked)} />
+                <span>
+                  {t("Я прочитал и принимаю")}{" "}
+                  <a href="#/privacy" target="_blank" rel="noreferrer">{t("Политику конфиденциальности")}</a>.
+                </span>
+              </label>
+              <div className="tos-actions">
+                <button className="btn btn-primary" disabled={!tosA || !tosB} onClick={acceptTos}>
+                  {t("Принять и продолжить")}
+                </button>
+                <button className="tos-ghost" onClick={declineTos}>{t("Отключить кошелёк")}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
