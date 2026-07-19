@@ -30,9 +30,12 @@ function countdown(sec) {
 // Плюс сохраняем в localStorage, чтобы и после перезагрузки не было "Reading the chain".
 let _voteState = null;
 const VOTE_LS = "hood_cache_vote_v1";
+// числа блокчейна (BigInt) не сериализуются штатным JSON — упаковываем вручную
+const _bigR = (k, v) => (typeof v === "bigint" ? { __b: v.toString() } : v);
+const _bigV = (k, v) => (v && typeof v === "object" && "__b" in v ? BigInt(v.__b) : v);
 try {
   const raw = localStorage.getItem(VOTE_LS);
-  if (raw) _voteState = JSON.parse(raw);
+  if (raw) _voteState = JSON.parse(raw, _bigV);
 } catch (e) { /* ignore */ }
 
 export default function Vote({ wallet, onConnect }) {
@@ -111,7 +114,7 @@ export default function Vote({ wallet, onConnect }) {
 
     const next = { rows, votes, symByAddr, total: votes.length, endsIn, ep: ep.toString() };
     _voteState = next;
-    try { localStorage.setItem(VOTE_LS, JSON.stringify(next)); } catch (e) { /* ignore */ }
+    try { localStorage.setItem(VOTE_LS, JSON.stringify(next, _bigR)); } catch (e) { /* ignore */ }
     setState(next);
   }, [enabled]);
 
