@@ -168,34 +168,47 @@ async function discoverPonsFactory() {
 function ponsClient() {
   return createPublicClient({
     chain: CHAINS[state.ponsSide].chain,
-    transport: http(undefined, { batch: true }),
+    transport: http(undefined, { batch: true, timeout: 30_000, retryCount: 3 }),
   });
 }
 
-// Новые токены: транзакции к фабрике → созданные контракты из internal txs
+// Событие запуска токена на фабрике Pons (PonsLauncher.TokenLaunched):
+// topic1 = адрес токена. Читаем напрямую из RPC — эксплорер не нужен.
+const PONS_LAUNCH_TOPICS = [
+  "0xdb51ea9ad51ab453a65a4cb7e60c3cb378c9501bb002609f8f97778fb6c4235a", // TokenLaunched
+  "0x1461370115e1c2be79cb529f8cfcbd11316e789d9c6099fc83417b0b4c48c62a", // TokenDeployed (запасной)
+];
+const MAX_LOOKBACK = 20_000n; // не смотрим глубже ~20k блоков при долгом простое
+
 async function fetchNewPonsTokens() {
-  const net = CHAINS[state.ponsSide];
-  const txs = await jget(
-    `${net.explorer}/api/v2/addresses/${state.ponsFactory}/transactions?filter=to`
-  );
-  const fresh = [];
-  for (const tx of (txs.items ?? []).slice(0, 25)) {
-    const h = tx.hash;
-    if (state.seenTx[h]) continue;
-    if (tx.status !== "ok") { state.seenTx[h] = "failed"; continue; }
-    try {
-      const internal = await jget(`${net.explorer}/api/v2/transactions/${h}/internal-transactions`);
-      const created = (internal.items ?? [])
-        .filter((i) => i.type === "create" || i.type === "create2")
-        .map((i) => i.created_contract?.hash)
-        .filter(Boolean);
-      // фабрики обычно создают токен + пул; токен определим ниже по name()
-      state.seenTx[h] = created.length ? created : "none";
-      for (const c of created) fresh.push({ addr: c, tx: h, ts: tx.timestamp });
-    } catch (e) {
-      console.warn("  internal-tx error:", h.slice(0, 12), e.message);
-    }
+  const pc = ponsClient();
+  const latest = await pc.getBlockNumber();
+  if (!state.lastBlock) {
+    state.lastBlock = latest.toString();
+    saveState();
+    console.log(`Стартовая точка: блок ${latest} (${state.ponsSide}) — зеркалю только новые запуски.`);
+    return [];
   }
+  let from = BigInt(state.lastBlock) + 1n;
+  if (latest - from > MAX_LOOKBACK) from = latest - MAX_LOOKBACK; // после долгого простоя
+  if (from > latest) return [];
+  const logs = await pc.getLogs({
+    address: state.ponsFactory,
+    fromBlock: from,
+    toBlock: latest,
+  });
+  const fresh = [];
+  const seen = new Set();
+  for (const l of logs) {
+    if (!PONS_LAUNCH_TOPICS.includes(l.topics?.[0])) continue;
+    const t = l.topics?.[1];
+    if (!t || t.length !== 66) continue;
+    const addr = "0x" + t.slice(26);
+    if (seen.has(addr)) continue;
+    seen.add(addr);
+    fresh.push({ addr, tx: l.transactionHash });
+  }
+  state.lastBlock = latest.toString();
   saveState();
   return fresh;
 }
@@ -255,9 +268,21 @@ async function imageToDataUrl(imgUrl) {
   try {
     let buf;
     if (imgUrl) {
-      const r = await fetch(ipfsToHttp(imgUrl), { headers: { "User-Agent": UA["User-Agent"] }, signal: AbortSignal.timeout(20000) });
-      if (!r.ok) throw new Error("img " + r.status);
-      buf = Buffer.from(await r.arrayBuffer());
+      // несколько IPFS-шлюзов на случай, если какой-то недоступен
+      const urls = /^(ipfs:\/\/|Qm|baf)/.test(imgUrl)
+        ? ["https://ipfs.io/ipfs/", "https://cloudflare-ipfs.com/ipfs/", "https://dweb.link/ipfs/"]
+            .map((g) => g + imgUrl.replace(/^ipfs:\/\//, ""))
+        : [imgUrl];
+      let lastErr;
+      for (const u of urls) {
+        try {
+          const r = await fetch(u, { headers: { "User-Agent": UA["User-Agent"] }, signal: AbortSignal.timeout(25000) });
+          if (!r.ok) throw new Error("img " + r.status);
+          buf = Buffer.from(await r.arrayBuffer());
+          break;
+        } catch (e) { lastErr = e; }
+      }
+      if (!buf) throw lastErr ?? new Error("no image");
     } else {
       return "";
     }
@@ -274,8 +299,8 @@ async function imageToDataUrl(imgUrl) {
 
 // ---------------------------------------------------------------- hood side
 const account = privateKeyToAccount(CFG.privateKey);
-const hoodPub = createPublicClient({ chain: HOOD.chain, transport: http(undefined, { batch: true }) });
-const hoodWallet = createWalletClient({ account, chain: HOOD.chain, transport: http() });
+const hoodPub = createPublicClient({ chain: HOOD.chain, transport: http(undefined, { batch: true, timeout: 30_000, retryCount: 3 }) });
+const hoodWallet = createWalletClient({ account, chain: HOOD.chain, transport: http(undefined, { timeout: 30_000, retryCount: 2 }) });
 
 async function launchOnHood({ name, symbol, meta }) {
   const image = await imageToDataUrl(meta.image);
@@ -340,17 +365,6 @@ async function tick() {
   const bal = await hoodPub.getBalance({ address: account.address });
   console.log(`Баланс бота: ${Number(bal) / 1e18} ETH (тестнет hood)`);
   if (bal === 0n) console.warn("⚠ Баланс 0 — пополните кошелёк бота тестовым ETH, иначе запуски не пройдут.");
-
-  // Первый проход: помечаем всё существующее как «уже видели», НЕ зеркалим
-  // историю — только новые запуски с этого момента. Уберите флаг, если надо
-  // зазеркалить и старые.
-  if (!state.bootstrapped) {
-    const old = await fetchNewPonsTokens();
-    for (const f of old) state.mirrored[f.addr.toLowerCase()] = "pre-existing";
-    state.bootstrapped = true;
-    saveState();
-    console.log(`Помечено ${old.length} старых токенов Pons — зеркалю только новые.`);
-  }
 
   for (;;) {
     try { await tick(); } catch (e) { console.error("tick error:", e.message); }
