@@ -870,3 +870,10 @@ html[data-theme="light"] .verify-note { border-color: #cfcec6; }
   color: inherit; font: inherit; text-align: right; padding: 6px 0;
 }
 .slip-opt-custom input::placeholder { color: var(--text-dim); opacity: .6; }
+
+/* -------- slippage: компактнее и ближе к подписи -------- */
+.slip-row { justify-content: flex-start; gap: 12px; }
+.slip-seg { margin-left: 0; border-radius: 999px; }
+.slip-opt { padding: 4px 12px; font-size: 11.5px; line-height: 1.4; }
+.slip-opt-custom { padding: 0 10px 0 5px; }
+.slip-opt-custom input { width: 28px; padding: 4px 0; font-size: 11.5px; }
