@@ -340,10 +340,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     if (!quote) return;
     setBusy(true);
     try {
-      const autoPct = impact !== null
-        ? Math.min(30, Math.max(0.5, impact * 1.3 + 0.5))
-        : 1;
-      const slipPct = slip === "auto" ? autoPct : Number(slip);
+      const slipPct = slip === "auto" ? 40 : Number(slip);
       const slipBps = BigInt(Math.round(slipPct * 100));
       let hash;
       if (tab === "buy") {
@@ -740,8 +737,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 <div className={`slip-opt ${slip === "auto" ? "on" : ""}`}
                      onClick={() => setSlipSave("auto")}
                      title={t("Подбирается автоматически под размер сделки")}>
-                  ⚡ {t("Авто")}{slip === "auto" && impact !== null
-                    ? ` ${fmt(Math.min(30, Math.max(0.5, impact * 1.3 + 0.5)), 1)}%` : ""}
+                  ⚡ {t("Авто")} 40%
                 </div>
                 <div className="slip-div" />
                 <label className={`slip-opt slip-opt-custom ${typeof slip === "number" ? "on" : ""}`}>

@@ -877,3 +877,9 @@ html[data-theme="light"] .verify-note { border-color: #cfcec6; }
 .slip-opt { padding: 4px 12px; font-size: 11.5px; line-height: 1.4; }
 .slip-opt-custom { padding: 0 10px 0 5px; }
 .slip-opt-custom input { width: 28px; padding: 4px 0; font-size: 11.5px; }
+
+/* -------- slippage: ровная заливка и мельче -------- */
+.slip-seg { height: 24px; align-items: stretch; }
+.slip-opt { padding: 0 10px; font-size: 11px; display: flex; align-items: center; }
+label.slip-opt-custom { margin: 0; display: flex; align-items: center; padding: 0 9px 0 5px; }
+.slip-opt-custom input { width: 26px; padding: 0; font-size: 11px; height: 100%; margin: 0; border-radius: 0; }
