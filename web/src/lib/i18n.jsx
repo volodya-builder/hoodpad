@@ -216,6 +216,8 @@ const EN = {
   "Собрать в казну": "Collect to treasury",
   "Комиссии собраны": "Fees collected",
   "От баланса": "Of balance",
+  "Объём 24ч": "24h volume",
+  "Пул": "Pool",
   "Авто": "Auto",
   "Настроить быстрые проценты": "Customize quick percents",
   "Подбирается автоматически под размер сделки": "Picked automatically for your trade size",

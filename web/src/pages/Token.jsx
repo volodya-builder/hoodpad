@@ -11,7 +11,7 @@ import { useLang } from "../lib/i18n.jsx";
 
 const SLIPPAGE_CHOICES = [0.5, 1, 3, 5]; // %
 
-function MiniChart({ points, rate }) {
+function MiniChart({ points, rate, marks }) {
   const [hover, setHover] = React.useState(null);
   const W = 640, H = 240, PADB = 22, PADT = 10, PADL = 6, PADR = 6;
 
@@ -74,6 +74,24 @@ function MiniChart({ points, rate }) {
                     fill="#dcea5c" stroke="#0d0e0c" strokeWidth="2" />
           </g>
         )}
+        {(marks ?? []).map((mk, k) => {
+          if (!pts.some((pp) => pp.ts)) return null;
+          let best = -1, bd = Infinity;
+          pts.forEach((pp, ii) => {
+            if (pp.ts) { const d = Math.abs(pp.ts - mk.ts); if (d < bd) { bd = d; best = ii; } }
+          });
+          if (best < 0) return null;
+          return (
+            <g key={`mk${k}`}>
+              <line x1={X(best)} x2={X(best)} y1={PADT} y2={H - PADB}
+                    stroke={mk.kind === "burned" ? "#e05252" : "#dcea5c"}
+                    strokeOpacity="0.35" strokeDasharray="3 4" />
+              <text x={X(best)} y={PADT + 13} textAnchor="middle" fontSize="11">
+                {mk.kind === "burned" ? "🔥" : "🛒"}
+              </text>
+            </g>
+          );
+        })}
         <text x={PADL} y={PADT + 4} className="chart-axis">{usdV(mx)}</text>
         <text x={PADL} y={H - PADB - 4} className="chart-axis">{usdV(mn)}</text>
         {firstTs && <text x={PADL} y={H - 6} className="chart-axis">{timeLbl(firstTs)}</text>}
@@ -114,6 +132,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [copiedCA, setCopiedCA] = useState(false);
   const [tf, setTf] = useState("all"); // таймфрейм графика
   const [tradePct, setTradePct] = useState(0); // ползунок суммы
+  const [btTab, setBtTab] = useState("trades");
   const [qpcts, setQpcts] = useState(() => {
     try {
       const v = JSON.parse(localStorage.getItem("hood_qp") || "null");
@@ -159,6 +178,17 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     return { list, unsold, unsoldPct: (unsold / TOTAL) * 100 };
   }, [history, data]);
 
+  // Статистика для полосы над графиком
+  const tokStats = useMemo(() => {
+    if (!history || !history.trades.length) return null;
+    const now = history.now ?? Date.now();
+    const vol24 = history.trades
+      .filter((tr) => (tr.ts ?? 0) >= now - 86400e3)
+      .reduce((s2, tr) => s2 + tr.eth + tr.fee, 0);
+    const ath = Math.max(...history.points.map((pp) => pp.mcap));
+    return { vol24, ath };
+  }, [history]);
+
   const chartPoints = useMemo(() => {
     if (!history) return null;
     if (tf === "all" || !history.now) return history.points;
@@ -168,6 +198,29 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     const base = before.length ? [before[before.length - 1]] : [];
     return [...base, ...after];
   }, [history, tf]);
+
+  const tfChange = useMemo(() => {
+    if (!chartPoints || chartPoints.length < 2) return null;
+    const first = chartPoints[0].mcap, last = chartPoints[chartPoints.length - 1].mcap;
+    if (!(first > 0)) return null;
+    return ((last - first) / first) * 100;
+  }, [chartPoints]);
+
+  // Метки выкупов/сжиганий казны по этому токену — на график
+  const [marks, setMarks] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    import("../lib/data.js").then((m) => m.subgraphTreasuryOps())
+      .then((ops) => {
+        if (!alive) return;
+        setMarks(ops
+          .filter((o) => (o.token || "").toLowerCase() === tokenAddress.toLowerCase()
+                         && (o.kind === "buyback" || o.kind === "burned"))
+          .map((o) => ({ ts: Number(o.timestamp) * 1000, kind: o.kind })));
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [tokenAddress]);
 
   async function copyLink() {
     try {
@@ -528,6 +581,12 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                href={`https://x.com/intent/tweet?text=${encodeURIComponent(`$${data.symbol} — ${data.name} · hood`)}&url=${encodeURIComponent(window.location.href)}&via=hoodandarrow`}>
               𝕏 {t("Поделиться")}
             </a>
+            <a className="btn" target="_blank" rel="noreferrer" href={`${EXPLORER}/address/${tokenAddress}`}>
+              {t("Контракт")} ↗
+            </a>
+            <a className="btn" target="_blank" rel="noreferrer" href={`${EXPLORER}/address/${data.pool}`}>
+              {t("Пул")} ↗
+            </a>
           </div>
         </div>
 
@@ -540,11 +599,36 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               ))}
             </div>
           </div>
-          <MiniChart points={chartPoints} rate={rate} />
+          <div className="tk-strip">
+            <div>
+              <div className="tk-mcap">{mcapUsd}</div>
+              {tfChange !== null && (
+                <div className={`tk-chg ${tfChange >= 0 ? "up" : "down"}`}>
+                  {tfChange >= 0 ? "+" : ""}{fmt(tfChange, 2)}%{" "}
+                  <span className="dim">{tf === "all" ? "ALL" : tf === "24h" ? "24H" : "7D"}</span>
+                </div>
+              )}
+            </div>
+            <div className="tk-cells">
+              <div className="tk-cell"><span>{t("Собрано")}</span><b>{fmt(formatEther(data.reserve), 3)} ETH</b></div>
+              <div className="tk-cell"><span>{t("Объём 24ч")}</span><b>{tokStats ? fmt(tokStats.vol24, 4) : "0"} ETH</b></div>
+              <div className="tk-cell"><span>ATH</span><b>{tokStats ? usd(tokStats.ath * rate) : "—"}</b></div>
+            </div>
+          </div>
+          <MiniChart points={chartPoints} rate={rate} marks={marks} />
         </div>
 
         <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
-          <div className="card-title"><h3>{t("Сделки из блокчейна")}</h3></div>
+          <div className="bt-tabs">
+            <div className={`bt-tab ${btTab === "trades" ? "on" : ""}`} onClick={() => setBtTab("trades")}>
+              {t("Сделки из блокчейна")}
+            </div>
+            <div className={`bt-tab ${btTab === "holders" ? "on" : ""}`} onClick={() => setBtTab("holders")}>
+              {t("Топ держателей")}
+            </div>
+          </div>
+          {btTab === "trades" && (<>
+
           {!history && <div className="dim" style={{ padding: "14px 0" }}>{t("Читаю события…")}</div>}
           {history && history.trades.length === 0 && (
             <div className="dim" style={{ padding: "14px 0" }}>{t("Пока нет сделок.")}</div>
@@ -562,10 +646,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               <span className="dim">{t("блок")} {String(tr.block)}</span>
             </div>
           ))}
-        </div>
+          </>)}
+          {btTab === "holders" && (<>
 
-        <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
-          <div className="card-title"><h3>{t("Топ держателей")}</h3></div>
           {!holders && <div className="dim" style={{ padding: "14px 0" }}>{t("Читаю события…")}</div>}
           {holders && holders.list.length > 0 && (() => {
             const top10 = holders.list.reduce((s, h) => s + h.pct, 0);
@@ -609,6 +692,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               )}
             </div>
           )}
+          </>)}
         </div>
       </div>
 

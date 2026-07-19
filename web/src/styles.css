@@ -892,3 +892,17 @@ label.slip-opt-custom { margin: 0; display: flex; align-items: center; padding: 
   transform: translateY(-1px);
 }
 .qa-pill:active { transform: translateY(0) scale(.95); }
+
+/* -------- token stats strip -------- */
+.tk-strip {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 18px; flex-wrap: wrap; margin: 14px 0 4px;
+}
+.tk-mcap { font-size: 34px; font-weight: 800; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
+.tk-chg { font-size: 14px; font-weight: 800; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.tk-chg.up { color: var(--leaf); }
+.tk-chg.down { color: var(--red); }
+.tk-cells { display: flex; gap: 22px; flex-wrap: wrap; }
+.tk-cell { display: flex; flex-direction: column; gap: 2px; }
+.tk-cell span { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; color: var(--text-dim); }
+.tk-cell b { font-size: 14.5px; font-variant-numeric: tabular-nums; }
