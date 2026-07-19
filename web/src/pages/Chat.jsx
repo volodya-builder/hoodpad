@@ -33,6 +33,7 @@ export default function Chat({ tokenAddress, wallet }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [bans, setBans] = useState({});
   const listRef = useRef(null);
 
   const enabled = !!CHAT_DB_URL;
@@ -41,12 +42,19 @@ export default function Chat({ tokenAddress, wallet }) {
 
   const load = useCallback(async () => {
     if (!enabled) return;
-    const r = await fetch(url + '?orderBy="$key"&limitToLast=60');
+    const [r, br] = await Promise.all([
+      fetch(url + '?orderBy="$key"&limitToLast=60'),
+      fetch(`${CHAT_DB_URL}/bans.json`).catch(() => null),
+    ]);
     if (!r.ok) throw new Error("chat backend " + r.status);
     const j = await r.json();
+    const banMap = (br && br.ok) ? (await br.json()) || {} : {};
+    setBans(banMap);
+    const banned = new Set(Object.keys(banMap).map((k) => k.toLowerCase()));
     const list = j
       ? Object.entries(j)
           .map(([k, v]) => ({ key: k, ...v }))
+          .filter((m) => !banned.has((m.who || "").toLowerCase())) // скрываем забаненных
           .sort((a, b) => (a.key < b.key ? -1 : 1))
       : [];
     setMsgs(list);
@@ -67,9 +75,15 @@ export default function Chat({ tokenAddress, wallet }) {
     const t = text.trim();
     if (!t || busy) return;
     setError("");
+    const author = wallet ? short(wallet.account) : guestName();
+    // забаненные не могут писать
+    const banned = new Set(Object.keys(bans).map((k) => k.toLowerCase()));
+    if (banned.has(author.toLowerCase())) {
+      setError("Вы не можете писать в этот чат.");
+      return;
+    }
     setBusy(true);
     try {
-      const author = wallet ? short(wallet.account) : guestName();
       const r = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

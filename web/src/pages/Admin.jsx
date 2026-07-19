@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { formatEther, parseEther } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { treasuryAbi, tokenAbi, poolExtraAbi } from "../lib/abi.js";
-import { TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
+import { TREASURY_ADDRESS, EXPLORER, CHAT_DB_URL } from "../lib/config.js";
 import { loadTokens, subgraphVotes, subgraphTreasuryOps, timeAgo, useClock } from "../lib/data.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { useLang } from "../lib/i18n.jsx";
@@ -25,6 +25,57 @@ export default function Admin({ wallet, onConnect }) {
   const [copiedCA, setCopiedCA] = useState("");
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
+  const [online, setOnline] = useState(null);
+  const [bans, setBans] = useState({});
+  const [banInput, setBanInput] = useState("");
+
+  // онлайн + баны из Firebase
+  useEffect(() => {
+    if (!CHAT_DB_URL) return;
+    let alive = true;
+    const load = async () => {
+      try {
+        const [pr, br] = await Promise.all([
+          fetch(`${CHAT_DB_URL}/presence.json`),
+          fetch(`${CHAT_DB_URL}/bans.json`),
+        ]);
+        const pres = (await pr.json()) || {};
+        const now = Date.now();
+        const cnt = Object.values(pres).filter((p) => p && now - (p.ts || 0) < 45_000).length;
+        if (alive) { setOnline(cnt); setBans((await br.json()) || {}); }
+      } catch (e) { /* ignore */ }
+    };
+    load();
+    const id = setInterval(load, 10_000);
+    return () => { alive = false; clearInterval(id); };
+  }, []);
+
+  // Ключ бана — сам `who` в теле JSON (PATCH сливает), без кодирования в URL —
+  // Firebase хранит ключ буква-в-букву, и он совпадёт с тем, что в чате.
+  const banUser = async (who) => {
+    const key = who.trim();
+    if (!key || !CHAT_DB_URL) return;
+    try {
+      await fetch(`${CHAT_DB_URL}/bans.json`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [key]: { ts: Date.now() } }),
+      });
+      setBans((b) => ({ ...b, [key]: { ts: Date.now() } }));
+      setBanInput("");
+      setOk(`Забанен: ${key}`); setTimeout(() => setOk(""), 2500);
+    } catch (e) { setError("Не удалось забанить: " + e.message); }
+  };
+
+  const unbanUser = async (who) => {
+    if (!CHAT_DB_URL) return;
+    try {
+      await fetch(`${CHAT_DB_URL}/bans.json`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [who]: null }), // null удаляет ключ в RTDB
+      });
+      setBans((b) => { const c = { ...b }; delete c[who]; return c; });
+    } catch (e) { setError("Не удалось разбанить: " + e.message); }
+  };
 
   const copyAddr = (addr, e) => {
     e.preventDefault(); e.stopPropagation();
@@ -194,6 +245,48 @@ export default function Admin({ wallet, onConnect }) {
                   {busy ? "…" : t("Собрать в казну")}
                 </button>
               </div>
+            </div>
+            <div className="ana-card">
+              <div className="k">{t("Онлайн сейчас")}</div>
+              <div className="v" style={{ fontSize: 24, color: "var(--leaf)" }}>
+                {online === null ? "…" : online}
+                <span style={{ fontSize: 13, color: "var(--text-dim)", marginLeft: 6 }}>
+                  {online === 1 ? "человек" : "человек"}
+                </span>
+              </div>
+              <div className="s">{t("посетителей на сайте за последнюю минуту")}</div>
+            </div>
+          </div>
+
+          <div className="bottom-card" style={{ marginTop: 18 }}>
+            <div className="bt-tabs"><div className="bt-tab on">{t("Модерация чата")}</div></div>
+            <div className="page-sub" style={{ margin: "4px 0 12px" }}>
+              {t("Забаньте кошелёк или ник — их сообщения скроются у всех, и писать они больше не смогут.")}
+            </div>
+            <div className="wp-filters" style={{ marginBottom: 12 }}>
+              <input
+                value={banInput}
+                onChange={(e) => setBanInput(e.target.value)}
+                placeholder={t("Адрес (0x1234…abcd) или ник (гость-xxxx)…")}
+                spellCheck={false}
+                onKeyDown={(e) => e.key === "Enter" && banUser(banInput)}
+              />
+              <button className="btn btn-danger" onClick={() => banUser(banInput)} disabled={!banInput.trim()}>
+                {t("Забанить")}
+              </button>
+            </div>
+            {Object.keys(bans).length === 0 ? (
+              <div className="dim">{t("Никто не забанен.")}</div>
+            ) : (
+              Object.keys(bans).map((who) => (
+                <div className="trs-row" key={who} style={{ gridTemplateColumns: "1fr auto" }}>
+                  <span className="mono">🚫 {who}</span>
+                  <button className="btn" onClick={() => unbanUser(who)}>{t("Разбанить")}</button>
+                </div>
+              ))
+            )}
+            <div className="ana-note" style={{ marginTop: 10 }}>
+              {t("Подсказка: адрес берите в том виде, как он показан в чате — например 0x1234…abcd.")}
             </div>
           </div>
 

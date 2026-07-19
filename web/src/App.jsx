@@ -10,7 +10,7 @@ import Treasury from "./pages/Treasury.jsx";
 import Admin from "./pages/Admin.jsx";
 import { Privacy, Terms } from "./pages/Legal.jsx";
 import { connectWallet, reconnectWallet, hasWallet, short, fmt, fmtEth, publicClient } from "./lib/web3.js";
-import { CHAIN, FACTORY_ADDRESS, TREASURY_ADDRESS } from "./lib/config.js";
+import { CHAIN, FACTORY_ADDRESS, TREASURY_ADDRESS, CHAT_DB_URL } from "./lib/config.js";
 import { treasuryAbi } from "./lib/abi.js";
 import { dataSource } from "./lib/data.js";
 import { loadTokens } from "./lib/data.js";
@@ -183,6 +183,27 @@ export default function App() {
 
   // Прогрев кэша данных сразу при загрузке приложения
   useEffect(() => { loadTokens().catch(() => {}); }, []);
+
+  // Пульс присутствия: каждый посетитель раз в 20с отмечается в Firebase,
+  // из этих отметок админ-панель считает «онлайн сейчас».
+  useEffect(() => {
+    if (!CHAT_DB_URL) return;
+    let id;
+    try {
+      let pid = localStorage.getItem("hood_pid");
+      if (!pid) { pid = Math.random().toString(36).slice(2, 12); localStorage.setItem("hood_pid", pid); }
+      const beat = () => {
+        fetch(`${CHAT_DB_URL}/presence/${pid}.json`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ts: Date.now(), w: wallet ? 1 : 0 }),
+        }).catch(() => {});
+      };
+      beat();
+      id = setInterval(beat, 20_000);
+    } catch (e) { /* ignore */ }
+    return () => clearInterval(id);
+  }, [wallet]);
 
   // Закрываем мобильное меню при смене страницы
   useEffect(() => { setMenuOpen(false); }, [route]);
