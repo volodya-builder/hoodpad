@@ -770,3 +770,23 @@ html[data-theme="light"] .king-card { background: var(--card); }
 /* -------- header profile icon -------- */
 a.icon-btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; color: var(--text); }
 .icon-btn.on { border-color: var(--gold); color: var(--gold); }
+
+/* -------- light theme: missing overrides -------- */
+html[data-theme="light"] .bt-tab.on,
+html[data-theme="light"] .mode-tab.on { background: #eceae4; color: #17181a; }
+html[data-theme="light"] .swap-box .asset,
+html[data-theme="light"] .swap-btn,
+html[data-theme="light"] .chat-ava { background: #f2f1ec; }
+html[data-theme="light"] .search-modal { background: #ffffff; }
+html[data-theme="light"] .vote-row:hover,
+html[data-theme="light"] .trs-row:hover,
+html[data-theme="light"] .lb-row:hover { background: rgba(0, 0, 0, .035); }
+html[data-theme="light"] .wp-item:hover { background: rgba(0, 0, 0, .05); }
+html[data-theme="light"] .vote-voters { background: rgba(0, 0, 0, .025); }
+html[data-theme="light"] .adm-sel { background: color-mix(in srgb, #6e7a1c 10%, transparent) !important; }
+html[data-theme="light"] .fav-btn { background: rgba(255, 255, 255, .75); color: #17181a; border-color: rgba(0, 0, 0, .2); }
+html[data-theme="light"] .fav-btn.on { color: #b8860b; border-color: #b8860b; }
+html[data-theme="light"] .feed-chip { background: #ffffff; }
+html[data-theme="light"] .holder-row { border-color: #e6e5db; }
+html[data-theme="light"] .trs-row, html[data-theme="light"] .lb-row { border-color: #e6e5db; }
+html[data-theme="light"] .verify-note { border-color: #cfcec6; }
