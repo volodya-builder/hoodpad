@@ -773,6 +773,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
 
             <button
               className={`btn btn-block ${tab === "buy" ? "btn-primary" : "btn-danger"}`}
+              style={{ marginTop: 18 }}
               onClick={trade}
               disabled={busy || (!quote && !!wallet)}
             >

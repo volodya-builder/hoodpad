@@ -92,6 +92,7 @@ export default function App() {
   const route = useHashRoute();
   const [wallet, setWallet] = useState(null); // { account, walletClient }
   const [isOwner, setIsOwner] = useState(false);
+  const [hdrBal, setHdrBal] = useState(null);
   const [walletMenu, setWalletMenu] = useState(false);
   useEffect(() => {
     const close = (e) => { if (!e.target.closest(".wallet-wrap")) setWalletMenu(false); };
@@ -155,6 +156,19 @@ export default function App() {
     provider.on("accountsChanged", onAccounts);
     return () => provider.removeListener?.("accountsChanged", onAccounts);
   }, [connect]);
+
+  // баланс кошелька в шапке
+  useEffect(() => {
+    let alive = true;
+    if (!wallet) { setHdrBal(null); return; }
+    const pull = () =>
+      publicClient.getBalance({ address: wallet.account })
+        .then((b) => alive && setHdrBal(b))
+        .catch(() => {});
+    pull();
+    const id = setInterval(pull, 30000);
+    return () => { alive = false; clearInterval(id); };
+  }, [wallet]);
 
   // владелец казны видит пункт «Админ» в меню кошелька
   useEffect(() => {
@@ -231,6 +245,11 @@ export default function App() {
             {wallet ? (
               <div className="wallet-wrap">
                 <button className="btn mono" onClick={() => setWalletMenu(!walletMenu)}>
+                  {hdrBal !== null && (
+                    <span style={{ color: "var(--gold)", marginRight: 8 }}>
+                      {fmt(Number(formatEther(hdrBal)), 4)} ETH
+                    </span>
+                  )}
                   {short(wallet.account)} ▾
                 </button>
                 <div className={`wallet-menu ${walletMenu ? "open" : ""}`}>
