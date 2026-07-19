@@ -1,0 +1,8 @@
+{
+  "ponsFactory": ["0xA5aAb3F0c6EeadF30Ef1D3Eb997108E976351feB", "0x0c37a24F5D23A486FA692d1500881d698B1F77a4"],
+  "ponsSide": "mainnet",
+  "hoodFactory": "0x22079e9f1c5acd14a1d3f1c41fd9798b33775518",
+  "pollSec": 20,
+  "maxPerHour": 6,
+  "initialBuyEth": 0
+}
