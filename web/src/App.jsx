@@ -145,6 +145,19 @@ export default function App() {
     }
   }, [requireTos]);
 
+  const hardDisconnect = useCallback(() => {
+    const prov = wallet?.provider;
+    setWallet(null);
+    try { localStorage.removeItem("hood_wallet"); } catch (e) { /* ignore */ }
+    // отзыв разрешения в MetaMask — следующее подключение снова спросит
+    try {
+      prov?.request({
+        method: "wallet_revokePermissions",
+        params: [{ eth_accounts: {} }],
+      }).catch(() => {});
+    } catch (e) { /* кошелёк без поддержки revoke — не страшно */ }
+  }, [wallet]);
+
   const acceptTos = () => {
     if (!wallet) return;
     try {
@@ -157,8 +170,7 @@ export default function App() {
 
   const declineTos = () => {
     setTosOpen(false);
-    setWallet(null);
-    try { localStorage.removeItem("hood_wallet"); } catch (e) { /* ignore */ }
+    hardDisconnect();
   };
 
   // Прогрев кэша данных сразу при загрузке приложения
@@ -291,8 +303,8 @@ export default function App() {
                        style={{ display: "block" }}>⚙ {t("Админ-панель")}</a>
                   )}
                   <div className="wallet-item" onClick={() => {
-                    setWallet(null); setWalletMenu(false);
-                    try { localStorage.removeItem("hood_wallet"); } catch (e) { /* ignore */ }
+                    setWalletMenu(false);
+                    hardDisconnect();
                   }}>
                     {t("Отключить")}
                   </div>
