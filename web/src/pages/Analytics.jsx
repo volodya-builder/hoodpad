@@ -1,8 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { formatEther, parseAbiItem } from "viem";
-import { publicClient, fmt } from "../lib/web3.js";
+import { publicClient, fmt, short } from "../lib/web3.js";
+import { parseAbi } from "viem";
 import { treasuryAbi, poolExtraAbi } from "../lib/abi.js";
+
+const poolExtraAbi2 = parseAbi(["function creator() view returns (address)"]);
 import { TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
+import { useEthUsd, usd } from "../lib/price.js";
 import { loadTokens, poolTrades, useSplit } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 
@@ -40,6 +44,7 @@ function Bars({ data }) {
 export default function Analytics() {
   const { t } = useLang();
   const split = useSplit();
+  const rate = useEthUsd();
   const [raw, setRaw] = useState(null);
   const [error, setError] = useState("");
   const [period, setPeriod] = useState("all");
@@ -51,13 +56,39 @@ export default function Analytics() {
 
       // Все сделки всех пулов + доля создателя конкретного пула на каждой сделке.
       const all = await Promise.all(tokens.map(async (tk) => {
-        const [h, shareBps] = await Promise.all([
+        const [h, shareBps, creator] = await Promise.all([
           poolTrades(tk.pool).catch(() => ({ trades: [] })),
           publicClient.readContract({ address: tk.pool, abi: poolExtraAbi, functionName: "creatorFeeShareBps" }).catch(() => 2000),
+          publicClient.readContract({ address: tk.pool, abi: poolExtraAbi2, functionName: "creator" }).catch(() => null),
         ]);
-        return h.trades.map((tr) => ({ ...tr, shareBps: Number(shareBps) }));
+        return { tk, creator, shareBps: Number(shareBps),
+                 trades: h.trades.map((tr) => ({ ...tr, shareBps: Number(shareBps) })) };
       }));
-      const trades = all.flat();
+      const trades = all.flatMap((a) => a.trades);
+
+      // Лидерборды: создатели по заработанным комиссиям, трейдеры по объёму
+      const creatorsMap = {};
+      for (const a of all) {
+        if (!a.creator) continue;
+        const key = a.creator.toLowerCase();
+        const earned = a.trades.reduce((s, tr) => s + tr.fee, 0) * (a.shareBps / 10000);
+        const c = creatorsMap[key] ?? { earned: 0, symbols: [] };
+        c.earned += earned;
+        c.symbols.push(a.tk.symbol);
+        creatorsMap[key] = c;
+      }
+      const tradersMap = {};
+      for (const tr of trades) {
+        const k = tr.addr.toLowerCase();
+        const x = tradersMap[k] ?? { volume: 0, count: 0 };
+        x.volume += tr.eth + tr.fee;
+        x.count += 1;
+        tradersMap[k] = x;
+      }
+      const leaders = {
+        creators: Object.entries(creatorsMap).sort((a, b) => b[1].earned - a[1].earned).slice(0, 10),
+        traders: Object.entries(tradersMap).sort((a, b) => b[1].volume - a[1].volume).slice(0, 10),
+      };
 
       // Оценка времени каждой сделки: интерполяция по номерам блоков
       // (2 RPC-вызова вместо сотен getBlock).
@@ -101,7 +132,7 @@ export default function Analytics() {
         trades, now,
         launches: tokens.length,
         grads: tokens.filter((tk) => tk.graduated).length,
-        treBal, received, spent, bought, burned, buybackCount,
+        treBal, received, spent, bought, burned, buybackCount, leaders,
       });
     })().catch((e) => alive && setError(e.shortMessage || e.message));
     return () => { alive = false; };
@@ -198,6 +229,44 @@ export default function Analytics() {
           </div>
         </div>
       )}
+
+      {raw?.leaders && (raw.leaders.creators.length > 0 || raw.leaders.traders.length > 0) && (
+        <div className="lb-grid">
+          <div className="bottom-card" style={{ marginTop: 0 }}>
+            <div className="bt-tabs"><div className="bt-tab on">🏆 {t("Топ создателей")}</div></div>
+            {raw.leaders.creators.length === 0 && <div className="center">{t("Пока пусто.")}</div>}
+            {raw.leaders.creators.map(([addr, c], i) => (
+              <a className="lb-row" key={addr} href={`${EXPLORER}/address/${addr}`} target="_blank" rel="noreferrer">
+                <span className={i < 3 ? `rank-num rk${i + 1}` : "dim"}>{i + 1}</span>
+                <span className="lb-who">
+                  <span className="mono">{short(addr)}</span>
+                  <span className="lb-syms">{c.symbols.map((s) => `$${s}`).join(" ")}</span>
+                </span>
+                <span className="lb-val" style={{ color: "var(--gold)" }}>
+                  {fmt(c.earned, 5)} ETH <span className="usd-sub">({usd(c.earned * rate)})</span>
+                </span>
+              </a>
+            ))}
+          </div>
+          <div className="bottom-card" style={{ marginTop: 0 }}>
+            <div className="bt-tabs"><div className="bt-tab on">⚡ {t("Топ трейдеров")}</div></div>
+            {raw.leaders.traders.length === 0 && <div className="center">{t("Пока пусто.")}</div>}
+            {raw.leaders.traders.map(([addr, x], i) => (
+              <a className="lb-row" key={addr} href={`${EXPLORER}/address/${addr}`} target="_blank" rel="noreferrer">
+                <span className={i < 3 ? `rank-num rk${i + 1}` : "dim"}>{i + 1}</span>
+                <span className="lb-who">
+                  <span className="mono">{short(addr)}</span>
+                  <span className="lb-syms">{x.count} {t("сделок")}</span>
+                </span>
+                <span className="lb-val">
+                  {fmt(x.volume, 4)} ETH <span className="usd-sub">({usd(x.volume * rate)})</span>
+                </span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="ana-note">
         {t("Примечание: комиссии попадают в казну после вызова claimProtocolFees у пула — до этого они накапливаются в самом пуле.")}
       </div>

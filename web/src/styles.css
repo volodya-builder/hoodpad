@@ -740,3 +740,18 @@ html[data-theme="light"] .king-card { background: var(--card); }
 .tr-buy { color: var(--gold); }
 .tr-burn { color: var(--red); }
 @media (max-width: 640px) { .trs-row { grid-template-columns: 110px 1fr 90px; } .trs-row > :nth-child(3) { display: none; } }
+
+/* -------- analytics leaderboards -------- */
+.lb-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 0 0 26px; }
+@media (max-width: 900px) { .lb-grid { grid-template-columns: 1fr; } }
+.lb-row {
+  display: grid; grid-template-columns: 30px minmax(0, 1fr) auto;
+  gap: 12px; align-items: center; padding: 11px 16px;
+  border-bottom: 1px solid var(--border); font-size: 13.5px;
+  color: var(--text); text-decoration: none;
+}
+.lb-row:last-child { border-bottom: none; }
+.lb-row:hover { background: rgba(255, 255, 255, .025); }
+.lb-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lb-syms { font-size: 11.5px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-val { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }

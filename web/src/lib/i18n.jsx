@@ -193,6 +193,9 @@ const EN = {
   "слиппедж": "slippage",
   "влияние на цену": "price impact",
   "Код верифицирован": "Source code verified",
+  "Топ создателей": "Top creators",
+  "Топ трейдеров": "Top traders",
+  "Пока пусто.": "Nothing here yet.",
   "Сюда автоматически поступает доля всех торговых комиссий. Вывести ETH из казны невозможно — в контракте нет такой функции, деньги могут только выкупать токены платформы. Всё, что происходит с казной, видно ниже — это публичные транзакции блокчейна.":
     "A share of every trading fee flows here automatically. ETH cannot be withdrawn from the treasury — the contract has no such function; the money can only buy back platform tokens. Everything that happens to the treasury is visible below — these are public blockchain transactions.",
   "Баланс казны": "Treasury balance",
