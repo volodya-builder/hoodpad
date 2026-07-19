@@ -7,9 +7,9 @@ pragma solidity ^0.8.28;
 ///         `treasury` so pools need no changes: they keep sending the
 ///         protocol share to one address, and the split happens here.
 ///
-///         With creator share 40% and teamBps = 3333 (1/3 of the remaining
-///         60%), the effective split of each trade's fee is:
-///           40% creator · 20% team · 40% buyback treasury.
+///         With creator share 50% and teamBps = 4000 (40% of the remaining
+///         50%), the effective split of each trade's fee is:
+///           50% creator · 20% team · 30% buyback treasury.
 contract FeeSplitter {
     address public immutable team;
     address public immutable buyback;

@@ -68,6 +68,7 @@ contract BondingCurvePool is ReentrancyGuard {
         uint16  creatorFeeShareBps_
     ) {
         require(saleCap_ < totalSupply_, "cap>=supply");
+        require(token_ != address(0) && creator_ != address(0), "zero addr");
         require(feeBps_ <= 500, "fee>5%");
         require(creatorFeeShareBps_ <= 10_000, "share>100%");
         factory = msg.sender;

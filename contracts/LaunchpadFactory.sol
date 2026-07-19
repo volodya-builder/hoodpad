@@ -47,6 +47,7 @@ contract LaunchpadFactory is Ownable {
     event ConfigUpdated(address treasury, address migrator, uint16 feeBps, uint16 creatorFeeShareBps);
 
     constructor(address treasury_, address migrator_) Ownable(msg.sender) {
+        require(treasury_ != address(0) && migrator_ != address(0), "zero addr");
         treasury = treasury_;
         migrator = migrator_;
     }
@@ -131,6 +132,7 @@ contract LaunchpadFactory is Ownable {
         uint16 feeBps_,
         uint16 creatorFeeShareBps_
     ) external onlyOwner {
+        require(treasury_ != address(0) && migrator_ != address(0), "zero addr");
         require(feeBps_ <= 500, "fee>5%");
         require(creatorFeeShareBps_ <= 10_000, "share>100%");
         treasury = treasury_;

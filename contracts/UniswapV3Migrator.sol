@@ -8,7 +8,13 @@ import {ILiquidityMigrator} from "./interfaces/ILiquidityMigrator.sol";
 
 interface IWETH9 {
     function deposit() external payable;
+    function withdraw(uint256) external;
     function approve(address, uint256) external returns (bool);
+}
+
+/// @dev Пул, вызывающий migrate(), знает своего создателя — ему и вернём пыль.
+interface IPoolCreator {
+    function creator() external view returns (address);
 }
 
 interface INonfungiblePositionManager {
@@ -62,6 +68,7 @@ contract UniswapV3Migrator is ILiquidityMigrator {
     );
 
     constructor(address positionManager_, address weth_) {
+        require(positionManager_ != address(0) && weth_ != address(0), "zero addr");
         positionManager = INonfungiblePositionManager(positionManager_);
         weth = IWETH9(weth_);
     }
@@ -92,9 +99,9 @@ contract UniswapV3Migrator is ILiquidityMigrator {
         );
 
         IERC20(token).forceApprove(address(positionManager), tokenAmount);
-        IERC20(address(weth)).approve(address(positionManager), ethAmount);
+        IERC20(address(weth)).forceApprove(address(positionManager), ethAmount);
 
-        (uint256 positionId, , , ) = positionManager.mint(
+        (uint256 positionId, , uint256 used0, uint256 used1) = positionManager.mint(
             INonfungiblePositionManager.MintParams({
                 token0: token0,
                 token1: token1,
@@ -110,8 +117,35 @@ contract UniswapV3Migrator is ILiquidityMigrator {
             })
         );
 
+        // Остаток («пыль») после создания позиции возвращаем создателю токена,
+        // чтобы он не запирался в контракте навсегда.
+        bool tokenIs0 = token < address(weth);
+        _refundDust(
+            token,
+            tokenAmount - (tokenIs0 ? used0 : used1),  // остаток токена
+            ethAmount - (tokenIs0 ? used1 : used0)     // остаток WETH
+        );
+
         emit LiquidityLocked(token, v3Pool, positionId, tokenAmount, ethAmount);
     }
+
+    /// @dev Best-effort возврат остатков создателю пула. Если получатель не
+    ///      принимает средства — миграция всё равно проходит (нет грифинга).
+    function _refundDust(address token, uint256 leftoverToken, uint256 leftoverWeth) internal {
+        address creator = address(0);
+        try IPoolCreator(msg.sender).creator() returns (address c) { creator = c; }
+        catch { return; }
+        if (creator == address(0)) return;
+        if (leftoverToken > 0) IERC20(token).safeTransfer(creator, leftoverToken);
+        if (leftoverWeth > 0) {
+            weth.withdraw(leftoverWeth);
+            (bool ok, ) = creator.call{value: leftoverWeth}("");
+            ok; // проигнорировано намеренно
+        }
+    }
+
+    /// @dev Принимаем ETH при разворачивании WETH.
+    receive() external payable {}
 
     /// @dev Accept NFT transfers from the position manager.
     function onERC721Received(address, address, uint256, bytes calldata)
