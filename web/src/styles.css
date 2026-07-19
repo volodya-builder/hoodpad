@@ -725,3 +725,18 @@ html[data-theme="light"] .king-card { background: var(--card); }
 
 .addr-copy { cursor: pointer; }
 .addr-copy:hover { color: var(--gold); }
+
+/* -------- treasury history feed -------- */
+.trs-row {
+  display: grid; grid-template-columns: 150px 1.3fr 1fr 110px;
+  gap: 14px; align-items: center; padding: 12px 16px;
+  border-bottom: 1px solid var(--border); font-size: 13.5px;
+  color: var(--text); text-decoration: none;
+}
+.trs-row:last-child { border-bottom: none; }
+.trs-row:hover { background: rgba(255, 255, 255, .025); }
+.trs-kind { font-weight: 800; font-size: 12.5px; }
+.tr-in { color: var(--leaf); }
+.tr-buy { color: var(--gold); }
+.tr-burn { color: var(--red); }
+@media (max-width: 640px) { .trs-row { grid-template-columns: 110px 1fr 90px; } .trs-row > :nth-child(3) { display: none; } }

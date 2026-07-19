@@ -6,6 +6,7 @@ import Analytics from "./pages/Analytics.jsx";
 import Profile from "./pages/Profile.jsx";
 import Vote from "./pages/Vote.jsx";
 import About from "./pages/About.jsx";
+import Treasury from "./pages/Treasury.jsx";
 import { Privacy, Terms } from "./pages/Legal.jsx";
 import { connectWallet, reconnectWallet, hasWallet, short, fmt } from "./lib/web3.js";
 import { CHAIN, FACTORY_ADDRESS } from "./lib/config.js";
@@ -150,6 +151,8 @@ export default function App() {
     page = <Analytics />;
   } else if (route === "/vote") {
     page = <Vote wallet={wallet} onConnect={connect} />;
+  } else if (route === "/treasury") {
+    page = <Treasury />;
   } else if (route === "/about") {
     page = <About />;
   } else if (route === "/privacy") {
@@ -172,9 +175,10 @@ export default function App() {
             <span className="logo-word">HOOD</span>
           </a>
           <div className="nav-pills">
-            <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/profile") && !route.startsWith("/vote") && !route.startsWith("/about") ? "on" : ""}`} href="#/">{t("Обзор")}</a>
+            <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/profile") && !route.startsWith("/vote") && !route.startsWith("/treasury") && !route.startsWith("/about") ? "on" : ""}`} href="#/">{t("Обзор")}</a>
             <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>
             <a className={`nav-pill ${route.startsWith("/vote") ? "on" : ""}`} href="#/vote">{t("Голосование")}</a>
+            <a className={`nav-pill ${route.startsWith("/treasury") ? "on" : ""}`} href="#/treasury">{t("Казна")}</a>
             <a className={`nav-pill ${route.startsWith("/about") ? "on" : ""}`} href="#/about">{t("О нас")}</a>
           </div>
           <nav className="nav">
@@ -234,6 +238,7 @@ export default function App() {
               <a href="#/">{t("Обзор")}</a>
               <a href="#/analytics">{t("Аналитика")}</a>
               <a href="#/vote">{t("Голосование")}</a>
+              <a href="#/treasury">{t("Казна")}</a>
               <a href="#/about">{t("О нас")}</a>
               <a href="#/create">{t("Создать")}</a>
               <a href="#/profile">{t("Профиль")}</a>
