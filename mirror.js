@@ -271,17 +271,24 @@ async function imageToDataUrl(imgUrl) {
     if (imgUrl) {
       // несколько IPFS-шлюзов на случай, если какой-то недоступен
       const urls = /^(ipfs:\/\/|Qm|baf)/.test(imgUrl)
-        ? ["https://ipfs.io/ipfs/", "https://cloudflare-ipfs.com/ipfs/", "https://dweb.link/ipfs/"]
-            .map((g) => g + imgUrl.replace(/^ipfs:\/\//, ""))
+        ? [
+            "https://ipfs.io/ipfs/", "https://cloudflare-ipfs.com/ipfs/",
+            "https://dweb.link/ipfs/", "https://gateway.pinata.cloud/ipfs/",
+            "https://4everland.io/ipfs/", "https://w3s.link/ipfs/",
+          ].map((g) => g + imgUrl.replace(/^ipfs:\/\//, ""))
         : [imgUrl];
       let lastErr;
-      for (const u of urls) {
-        try {
-          const r = await fetch(u, { headers: { "User-Agent": UA["User-Agent"] }, signal: AbortSignal.timeout(25000) });
-          if (!r.ok) throw new Error("img " + r.status);
-          buf = Buffer.from(await r.arrayBuffer());
-          break;
-        } catch (e) { lastErr = e; }
+      outer:
+      for (let round = 0; round < 2 && !buf; round++) {
+        for (const u of urls) {
+          try {
+            const r = await fetch(u, { headers: { "User-Agent": UA["User-Agent"] }, signal: AbortSignal.timeout(20000) });
+            if (!r.ok) throw new Error("img " + r.status);
+            buf = Buffer.from(await r.arrayBuffer());
+            break outer;
+          } catch (e) { lastErr = e; }
+        }
+        await sleep(3000);
       }
       if (!buf) throw lastErr ?? new Error("no image");
     } else {
@@ -303,8 +310,8 @@ const account = privateKeyToAccount(CFG.privateKey);
 const hoodPub = createPublicClient({ chain: HOOD.chain, transport: http(undefined, { batch: true, timeout: 30_000, retryCount: 3 }) });
 const hoodWallet = createWalletClient({ account, chain: HOOD.chain, transport: http(undefined, { timeout: 30_000, retryCount: 2 }) });
 
-async function launchOnHood({ name, symbol, meta }) {
-  const image = await imageToDataUrl(meta.image);
+async function launchOnHood({ name, symbol, meta }, preloadedImage) {
+  const image = preloadedImage ?? await imageToDataUrl(meta.image);
   const metadata = {
     description: meta.description ?? "",
     image,
@@ -333,7 +340,11 @@ function underRateLimit() {
 
 async function tick() {
   const fresh = await fetchNewPonsTokens();
-  for (const f of fresh) {
+  // отложенные (например, из-за недокачанной картинки) — в начало очереди
+  const queued = (state.retry ?? []).map((a) => ({ addr: a }));
+  state.retry = [];
+  const queue = [...queued, ...fresh];
+  for (const f of queue) {
     const key = f.addr.toLowerCase();
     if (state.mirrored[key]) continue;
     const tok = await readPonsToken(f.addr);
@@ -342,12 +353,36 @@ async function tick() {
     const dupKey = `${tok.name}|${tok.symbol}`.toLowerCase();
     if (state.mirrored[dupKey]) { state.mirrored[key] = "dup"; saveState(); continue; }
     if (!underRateLimit()) {
-      console.log(`⏸ лимит ${MAX_PER_HOUR}/час — ${tok.symbol} отложен до следующего часа`);
+      console.log(`⏸ лимит ${MAX_PER_HOUR}/час — ${tok.symbol} и остальные отложены, доделаю позже`);
+      for (const rest of queue.slice(queue.indexOf(f))) {
+        const rk = rest.addr.toLowerCase();
+        if (!state.mirrored[rk] && !state.retry.includes(rest.addr)) state.retry.push(rest.addr);
+      }
+      saveState();
       return;
+    }
+    // картинка обязательна: если не скачалась — откладываем токен и пробуем
+    // в следующих проходах (до 4 попыток), чтобы не запускать без аватарки
+    let image = "";
+    if (tok.meta.image) {
+      image = await imageToDataUrl(tok.meta.image);
+      if (!image) {
+        state.imgTries = state.imgTries || {};
+        const tries = (state.imgTries[key] ?? 0) + 1;
+        state.imgTries[key] = tries;
+        saveState();
+        if (tries < 4) {
+          console.log(`🖼 ${tok.symbol}: картинка не скачалась (попытка ${tries}/4) — отложил, попробую снова`);
+          if (!state.retry.includes(f.addr)) state.retry.push(f.addr);
+          saveState();
+          continue;
+        }
+        console.warn(`🖼 ${tok.symbol}: картинка так и не скачалась — запускаю без неё`);
+      }
     }
     console.log(`🚀 Зеркалю: ${tok.name} ($${tok.symbol})…`);
     try {
-      const hash = await launchOnHood(tok);
+      const hash = await launchOnHood(tok, image);
       state.mirrored[key] = hash;
       state.mirrored[dupKey] = hash;
       state.launchTimes.push(Date.now());
