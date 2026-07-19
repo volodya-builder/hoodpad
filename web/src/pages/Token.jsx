@@ -51,8 +51,8 @@ function MiniChart({ points, rate, marks }) {
            onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
         <defs>
           <linearGradient id="tokAreaG" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#b9c94b" stopOpacity=".25" />
-            <stop offset="1" stopColor="#b9c94b" stopOpacity="0" />
+            <stop offset="0" stopColor="#c8f42b" stopOpacity=".25" />
+            <stop offset="1" stopColor="#c8f42b" stopOpacity="0" />
           </linearGradient>
         </defs>
         {[0.25, 0.5, 0.75].map((f) => (
@@ -61,17 +61,17 @@ function MiniChart({ points, rate, marks }) {
                 stroke="currentColor" strokeOpacity="0.07" strokeDasharray="4 5" />
         ))}
         <path d={area} fill="url(#tokAreaG)" />
-        <path d={line} fill="none" stroke="#b9c94b" strokeWidth="2"
+        <path d={line} fill="none" stroke="#c8f42b" strokeWidth="2"
               strokeLinejoin="round" strokeDasharray={empty ? "5 6" : "none"} />
         {!empty && (
-          <circle cx={X(pts.length - 1)} cy={Y(last.mcap)} r="4" fill="#dcea5c" stroke="#0d0e0c" strokeWidth="2" />
+          <circle cx={X(pts.length - 1)} cy={Y(last.mcap)} r="4" fill="#e2ff5c" stroke="#0d0e0c" strokeWidth="2" />
         )}
         {hover !== null && !empty && (
           <g>
             <line x1={X(hover)} x2={X(hover)} y1={PADT} y2={H - PADB}
                   stroke="currentColor" strokeOpacity="0.25" />
             <circle cx={X(hover)} cy={Y(pts[hover].mcap)} r="4.5"
-                    fill="#dcea5c" stroke="#0d0e0c" strokeWidth="2" />
+                    fill="#e2ff5c" stroke="#0d0e0c" strokeWidth="2" />
           </g>
         )}
         {(marks ?? []).map((mk, k) => {
@@ -84,7 +84,7 @@ function MiniChart({ points, rate, marks }) {
           return (
             <g key={`mk${k}`}>
               <line x1={X(best)} x2={X(best)} y1={PADT} y2={H - PADB}
-                    stroke={mk.kind === "burned" ? "#e05252" : "#dcea5c"}
+                    stroke={mk.kind === "burned" ? "#e05252" : "#e2ff5c"}
                     strokeOpacity="0.35" strokeDasharray="3 4" />
               <text x={X(best)} y={PADT + 13} textAnchor="middle" fontSize="11">
                 {mk.kind === "burned" ? "🔥" : "🛒"}
