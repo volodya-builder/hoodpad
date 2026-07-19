@@ -203,6 +203,13 @@ export default function App() {
           </div>
           <nav className="nav">
             <button className="icon-btn" onClick={() => setSearchOpen(true)} title="Поиск (Ctrl+K)">⌕</button>
+            <a className={`icon-btn ${route.startsWith("/profile") ? "on" : ""}`} href="#/profile" title={t("Профиль")}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 20c1.8-3.4 4.5-5 8-5s6.2 1.6 8 5" />
+              </svg>
+            </a>
             <button className="icon-btn" onClick={() => setLang(lang === "en" ? "ru" : "en")}
                     title="Язык / Language" style={{ width: "auto", padding: "0 13px", fontSize: 12, fontWeight: 800 }}>
               {lang === "en" ? "RU" : "EN"}

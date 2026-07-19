@@ -766,3 +766,7 @@ html[data-theme="light"] .king-card { background: var(--card); }
   cursor: pointer; margin: 2px 0 8px;
 }
 .adm-slider.burn { accent-color: var(--red); }
+
+/* -------- header profile icon -------- */
+a.icon-btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; color: var(--text); }
+.icon-btn.on { border-color: var(--gold); color: var(--gold); }
