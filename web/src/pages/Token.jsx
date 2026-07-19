@@ -115,11 +115,15 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [tf, setTf] = useState("all"); // таймфрейм графика
   const [tradePct, setTradePct] = useState(0); // ползунок суммы
   const [slip, setSlip] = useState(() => {
-    try { return Number(localStorage.getItem("hood_slip")) || 3; } catch (e) { return 3; }
+    try {
+      const v = localStorage.getItem("hood_slip");
+      if (v === null || v === "auto") return "auto";
+      return Number(v) || "auto";
+    } catch (e) { return "auto"; }
   });
-  const setSlipSave = (s) => {
-    setSlip(s);
-    try { localStorage.setItem("hood_slip", String(s)); } catch (e) { /* ignore */ }
+  const setSlipSave = (s2) => {
+    setSlip(s2);
+    try { localStorage.setItem("hood_slip", String(s2)); } catch (e) { /* ignore */ }
   };
 
   // ETH → доллары мелким шрифтом
@@ -328,7 +332,11 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     if (!quote) return;
     setBusy(true);
     try {
-      const slipBps = BigInt(Math.round(slip * 100));
+      const autoPct = impact !== null
+        ? Math.min(30, Math.max(0.5, impact * 1.3 + 0.5))
+        : 1;
+      const slipPct = slip === "auto" ? autoPct : Number(slip);
+      const slipBps = BigInt(Math.round(slipPct * 100));
       let hash;
       if (tab === "buy") {
         const minOut = quote.value - (quote.value * slipBps) / 10000n;
@@ -694,11 +702,27 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
 
             <div className="slip-row">
               <span className="dim">{t("Слиппедж")}</span>
-              {SLIPPAGE_CHOICES.map((s) => (
-                <div key={s} className={`fpill slip-pill ${slip === s ? "on" : ""}`} onClick={() => setSlipSave(s)}>
-                  {s}%
+              <div className={`fpill slip-pill ${slip === "auto" ? "on" : ""}`}
+                   onClick={() => setSlipSave("auto")}
+                   title={t("Подбирается автоматически под размер сделки")}>
+                {t("Авто")}{slip === "auto" && impact !== null
+                  ? ` · ${fmt(Math.min(30, Math.max(0.5, impact * 1.3 + 0.5)), 1)}%` : ""}
+              </div>
+              {SLIPPAGE_CHOICES.map((s2) => (
+                <div key={s2} className={`fpill slip-pill ${slip === s2 ? "on" : ""}`} onClick={() => setSlipSave(s2)}>
+                  {s2}%
                 </div>
               ))}
+              <input className={`slip-custom ${typeof slip === "number" && !SLIPPAGE_CHOICES.includes(slip) ? "on" : ""}`}
+                     inputMode="decimal"
+                     placeholder="%"
+                     value={typeof slip === "number" && !SLIPPAGE_CHOICES.includes(slip) ? slip : ""}
+                     onChange={(e) => {
+                       const v = e.target.value.replace(",", ".");
+                       if (v === "") { setSlipSave("auto"); return; }
+                       const n = Number(v);
+                       if (n > 0 && n <= 50) setSlipSave(n);
+                     }} />
             </div>
 
             {quote && (
@@ -731,9 +755,6 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 ? `${t("Купить")} ${data.symbol}`
                 : `${t("Продать")} ${data.symbol}`}
             </button>
-            <p className="dim" style={{ marginTop: 12 }}>
-              {t("Комиссия 1%")} · {t("слиппедж")} {slip}% · {split.creator}% {t("создателю")}{split.team > 0 ? ` · ${split.team}% ${t("команде")}` : ""} · {split.buyback}% {t("на выкуп")}
-            </p>
             {error && <div className="error">{error}</div>}
           </div>
         )}

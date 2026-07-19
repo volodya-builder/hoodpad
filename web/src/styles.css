@@ -800,3 +800,11 @@ html[data-theme="light"] .verify-note { border-color: #cfcec6; }
   pointer-events: none; white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+
+/* -------- custom slippage input -------- */
+.slip-custom {
+  width: 56px; padding: 4px 8px; font-size: 12px; text-align: center;
+  border-radius: 999px; background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); outline: none;
+}
+.slip-custom.on, .slip-custom:focus { border-color: var(--gold); color: var(--gold); }
