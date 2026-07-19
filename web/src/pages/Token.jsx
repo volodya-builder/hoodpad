@@ -11,31 +11,88 @@ import { useLang } from "../lib/i18n.jsx";
 
 const SLIPPAGE_CHOICES = [0.5, 1, 3, 5]; // %
 
-function MiniChart({ points }) {
-  if (!points || points.length < 2) {
-    return <div className="dim" style={{ padding: "20px 0" }}>{window.__hoodT ? window.__hoodT("График появится после первых сделок.") : "График появится после первых сделок."}</div>;
-  }
-  const W = 640, H = 180, PADB = 6, PADT = 8;
+function MiniChart({ points, rate }) {
+  const [hover, setHover] = React.useState(null);
+  const W = 640, H = 240, PADB = 22, PADT = 10, PADL = 6, PADR = 6;
+
+  // Нет сделок — рисуем базовую линию стартовой капитализации
+  const pts = (points && points.length >= 2)
+    ? points
+    : [{ i: 0, mcap: 1.625, ts: null }, { i: 1, mcap: 1.625, ts: null }];
+  const empty = !(points && points.length >= 2);
+
   let mn = Infinity, mx = -Infinity;
-  points.forEach((p) => { mn = Math.min(mn, p.mcap); mx = Math.max(mx, p.mcap); });
-  if (mx - mn < mx * 0.02) { mx *= 1.01; mn *= 0.99; }
-  const X = (i) => (i / (points.length - 1)) * (W - 8) + 4;
+  pts.forEach((p) => { mn = Math.min(mn, p.mcap); mx = Math.max(mx, p.mcap); });
+  if (mx - mn < mx * 0.02) { mx *= 1.02; mn *= 0.98; }
+  const X = (i) => PADL + (i / (pts.length - 1)) * (W - PADL - PADR);
   const Y = (v) => PADT + (1 - (v - mn) / (mx - mn)) * (H - PADT - PADB);
-  const line = points.map((p, i) => `${i ? "L" : "M"}${X(i).toFixed(1)} ${Y(p.mcap).toFixed(1)}`).join(" ");
-  const area = `${line} L${X(points.length - 1).toFixed(1)} ${H - PADB} L4 ${H - PADB} Z`;
-  const last = points[points.length - 1];
+  const line = pts.map((p, i) => `${i ? "L" : "M"}${X(i).toFixed(1)} ${Y(p.mcap).toFixed(1)}`).join(" ");
+  const area = `${line} L${X(pts.length - 1).toFixed(1)} ${H - PADB} L${PADL} ${H - PADB} Z`;
+  const last = pts[pts.length - 1];
+  const usdV = (m) => usd(m * rate);
+  const timeLbl = (ts) => {
+    if (!ts) return "";
+    const d = new Date(ts);
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  };
+  const firstTs = pts.find((p) => p.ts)?.ts;
+  const lastTs = [...pts].reverse().find((p) => p.ts)?.ts;
+
+  const onMove = (e) => {
+    const box = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - box.left) / box.width) * W;
+    const idx = Math.round(((x - PADL) / (W - PADL - PADR)) * (pts.length - 1));
+    setHover(Math.max(0, Math.min(pts.length - 1, idx)));
+  };
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", display: "block", marginTop: 8 }}>
-      <defs>
-        <linearGradient id="tokAreaG" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#b9c94b" stopOpacity=".25" />
-          <stop offset="1" stopColor="#b9c94b" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={area} fill="url(#tokAreaG)" />
-      <path d={line} fill="none" stroke="#b9c94b" strokeWidth="2" strokeLinejoin="round" />
-      <circle cx={X(points.length - 1)} cy={Y(last.mcap)} r="4" fill="#dcea5c" stroke="#0d0e0c" strokeWidth="2" />
-    </svg>
+    <div style={{ position: "relative" }}>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", display: "block", marginTop: 8 }}
+           onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
+        <defs>
+          <linearGradient id="tokAreaG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#b9c94b" stopOpacity=".25" />
+            <stop offset="1" stopColor="#b9c94b" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {[0.25, 0.5, 0.75].map((f) => (
+          <line key={f} x1={PADL} x2={W - PADR}
+                y1={PADT + f * (H - PADT - PADB)} y2={PADT + f * (H - PADT - PADB)}
+                stroke="currentColor" strokeOpacity="0.07" strokeDasharray="4 5" />
+        ))}
+        <path d={area} fill="url(#tokAreaG)" />
+        <path d={line} fill="none" stroke="#b9c94b" strokeWidth="2"
+              strokeLinejoin="round" strokeDasharray={empty ? "5 6" : "none"} />
+        {!empty && (
+          <circle cx={X(pts.length - 1)} cy={Y(last.mcap)} r="4" fill="#dcea5c" stroke="#0d0e0c" strokeWidth="2" />
+        )}
+        {hover !== null && !empty && (
+          <g>
+            <line x1={X(hover)} x2={X(hover)} y1={PADT} y2={H - PADB}
+                  stroke="currentColor" strokeOpacity="0.25" />
+            <circle cx={X(hover)} cy={Y(pts[hover].mcap)} r="4.5"
+                    fill="#dcea5c" stroke="#0d0e0c" strokeWidth="2" />
+          </g>
+        )}
+        <text x={PADL} y={PADT + 4} className="chart-axis">{usdV(mx)}</text>
+        <text x={PADL} y={H - PADB - 4} className="chart-axis">{usdV(mn)}</text>
+        {firstTs && <text x={PADL} y={H - 6} className="chart-axis">{timeLbl(firstTs)}</text>}
+        {lastTs && <text x={W - PADR} y={H - 6} className="chart-axis" textAnchor="end">{timeLbl(lastTs)}</text>}
+      </svg>
+      {hover !== null && !empty && (
+        <div className="chart-tip"
+             style={{ left: `${(X(hover) / W) * 100}%` }}>
+          <b>{usdV(pts[hover].mcap)}</b>
+          {pts[hover].ts ? <span> · {timeAgo(pts[hover].ts)}</span> : null}
+        </div>
+      )}
+      {empty && (
+        <div className="dim" style={{ position: "absolute", inset: 0, display: "flex",
+             alignItems: "center", justifyContent: "center", fontSize: 13, pointerEvents: "none" }}>
+          {window.__hoodT ? window.__hoodT("График появится после первых сделок.") : "График появится после первых сделок."}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -56,6 +113,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCA, setCopiedCA] = useState(false);
   const [tf, setTf] = useState("all"); // таймфрейм графика
+  const [tradePct, setTradePct] = useState(0); // ползунок суммы
   const [slip, setSlip] = useState(() => {
     try { return Number(localStorage.getItem("hood_slip")) || 3; } catch (e) { return 3; }
   });
@@ -157,15 +215,19 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         publicClient.readContract({ address: pool, abi: poolAbi, functionName: "creator" }),
       ]);
     let balance = 0n;
+    let walletEth = 0n;
     if (wallet) {
-      balance = await publicClient.readContract({
-        address: tokenAddress,
-        abi: tokenAbi,
-        functionName: "balanceOf",
-        args: [wallet.account],
-      });
+      [balance, walletEth] = await Promise.all([
+        publicClient.readContract({
+          address: tokenAddress,
+          abi: tokenAbi,
+          functionName: "balanceOf",
+          args: [wallet.account],
+        }),
+        publicClient.getBalance({ address: wallet.account }).catch(() => 0n),
+      ]);
     }
-    setData({ pool, name, symbol, uri, price, sold, cap, reserve, graduated, migrated, creator, balance });
+    setData({ pool, name, symbol, uri, price, sold, cap, reserve, graduated, migrated, creator, balance, walletEth });
     try {
       if (uri.startsWith("data:application/json;base64,")) {
         setMeta(JSON.parse(decodeURIComponent(escape(atob(uri.split(",")[1])))));
@@ -465,7 +527,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               ))}
             </div>
           </div>
-          <MiniChart points={chartPoints} />
+          <MiniChart points={chartPoints} rate={rate} />
         </div>
 
         <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
@@ -559,10 +621,10 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         ) : (
           <div className="panel" style={{ margin: 0, maxWidth: "none" }}>
             <div className="tabs">
-              <div className={`tab ${tab === "buy" ? "active-buy" : ""}`} onClick={() => { setTab("buy"); setAmount(""); }}>
+              <div className={`tab ${tab === "buy" ? "active-buy" : ""}`} onClick={() => { setTab("buy"); setAmount(""); setTradePct(0); }}>
                 {t("Купить")}
               </div>
-              <div className={`tab ${tab === "sell" ? "active-sell" : ""}`} onClick={() => { setTab("sell"); setAmount(""); }}>
+              <div className={`tab ${tab === "sell" ? "active-sell" : ""}`} onClick={() => { setTab("sell"); setAmount(""); setTradePct(0); }}>
                 {t("Продать")}
               </div>
             </div>
@@ -570,10 +632,44 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <label>{tab === "buy" ? t("Вы платите (ETH)") : `${t("Вы продаёте")} (${data.symbol})`}</label>
             <input
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => {
+                setAmount(e.target.value);
+                const n = Number(e.target.value);
+                if (tab === "buy") {
+                  const avail = Math.max(0, Number(formatEther(data.walletEth ?? 0n)) - 0.0003);
+                  setTradePct(avail > 0 && n > 0 ? Math.min(100, Math.round((n / avail) * 100)) : 0);
+                } else {
+                  const bal = Number(formatEther(data.balance));
+                  setTradePct(bal > 0 && n > 0 ? Math.min(100, Math.round((n / bal) * 100)) : 0);
+                }
+              }}
               placeholder="0.0"
               inputMode="decimal"
             />
+            {wallet && (
+              <>
+                <div className="slider-row" style={{ marginTop: 10 }}>
+                  <span className="dim">
+                    {tab === "buy"
+                      ? `${t("От баланса")} ${fmt(Number(formatEther(data.walletEth ?? 0n)), 4)} ETH`
+                      : `${t("От баланса")} ${fmt(Number(formatEther(data.balance)), 0)} ${data.symbol}`}
+                  </span>
+                  <b style={{ color: tab === "buy" ? "var(--gold)" : "var(--red)" }}>{tradePct}%</b>
+                </div>
+                <input type="range" className={`adm-slider ${tab === "sell" ? "burn" : ""}`}
+                       min="0" max="100" step="1" value={tradePct}
+                       onChange={(e) => {
+                         const v = Number(e.target.value);
+                         setTradePct(v);
+                         if (tab === "buy") {
+                           const avail = Math.max(0, Number(formatEther(data.walletEth ?? 0n)) - 0.0003);
+                           setAmount(v > 0 ? (avail * v / 100).toFixed(6) : "");
+                         } else {
+                           setAmount(v > 0 ? formatEther((data.balance * BigInt(v)) / 100n) : "");
+                         }
+                       }} />
+              </>
+            )}
             {tab === "sell" && wallet && (
               <p className="dim" style={{ margin: "6px 0 0" }}>
                 {t("Баланс:")} {fmt(formatEther(data.balance), 2)}{" "}

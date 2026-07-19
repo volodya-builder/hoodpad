@@ -790,3 +790,13 @@ html[data-theme="light"] .feed-chip { background: #ffffff; }
 html[data-theme="light"] .holder-row { border-color: #e6e5db; }
 html[data-theme="light"] .trs-row, html[data-theme="light"] .lb-row { border-color: #e6e5db; }
 html[data-theme="light"] .verify-note { border-color: #cfcec6; }
+
+/* -------- token chart v2 -------- */
+.chart-axis { font-size: 10px; fill: currentColor; opacity: .45; font-family: ui-monospace, monospace; }
+.chart-tip {
+  position: absolute; top: 6px; transform: translateX(-50%);
+  background: var(--card, #191a17); border: 1px solid var(--border);
+  border-radius: 8px; padding: 5px 10px; font-size: 12px;
+  pointer-events: none; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
