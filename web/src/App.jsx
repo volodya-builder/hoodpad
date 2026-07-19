@@ -7,9 +7,11 @@ import Profile from "./pages/Profile.jsx";
 import Vote from "./pages/Vote.jsx";
 import About from "./pages/About.jsx";
 import Treasury from "./pages/Treasury.jsx";
+import Admin from "./pages/Admin.jsx";
 import { Privacy, Terms } from "./pages/Legal.jsx";
-import { connectWallet, reconnectWallet, hasWallet, short, fmt } from "./lib/web3.js";
-import { CHAIN, FACTORY_ADDRESS } from "./lib/config.js";
+import { connectWallet, reconnectWallet, hasWallet, short, fmt, publicClient } from "./lib/web3.js";
+import { CHAIN, FACTORY_ADDRESS, TREASURY_ADDRESS } from "./lib/config.js";
+import { treasuryAbi } from "./lib/abi.js";
 import { loadTokens } from "./lib/data.js";
 import { useEthUsd, usd } from "./lib/price.js";
 import { useLang } from "./lib/i18n.jsx";
@@ -78,6 +80,7 @@ export default function App() {
   const { lang, t, setLang } = useLang();
   const route = useHashRoute();
   const [wallet, setWallet] = useState(null); // { account, walletClient }
+  const [isOwner, setIsOwner] = useState(false);
   const [walletMenu, setWalletMenu] = useState(false);
   useEffect(() => {
     const close = (e) => { if (!e.target.closest(".wallet-wrap")) setWalletMenu(false); };
@@ -142,6 +145,18 @@ export default function App() {
     return () => provider.removeListener?.("accountsChanged", onAccounts);
   }, [connect]);
 
+  // владелец казны видит пункт «Админ» в меню кошелька
+  useEffect(() => {
+    let alive = true;
+    if (!wallet) { setIsOwner(false); return; }
+    publicClient.readContract({
+      address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "owner",
+    })
+      .then((o) => alive && setIsOwner(o.toLowerCase() === wallet.account.toLowerCase()))
+      .catch(() => alive && setIsOwner(false));
+    return () => { alive = false; };
+  }, [wallet]);
+
   const factoryMissing =
     FACTORY_ADDRESS === "0x0000000000000000000000000000000000000000";
 
@@ -156,6 +171,8 @@ export default function App() {
     page = <Vote wallet={wallet} onConnect={connect} />;
   } else if (route === "/treasury") {
     page = <Treasury />;
+  } else if (route === "/admin") {
+    page = <Admin wallet={wallet} onConnect={connect} />;
   } else if (route === "/about") {
     page = <About />;
   } else if (route === "/privacy") {
@@ -201,6 +218,10 @@ export default function App() {
                 <div className={`wallet-menu ${walletMenu ? "open" : ""}`}>
                   <a className="wallet-item" href="#/profile" onClick={() => setWalletMenu(false)}
                      style={{ display: "block" }}>{t("Профиль")}</a>
+                  {isOwner && (
+                    <a className="wallet-item" href="#/admin" onClick={() => setWalletMenu(false)}
+                       style={{ display: "block" }}>⚙ {t("Админ-панель")}</a>
+                  )}
                   <div className="wallet-item" onClick={() => {
                     setWallet(null); setWalletMenu(false);
                     try { localStorage.removeItem("hood_wallet"); } catch (e) { /* ignore */ }
