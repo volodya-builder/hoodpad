@@ -5,34 +5,6 @@ import { useEthUsd, usd } from "../lib/price.js";
 import { timeAgo, loadTokens } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 
-/** Король горы — самый близкий к градации токен. */
-function KingCard({ king }) {
-  const { t } = useLang();
-  const rate = useEthUsd();
-  if (!king) return null;
-  const progress = Number((king.sold * 10000n) / king.cap) / 100;
-  const mcapEth = Number(formatEther(king.price)) * 1_000_000_000;
-  return (
-    <a className="king-card" href={`#/token/${king.token}`}>
-      <div className="king-img">{king.meta.image ? <img src={king.meta.image} alt="" /> : "🖼️"}</div>
-      <div className="king-info">
-        <div className="king-tag">👑 {t("Король горы")}</div>
-        <div className="king-name">
-          {king.name} <span className="ticker">${king.symbol}</span>
-        </div>
-        <div className="king-stats">
-          {usd(mcapEth * rate)} MC · {fmt(Number(formatEther(king.reserve)), 3)} / 6.5 ETH
-          {king.createdAt ? <> · {timeAgo(king.createdAt)}</> : null}
-        </div>
-        <div className="pbar king-bar">
-          <div style={{ width: `${Math.min(progress, 100)}%` }} />
-        </div>
-      </div>
-      <div className="king-pct">{fmt(Math.min(progress, 100), 0)}%</div>
-    </a>
-  );
-}
-
 function loadFavs() {
   try { return new Set(JSON.parse(localStorage.getItem("hood_favs") || "[]")); }
   catch (e) { return new Set(); }
@@ -127,12 +99,6 @@ export default function Home({ onSearch }) {
       </div>
       {error && <div className="error">{error}</div>}
       {!tokens && !error && <div className="center">{t("Загружаю токены из блокчейна…")}</div>}
-
-      <KingCard
-        king={(tokens ?? [])
-          .filter((x) => !x.graduated && x.reserve > 0n)
-          .sort((a, b) => (b.reserve > a.reserve ? 1 : -1))[0]}
-      />
 
       <div className="grad-wrap">
         <div className="sec-head">
