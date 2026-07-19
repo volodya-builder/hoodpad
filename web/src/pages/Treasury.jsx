@@ -3,7 +3,7 @@ import { formatEther, parseAbiItem } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { treasuryAbi } from "../lib/abi.js";
 import { TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
-import { loadTokens, timeAgo, subgraphTreasuryOps, useClock } from "../lib/data.js";
+import { loadTokens, timeAgo, subgraphTreasuryOps, useClock, recentFromBlock } from "../lib/data.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { useLang } from "../lib/i18n.jsx";
 
@@ -11,8 +11,15 @@ const evReceived = parseAbiItem("event Received(address indexed from, uint256 am
 const evBuyback = parseAbiItem("event Buyback(address indexed token, address indexed pool, uint256 ethIn, uint256 tokensOut)");
 const evBurned = parseAbiItem("event Burned(address indexed token, uint256 amount)");
 
-// Память вкладки между заходами
+// Память вкладки между заходами (+ localStorage, чтобы не было "Читаю блокчейн" после перезагрузки)
 let _tresState = null;
+const TRES_LS = "hood_cache_treasury_v1";
+const _bigR = (k, v) => (typeof v === "bigint" ? { __b: v.toString() } : v);
+const _bigV = (k, v) => (v && typeof v === "object" && "__b" in v ? BigInt(v.__b) : v);
+try {
+  const raw = localStorage.getItem(TRES_LS);
+  if (raw) _tresState = JSON.parse(raw, _bigV);
+} catch (e) { /* ignore */ }
 
 export default function Treasury() {
   useClock(5000);
@@ -32,9 +39,9 @@ export default function Treasury() {
     (async () => {
       const [tokens, bal, received, spent] = await Promise.all([
         loadTokens().catch(() => []),
-        publicClient.getBalance({ address: TREASURY_ADDRESS }),
-        publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "totalReceived" }).catch(() => 0n),
-        publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "totalSpent" }).catch(() => 0n),
+        publicClient.getBalance({ address: TREASURY_ADDRESS }).catch(() => _tresState?.bal ?? 0n),
+        publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "totalReceived" }).catch(() => _tresState?.received ?? 0n),
+        publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "totalSpent" }).catch(() => _tresState?.spent ?? 0n),
       ]);
       const symByAddr = {};
       for (const tk of tokens) symByAddr[tk.token.toLowerCase()] = tk.symbol;
@@ -69,7 +76,7 @@ export default function Treasury() {
         const logs = await publicClient.getLogs({
           address: TREASURY_ADDRESS,
           events: [evReceived, evBuyback, evBurned],
-          fromBlock: 0n, toBlock: "latest",
+          fromBlock: await recentFromBlock(), toBlock: "latest",
         }).catch(() => []);
         logs.sort((a, b) => Number(b.blockNumber - a.blockNumber) || (b.logIndex - a.logIndex));
         let items = logs.map((l) => ({ l, ts: null }));
@@ -108,8 +115,9 @@ export default function Treasury() {
       if (!alive) return;
       const next = { bal, received, spent, burnedTotal, rows };
       _tresState = next;
+      try { localStorage.setItem(TRES_LS, JSON.stringify(next, _bigR)); } catch (e) { /* ignore */ }
       setState(next);
-    })().catch((e) => alive && setError(e.shortMessage || e.message));
+    })().catch((e) => { if (alive && !_tresState) setError(e.shortMessage || e.message); });
     return () => { alive = false; };
   }, []);
 

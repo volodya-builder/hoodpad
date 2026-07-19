@@ -3,15 +3,30 @@ import {
   createWalletClient,
   custom,
   http,
+  fallback,
   numberToHex,
 } from "viem";
-import { CHAIN } from "./config.js";
+import { CHAIN, RPC_URLS } from "./config.js";
+
+// Устойчивый транспорт: несколько RPC с автопереключением при сбое.
+// Каждый эндпоинт повторяет запрос до 4 раз с нарастающей паузой, ждёт до 20с,
+// и склеивает параллельные вызовы в пакеты (batch). Если один RPC лёг —
+// viem сам уходит на следующий, а через минуту снова пробует основной.
+const rpcTransport = fallback(
+  RPC_URLS.map((url) =>
+    http(url, {
+      batch: { wait: 16, batchSize: 20 },
+      timeout: 20_000,
+      retryCount: 4,
+      retryDelay: 400,
+    })
+  ),
+  { rank: false, retryCount: 2 }
+);
 
 export const publicClient = createPublicClient({
   chain: CHAIN,
-  // batch: true склеивает параллельные eth_call в пакетные JSON-RPC запросы —
-  // вместо десятков HTTP-запросов уходит несколько.
-  transport: http(undefined, { batch: true }),
+  transport: rpcTransport,
 });
 
 // ---------------------------------------------------------------- providers

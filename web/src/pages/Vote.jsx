@@ -27,7 +27,13 @@ function countdown(sec) {
 }
 
 // Память вкладки между заходами: повторное открытие — мгновенное.
+// Плюс сохраняем в localStorage, чтобы и после перезагрузки не было "Reading the chain".
 let _voteState = null;
+const VOTE_LS = "hood_cache_vote_v1";
+try {
+  const raw = localStorage.getItem(VOTE_LS);
+  if (raw) _voteState = JSON.parse(raw);
+} catch (e) { /* ignore */ }
 
 export default function Vote({ wallet, onConnect }) {
   const { t } = useLang();
@@ -52,32 +58,44 @@ export default function Vote({ wallet, onConnect }) {
 
     let votes;
     try {
-      votes = await subgraphVotes(ep); // индексатор: один быстрый запрос
+      votes = await subgraphVotes(ep); // индексатор: один быстрый запрос (с повторами внутри)
     } catch (e) {
-      // запасной путь: события из блокчейна
-      const logs = await publicClient.getLogs({
-        address: VOTE_ADDRESS, event: voteEvent, args: { epoch: ep },
-        fromBlock: 0n, toBlock: "latest",
-      });
-      votes = logs.map((l) => ({
-        voter: l.args.voter, token: l.args.token.toLowerCase(),
-        block: Number(l.blockNumber), ts: null,
-      }));
-      if (votes.length > 0) {
-        try {
-          const minB = Math.min(...votes.map((v) => v.block));
-          const [latest, oldest] = await Promise.all([
-            publicClient.getBlock(),
-            publicClient.getBlock({ blockNumber: BigInt(minB) }),
-          ]);
-          const span = Number(latest.number) - minB;
-          const avg = span > 0 ? (Number(latest.timestamp) - Number(oldest.timestamp)) / span : 0;
-          for (const v of votes) {
-            v.ts = (Number(oldest.timestamp) + (v.block - minB) * avg) * 1000;
-          }
-        } catch (e2) { /* останутся номера блоков */ }
+      // Запасной путь: события из блокчейна, но БЕЗ сканирования от нулевого блока
+      // (это убивало публичный RPC). Смотрим только последние ~1.2 млн блоков —
+      // раунд длится 7 дней, этого с запасом хватает.
+      let latest;
+      try { latest = await publicClient.getBlockNumber(); } catch (e0) { latest = null; }
+      if (latest === null) {
+        // RPC тоже недоступен — оставляем то, что уже показано, не роняем страницу
+        if (_voteState) return;
+        votes = [];
+      } else {
+        const LOOKBACK = 1_200_000n;
+        const fromB = latest > LOOKBACK ? latest - LOOKBACK : 0n;
+        const logs = await publicClient.getLogs({
+          address: VOTE_ADDRESS, event: voteEvent, args: { epoch: ep },
+          fromBlock: fromB, toBlock: "latest",
+        });
+        votes = logs.map((l) => ({
+          voter: l.args.voter, token: l.args.token.toLowerCase(),
+          block: Number(l.blockNumber), ts: null,
+        }));
+        if (votes.length > 0) {
+          try {
+            const minB = Math.min(...votes.map((v) => v.block));
+            const [lb, oldest] = await Promise.all([
+              publicClient.getBlock(),
+              publicClient.getBlock({ blockNumber: BigInt(minB) }),
+            ]);
+            const span = Number(lb.number) - minB;
+            const avg = span > 0 ? (Number(lb.timestamp) - Number(oldest.timestamp)) / span : 0;
+            for (const v of votes) {
+              v.ts = (Number(oldest.timestamp) + (v.block - minB) * avg) * 1000;
+            }
+          } catch (e2) { /* останутся номера блоков */ }
+        }
+        votes.sort((a, b) => b.block - a.block);
       }
-      votes.sort((a, b) => b.block - a.block);
     }
 
     const tally = {};
@@ -91,13 +109,15 @@ export default function Vote({ wallet, onConnect }) {
       .map((tk) => ({ ...tk, votes: tally[tk.token.toLowerCase()] ?? 0 }))
       .sort((a, b) => b.votes - a.votes);
 
-    const next = { rows, votes, symByAddr, total: votes.length, endsIn, ep };
+    const next = { rows, votes, symByAddr, total: votes.length, endsIn, ep: ep.toString() };
     _voteState = next;
+    try { localStorage.setItem(VOTE_LS, JSON.stringify(next)); } catch (e) { /* ignore */ }
     setState(next);
   }, [enabled]);
 
   useEffect(() => {
-    load().catch((e) => setError(e.shortMessage || e.message));
+    // Ошибку показываем ТОЛЬКО если совсем нечего показать. Есть кэш — молча повторим.
+    load().catch((e) => { if (!_voteState) setError(e.shortMessage || e.message); });
     const id = setInterval(() => load().catch(() => {}), 15000);
     return () => clearInterval(id);
   }, [load]);

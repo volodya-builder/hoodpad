@@ -21,17 +21,37 @@ const PAGE = 96n;
 export const SUBGRAPH_URL =
   "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood/1.0.0/gn";
 
-async function gql(query) {
-  const r = await fetch(SUBGRAPH_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query }),
-    signal: AbortSignal.timeout(5000),
-  });
-  if (!r.ok) throw new Error("subgraph " + r.status);
-  const j = await r.json();
-  if (j.errors) throw new Error(j.errors[0]?.message || "subgraph error");
-  return j.data;
+async function gql(query, attempts = 3) {
+  let lastErr;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const r = await fetch(SUBGRAPH_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!r.ok) throw new Error("subgraph " + r.status);
+      const j = await r.json();
+      if (j.errors) throw new Error(j.errors[0]?.message || "subgraph error");
+      return j.data;
+    } catch (e) {
+      lastErr = e;
+      if (i < attempts - 1) await new Promise((res) => setTimeout(res, 500 * (i + 1)));
+    }
+  }
+  throw lastErr;
+}
+
+// Публичный RPC отклоняет getLogs на огромных диапазонах. Считаем безопасный
+// стартовый блок: не глубже LOOKBACK от текущего (раунды/история за неделю
+// целиком покрываются, а полную историю всё равно отдаёт индексатор).
+const LOG_LOOKBACK = 1_200_000n;
+export async function recentFromBlock(lookback = LOG_LOOKBACK) {
+  try {
+    const latest = await publicClient.getBlockNumber();
+    return latest > lookback ? latest - lookback : 0n;
+  } catch (e) { return 0n; }
 }
 
 const VIRT_WEI = 1625000000000000000n;      // 1.625 ETH
@@ -246,7 +266,7 @@ async function _poolTradesFresh(pool) {
 
 async function _poolTradesRpc(pool) {
   const logs = await publicClient.getLogs({
-    address: pool, events: tradeEvents, fromBlock: 0n, toBlock: "latest",
+    address: pool, events: tradeEvents, fromBlock: await recentFromBlock(), toBlock: "latest",
   });
   logs.sort((a, b) => (a.blockNumber === b.blockNumber
     ? Number(a.logIndex - b.logIndex) : Number(a.blockNumber - b.blockNumber)));
@@ -355,7 +375,7 @@ export async function loadCreationTimes(addrs) {
   if (still.length) {
     try {
       const logs = await publicClient.getLogs({
-        address: FACTORY_ADDRESS, event: createdEvent, fromBlock: 0n, toBlock: "latest",
+        address: FACTORY_ADDRESS, event: createdEvent, fromBlock: await recentFromBlock(), toBlock: "latest",
       });
       for (const l of logs) {
         const k = l.args.token.toLowerCase();

@@ -7,7 +7,7 @@ import { treasuryAbi, poolExtraAbi } from "../lib/abi.js";
 const poolExtraAbi2 = parseAbi(["function creator() view returns (address)"]);
 import { TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
 import { useEthUsd, usd } from "../lib/price.js";
-import { loadTokens, poolTrades, useSplit } from "../lib/data.js";
+import { loadTokens, poolTrades, useSplit, recentFromBlock } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 
 const PERIODS = [
@@ -128,7 +128,7 @@ export default function Analytics() {
       const bought = bb.reduce((s, [b]) => s + Number(formatEther(b)), 0);
       const burned = bb.reduce((s, [, x]) => s + Number(formatEther(x)), 0);
       const buybackCount = await publicClient
-        .getLogs({ address: TREASURY_ADDRESS, event: buybackEvent, fromBlock: 0n, toBlock: "latest" })
+        .getLogs({ address: TREASURY_ADDRESS, event: buybackEvent, fromBlock: await recentFromBlock(), toBlock: "latest" })
         .then((l) => l.length)
         .catch(() => null);
 

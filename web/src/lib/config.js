@@ -54,3 +54,19 @@ export const VOTE_ADDRESS =
 export const CHAT_DB_URL = (import.meta.env.VITE_CHAT_DB_URL ?? "https://hood-chat-4b664-default-rtdb.europe-west1.firebasedatabase.app").replace(/\/$/, "");
 
 export const EXPLORER = CHAIN.blockExplorers?.default?.url ?? "";
+
+// Список RPC-эндпоинтов с автоматическим переключением при сбое.
+// Можно задать приватный (Alchemy и т.п.) через VITE_RPC_URL или сохранить
+// в localStorage["hood_rpc"] — он встанет ПЕРВЫМ, публичный останется резервом.
+function rpcList() {
+  const def = CHAIN.rpcUrls?.default?.http ?? [];
+  const urls = [...def];
+  const envUrl = import.meta.env.VITE_RPC_URL;
+  if (envUrl) urls.unshift(envUrl);
+  try {
+    const ls = localStorage.getItem("hood_rpc");
+    if (ls && /^https?:\/\//.test(ls)) urls.unshift(ls.trim());
+  } catch (e) { /* ignore */ }
+  return [...new Set(urls)]; // без дублей, приоритетные первыми
+}
+export const RPC_URLS = rpcList();
