@@ -30,17 +30,17 @@ export const localChain = defineChain({
 });
 
 // Active network: switch to robinhoodMainnet for production.
-const NETWORK = import.meta.env.VITE_NETWORK ?? "testnet";
+const NETWORK = import.meta.env.VITE_NETWORK ?? "mainnet";
 export const CHAIN =
   NETWORK === "mainnet" ? robinhoodMainnet : NETWORK === "local" ? localChain : robinhoodTestnet;
 
 // Set after deployment (scripts/deploy.js prints it).
 export const FACTORY_ADDRESS =
-  import.meta.env.VITE_FACTORY_ADDRESS ?? "0x22079e9f1c5acd14a1d3f1c41fd9798b33775518";
+  import.meta.env.VITE_FACTORY_ADDRESS ?? "0xb09683cdd8e1dae93e37163eb4e6dd925d4104f9";
 
 // Buyback treasury (80% of fees; ETH can only leave via buybacks)
 export const TREASURY_ADDRESS =
-  import.meta.env.VITE_TREASURY_ADDRESS ?? "0xd8d4f77d200e5ddf5b44ba2d2f7539aa1d8fc811";
+  import.meta.env.VITE_TREASURY_ADDRESS ?? "0xe5544c837f8dfd6b7e082435f7a1d646692239d3";
 
 // On-chain chat contract (messages are events; zero = not deployed yet)
 export const CHAT_ADDRESS =
@@ -48,7 +48,7 @@ export const CHAT_ADDRESS =
 
 // Weekly advisory buyback poll (zero = not deployed yet)
 export const VOTE_ADDRESS =
-  import.meta.env.VITE_VOTE_ADDRESS ?? "0xa1936b527e198a4e46ed0f9e2410d6ef2c428d14";
+  import.meta.env.VITE_VOTE_ADDRESS ?? "0xf663b704929b8c0562f6e1ae5c0387ad264d4ef3";
 
 // Off-chain chat storage: Firebase Realtime Database URL
 export const CHAT_DB_URL = (import.meta.env.VITE_CHAT_DB_URL ?? "https://hood-chat-4b664-default-rtdb.europe-west1.firebasedatabase.app").replace(/\/$/, "");
@@ -62,7 +62,7 @@ export const EXPLORER = CHAIN.blockExplorers?.default?.url ?? "";
 // Ключ фронтенд-типа: защищается ограничением по домену в панели Alchemy.
 const ALCHEMY_RPC = {
   testnet: "https://robinhood-testnet.g.alchemy.com/v2/Vs1nO3DOTOw64ThcZAuNf",
-  mainnet: "",
+  mainnet: "https://robinhood-mainnet.g.alchemy.com/v2/Vs1nO3DOTOw64ThcZAuNf",
 };
 function rpcList() {
   const def = CHAIN.rpcUrls?.default?.http ?? [];
