@@ -346,9 +346,6 @@ export default function App() {
           <div style={{ maxWidth: 300 }}>
             <div className="footer-tag">hood</div>
             <div className="dim" style={{ marginTop: 10 }}>{t("Запускайте и исследуйте токены с фиксированным сапплаем на Robinhood Chain. Каждую транзакцию подписывает ваш кошелёк — hood не хранит активы.")}</div>
-            <a className="x-link" href="https://x.com/hoodandarrow" target="_blank" rel="noreferrer">
-              𝕏 @hoodandarrow
-            </a>
           </div>
           <div className="footer-cols">
             <div className="fcol">
@@ -369,7 +366,7 @@ export default function App() {
             <div className="fcol">
               <h4>{t("Контакты")}</h4>
               <a href="mailto:contact@hoodandarrow.com">contact@hoodandarrow.com</a>
-              <a href="https://x.com/hoodandarrow" target="_blank" rel="noreferrer">@hoodandarrow</a>
+              <a className="x-link" href="https://x.com/hoodandarrow" target="_blank" rel="noreferrer">𝕏 @hoodandarrow</a>
             </div>
           </div>
           <div className="footer-note">
