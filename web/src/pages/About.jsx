@@ -76,7 +76,7 @@ export default function About() {
         ))}
       </div>
       <div className="verify-note">
-        {t("Проверьте сами — откройте контракт казны в эксплорере:")}{" "}
+        <b style={{ color: "var(--leaf)" }}>✓ {t("Код верифицирован")}</b> · {t("Проверьте сами — откройте контракт казны в эксплорере:")}{" "}
         <a href={`${EXPLORER}/address/${TREASURY_ADDRESS}`} target="_blank" rel="noreferrer">
           {t("Контракт казны")} →
         </a>

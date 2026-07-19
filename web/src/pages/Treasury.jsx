@@ -133,7 +133,7 @@ export default function Treasury() {
           </div>
 
           <div className="verify-note" style={{ marginBottom: 18 }}>
-            {t("Не верьте на слово — откройте контракт казны в эксплорере и убедитесь сами:")}{" "}
+            <b style={{ color: "var(--leaf)" }}>✓ {t("Код верифицирован")}</b> · {t("Не верьте на слово — откройте контракт казны в эксплорере и убедитесь сами:")}{" "}
             <a href={`${EXPLORER}/address/${TREASURY_ADDRESS}`} target="_blank" rel="noreferrer">
               {t("Контракт казны")} →
             </a>
