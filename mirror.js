@@ -103,9 +103,18 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const UA = { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) pons-mirror/1.1", "Accept": "application/json" };
 
 async function jget(url) {
-  const r = await fetch(url, { headers: UA, signal: AbortSignal.timeout(15000) });
-  if (!r.ok) throw new Error(`${r.status} ${url}`);
-  return r.json();
+  let lastErr;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const r = await fetch(url, { headers: UA, signal: AbortSignal.timeout(30000) });
+      if (!r.ok) throw new Error(`${r.status} ${url}`);
+      return r.json();
+    } catch (e) {
+      lastErr = e;
+      await sleep(2000 * (attempt + 1)); // подождать и повторить
+    }
+  }
+  throw new Error(`${lastErr.message} — ${url.slice(0, 80)}`);
 }
 
 function ipfsToHttp(u) {
