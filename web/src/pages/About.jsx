@@ -28,6 +28,7 @@ export default function About() {
 
   return (
     <div className="about-page">
+      <img className="about-hero-img" src="./og.png" alt="hood" />
       <div className="page-title">{t("О нас")}</div>
       <div className="page-sub" style={{ maxWidth: 720 }}>
         {t("hood — лаунчпад токенов на Robinhood Chain с революционной экономикой: треть всех торговых комиссий уходит в казну выкупа, из которой их невозможно вывести — только выкупать токены платформы. Мы зарабатываем вместе с комьюнити, а не на нём.")}
