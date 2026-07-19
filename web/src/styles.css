@@ -758,3 +758,11 @@ html[data-theme="light"] .king-card { background: var(--card); }
 
 /* -------- admin panel -------- */
 .adm-sel { background: color-mix(in srgb, var(--gold) 8%, transparent) !important; box-shadow: inset 3px 0 0 var(--gold); }
+
+/* -------- admin sliders -------- */
+.slider-row { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; margin-bottom: 4px; }
+.adm-slider {
+  width: 100%; accent-color: var(--gold); height: 20px;
+  cursor: pointer; margin: 2px 0 8px;
+}
+.adm-slider.burn { accent-color: var(--red); }

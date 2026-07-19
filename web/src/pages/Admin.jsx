@@ -17,7 +17,9 @@ export default function Admin({ wallet, onConnect }) {
   const [sel, setSel] = useState(null);
   const [q, setQ] = useState("");
   const [amt, setAmt] = useState("");
+  const [buyPct, setBuyPct] = useState(0);
   const [burnAmt, setBurnAmt] = useState("");
+  const [burnPct, setBurnPct] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
@@ -202,7 +204,8 @@ export default function Admin({ wallet, onConnect }) {
                 <div key={tk.token}
                      className={`prow6 vote-row ${sel === tk.token ? "adm-sel" : ""}`}
                      style={{ gridTemplateColumns: "44px 1.6fr 1fr 1fr 1fr", cursor: "pointer" }}
-                     onClick={() => { setSel(tk.token); setOk(""); setError(""); }}>
+                     onClick={() => { setSel(tk.token); setOk(""); setError("");
+                                      setAmt(""); setBuyPct(0); setBurnAmt(""); setBurnPct(0); }}>
                   <span>
                     {tk.meta.image
                       ? <img src={tk.meta.image} style={{ width: 32, height: 32, borderRadius: 9 }} alt="" />
@@ -237,18 +240,26 @@ export default function Admin({ wallet, onConnect }) {
                     </div>
                   ) : (
                     <>
-                      <label>{t("Сумма выкупа (ETH)")}</label>
-                      <div className="wp-filters" style={{ marginBottom: 8 }}>
-                        <input value={amt} onChange={(e) => setAmt(e.target.value)}
-                               placeholder="0.001" inputMode="decimal" />
+                      <div className="slider-row">
+                        <label style={{ margin: 0 }}>{t("Сумма выкупа (ETH)")}</label>
+                        <b style={{ color: "var(--gold)" }}>{buyPct}% {t("казны")}</b>
                       </div>
-                      <div className="qa-row" style={{ marginTop: 0, marginBottom: 10 }}>
-                        {[10, 25, 50].map((p) => (
-                          <div key={p} className="fpill qa-pill"
-                               onClick={() => setAmt((balEth * p / 100).toFixed(6))}>
-                            {p}% {t("казны")}
-                          </div>
-                        ))}
+                      <input type="range" className="adm-slider" min="0" max="100" step="1"
+                             value={buyPct}
+                             onChange={(e) => {
+                               const v = Number(e.target.value);
+                               setBuyPct(v);
+                               setAmt(v > 0 ? (balEth * v / 100).toFixed(8) : "");
+                             }} />
+                      <div className="wp-filters" style={{ marginBottom: 8 }}>
+                        <input value={amt}
+                               onChange={(e) => {
+                                 setAmt(e.target.value);
+                                 const n = Number(e.target.value);
+                                 setBuyPct(balEth > 0 && n > 0
+                                   ? Math.min(100, Math.round((n / balEth) * 100)) : 0);
+                               }}
+                               placeholder="0.001" inputMode="decimal" />
                       </div>
                       <button className="btn btn-primary btn-block" disabled={busy || !amt}
                               onClick={doBuyback}>
@@ -259,18 +270,30 @@ export default function Admin({ wallet, onConnect }) {
 
                   {selected.held > 0n && (
                     <>
-                      <label style={{ marginTop: 18, display: "block" }}>
-                        {t("Сжечь токены")} · {t("в казне")} {fmt(Number(formatEther(selected.held)), 0)}
-                      </label>
-                      <div className="wp-filters" style={{ marginBottom: 8 }}>
-                        <input value={burnAmt} onChange={(e) => setBurnAmt(e.target.value)}
-                               placeholder="0" inputMode="decimal" />
+                      <div className="slider-row" style={{ marginTop: 18 }}>
+                        <label style={{ margin: 0 }}>
+                          {t("Сжечь токены")} · {t("в казне")} {fmt(Number(formatEther(selected.held)), 0)}
+                        </label>
+                        <b style={{ color: "var(--red)" }}>{burnPct}%</b>
                       </div>
-                      <div className="qa-row" style={{ marginTop: 0, marginBottom: 10 }}>
-                        <div className="fpill qa-pill"
-                             onClick={() => setBurnAmt(formatEther(selected.held))}>
-                          MAX
-                        </div>
+                      <input type="range" className="adm-slider burn" min="0" max="100" step="1"
+                             value={burnPct}
+                             onChange={(e) => {
+                               const v = Number(e.target.value);
+                               setBurnPct(v);
+                               setBurnAmt(v > 0
+                                 ? formatEther((selected.held * BigInt(v)) / 100n) : "");
+                             }} />
+                      <div className="wp-filters" style={{ marginBottom: 8 }}>
+                        <input value={burnAmt}
+                               onChange={(e) => {
+                                 setBurnAmt(e.target.value);
+                                 const heldN = Number(formatEther(selected.held));
+                                 const n = Number(e.target.value);
+                                 setBurnPct(heldN > 0 && n > 0
+                                   ? Math.min(100, Math.round((n / heldN) * 100)) : 0);
+                               }}
+                               placeholder="0" inputMode="decimal" />
                       </div>
                       <button className="btn btn-danger btn-block" disabled={busy || !burnAmt}
                               onClick={doBurn}>
