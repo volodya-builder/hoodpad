@@ -361,24 +361,27 @@ async function tick() {
       saveState();
       return;
     }
-    // картинка обязательна: если не скачалась — откладываем токен и пробуем
-    // в следующих проходах (до 4 попыток), чтобы не запускать без аватарки
-    let image = "";
-    if (tok.meta.image) {
-      image = await imageToDataUrl(tok.meta.image);
-      if (!image) {
-        state.imgTries = state.imgTries || {};
-        const tries = (state.imgTries[key] ?? 0) + 1;
-        state.imgTries[key] = tries;
-        saveState();
-        if (tries < 4) {
-          console.log(`🖼 ${tok.symbol}: картинка не скачалась (попытка ${tries}/4) — отложил, попробую снова`);
-          if (!state.retry.includes(f.addr)) state.retry.push(f.addr);
-          saveState();
-          continue;
-        }
-        console.warn(`🖼 ${tok.symbol}: картинка так и не скачалась — запускаю без неё`);
+    // Картинка ОБЯЗАТЕЛЬНА: без неё токен на hood не запускается вообще.
+    if (!tok.meta.image) {
+      console.log(`🖼 ${tok.symbol}: у токена нет картинки — пропускаю навсегда`);
+      state.mirrored[key] = "no-image";
+      saveState();
+      continue;
+    }
+    const image = await imageToDataUrl(tok.meta.image);
+    if (!image) {
+      state.imgTries = state.imgTries || {};
+      const tries = (state.imgTries[key] ?? 0) + 1;
+      state.imgTries[key] = tries;
+      if (tries < 8) {
+        console.log(`🖼 ${tok.symbol}: картинка не скачалась (попытка ${tries}/8) — отложил, попробую снова`);
+        if (!state.retry.includes(f.addr)) state.retry.push(f.addr);
+      } else {
+        console.warn(`🖼 ${tok.symbol}: картинка так и не скачалась за 8 попыток — пропускаю, БЕЗ картинки не запускаю`);
+        state.mirrored[key] = "img-failed";
       }
+      saveState();
+      continue;
     }
     console.log(`🚀 Зеркалю: ${tok.name} ($${tok.symbol})…`);
     try {
