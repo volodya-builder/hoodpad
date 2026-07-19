@@ -58,9 +58,20 @@ export function hasWallet() {
   return typeof window !== "undefined" && (discovered.length > 0 || !!window.ethereum);
 }
 
+const isMobile = () =>
+  typeof navigator !== "undefined" && /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+
 export async function connectWallet() {
   const provider = pickProvider();
   if (!provider) {
+    if (isMobile()) {
+      // На телефоне MetaMask — приложение, а не расширение браузера.
+      // Открываем сайт внутри встроенного браузера MetaMask через deep link:
+      // там window.ethereum есть, и подключение работает как на компьютере.
+      const target = `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}${window.location.hash}`;
+      window.location.href = target;
+      throw new Error("Открываю сайт в приложении MetaMask… Если ничего не произошло — установите MetaMask из App Store / Google Play.");
+    }
     throw new Error("Кошелёк не найден. Установите MetaMask и обновите страницу.");
   }
   const [account] = await provider.request({ method: "eth_requestAccounts" });
