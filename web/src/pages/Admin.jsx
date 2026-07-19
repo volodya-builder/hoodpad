@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { formatEther, parseEther } from "viem";
 import { publicClient, fmt, short } from "../lib/web3.js";
-import { treasuryAbi, tokenAbi } from "../lib/abi.js";
+import { treasuryAbi, tokenAbi, poolExtraAbi } from "../lib/abi.js";
 import { TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
 import { loadTokens, subgraphVotes, subgraphTreasuryOps, timeAgo } from "../lib/data.js";
 import { useEthUsd, usd } from "../lib/price.js";
@@ -43,12 +43,16 @@ export default function Admin({ wallet, onConnect }) {
     const held = await Promise.all(tokens.map((tk) =>
       publicClient.readContract({ address: tk.token, abi: tokenAbi, functionName: "balanceOf", args: [TREASURY_ADDRESS] }).catch(() => 0n)
     ));
+    const accrued = await Promise.all(tokens.map((tk) =>
+      publicClient.readContract({ address: tk.pool, abi: poolExtraAbi, functionName: "protocolFeesAccrued" }).catch(() => 0n)
+    ));
     const ops = await subgraphTreasuryOps().catch(() => []);
     const list = tokens.map((tk, i) => ({
-      ...tk, held: held[i], voteCount: tally[tk.token.toLowerCase()] ?? 0,
+      ...tk, held: held[i], accrued: accrued[i], voteCount: tally[tk.token.toLowerCase()] ?? 0,
     })).sort((a, b) => b.voteCount - a.voteCount || Number(b.reserve - a.reserve));
+    const unclaimed = accrued.reduce((s2, a) => s2 + a, 0n);
     setOwner(ownerAddr);
-    setData({ list, bal, received, spent, ops: ops.slice(0, 12) });
+    setData({ list, bal, received, spent, unclaimed, ops: ops.slice(0, 12) });
   }, []);
 
   useEffect(() => {
@@ -92,6 +96,27 @@ export default function Admin({ wallet, onConnect }) {
     }),
     t("Выкуп исполнен")
   );
+
+  async function claimAll() {
+    setError(""); setOk(""); setBusy(true);
+    try {
+      let claimed = 0;
+      for (const tk of data.list) {
+        if (tk.accrued > 0n) {
+          const hash = await wallet.walletClient.writeContract({
+            address: tk.pool, abi: poolExtraAbi, functionName: "claimProtocolFees",
+          });
+          await publicClient.waitForTransactionReceipt({ hash });
+          claimed++;
+        }
+      }
+      setOk(t("Комиссии собраны") + ` (${claimed})`);
+      await load();
+      setTimeout(() => load().catch(() => {}), 3000);
+    } catch (e) {
+      setError(e.shortMessage || e.message);
+    } finally { setBusy(false); }
+  }
 
   const doBurn = () => run(
     () => wallet.walletClient.writeContract({
@@ -147,6 +172,17 @@ export default function Admin({ wallet, onConnect }) {
               <div className="k">{t("Потрачено на выкупы")}</div>
               <div className="v" style={{ fontSize: 24 }}>{fmt(Number(formatEther(data.spent)), 5)} ETH</div>
               <div className="s">{dollars(Number(formatEther(data.spent)))}</div>
+            </div>
+            <div className="ana-card">
+              <div className="k">{t("Несобранные комиссии в пулах")}</div>
+              <div className="v" style={{ fontSize: 24, color: data.unclaimed > 0n ? "var(--gold)" : "inherit" }}>
+                {fmt(Number(formatEther(data.unclaimed)), 6)} ETH
+              </div>
+              <div className="s" style={{ marginTop: 8 }}>
+                <button className="btn" disabled={busy || data.unclaimed === 0n} onClick={claimAll}>
+                  {busy ? "…" : t("Собрать в казну")}
+                </button>
+              </div>
             </div>
           </div>
 
