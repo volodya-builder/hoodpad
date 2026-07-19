@@ -808,3 +808,28 @@ html[data-theme="light"] .verify-note { border-color: #cfcec6; }
   color: var(--text); outline: none;
 }
 .slip-custom.on, .slip-custom:focus { border-color: var(--gold); color: var(--gold); }
+
+/* -------- slider: точные края 0% и 100% -------- */
+.adm-slider {
+  -webkit-appearance: none; appearance: none;
+  background: transparent; height: 22px;
+  width: calc(100% + 14px); margin-left: -7px; margin-right: -7px;
+}
+.adm-slider::-webkit-slider-runnable-track {
+  height: 6px; border-radius: 3px; background: var(--border);
+}
+.adm-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--gold); border: none; margin-top: -4px;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, .25);
+}
+.adm-slider.burn::-webkit-slider-thumb { background: var(--red); }
+.adm-slider::-moz-range-track {
+  height: 6px; border-radius: 3px; background: var(--border);
+}
+.adm-slider::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--gold); border: none;
+}
+.adm-slider.burn::-moz-range-thumb { background: var(--red); }
