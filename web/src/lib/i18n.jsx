@@ -315,8 +315,8 @@ const EN = {
   "Политика конфиденциальности": "Privacy Policy",
   "Условия использования": "Terms of Use",
   "Риск-нотис": "Risk notice",
-  "Запускайте и исследуйте токены с фиксированным сапплаем на Robinhood Chain. Каждую транзакцию подписывает ваш кошелёк — hood не хранит активы.":
-    "Launch and explore fixed-supply tokens on Robinhood Chain. Every transaction is signed by your wallet — hood does not custody assets.",
+  "Запускайте и исследуйте токены с фиксированным сапплаем на Robinhood Chain. Ваш кошелёк подписывает каждую транзакцию. hood не хранит активы.":
+    "Launch and explore fixed-supply tokens on Robinhood Chain. Your wallet submits every transaction. hood does not custody assets.",
   "Транзакции отправляются вашим кошельком и необратимы. Токены волатильны и могут полностью обесцениться. hood не хранит активы, не даёт гарантий и финансовых советов.":
     "Transactions are submitted by your wallet and are irreversible. Tokens are volatile and can lose all value. hood does not provide custody, warranties, or financial advice.",
   "только что": "just now",

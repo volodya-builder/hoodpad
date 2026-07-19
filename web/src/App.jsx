@@ -345,7 +345,7 @@ export default function App() {
         <div className="container footer-inner">
           <div style={{ maxWidth: 300 }}>
             <div className="footer-tag">hood</div>
-            <div className="dim" style={{ marginTop: 10 }}>{t("Запускайте и исследуйте токены с фиксированным сапплаем на Robinhood Chain. Каждую транзакцию подписывает ваш кошелёк — hood не хранит активы.")}</div>
+            <div className="dim" style={{ marginTop: 10 }}>{t("Запускайте и исследуйте токены с фиксированным сапплаем на Robinhood Chain. Ваш кошелёк подписывает каждую транзакцию. hood не хранит активы.")}</div>
           </div>
           <div className="footer-cols">
             <div className="fcol">
