@@ -244,16 +244,6 @@ export default function Analytics() {
         </div>
       )}
 
-      {raw?.leaders && (raw.leaders.creators.length > 0 || raw.leaders.traders.length > 0) && (
-        <div className="ana-note" style={{ marginBottom: 0 }}>
-          🏆 {t("Топ создателей и трейдеров теперь в разделе")}{" "}
-          <a href="#/leaderboard" style={{ color: "var(--gold)" }}>{t("Лидеры")} →</a>
-        </div>
-      )}
-
-      <div className="ana-note">
-        {t("Примечание: комиссии попадают в казну после вызова claimProtocolFees у пула — до этого они накапливаются в самом пуле.")}
-      </div>
     </>
   );
 }
