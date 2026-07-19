@@ -7,10 +7,21 @@ import { loadTokens, poolTrades } from "../lib/data.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { useLang } from "../lib/i18n.jsx";
 
+// Память профиля по адресу: мгновенно при переключении вкладок и после перезагрузки.
+const _profCache = {}; // account -> state (в памяти сессии)
+const PROF_LS = "hood_cache_profile_v1";
+const _bigR = (k, v) => (typeof v === "bigint" ? { __b: v.toString() } : v);
+const _bigV = (k, v) => (v && typeof v === "object" && "__b" in v ? BigInt(v.__b) : v);
+try {
+  const s = localStorage.getItem(PROF_LS);
+  if (s) Object.assign(_profCache, JSON.parse(s, _bigV));
+} catch (e) { /* ignore */ }
+
 export default function Profile({ wallet, onConnect }) {
   const { t } = useLang();
   const rate = useEthUsd();
-  const [state, setState] = useState(null);
+  const acc = wallet?.account?.toLowerCase();
+  const [state, setState] = useState(() => (acc ? _profCache[acc] ?? null : null));
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [claiming, setClaiming] = useState("");
@@ -57,6 +68,8 @@ export default function Profile({ wallet, onConnect }) {
   useEffect(() => {
     if (!wallet) return;
     let alive = true;
+    // показываем кэш этого адреса сразу, обновляем в фоне
+    if (_profCache[acc]) setState(_profCache[acc]);
     (async () => {
       const me = wallet.account.toLowerCase();
       const [tokens, ethBal] = await Promise.all([
@@ -98,16 +111,24 @@ export default function Profile({ wallet, onConnect }) {
         totVal += Number(formatEther(tk.bal)) * Number(formatEther(tk.price));
         totInv += tk.invested; totReal += tk.realized;
       });
-      setState({
+      const next = {
         ethBal, positions, launched,
         totVal, totInv, totReal, totPnl: totVal + totReal - totInv,
         tradesCount: enriched.reduce((s, tk) => s + tk.mine.length, 0),
         myTrades: enriched.flatMap((tk) => tk.mine.map((tr) => ({ ...tr, sym: tk.symbol, token: tk.token })))
           .sort((a, b) => Number(b.block - a.block)).slice(0, 20),
-      });
-    })().catch((e) => alive && setError(e.shortMessage || e.message));
+      };
+      _profCache[me] = next;
+      // в localStorage кладём облегчённую версию (без тяжёлых картинок), чтобы влезло
+      try {
+        const strip = (arr) => arr.map(({ meta, mine, ...r }) => ({ ...r, meta: {} }));
+        const lite = { ...next, positions: strip(positions), launched: strip(launched) };
+        localStorage.setItem(PROF_LS, JSON.stringify({ [me]: lite }, _bigR));
+      } catch (e) { /* переполнение localStorage — не страшно, память сессии остаётся */ }
+      setState(next);
+    })().catch((e) => { if (alive && !_profCache[acc]) setError(e.shortMessage || e.message); });
     return () => { alive = false; };
-  }, [wallet, reload]);
+  }, [wallet, reload, acc]);
 
   async function copyAddr() {
     try {
