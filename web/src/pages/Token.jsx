@@ -191,7 +191,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       loadCreationTimes([tokenAddress]).catch(() => ({})),
     ]);
     // Время сделок: интерполяция по блокам (2 RPC-вызова) — для таймфреймов графика
-    if (h.trades.length > 0) {
+    if (h.trades.length > 0 && !h.trades[0].ts) {
       try {
         const blocks = h.trades.map((tr) => Number(tr.block));
         const minB = Math.min(...blocks);

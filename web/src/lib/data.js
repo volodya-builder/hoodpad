@@ -15,6 +15,48 @@ export function parseMeta(uri) {
 
 const PAGE = 96n;
 
+// ---------------------------------------------------------------- subgraph
+// Goldsky-индексатор: сайт получает готовые данные одним запросом.
+// При любой ошибке автоматически откатываемся на прямое чтение блокчейна.
+export const SUBGRAPH_URL =
+  "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood/1.0.0/gn";
+
+async function gql(query) {
+  const r = await fetch(SUBGRAPH_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query }),
+    signal: AbortSignal.timeout(5000),
+  });
+  if (!r.ok) throw new Error("subgraph " + r.status);
+  const j = await r.json();
+  if (j.errors) throw new Error(j.errors[0]?.message || "subgraph error");
+  return j.data;
+}
+
+const VIRT_WEI = 1625000000000000000n;      // 1.625 ETH
+const TOTAL_WEI = 10n ** 27n;               // 1e9 токенов
+const CAP_WEI = 8n * 10n ** 26n;            // 800M
+
+async function _loadTokensSubgraph() {
+  const d = await gql(`{ tokens(first: 96, orderBy: createdBlock, orderDirection: desc) {
+    id name symbol metadataURI creator pool createdAt graduated ethReserve tokensSold } }`);
+  if (!d?.tokens) throw new Error("no tokens field");
+  return d.tokens.map((x) => {
+    const reserve = BigInt(x.ethReserve);
+    const sold = BigInt(x.tokensSold);
+    const denom = TOTAL_WEI - sold;
+    const price = denom > 0n ? ((VIRT_WEI + reserve) * 10n ** 18n) / denom : 0n;
+    return {
+      token: x.id, pool: x.pool, name: x.name, symbol: x.symbol,
+      price, sold, cap: CAP_WEI, reserve, graduated: x.graduated,
+      meta: parseMeta(x.metadataURI),
+      createdAt: Number(x.createdAt) * 1000,
+      creator: x.creator,
+    };
+  });
+}
+
 // Кэш списка токенов в режиме stale-while-revalidate: страница ВСЕГДА
 // получает данные мгновенно (пусть и чуть устаревшие), а свежие
 // подтягиваются в фоне. Кэш переживает перезагрузку через localStorage.
@@ -50,6 +92,11 @@ export async function loadTokens() {
 }
 
 async function _loadTokensFresh() {
+  try { return await _loadTokensSubgraph(); }
+  catch (e) { return _loadTokensRpc(); }
+}
+
+async function _loadTokensRpc() {
   const count = await publicClient.readContract({
     address: FACTORY_ADDRESS, abi: factoryAbi, functionName: "tokenCount",
   });
@@ -110,7 +157,41 @@ export async function poolTrades(pool) {
   return p;
 }
 
+async function _poolTradesSubgraph(pool) {
+  const d = await gql(`{ trades(first: 1000, orderBy: block, orderDirection: asc,
+    where: { pool: "${pool.toLowerCase()}" }) {
+    isBuy trader ethAmount tokenAmount fee timestamp block tx } }`);
+  if (!d?.trades) throw new Error("no trades field");
+  const VIRT = 1.625, TOTAL = 1e9;
+  let eth = 0, sold = 0;
+  const trades = [];
+  const points = [{ i: 0, mcap: (VIRT / TOTAL) * TOTAL, ts: null }];
+  for (const l of d.trades) {
+    const ethAmt = Number(l.ethAmount) / 1e18;
+    const tokAmt = Number(l.tokenAmount) / 1e18;
+    const fee = Number(l.fee) / 1e18;
+    if (l.isBuy) { eth += ethAmt; sold += tokAmt; }
+    else { eth -= ethAmt + fee; sold -= tokAmt; }
+    const price = (VIRT + eth) / (TOTAL - sold);
+    const ts = Number(l.timestamp) * 1000;
+    trades.push({
+      side: l.isBuy ? "buy" : "sell", addr: l.trader,
+      eth: ethAmt, tokens: tokAmt, fee,
+      block: BigInt(l.block), tx: l.tx, ts,
+    });
+    points.push({ i: trades.length, mcap: price * TOTAL, ts });
+  }
+  const res = { trades: trades.reverse(), points };
+  if (res.trades.length > 0) res.now = Date.now();
+  return res;
+}
+
 async function _poolTradesFresh(pool) {
+  try { return await _poolTradesSubgraph(pool); }
+  catch (e) { return _poolTradesRpc(pool); }
+}
+
+async function _poolTradesRpc(pool) {
   const logs = await publicClient.getLogs({
     address: pool, events: tradeEvents, fromBlock: 0n, toBlock: "latest",
   });

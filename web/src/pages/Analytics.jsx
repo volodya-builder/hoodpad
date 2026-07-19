@@ -59,7 +59,9 @@ export default function Analytics() {
         const [h, shareBps, creator] = await Promise.all([
           poolTrades(tk.pool).catch(() => ({ trades: [] })),
           publicClient.readContract({ address: tk.pool, abi: poolExtraAbi, functionName: "creatorFeeShareBps" }).catch(() => 2000),
-          publicClient.readContract({ address: tk.pool, abi: poolExtraAbi2, functionName: "creator" }).catch(() => null),
+          tk.creator
+            ? Promise.resolve(tk.creator)
+            : publicClient.readContract({ address: tk.pool, abi: poolExtraAbi2, functionName: "creator" }).catch(() => null),
         ]);
         return { tk, creator, shareBps: Number(shareBps),
                  trades: h.trades.map((tr) => ({ ...tr, shareBps: Number(shareBps) })) };
