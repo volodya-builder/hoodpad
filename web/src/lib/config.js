@@ -58,9 +58,17 @@ export const EXPLORER = CHAIN.blockExplorers?.default?.url ?? "";
 // Список RPC-эндпоинтов с автоматическим переключением при сбое.
 // Можно задать приватный (Alchemy и т.п.) через VITE_RPC_URL или сохранить
 // в localStorage["hood_rpc"] — он встанет ПЕРВЫМ, публичный останется резервом.
+// Выделенный RPC от Alchemy (высокие лимиты, стабильность) — основной канал.
+// Ключ фронтенд-типа: защищается ограничением по домену в панели Alchemy.
+const ALCHEMY_RPC = {
+  testnet: "https://robinhood-testnet.g.alchemy.com/v2/Vs1nO3DOTOw64ThcZAuNf",
+  mainnet: "",
+};
 function rpcList() {
   const def = CHAIN.rpcUrls?.default?.http ?? [];
-  const urls = [...def];
+  const urls = [...def];                       // публичный — резерв
+  const dedicated = ALCHEMY_RPC[NETWORK];
+  if (dedicated) urls.unshift(dedicated);      // Alchemy — основной
   const envUrl = import.meta.env.VITE_RPC_URL;
   if (envUrl) urls.unshift(envUrl);
   try {
