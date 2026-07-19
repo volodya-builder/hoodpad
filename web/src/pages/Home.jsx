@@ -16,8 +16,14 @@ function saveFavs(s) {
 function TokenCard({ t, fav, onFav }) {
   const { t: tr } = useLang();
   const rate = useEthUsd();
+  const [cp, setCp] = useState(false);
   const progress = Number((t.sold * 10000n) / t.cap) / 100;
   const mcapEth = Number(formatEther(t.price)) * 1_000_000_000;
+  const copyCA = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    try { navigator.clipboard.writeText(t.token); } catch (err) { /* ignore */ }
+    setCp(true); setTimeout(() => setCp(false), 1200);
+  };
   return (
     <a className="tcard" href={`#/token/${t.token}`}>
       <div className="timg">
@@ -41,7 +47,9 @@ function TokenCard({ t, fav, onFav }) {
         <span className="pv">{fmt(Math.min(progress, 100), 0)}%</span>
       </div>
       <div className="tmeta">
-        <span className="mono">{t.token.slice(0, 6)}…{t.token.slice(-4)}</span>
+        <span className="mono addr-copy" title={tr("Скопировать адрес")} onClick={copyCA}>
+          {t.token.slice(0, 6)}…{t.token.slice(-4)} {cp ? "✓" : "⧉"}
+        </span>
         <span>{t.createdAt ? timeAgo(t.createdAt) : `${fmt(Number(formatEther(t.reserve)), 3)} / 6.5 ETH`}</span>
       </div>
     </a>

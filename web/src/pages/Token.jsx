@@ -54,6 +54,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [extra, setExtra] = useState({});       // creatorFees, treasuryOwner, treasuryHeld, burned
   const [bbAmt, setBbAmt] = useState("");
   const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedCA, setCopiedCA] = useState(false);
   const [tf, setTf] = useState("all"); // таймфрейм графика
   const [slip, setSlip] = useState(() => {
     try { return Number(localStorage.getItem("hood_slip")) || 3; } catch (e) { return 3; }
@@ -105,6 +106,35 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       setTimeout(() => setCopiedLink(false), 1500);
     } catch (e) { /* clipboard unavailable */ }
   }
+
+  async function copyCA() {
+    try {
+      await navigator.clipboard.writeText(tokenAddress);
+      setCopiedCA(true);
+      setTimeout(() => setCopiedCA(false), 1500);
+    } catch (e) { /* clipboard unavailable */ }
+  }
+
+  // Прайс-импакт: насколько сделка сдвинет цену относительно спота
+  const impact = useMemo(() => {
+    if (!quote || !data || !amount || Number(amount) <= 0) return null;
+    const spot = Number(formatEther(data.price));
+    if (spot <= 0) return null;
+    if (tab === "buy" && quote.kind === "tokens") {
+      const tokens = Number(formatEther(quote.value));
+      if (tokens <= 0) return null;
+      const eff = (Number(amount) * 0.99) / tokens; // за вычетом комиссии 1%
+      return (eff / spot - 1) * 100;
+    }
+    if (tab === "sell" && quote.kind === "eth") {
+      const eth = Number(formatEther(quote.value));
+      const tokens = Number(amount);
+      if (tokens <= 0) return null;
+      const eff = eth / tokens;
+      return (1 - eff / spot) * 100;
+    }
+    return null;
+  }, [quote, data, amount, tab]);
 
   const load = useCallback(async () => {
     const pool = await publicClient.readContract({
@@ -403,7 +433,10 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             {t("Токен:")}{" "}
             <a className="mono" href={`${EXPLORER}/address/${tokenAddress}`} target="_blank" rel="noreferrer">
               {short(tokenAddress)}
-            </a>
+            </a>{" "}
+            <button className="mini-btn" onClick={copyCA} title={t("Скопировать адрес")}>
+              {copiedCA ? "✓" : "⧉"}
+            </button>
             {" · "}{t("Пул:")}{" "}
             <a className="mono" href={`${EXPLORER}/address/${data.pool}`} target="_blank" rel="noreferrer">
               {short(data.pool)}
@@ -459,6 +492,15 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
           <div className="card-title"><h3>{t("Топ держателей")}</h3></div>
           {!holders && <div className="dim" style={{ padding: "14px 0" }}>{t("Читаю события…")}</div>}
+          {holders && holders.list.length > 0 && (() => {
+            const top10 = holders.list.reduce((s, h) => s + h.pct, 0);
+            const cls = top10 >= 40 ? "bad" : top10 >= 20 ? "warn" : "ok";
+            return (
+              <div className={`conc-note ${cls}`}>
+                {t("Топ-10 держат")} {fmt(top10, 1)}% {t("сапплая")}
+              </div>
+            );
+          })()}
           {holders && (
             <div style={{ marginTop: 6 }}>
               <div className="holder-row">
@@ -541,6 +583,19 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               </p>
             )}
 
+            <div className="qa-row">
+              {tab === "buy"
+                ? ["0.001", "0.01", "0.05", "0.1"].map((v) => (
+                    <div key={v} className="fpill qa-pill" onClick={() => setAmount(v)}>{v}</div>
+                  ))
+                : [25, 50, 75, 100].map((p) => (
+                    <div key={p} className="fpill qa-pill"
+                         onClick={() => wallet && setAmount(formatEther((data.balance * BigInt(p)) / 100n))}>
+                      {p}%
+                    </div>
+                  ))}
+            </div>
+
             <div className="slip-row">
               <span className="dim">{t("Слиппедж")}</span>
               {SLIPPAGE_CHOICES.map((s) => (
@@ -558,6 +613,12 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                     ? `${fmt(formatEther(quote.value), 2)} ${data.symbol}`
                     : `${fmt(formatEther(quote.value), 6)} ETH`}
                 </b>
+              </div>
+            )}
+            {impact !== null && impact > 0.05 && (
+              <div className={`impact-note ${impact >= 5 ? "bad" : impact >= 2 ? "warn" : ""}`}>
+                {t("влияние на цену")} ≈ {fmt(impact, 1)}%
+                {impact >= 5 ? " ⚠" : ""}
               </div>
             )}
 
