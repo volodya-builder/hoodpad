@@ -708,15 +708,10 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 {t("Авто")}{slip === "auto" && impact !== null
                   ? ` · ${fmt(Math.min(30, Math.max(0.5, impact * 1.3 + 0.5)), 1)}%` : ""}
               </div>
-              {SLIPPAGE_CHOICES.map((s2) => (
-                <div key={s2} className={`fpill slip-pill ${slip === s2 ? "on" : ""}`} onClick={() => setSlipSave(s2)}>
-                  {s2}%
-                </div>
-              ))}
-              <input className={`slip-custom ${typeof slip === "number" && !SLIPPAGE_CHOICES.includes(slip) ? "on" : ""}`}
+              <input className={`slip-custom ${typeof slip === "number" ? "on" : ""}`}
                      inputMode="decimal"
                      placeholder="%"
-                     value={typeof slip === "number" && !SLIPPAGE_CHOICES.includes(slip) ? slip : ""}
+                     value={typeof slip === "number" ? slip : ""}
                      onChange={(e) => {
                        const v = e.target.value.replace(",", ".");
                        if (v === "") { setSlipSave("auto"); return; }
