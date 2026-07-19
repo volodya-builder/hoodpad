@@ -141,9 +141,16 @@ export default function App() {
       try { localStorage.setItem("hood_wallet", "1"); } catch (e) { /* ignore */ }
       requireTos(w.account);
     } catch (e) {
-      alert(e.shortMessage || e.message);
+      const msg = String(e.message || "");
+      if (e.code === -32002 || msg.includes("already pending")) {
+        alert(t("Запрос на подключение уже открыт в кошельке. Нажмите на иконку MetaMask в панели браузера и подтвердите его там."));
+      } else if (e.code === 4001 || msg.includes("rejected")) {
+        // пользователь сам отменил — молчим
+      } else {
+        alert(e.shortMessage || e.message);
+      }
     }
-  }, [requireTos]);
+  }, [requireTos, t]);
 
   const hardDisconnect = useCallback(() => {
     const prov = wallet?.provider;

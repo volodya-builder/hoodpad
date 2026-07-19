@@ -226,6 +226,8 @@ const EN = {
   "Я прочитал и принимаю": "I have read and accept the",
   "Политику конфиденциальности": "Privacy Policy",
   "Принять и продолжить": "Accept and continue",
+  "Запрос на подключение уже открыт в кошельке. Нажмите на иконку MetaMask в панели браузера и подтвердите его там.":
+    "A connection request is already open in your wallet. Click the MetaMask icon in your browser toolbar and confirm it there.",
   "Отключить кошелёк": "Disconnect wallet",
   "Настроить быстрые проценты": "Customize quick percents",
   "Подбирается автоматически под размер сделки": "Picked automatically for your trade size",
