@@ -85,6 +85,16 @@ const HOOD_FACTORY = CFG.hoodFactory ?? "0x22079e9f1c5acd14a1d3f1c41fd9798b33775
 
 const factoryAbi = parseAbi([
   "function createToken(string name, string symbol, string metadataURI, address creatorWallet) payable returns (address token, address pool)",
+  "function tokenCount() view returns (uint256)",
+  "function tokens(uint256 offset, uint256 limit) view returns (address[])",
+  "function poolOf(address token) view returns (address)",
+]);
+const poolFeeAbi = parseAbi([
+  "function protocolFeesAccrued() view returns (uint256)",
+  "function creatorFeesAccrued() view returns (uint256)",
+  "function creator() view returns (address)",
+  "function claimProtocolFees()",
+  "function claimCreatorFees(address to)",
 ]);
 const erc20MetaAbi = parseAbi([
   "function name() view returns (string)",
@@ -340,6 +350,75 @@ async function launchOnHood({ name, symbol, meta }, preloadedImage) {
   return hash;
 }
 
+// ---------------------------------------------------------------- сбор комиссий
+// Проходит по всем пулам платформы порциями (курсор в state.feeCursor) и:
+//  1) вызывает claimProtocolFees() — забирает долю платформы в казну (permissionless);
+//  2) для монет, где создатель — этот бот, вызывает claimCreatorFees() на collectWallet.
+// Пыль (меньше MIN_CLAIM) пропускает, чтобы не жечь газ впустую.
+const MIN_CLAIM = 3_000_000_000_000n;   // ~0.000003 ETH — ниже не собираем
+const SWEEP_PAGE = Number(CFG.sweepPage ?? 40);      // сколько пулов смотреть за проход
+const SWEEP_MAX_TX = Number(CFG.sweepMaxTx ?? 20);   // максимум транзакций за проход
+const COLLECT_WALLET = CFG.collectWallet || account.address; // куда creator-комиссии
+
+async function sweepFees() {
+  if (CFG.autoCollect === false) return;
+  const count = await hoodPub.readContract({ address: HOOD_FACTORY, abi: factoryAbi, functionName: "tokenCount" });
+  const total = Number(count);
+  if (total === 0) return;
+
+  let cursor = state.feeCursor ?? 0;
+  if (cursor >= total) cursor = 0;
+  const limit = Math.min(SWEEP_PAGE, total - cursor);
+  const addrs = await hoodPub.readContract({
+    address: HOOD_FACTORY, abi: factoryAbi, functionName: "tokens",
+    args: [BigInt(cursor), BigInt(limit)],
+  });
+
+  let txCount = 0;
+  for (const token of addrs) {
+    if (txCount >= SWEEP_MAX_TX) break;
+    let pool;
+    try {
+      pool = await hoodPub.readContract({ address: HOOD_FACTORY, abi: factoryAbi, functionName: "poolOf", args: [token] });
+    } catch (e) { continue; }
+    if (!pool || /^0x0+$/.test(pool)) continue;
+
+    let protoFee = 0n, creatorFee = 0n, creator = null;
+    try {
+      [protoFee, creatorFee, creator] = await Promise.all([
+        hoodPub.readContract({ address: pool, abi: poolFeeAbi, functionName: "protocolFeesAccrued" }).catch(() => 0n),
+        hoodPub.readContract({ address: pool, abi: poolFeeAbi, functionName: "creatorFeesAccrued" }).catch(() => 0n),
+        hoodPub.readContract({ address: pool, abi: poolFeeAbi, functionName: "creator" }).catch(() => null),
+      ]);
+    } catch (e) { continue; }
+
+    // 1) комиссия платформы → в казну (может звать кто угодно)
+    if (protoFee >= MIN_CLAIM && txCount < SWEEP_MAX_TX) {
+      try {
+        const h = await hoodWallet.writeContract({ address: pool, abi: poolFeeAbi, functionName: "claimProtocolFees" });
+        await hoodPub.waitForTransactionReceipt({ hash: h });
+        console.log(`💰 Казна: собрано ${Number(protoFee) / 1e18} ETH с ${token.slice(0, 10)}`);
+        txCount++;
+      } catch (e) { console.warn("  claimProtocol:", token.slice(0, 10), e.shortMessage || e.message); }
+    }
+    // 2) комиссия создателя (только для монет бота) → на кошелёк сбора
+    if (creator && creator.toLowerCase() === account.address.toLowerCase()
+        && creatorFee >= MIN_CLAIM && txCount < SWEEP_MAX_TX) {
+      try {
+        const h = await hoodWallet.writeContract({ address: pool, abi: poolFeeAbi, functionName: "claimCreatorFees", args: [COLLECT_WALLET] });
+        await hoodPub.waitForTransactionReceipt({ hash: h });
+        console.log(`💵 Создатель: собрано ${Number(creatorFee) / 1e18} ETH с ${token.slice(0, 10)} → ${COLLECT_WALLET.slice(0, 10)}`);
+        txCount++;
+      } catch (e) { console.warn("  claimCreator:", token.slice(0, 10), e.shortMessage || e.message); }
+    }
+  }
+
+  state.feeCursor = cursor + limit;
+  if (state.feeCursor >= total) state.feeCursor = 0; // круг пройден — заходим заново
+  saveState();
+  if (txCount > 0) console.log(`   Сбор: ${txCount} транзакций (пулы ${cursor}–${cursor + limit} из ${total})`);
+}
+
 // ---------------------------------------------------------------- main loop
 function underRateLimit() {
   const hourAgo = Date.now() - 3600_000;
@@ -437,12 +516,18 @@ async function tick() {
       try { await tick(); } catch (e) { console.error("tick error:", e.message); }
       if (i < ROUNDS - 1) await sleep(15_000);
     }
+    try { await sweepFees(); } catch (e) { console.error("sweep error:", e.message); }
     console.log("Проход завершён.");
     process.exit(0);
   }
 
+  let sweepTick = 0;
   for (;;) {
     try { await tick(); } catch (e) { console.error("tick error:", e.message); }
+    // сбор комиссий раз в ~5 минут (каждый 15-й проход по 20с)
+    if (++sweepTick % 15 === 0) {
+      try { await sweepFees(); } catch (e) { console.error("sweep error:", e.message); }
+    }
     await sleep(POLL_SEC * 1000);
   }
 })();
