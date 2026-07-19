@@ -734,24 +734,28 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               </div>
             </div>
 
-            <div className="slip-row">
+            <div className="slip-row" style={{ marginTop: 12 }}>
               <span className="dim">{t("Слиппедж")}</span>
-              <div className={`fpill slip-pill ${slip === "auto" ? "on" : ""}`}
-                   onClick={() => setSlipSave("auto")}
-                   title={t("Подбирается автоматически под размер сделки")}>
-                {t("Авто")}{slip === "auto" && impact !== null
-                  ? ` · ${fmt(Math.min(30, Math.max(0.5, impact * 1.3 + 0.5)), 1)}%` : ""}
+              <div className="slip-seg">
+                <div className={`slip-opt ${slip === "auto" ? "on" : ""}`}
+                     onClick={() => setSlipSave("auto")}
+                     title={t("Подбирается автоматически под размер сделки")}>
+                  ⚡ {t("Авто")}{slip === "auto" && impact !== null
+                    ? ` ${fmt(Math.min(30, Math.max(0.5, impact * 1.3 + 0.5)), 1)}%` : ""}
+                </div>
+                <div className="slip-div" />
+                <label className={`slip-opt slip-opt-custom ${typeof slip === "number" ? "on" : ""}`}>
+                  <input inputMode="decimal" placeholder="1.0"
+                         value={typeof slip === "number" ? slip : ""}
+                         onChange={(e) => {
+                           const v = e.target.value.replace(",", ".");
+                           if (v === "") { setSlipSave("auto"); return; }
+                           const n = Number(v);
+                           if (n > 0 && n <= 50) setSlipSave(n);
+                         }} />
+                  <span>%</span>
+                </label>
               </div>
-              <input className={`slip-custom ${typeof slip === "number" ? "on" : ""}`}
-                     inputMode="decimal"
-                     placeholder="%"
-                     value={typeof slip === "number" ? slip : ""}
-                     onChange={(e) => {
-                       const v = e.target.value.replace(",", ".");
-                       if (v === "") { setSlipSave("auto"); return; }
-                       const n = Number(v);
-                       if (n > 0 && n <= 50) setSlipSave(n);
-                     }} />
             </div>
 
             {quote && (

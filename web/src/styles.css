@@ -844,3 +844,29 @@ html[data-theme="light"] .verify-note { border-color: #cfcec6; }
   border-radius: 999px; background: var(--bg); border: 1px solid var(--gold);
   color: var(--text); outline: none;
 }
+
+/* -------- slippage segmented control -------- */
+.slip-row { display: flex; align-items: center; gap: 10px; }
+.slip-seg {
+  margin-left: auto; display: flex; align-items: stretch;
+  border: 1px solid var(--border); border-radius: 999px;
+  background: var(--bg); overflow: hidden;
+}
+.slip-opt {
+  display: flex; align-items: center; gap: 3px;
+  padding: 6px 14px; font-size: 12.5px; font-weight: 700;
+  color: var(--text-dim); cursor: pointer; white-space: nowrap;
+  transition: background .12s, color .12s;
+}
+.slip-opt:hover { color: var(--text); }
+.slip-opt.on {
+  background: color-mix(in srgb, var(--gold) 16%, transparent);
+  color: var(--gold);
+}
+.slip-div { width: 1px; background: var(--border); }
+.slip-opt-custom { padding: 0 12px 0 6px; }
+.slip-opt-custom input {
+  width: 40px; background: transparent; border: none; outline: none;
+  color: inherit; font: inherit; text-align: right; padding: 6px 0;
+}
+.slip-opt-custom input::placeholder { color: var(--text-dim); opacity: .6; }
