@@ -13,7 +13,6 @@ import { Privacy, Terms } from "./pages/Legal.jsx";
 import { connectWallet, reconnectWallet, hasWallet, short, fmt, fmtEth, publicClient } from "./lib/web3.js";
 import { CHAIN, FACTORY_ADDRESS, TREASURY_ADDRESS, CHAT_DB_URL } from "./lib/config.js";
 import { treasuryAbi } from "./lib/abi.js";
-import { dataSource } from "./lib/data.js";
 import { loadTokens } from "./lib/data.js";
 import { useEthUsd, usd } from "./lib/price.js";
 import { useLang } from "./lib/i18n.jsx";
@@ -29,15 +28,6 @@ function useHashRoute() {
   return hash.replace(/^#/, "");
 }
 
-function DataSourceBadge() {
-  const [src, setSrc] = useState(dataSource.v);
-  useEffect(() => {
-    const id = setInterval(() => setSrc(dataSource.v), 2000);
-    return () => clearInterval(id);
-  }, []);
-  if (!src) return null;
-  return <span title="Откуда сайт берёт данные">{src === "subgraph" ? " · ⚡ Goldsky" : " · ⛓ RPC fallback"}</span>;
-}
 
 function SearchModal({ open, onClose }) {
   const { t } = useLang();
@@ -397,7 +387,7 @@ export default function App() {
             </div>
           </div>
           <div className="footer-bottom">
-            <span className="dim">© 2026 hood · Robinhood Chain<DataSourceBadge /></span>
+            <span className="dim">© 2026 hood · Robinhood Chain</span>
             <a className="x-chip" href="https://x.com/hoodandarrow" target="_blank" rel="noreferrer">
               @hoodandarrow <span className="x-box">𝕏</span>
             </a>

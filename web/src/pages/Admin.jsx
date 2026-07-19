@@ -3,7 +3,7 @@ import { formatEther, parseEther } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { treasuryAbi, tokenAbi, poolExtraAbi } from "../lib/abi.js";
 import { TREASURY_ADDRESS, EXPLORER, CHAT_DB_URL } from "../lib/config.js";
-import { loadTokens, subgraphVotes, subgraphTreasuryOps, timeAgo, useClock } from "../lib/data.js";
+import { loadTokens, subgraphVotes, subgraphTreasuryOps, timeAgo, useClock, dataSource } from "../lib/data.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { useLang } from "../lib/i18n.jsx";
 
@@ -208,7 +208,12 @@ export default function Admin({ wallet, onConnect }) {
 
   return (
     <>
-      <div className="page-title">⚙ {t("Панель управления казной")}</div>
+      <div className="page-title" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        ⚙ {t("Панель управления казной")}
+        <span className="ds-badge" title="Откуда сайт берёт данные">
+          {dataSource.v === "subgraph" ? "⚡ Goldsky" : dataSource.v === "rpc" ? "⛓ RPC fallback" : "…"}
+        </span>
+      </div>
       <div className="page-sub" style={{ maxWidth: 720 }}>
         {t("Выберите токен и выполните выкуп с казны. Голоса раунда показаны как подсказка — решение всегда за вами.")}
       </div>

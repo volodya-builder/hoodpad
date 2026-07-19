@@ -1097,3 +1097,7 @@ html[data-theme="light"] .tos-ico { background: #ffffff; }
   /* прячем "ETH" в балансе кошелька, оставляем адрес — экономим место */
   .header-inner .net-pill { display: none; }
 }
+
+/* индикатор источника данных в админке */
+.ds-badge { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--gold);
+  background: var(--gold-dim); border: 1px solid var(--border); padding: 4px 11px; border-radius: 999px; letter-spacing: .2px; }
