@@ -34,6 +34,17 @@ const NETWORK = import.meta.env.VITE_NETWORK ?? "mainnet";
 export const CHAIN =
   NETWORK === "mainnet" ? robinhoodMainnet : NETWORK === "local" ? localChain : robinhoodTestnet;
 
+// При смене сети чистим весь кэш данных (иначе на мейннете мелькают
+// старые тестнет-токены из localStorage, пока не подтянутся свежие).
+try {
+  if (localStorage.getItem("hood_net") !== NETWORK) {
+    for (const k of Object.keys(localStorage)) {
+      if (k.startsWith("hood_cache_") || k.startsWith("hood_created_")) localStorage.removeItem(k);
+    }
+    localStorage.setItem("hood_net", NETWORK);
+  }
+} catch (e) { /* ignore */ }
+
 // Set after deployment (scripts/deploy.js prints it).
 export const FACTORY_ADDRESS =
   import.meta.env.VITE_FACTORY_ADDRESS ?? "0xb09683cdd8e1dae93e37163eb4e6dd925d4104f9";
