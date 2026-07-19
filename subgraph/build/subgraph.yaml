@@ -1,0 +1,95 @@
+specVersion: 0.0.5
+schema:
+  file: schema.graphql
+dataSources:
+  - kind: ethereum
+    name: LaunchpadFactory
+    network: robinhood-testnet
+    source:
+      address: "0x22079e9f1c5acd14a1d3f1c41fd9798b33775518"
+      abi: LaunchpadFactory
+      startBlock: 91286380
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Token
+        - Protocol
+      abis:
+        - name: LaunchpadFactory
+          file: LaunchpadFactory/LaunchpadFactory.json
+      eventHandlers:
+        - event: TokenCreated(indexed address,indexed address,indexed address,string,string,string)
+          handler: handleTokenCreated
+      file: LaunchpadFactory/LaunchpadFactory.wasm
+  - kind: ethereum
+    name: BuybackTreasury
+    network: robinhood-testnet
+    source:
+      address: "0xd8d4f77d200e5ddf5b44ba2d2f7539aa1d8fc811"
+      abi: BuybackTreasury
+      startBlock: 91286380
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - TreasuryOp
+        - Protocol
+      abis:
+        - name: BuybackTreasury
+          file: BuybackTreasury/BuybackTreasury.json
+      eventHandlers:
+        - event: Received(indexed address,uint256)
+          handler: handleReceived
+        - event: Buyback(indexed address,indexed address,uint256,uint256)
+          handler: handleBuyback
+        - event: Burned(indexed address,uint256)
+          handler: handleBurned
+      file: BuybackTreasury/BuybackTreasury.wasm
+  - kind: ethereum
+    name: BuybackVote
+    network: robinhood-testnet
+    source:
+      address: "0xa1936b527e198a4e46ed0f9e2410d6ef2c428d14"
+      abi: BuybackVote
+      startBlock: 91286380
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - VoteCast
+      abis:
+        - name: BuybackVote
+          file: BuybackVote/BuybackVote.json
+      eventHandlers:
+        - event: Vote(indexed address,indexed address,indexed uint256)
+          handler: handleVote
+      file: BuybackVote/BuybackVote.wasm
+templates:
+  - kind: ethereum
+    name: BondingCurvePool
+    network: robinhood-testnet
+    source:
+      abi: BondingCurvePool
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Token
+        - Trade
+        - Protocol
+      abis:
+        - name: BondingCurvePool
+          file: BondingCurvePool/BondingCurvePool.json
+      eventHandlers:
+        - event: Buy(indexed address,uint256,uint256,uint256)
+          handler: handleBuy
+        - event: Sell(indexed address,uint256,uint256,uint256)
+          handler: handleSell
+        - event: Graduated(uint256,uint256)
+          handler: handleGraduated
+      file: templates/BondingCurvePool/BondingCurvePool.wasm

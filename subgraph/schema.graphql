@@ -1,0 +1,62 @@
+type Token @entity(immutable: false) {
+  id: ID!                # адрес токена
+  name: String!
+  symbol: String!
+  metadataURI: String!
+  creator: Bytes!
+  pool: Bytes!
+  createdAt: BigInt!
+  createdBlock: BigInt!
+  graduated: Boolean!
+  ethReserve: BigInt!
+  tokensSold: BigInt!
+  tradesCount: Int!
+  volumeEth: BigInt!
+  feesEth: BigInt!
+  lastTradeAt: BigInt!
+  trades: [Trade!]! @derivedFrom(field: "token")
+}
+
+type Trade @entity(immutable: true) {
+  id: ID!                # txHash-logIndex
+  token: Token!
+  pool: Bytes!
+  trader: Bytes!
+  isBuy: Boolean!
+  ethAmount: BigInt!
+  tokenAmount: BigInt!
+  fee: BigInt!
+  timestamp: BigInt!
+  block: BigInt!
+  tx: Bytes!
+}
+
+type VoteCast @entity(immutable: true) {
+  id: ID!
+  token: Bytes!
+  voter: Bytes!
+  epoch: BigInt!
+  timestamp: BigInt!
+}
+
+type TreasuryOp @entity(immutable: true) {
+  id: ID!
+  kind: String!          # received | buyback | burned
+  from: Bytes
+  token: Bytes
+  ethAmount: BigInt
+  tokenAmount: BigInt
+  timestamp: BigInt!
+  tx: Bytes!
+}
+
+type Protocol @entity(immutable: false) {
+  id: ID!                # всегда "1"
+  tokensCount: Int!
+  graduatedCount: Int!
+  tradesCount: Int!
+  volumeEth: BigInt!
+  feesEth: BigInt!
+  treasuryReceived: BigInt!
+  treasurySpent: BigInt!
+}
