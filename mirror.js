@@ -127,15 +127,17 @@ function ipfsToHttp(u) {
 // ---------------------------------------------------------------- discovery
 // По примеру токена Pons находим их фабрику и сеть.
 async function discoverPonsFactory() {
-  if (state.ponsFactory) return;
-  // фабрику можно задать вручную: "ponsFactory": "0x...", тогда поиск не нужен
+  // фабрику (или список фабрик) можно задать вручную: "ponsFactory": "0x..." | ["0x...", "0x..."]
+  // конфиг главнее памяти — обновление config.json подхватится сразу
   if (CFG.ponsFactory) {
-    state.ponsFactory = CFG.ponsFactory.toLowerCase();
+    const list = Array.isArray(CFG.ponsFactory) ? CFG.ponsFactory : [CFG.ponsFactory];
+    state.ponsFactory = list.map((a) => a.toLowerCase());
     state.ponsSide = CHAINS.custom ? "custom" : (CFG.ponsSide ?? "testnet");
     saveState();
-    console.log(`✔ Фабрика Pons задана вручную: ${state.ponsFactory} (${state.ponsSide})`);
+    console.log(`✔ Фабрики Pons заданы вручную: ${state.ponsFactory.join(", ")} (${state.ponsSide})`);
     return;
   }
+  if (state.ponsFactory) return;
   const sample = CFG.ponsSampleToken;
   if (!sample) throw new Error("В config.json нужен ponsSampleToken — адрес любого токена Pons");
   console.log(`Ищу фабрику Pons по токену ${sample}…`);
@@ -172,12 +174,9 @@ function ponsClient() {
   });
 }
 
-// Событие запуска токена на фабрике Pons (PonsLauncher.TokenLaunched):
-// topic1 = адрес токена. Читаем напрямую из RPC — эксплорер не нужен.
-const PONS_LAUNCH_TOPICS = [
-  "0xdb51ea9ad51ab453a65a4cb7e60c3cb378c9501bb002609f8f97778fb6c4235a", // TokenLaunched
-  "0x1461370115e1c2be79cb529f8cfcbd11316e789d9c6099fc83417b0b4c48c62a", // TokenDeployed (запасной)
-];
+// Слушаем ВСЕ события фабрик Pons; кандидата в токены берём из topic1
+// (индексированный адрес). Настоящий это токен или нет — проверяем по
+// name()/symbol() в блокчейне, так что точный формат события не важен.
 const MAX_LOOKBACK = 20_000n; // не смотрим глубже ~20k блоков при долгом простое
 
 async function fetchNewPonsTokens() {
@@ -192,17 +191,19 @@ async function fetchNewPonsTokens() {
   let from = BigInt(state.lastBlock) + 1n;
   if (latest - from > MAX_LOOKBACK) from = latest - MAX_LOOKBACK; // после долгого простоя
   if (from > latest) return [];
+  const addrList = Array.isArray(state.ponsFactory) ? state.ponsFactory : [state.ponsFactory];
   const logs = await pc.getLogs({
-    address: state.ponsFactory,
+    address: addrList,
     fromBlock: from,
     toBlock: latest,
   });
   const fresh = [];
   const seen = new Set();
   for (const l of logs) {
-    if (!PONS_LAUNCH_TOPICS.includes(l.topics?.[0])) continue;
     const t = l.topics?.[1];
     if (!t || t.length !== 66) continue;
+    // topic1 должен быть адресом (первые 24 hex-символа — нули)
+    if (!/^0x0{24}/.test(t)) continue;
     const addr = "0x" + t.slice(26);
     if (seen.has(addr)) continue;
     seen.add(addr);
