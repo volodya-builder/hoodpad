@@ -21,8 +21,16 @@ export default function Admin({ wallet, onConnect }) {
   const [burnAmt, setBurnAmt] = useState("");
   const [burnPct, setBurnPct] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [copiedCA, setCopiedCA] = useState("");
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
+
+  const copyAddr = (addr, e) => {
+    e.preventDefault(); e.stopPropagation();
+    try { navigator.clipboard.writeText(addr); } catch (err) { /* ignore */ }
+    setCopiedCA(addr);
+    setTimeout(() => setCopiedCA(""), 1200);
+  };
 
   const dollars = (e) => {
     const v = e * rate, a = Math.abs(v);
@@ -215,6 +223,11 @@ export default function Admin({ wallet, onConnect }) {
                     <b>{tk.symbol}</b>{" "}
                     <span className="dim" style={{ fontSize: 12 }}>{tk.name}</span>
                     {tk.graduated && <span className="badge" style={{ marginLeft: 6 }}>🎯</span>}
+                    <div className="mono addr-copy" style={{ fontSize: 11.5, marginTop: 3 }}
+                         title={t("Скопировать адрес")}
+                         onClick={(e) => copyAddr(tk.token, e)}>
+                      {short(tk.token)} {copiedCA === tk.token ? "✓" : "⧉"}
+                    </div>
                   </span>
                   <span className="dim">🗳 {tk.voteCount} {t("голосов")}</span>
                   <span className="dim">{fmt(Number(formatEther(tk.reserve)), 3)} ETH</span>
@@ -229,10 +242,16 @@ export default function Admin({ wallet, onConnect }) {
               {!selected && <div className="dim">{t("Выберите токен слева, чтобы выкупить или сжечь.")}</div>}
               {selected && (
                 <>
-                  <h3 style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <h3 style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                     {selected.meta.image && <img src={selected.meta.image} style={{ width: 26, height: 26, borderRadius: 7 }} alt="" />}
                     ${selected.symbol}
                   </h3>
+                  <div className="mono addr-copy" style={{ fontSize: 12, marginBottom: 12 }}
+                       title={t("Скопировать адрес")}
+                       onClick={(e) => copyAddr(selected.token, e)}>
+                    {selected.token.slice(0, 10)}…{selected.token.slice(-8)}{" "}
+                    {copiedCA === selected.token ? "✓" : "⧉"}
+                  </div>
 
                   {selected.graduated ? (
                     <div className="dim" style={{ marginBottom: 12 }}>
