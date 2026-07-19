@@ -11,6 +11,7 @@ import { Privacy, Terms } from "./pages/Legal.jsx";
 import { connectWallet, reconnectWallet, hasWallet, short, fmt } from "./lib/web3.js";
 import { CHAIN, FACTORY_ADDRESS } from "./lib/config.js";
 import { loadTokens } from "./lib/data.js";
+import { loadTokens } from "./lib/data.js";
 import { useEthUsd, usd } from "./lib/price.js";
 import { useLang } from "./lib/i18n.jsx";
 import { formatEther } from "viem";
@@ -114,6 +115,9 @@ export default function App() {
       alert(e.shortMessage || e.message);
     }
   }, []);
+
+  // Прогрев кэша данных сразу при загрузке приложения
+  useEffect(() => { loadTokens().catch(() => {}); }, []);
 
   // Автовосстановление сессии кошелька после перезагрузки страницы
   useEffect(() => {

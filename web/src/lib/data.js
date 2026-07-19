@@ -15,17 +15,38 @@ export function parseMeta(uri) {
 
 const PAGE = 96n;
 
-// Кэш списка токенов: переключение вкладок мгновенное, данные
-// дотягиваются в фоне (TTL 15с). Параллельные вызовы дедуплицируются.
+// Кэш списка токенов в режиме stale-while-revalidate: страница ВСЕГДА
+// получает данные мгновенно (пусть и чуть устаревшие), а свежие
+// подтягиваются в фоне. Кэш переживает перезагрузку через localStorage.
 let _tok = { v: null, t: 0, p: null };
+const TOK_LS = "hood_cache_tokens_v1";
 
-export async function loadTokens() {
-  if (_tok.v && Date.now() - _tok.t < 15_000) return _tok.v;
+const bigReplacer = (k, v) => (typeof v === "bigint" ? { __b: v.toString() } : v);
+const bigReviver = (k, v) => (v && typeof v === "object" && "__b" in v ? BigInt(v.__b) : v);
+
+try {
+  const rawLs = localStorage.getItem(TOK_LS);
+  if (rawLs) { _tok.v = JSON.parse(rawLs, bigReviver); _tok.t = 0; } // t=0 → сразу обновится в фоне
+} catch (e) { /* ignore */ }
+
+function refreshTokens() {
   if (_tok.p) return _tok.p;
   _tok.p = _loadTokensFresh()
-    .then((v) => { _tok = { v, t: Date.now(), p: null }; return v; })
+    .then((v) => {
+      _tok = { v, t: Date.now(), p: null };
+      try { localStorage.setItem(TOK_LS, JSON.stringify(v, bigReplacer)); } catch (e) { /* ignore */ }
+      return v;
+    })
     .catch((e) => { _tok.p = null; if (_tok.v) return _tok.v; throw e; });
   return _tok.p;
+}
+
+export async function loadTokens() {
+  if (_tok.v) {
+    if (Date.now() - _tok.t > 10_000) refreshTokens(); // фоновое обновление, не ждём
+    return _tok.v; // мгновенный ответ
+  }
+  return refreshTokens();
 }
 
 async function _loadTokensFresh() {
@@ -71,12 +92,21 @@ const _trades = new Map(); // pool -> { v, t, p }
 
 export async function poolTrades(pool) {
   const c = _trades.get(pool);
-  if (c?.v && Date.now() - c.t < 15_000) return c.v;
+  if (c?.v) {
+    // мгновенный ответ + тихое обновление в фоне
+    if (Date.now() - c.t > 10_000 && !c.p) {
+      const p = _poolTradesFresh(pool)
+        .then((v) => { _trades.set(pool, { v, t: Date.now(), p: null }); return v; })
+        .catch(() => { _trades.set(pool, { ...c, p: null }); return c.v; });
+      _trades.set(pool, { ...c, p });
+    }
+    return c.v;
+  }
   if (c?.p) return c.p;
   const p = _poolTradesFresh(pool)
     .then((v) => { _trades.set(pool, { v, t: Date.now(), p: null }); return v; })
-    .catch((e) => { _trades.set(pool, { ...(c ?? {}), p: null }); if (c?.v) return c.v; throw e; });
-  _trades.set(pool, { ...(c ?? {}), p });
+    .catch((e) => { _trades.set(pool, { p: null }); throw e; });
+  _trades.set(pool, { p });
   return p;
 }
 
