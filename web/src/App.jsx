@@ -12,6 +12,7 @@ import { Privacy, Terms } from "./pages/Legal.jsx";
 import { connectWallet, reconnectWallet, hasWallet, short, fmt, publicClient } from "./lib/web3.js";
 import { CHAIN, FACTORY_ADDRESS, TREASURY_ADDRESS } from "./lib/config.js";
 import { treasuryAbi } from "./lib/abi.js";
+import { dataSource } from "./lib/data.js";
 import { loadTokens } from "./lib/data.js";
 import { useEthUsd, usd } from "./lib/price.js";
 import { useLang } from "./lib/i18n.jsx";
@@ -25,6 +26,16 @@ function useHashRoute() {
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
   return hash.replace(/^#/, "");
+}
+
+function DataSourceBadge() {
+  const [src, setSrc] = useState(dataSource.v);
+  useEffect(() => {
+    const id = setInterval(() => setSrc(dataSource.v), 2000);
+    return () => clearInterval(id);
+  }, []);
+  if (!src) return null;
+  return <span title="Откуда сайт берёт данные">{src === "subgraph" ? " · ⚡ Goldsky" : " · ⛓ RPC fallback"}</span>;
 }
 
 function SearchModal({ open, onClose }) {
@@ -283,7 +294,7 @@ export default function App() {
           <div className="footer-note">
             <h4 style={{ fontSize: "11.5px", textTransform: "uppercase", color: "var(--text-dim)", letterSpacing: 1, margin: "0 0 11px" }}>{t("Риск-нотис")}</h4>
             {t("Транзакции отправляются вашим кошельком и необратимы. Токены волатильны и могут полностью обесцениться. hood не хранит активы, не даёт гарантий и финансовых советов.")}
-            <div className="dim" style={{ marginTop: 14 }}>© 2026 hood · Robinhood Chain</div>
+            <div className="dim" style={{ marginTop: 14 }}>© 2026 hood · Robinhood Chain<DataSourceBadge /></div>
           </div>
         </div>
       </footer>

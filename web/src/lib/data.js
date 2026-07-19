@@ -108,9 +108,17 @@ export async function loadTokens() {
   return refreshTokens();
 }
 
+export const dataSource = { v: "" }; // "subgraph" | "rpc" — что реально отвечает
+
 async function _loadTokensFresh() {
-  try { return await _loadTokensSubgraph(); }
-  catch (e) { return _loadTokensRpc(); }
+  try {
+    const r = await _loadTokensSubgraph();
+    dataSource.v = "subgraph";
+    return r;
+  } catch (e) {
+    dataSource.v = "rpc";
+    return _loadTokensRpc();
+  }
 }
 
 async function _loadTokensRpc() {
