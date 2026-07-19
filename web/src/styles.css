@@ -16,17 +16,21 @@
   --leaf-dim: #4caf6d1f;
   --red: #e05c5c;
   --radius: 16px;
-  --font-ui: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
   font-family: var(--font-ui);
 }
-/* Заголовки на Fraunces: авто-оптический размер + утончённая посадка */
+/* Заголовки в стиле pons: классический editorial-серив.
+   У Instrument Serif одно начертание (400) — жирность имитировать нельзя,
+   поэтому заголовкам задаём regular и чуть больший размер. */
 .sec-h2 { font-family: var(--font-display); }
 .page-title, .panel h2, .sec-h2, .preview-name, .footer-tag {
-  font-optical-sizing: auto;
-  font-variation-settings: "opsz" 120;
-  letter-spacing: -.5px;
+  font-weight: 400;
+  letter-spacing: 0;
 }
+.page-title { font-size: 42px; }
+.sec-h2 { font-size: 30px; }
+.footer-tag { font-size: 34px; }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body {
@@ -50,8 +54,8 @@ header {
 .logo { display: flex; align-items: center; gap: 10px; cursor: pointer; }
 .logo svg { flex: none; }
 .logo-word {
-  font-family: var(--font-ui); font-weight: 700; font-size: 17px;
-  letter-spacing: 7px; margin-left: 2px;
+  font-family: var(--font-display); font-weight: 400; font-size: 20px;
+  letter-spacing: 5px; margin-left: 2px;
 }
 .logo-word .dot { color: var(--gold); }
 .nav { display: flex; gap: 10px; align-items: center; }
@@ -177,7 +181,7 @@ header {
   background: linear-gradient(180deg, #1a1a19 0%, #151514 100%);
   border: 1px solid var(--border); border-radius: var(--radius); padding: 28px;
 }
-.panel h2 { margin: 0 0 8px; font-family: var(--font-display); font-size: 30px; font-weight: 700; letter-spacing: -.3px; }
+.panel h2 { margin: 0 0 8px; font-family: var(--font-display); font-size: 34px; font-weight: 400; letter-spacing: 0; }
 label { display: block; font-size: 12.5px; color: var(--text-dim); margin: 18px 0 7px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; }
 input, textarea {
   width: 100%; background: #111210; border: 1px solid var(--border); color: var(--text);
@@ -232,7 +236,7 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
   font-size: 36px; color: var(--text-dim); overflow: hidden;
 }
 .preview-img img { width: 100%; height: 100%; object-fit: cover; }
-.preview-name { font-family: var(--font-display); font-size: 24px; font-weight: 700; margin-top: 16px; letter-spacing: -.3px; word-break: break-word; }
+.preview-name { font-family: var(--font-display); font-size: 27px; font-weight: 400; margin-top: 16px; letter-spacing: 0; word-break: break-word; }
 .preview-ticker { color: var(--gold); font-size: 13px; font-weight: 800; margin-top: 3px; letter-spacing: .6px; }
 .preview-stats { margin-top: 20px; border-top: 1px solid var(--border); }
 .preview-stats .row { display: flex; justify-content: space-between; font-size: 13px; padding: 11px 0; border-bottom: 1px solid #2a2a28; gap: 10px; }
@@ -353,7 +357,7 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 /* footer */
 footer { border-top: 1px solid var(--border); padding: 40px 0 28px; margin-top: 24px; }
 .footer-inner { display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
-.footer-tag { font-family: var(--font-display); font-size: 30px; font-weight: 700; letter-spacing: -.5px; }
+.footer-tag { font-family: var(--font-display); font-size: 34px; font-weight: 400; letter-spacing: 0; }
 .footer-tag .gold { color: var(--gold); font-style: italic; }
 .footer-note { max-width: 480px; font-size: 12px; color: var(--text-dim); line-height: 1.6; }
 
@@ -380,7 +384,7 @@ footer { border-top: 1px solid var(--border); padding: 40px 0 28px; margin-top: 
   background: radial-gradient(700px 260px at 25% -40px, #c8f42b14, transparent 70%), var(--card);
   box-shadow: 0 0 40px -22px #c8f42b55;
 }
-.sec-h2 { font-size: 26px; font-weight: 800; margin: 0; letter-spacing: -.4px; }
+.sec-h2 { font-family: var(--font-display); font-size: 30px; font-weight: 400; margin: 0; letter-spacing: 0; }
 .sec-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
 .tgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
 .tcard { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 15px; padding: 11px; cursor: pointer; transition: all .16s ease; min-width: 0; overflow: hidden; }
@@ -439,7 +443,7 @@ html[data-theme="light"] .grad-wrap { background: radial-gradient(700px 260px at
 .sr-item .m { margin-left: auto; font-size: 12.5px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
 
 /* ---------------- analytics */
-.page-title { font-family: var(--font-display); font-size: 36px; font-weight: 700; margin: 40px 0 6px; letter-spacing: -.5px; }
+.page-title { font-family: var(--font-display); font-size: 42px; font-weight: 400; margin: 40px 0 6px; letter-spacing: 0; }
 .page-sub { color: var(--text-dim); font-size: 14.5px; margin-bottom: 22px; }
 .ana-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin: 18px 0 60px; }
 .ana-card { background: linear-gradient(180deg, #1a1a19 0%, #151514 100%); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
@@ -1036,7 +1040,7 @@ html[data-theme="light"] .tos-ico { background: #ffffff; }
   .container { padding: 0 16px; }
   .nav-pills { gap: 1px; padding: 3px; }
   .nav-pill { padding: 7px 11px; font-size: 12.5px; }
-  .page-title { font-size: 30px; margin: 30px 0 6px; }
+  .page-title { font-size: 34px; margin: 30px 0 6px; }
 }
 
 /* телефоны: сворачиваем меню в бургер */
@@ -1064,7 +1068,7 @@ html[data-theme="light"] .tos-ico { background: #ffffff; }
   /* компактная кнопка кошелька: прячем баланс и ▾ выносим */
   .nav .btn { padding: 9px 12px; font-size: 12.5px; }
 
-  .page-title { font-size: 26px; }
+  .page-title { font-size: 30px; }
   .page-sub { font-size: 13.5px; }
   .search-row { flex-direction: column; }
   .search-row .btn-primary { width: 100%; justify-content: center; padding: 13px 0 !important; }
@@ -1094,7 +1098,7 @@ html[data-theme="light"] .tos-ico { background: #ffffff; }
   .logo-word { font-size: 13px; letter-spacing: 3px; }
   .icon-btn { width: 34px; height: 34px; }
   .nav .btn { padding: 8px 10px; font-size: 11.5px; }
-  .page-title { font-size: 23px; }
+  .page-title { font-size: 27px; }
   /* прячем "ETH" в балансе кошелька, оставляем адрес — экономим место */
   .header-inner .net-pill { display: none; }
 }
