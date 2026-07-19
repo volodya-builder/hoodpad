@@ -18,9 +18,9 @@ const PAGE = 96n;
 // ---------------------------------------------------------------- subgraph
 // Goldsky-индексатор: сайт получает готовые данные одним запросом.
 // При любой ошибке автоматически откатываемся на прямое чтение блокчейна.
-// МЕЙННЕТ: пусто, пока не поднят мейннет-субграф — сайт работает через RPC.
-// Как будет готов, вставить сюда мейннет-endpoint Goldsky.
-export const SUBGRAPH_URL = "";
+// МЕЙННЕТ Goldsky-субграф (индексатор). Сеть robinhood-mainnet.
+export const SUBGRAPH_URL =
+  "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/1.0.0/gn";
 
 async function gql(query, attempts = 3) {
   if (!SUBGRAPH_URL) throw new Error("subgraph disabled"); // сразу на RPC-фолбэк
