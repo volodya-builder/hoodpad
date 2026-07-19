@@ -41,8 +41,15 @@ function Bars({ data }) {
   );
 }
 
-// Память вкладки между заходами
+// Память вкладки между заходами (+ localStorage — мгновенно после перезагрузки)
 let _anaRaw = null;
+const ANA_LS = "hood_cache_analytics_v1";
+const _bigR = (k, v) => (typeof v === "bigint" ? { __b: v.toString() } : v);
+const _bigV = (k, v) => (v && typeof v === "object" && "__b" in v ? BigInt(v.__b) : v);
+try {
+  const s = localStorage.getItem(ANA_LS);
+  if (s) _anaRaw = JSON.parse(s, _bigV);
+} catch (e) { /* ignore */ }
 
 export default function Analytics() {
   const { t } = useLang();
@@ -139,8 +146,9 @@ export default function Analytics() {
         grads: tokens.filter((tk) => tk.graduated).length,
         treBal, received, spent, bought, burned, buybackCount, leaders,
       };
+      try { localStorage.setItem(ANA_LS, JSON.stringify(_anaRaw, _bigR)); } catch (e) { /* ignore */ }
       setRaw(_anaRaw);
-    })().catch((e) => alive && setError(e.shortMessage || e.message));
+    })().catch((e) => { if (alive && !_anaRaw) setError(e.shortMessage || e.message); });
     return () => { alive = false; };
   }, []);
 
