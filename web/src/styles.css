@@ -833,3 +833,7 @@ html[data-theme="light"] .verify-note { border-color: #cfcec6; }
   background: var(--gold); border: none;
 }
 .adm-slider.burn::-moz-range-thumb { background: var(--red); }
+
+/* -------- bigger token chat -------- */
+.chat-panel { max-height: 880px; }
+.chat-list { min-height: 420px; }

@@ -754,44 +754,6 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           </div>
         )}
 
-        {isTreasuryOwner && !data.graduated && (
-          <div className="panel" style={{ margin: "18px 0 0", maxWidth: "none" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <b style={{ fontSize: 14 }}>{t("Выкуп из казны")}</b>
-              <TreasuryBalance />
-            </div>
-            <p className="dim" style={{ margin: "8px 0 10px" }}>
-              {t("Режим владельца платформы: казна купит этот токен с рынка.")}
-            </p>
-            <div style={{ display: "flex", gap: 8 }}>
-              <input
-                value={bbAmt}
-                onChange={(e) => setBbAmt(e.target.value)}
-                placeholder="0.001"
-                inputMode="decimal"
-                style={{ flex: 1 }}
-              />
-              <button
-                className="btn"
-                disabled={busy || !bbAmt}
-                onClick={() => sendTx(TREASURY_ADDRESS, treasuryAbi, "buyback", [tokenAddress, parseEther(bbAmt), 0n])}
-              >
-                {t("Выкупить")}
-              </button>
-            </div>
-            <div className="dim" style={{ marginTop: 8, display: "flex", justifyContent: "space-between" }}>
-              <span>{t("В казне:")} {fmt(formatEther(extra.treasuryHeld ?? 0n), 0)} {data.symbol}</span>
-              {(extra.treasuryHeld ?? 0n) > 0n && (
-                <a
-                  style={{ color: "var(--red)", cursor: "pointer" }}
-                  onClick={() => sendTx(TREASURY_ADDRESS, treasuryAbi, "burn", [tokenAddress, extra.treasuryHeld])}
-                >
-                  {t("Сжечь 🔥")}
-                </a>
-              )}
-            </div>
-          </div>
-        )}
 
         <Chat tokenAddress={tokenAddress} wallet={wallet} onConnect={onConnect} />
       </div>
