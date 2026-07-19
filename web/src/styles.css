@@ -952,3 +952,16 @@ label.slip-opt-custom { margin: 0; display: flex; align-items: center; padding: 
 .tos-ghost:hover { color: var(--gold); }
 html[data-theme="light"] .tos-hero { background: radial-gradient(320px 200px at 50% 30%, #c8f42b3d 0%, transparent 70%), #eceae4; }
 html[data-theme="light"] .tos-ico { background: #ffffff; }
+
+/* -------- chart v3: legend chips -------- */
+.ch-legend { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.ch-chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 5px 12px 5px 6px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  background: var(--bg-soft); border: 1px solid var(--border); color: var(--text);
+}
+.ch-chip i {
+  font-style: normal; font-size: 9.5px; font-weight: 800; padding: 2px 7px; border-radius: 7px;
+}
+.ch-chip .cbuy { background: var(--gold); color: #101100; }
+.ch-chip .cburn { background: #c2502e; color: #fff; }

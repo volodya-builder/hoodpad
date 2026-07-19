@@ -11,11 +11,33 @@ import { useLang } from "../lib/i18n.jsx";
 
 const SLIPPAGE_CHOICES = [0.5, 1, 3, 5]; // %
 
+const MONTHS_RU = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+const MONTHS_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function smoothPath(xs, ys) {
+  if (xs.length < 3) {
+    return xs.map((x, i) => `${i ? "L" : "M"}${x.toFixed(1)} ${ys[i].toFixed(1)}`).join(" ");
+  }
+  let d = `M${xs[0].toFixed(1)} ${ys[0].toFixed(1)}`;
+  for (let i = 0; i < xs.length - 1; i++) {
+    const x0 = xs[Math.max(0, i - 1)], y0 = ys[Math.max(0, i - 1)];
+    const x1 = xs[i], y1 = ys[i];
+    const x2 = xs[i + 1], y2 = ys[i + 1];
+    const x3 = xs[Math.min(xs.length - 1, i + 2)], y3 = ys[Math.min(xs.length - 1, i + 2)];
+    d += `C${(x1 + (x2 - x0) / 6).toFixed(1)} ${(y1 + (y2 - y0) / 6).toFixed(1)} ` +
+         `${(x2 - (x3 - x1) / 6).toFixed(1)} ${(y2 - (y3 - y1) / 6).toFixed(1)} ` +
+         `${x2.toFixed(1)} ${y2.toFixed(1)}`;
+  }
+  return d;
+}
+
 function MiniChart({ points, rate, marks }) {
   const [hover, setHover] = React.useState(null);
-  const W = 640, H = 240, PADB = 22, PADT = 10, PADL = 6, PADR = 6;
+  const W = 680, H = 300, PADB = 30, PADT = 14, PADL = 8, PADR = 62;
+  let en = false;
+  try { en = localStorage.getItem("hood_lang") === "en"; } catch (e) { /* ignore */ }
+  const MONTHS = en ? MONTHS_EN : MONTHS_RU;
 
-  // Нет сделок — рисуем базовую линию стартовой капитализации
   const pts = (points && points.length >= 2)
     ? points
     : [{ i: 0, mcap: 1.625, ts: null }, { i: 1, mcap: 1.625, ts: null }];
@@ -23,20 +45,34 @@ function MiniChart({ points, rate, marks }) {
 
   let mn = Infinity, mx = -Infinity;
   pts.forEach((p) => { mn = Math.min(mn, p.mcap); mx = Math.max(mx, p.mcap); });
-  if (mx - mn < mx * 0.02) { mx *= 1.02; mn *= 0.98; }
+  if (mx - mn < mx * 0.02) { mx *= 1.03; mn *= 0.97; }
   const X = (i) => PADL + (i / (pts.length - 1)) * (W - PADL - PADR);
   const Y = (v) => PADT + (1 - (v - mn) / (mx - mn)) * (H - PADT - PADB);
-  const line = pts.map((p, i) => `${i ? "L" : "M"}${X(i).toFixed(1)} ${Y(p.mcap).toFixed(1)}`).join(" ");
-  const area = `${line} L${X(pts.length - 1).toFixed(1)} ${H - PADB} L${PADL} ${H - PADB} Z`;
+  const xs = pts.map((_, i) => X(i));
+  const ys = pts.map((p) => Y(p.mcap));
+  const line = smoothPath(xs, ys);
+  const area = `${line} L${xs[xs.length - 1].toFixed(1)} ${H - PADB} L${PADL} ${H - PADB} Z`;
   const last = pts[pts.length - 1];
   const usdV = (m) => usd(m * rate);
-  const timeLbl = (ts) => {
-    if (!ts) return "";
+  const tsLbl = (ts) => {
     const d = new Date(ts);
-    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    return `${d.getDate()} ${MONTHS[d.getMonth()]}, ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   };
-  const firstTs = pts.find((p) => p.ts)?.ts;
-  const lastTs = [...pts].reverse().find((p) => p.ts)?.ts;
+
+  // тики времени по нижней оси
+  const tsPts = pts.map((p, i) => ({ i, ts: p.ts })).filter((x) => x.ts);
+  const ticks = [];
+  if (tsPts.length >= 2) {
+    const N = Math.min(5, tsPts.length);
+    for (let k = 0; k < N; k++) {
+      const idx = Math.round((k / (N - 1)) * (tsPts.length - 1));
+      ticks.push(tsPts[idx]);
+    }
+  }
+
+  // счётчики событий для легенды
+  const nBuy = (marks ?? []).filter((m) => m.kind === "buyback").length;
+  const nBurn = (marks ?? []).filter((m) => m.kind === "burned").length;
 
   const onMove = (e) => {
     const box = e.currentTarget.getBoundingClientRect();
@@ -47,32 +83,36 @@ function MiniChart({ points, rate, marks }) {
 
   return (
     <div style={{ position: "relative" }}>
+      {(nBuy > 0 || nBurn > 0) && (
+        <div className="ch-legend">
+          {nBuy > 0 && <span className="ch-chip"><i className="cbuy">BUY</i> {en ? "Treasury buyback" : "Выкуп казны"} {nBuy}</span>}
+          {nBurn > 0 && <span className="ch-chip"><i className="cburn">BRN</i> {en ? "Burn" : "Сжигание"} {nBurn}</span>}
+        </div>
+      )}
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", display: "block", marginTop: 8 }}
            onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
         <defs>
           <linearGradient id="tokAreaG" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#c8f42b" stopOpacity=".25" />
+            <stop offset="0" stopColor="#c8f42b" stopOpacity=".28" />
             <stop offset="1" stopColor="#c8f42b" stopOpacity="0" />
           </linearGradient>
+          <filter id="chGlow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="5" />
+          </filter>
         </defs>
-        {[0.25, 0.5, 0.75].map((f) => (
+        {[0, 0.5, 1].map((f) => (
           <line key={f} x1={PADL} x2={W - PADR}
                 y1={PADT + f * (H - PADT - PADB)} y2={PADT + f * (H - PADT - PADB)}
-                stroke="currentColor" strokeOpacity="0.07" strokeDasharray="4 5" />
+                stroke="currentColor" strokeOpacity="0.08" strokeDasharray="4 5" />
         ))}
         <path d={area} fill="url(#tokAreaG)" />
-        <path d={line} fill="none" stroke="#c8f42b" strokeWidth="2"
-              strokeLinejoin="round" strokeDasharray={empty ? "5 6" : "none"} />
+        <path d={line} fill="none" stroke="#c8f42b" strokeWidth="3" strokeOpacity=".55"
+              filter="url(#chGlow)" strokeLinejoin="round" strokeLinecap="round" />
+        <path d={line} fill="none" stroke="#dfff54" strokeWidth="2.2"
+              strokeLinejoin="round" strokeLinecap="round"
+              strokeDasharray={empty ? "5 6" : "none"} />
         {!empty && (
-          <circle cx={X(pts.length - 1)} cy={Y(last.mcap)} r="4" fill="#e2ff5c" stroke="#0d0e0c" strokeWidth="2" />
-        )}
-        {hover !== null && !empty && (
-          <g>
-            <line x1={X(hover)} x2={X(hover)} y1={PADT} y2={H - PADB}
-                  stroke="currentColor" strokeOpacity="0.25" />
-            <circle cx={X(hover)} cy={Y(pts[hover].mcap)} r="4.5"
-                    fill="#e2ff5c" stroke="#0d0e0c" strokeWidth="2" />
-          </g>
+          <circle cx={xs[xs.length - 1]} cy={Y(last.mcap)} r="4.5" fill="#e2ff5c" stroke="#0b0b0b" strokeWidth="2" />
         )}
         {(marks ?? []).map((mk, k) => {
           if (!pts.some((pp) => pp.ts)) return null;
@@ -81,25 +121,43 @@ function MiniChart({ points, rate, marks }) {
             if (pp.ts) { const d = Math.abs(pp.ts - mk.ts); if (d < bd) { bd = d; best = ii; } }
           });
           if (best < 0) return null;
+          const bx = X(best), by = Y(pts[best].mcap);
+          const isBurn = mk.kind === "burned";
+          const bw = 34;
           return (
             <g key={`mk${k}`}>
-              <line x1={X(best)} x2={X(best)} y1={PADT} y2={H - PADB}
-                    stroke={mk.kind === "burned" ? "#e05252" : "#e2ff5c"}
-                    strokeOpacity="0.35" strokeDasharray="3 4" />
-              <text x={X(best)} y={PADT + 13} textAnchor="middle" fontSize="11">
-                {mk.kind === "burned" ? "🔥" : "🛒"}
+              <line x1={bx} x2={bx} y1={by} y2={by - 22}
+                    stroke={isBurn ? "#c2502e" : "#c8f42b"} strokeWidth="1.5" strokeOpacity=".8" />
+              <circle cx={bx} cy={by} r="3.5" fill={isBurn ? "#c2502e" : "#c8f42b"} stroke="#0b0b0b" strokeWidth="1.5" />
+              <rect x={bx - bw / 2} y={by - 40} width={bw} height="18" rx="6"
+                    fill={isBurn ? "#c2502e" : "#c8f42b"} />
+              <text x={bx} y={by - 27} textAnchor="middle" fontSize="10" fontWeight="800"
+                    fill={isBurn ? "#ffffff" : "#101100"}>
+                {isBurn ? "BRN" : "BUY"}
               </text>
             </g>
           );
         })}
-        <text x={PADL} y={PADT + 4} className="chart-axis">{usdV(mx)}</text>
-        <text x={PADL} y={H - PADB - 4} className="chart-axis">{usdV(mn)}</text>
-        {firstTs && <text x={PADL} y={H - 6} className="chart-axis">{timeLbl(firstTs)}</text>}
-        {lastTs && <text x={W - PADR} y={H - 6} className="chart-axis" textAnchor="end">{timeLbl(lastTs)}</text>}
+        {hover !== null && !empty && (
+          <g>
+            <line x1={xs[hover]} x2={xs[hover]} y1={PADT} y2={H - PADB}
+                  stroke="currentColor" strokeOpacity="0.25" />
+            <circle cx={xs[hover]} cy={ys[hover]} r="4.5"
+                    fill="#e2ff5c" stroke="#0b0b0b" strokeWidth="2" />
+          </g>
+        )}
+        <text x={W - 6} y={PADT + 4} className="chart-axis" textAnchor="end">{usdV(mx)}</text>
+        <text x={W - 6} y={PADT + 0.5 * (H - PADT - PADB) + 3} className="chart-axis" textAnchor="end">{usdV((mx + mn) / 2)}</text>
+        <text x={W - 6} y={H - PADB} className="chart-axis" textAnchor="end">{usdV(mn)}</text>
+        {ticks.map((tk2, k) => (
+          <text key={k} x={X(tk2.i)} y={H - 8} className="chart-axis"
+                textAnchor={k === 0 ? "start" : k === ticks.length - 1 ? "end" : "middle"}>
+            {tsLbl(tk2.ts)}
+          </text>
+        ))}
       </svg>
       {hover !== null && !empty && (
-        <div className="chart-tip"
-             style={{ left: `${(X(hover) / W) * 100}%` }}>
+        <div className="chart-tip" style={{ left: `${(xs[hover] / W) * 100}%` }}>
           <b>{usdV(pts[hover].mcap)}</b>
           {pts[hover].ts ? <span> · {timeAgo(pts[hover].ts)}</span> : null}
         </div>
@@ -192,7 +250,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const chartPoints = useMemo(() => {
     if (!history) return null;
     if (tf === "all" || !history.now) return history.points;
-    const cutoff = history.now - (tf === "24h" ? 86400e3 : 7 * 86400e3);
+    const TF_MS = { "5m": 300000, "1h": 3600000, "6h": 21600000, "1d": 86400000 };
+    const cutoff = history.now - (TF_MS[tf] ?? 86400000);
     const after = history.points.filter((p) => (p.ts ?? 0) >= cutoff);
     const before = history.points.filter((p) => (p.ts ?? 0) < cutoff);
     const base = before.length ? [before[before.length - 1]] : [];
@@ -594,7 +653,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           <div className="card-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
             <h3>{t("Капитализация по сделкам")}</h3>
             <div className="pill-group">
-              {[["24h", t("24ч")], ["7d", t("7д")], ["all", t("Всё")]].map(([k, lbl]) => (
+              {[["5m", "5M"], ["1h", "1H"], ["6h", "6H"], ["1d", "1D"], ["all", "ALL"]].map(([k, lbl]) => (
                 <div key={k} className={`fpill ${tf === k ? "on" : ""}`} onClick={() => setTf(k)}>{lbl}</div>
               ))}
             </div>
@@ -605,7 +664,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               {tfChange !== null && (
                 <div className={`tk-chg ${tfChange >= 0 ? "up" : "down"}`}>
                   {tfChange >= 0 ? "+" : ""}{fmt(tfChange, 2)}%{" "}
-                  <span className="dim">{tf === "all" ? "ALL" : tf === "24h" ? "24H" : "7D"}</span>
+                  <span className="dim">{tf.toUpperCase()}</span>
                 </div>
               )}
             </div>
