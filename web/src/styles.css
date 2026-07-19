@@ -344,7 +344,7 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 .side-sell { color: var(--red); font-weight: 800; }
 
 /* footer */
-footer { border-top: 1px solid var(--border); padding: 46px 0 40px; margin-top: 40px; }
+footer { border-top: 1px solid var(--border); padding: 40px 0 28px; margin-top: 24px; }
 .footer-inner { display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
 .footer-tag { font-family: var(--font-display); font-size: 30px; font-weight: 700; letter-spacing: -.5px; }
 .footer-tag .gold { color: var(--gold); font-style: italic; }
@@ -516,7 +516,7 @@ footer { flex-shrink: 0; margin-top: auto; }
 .fcol .dim { white-space: normal; font-size: 13px; }
 .footer-bottom {
   display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;
-  border-top: 1px solid var(--border); margin-top: 40px; padding-top: 24px; font-size: 12.5px;
+  border-top: 1px solid var(--border); margin-top: 30px; padding-top: 22px; font-size: 12.5px;
 }
 .x-chip {
   display: inline-flex; align-items: center; gap: 10px;
