@@ -837,3 +837,10 @@ html[data-theme="light"] .verify-note { border-color: #cfcec6; }
 /* -------- bigger token chat -------- */
 .chat-panel { max-height: 880px; }
 .chat-list { min-height: 420px; }
+
+/* -------- editable quick-percent presets -------- */
+.qp-edit {
+  width: 52px; padding: 4px 6px; font-size: 12px; text-align: center;
+  border-radius: 999px; background: var(--bg); border: 1px solid var(--gold);
+  color: var(--text); outline: none;
+}

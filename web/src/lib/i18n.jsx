@@ -217,6 +217,7 @@ const EN = {
   "Комиссии собраны": "Fees collected",
   "От баланса": "Of balance",
   "Авто": "Auto",
+  "Настроить быстрые проценты": "Customize quick percents",
   "Подбирается автоматически под размер сделки": "Picked automatically for your trade size",
   "Топ трейдеров": "Top traders",
   "Пока пусто.": "Nothing here yet.",

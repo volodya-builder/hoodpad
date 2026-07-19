@@ -114,6 +114,14 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [copiedCA, setCopiedCA] = useState(false);
   const [tf, setTf] = useState("all"); // таймфрейм графика
   const [tradePct, setTradePct] = useState(0); // ползунок суммы
+  const [qpcts, setQpcts] = useState(() => {
+    try {
+      const v = JSON.parse(localStorage.getItem("hood_qp") || "null");
+      if (Array.isArray(v) && v.length === 4) return v;
+    } catch (e) { /* ignore */ }
+    return [25, 50, 75, 100];
+  });
+  const [qpEdit, setQpEdit] = useState(false);
   const [slip, setSlip] = useState(() => {
     try {
       const v = localStorage.getItem("hood_slip");
@@ -688,16 +696,42 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             )}
 
             <div className="qa-row">
-              {tab === "buy"
-                ? ["0.001", "0.01", "0.05", "0.1"].map((v) => (
-                    <div key={v} className="fpill qa-pill" onClick={() => setAmount(v)}>{v}</div>
-                  ))
-                : [25, 50, 75, 100].map((p) => (
-                    <div key={p} className="fpill qa-pill"
-                         onClick={() => wallet && setAmount(formatEther((data.balance * BigInt(p)) / 100n))}>
-                      {p}%
-                    </div>
-                  ))}
+              {qpcts.map((p2, i2) => qpEdit ? (
+                <input key={i2} className="qp-edit" inputMode="numeric" value={p2}
+                       onChange={(e) => {
+                         const v = e.target.value.replace(/[^0-9]/g, "");
+                         setQpcts((arr) => {
+                           const a = [...arr];
+                           a[i2] = v === "" ? "" : Math.min(100, Number(v));
+                           return a;
+                         });
+                       }} />
+              ) : (
+                <div key={i2} className="fpill qa-pill"
+                     onClick={() => {
+                       const v = Number(p2) || 0;
+                       setTradePct(v);
+                       if (tab === "buy") {
+                         const avail = Math.max(0, Number(formatEther(data.walletEth ?? 0n)) - 0.0003);
+                         setAmount(v > 0 ? (avail * v / 100).toFixed(6) : "");
+                       } else {
+                         setAmount(v > 0 ? formatEther((data.balance * BigInt(v)) / 100n) : "");
+                       }
+                     }}>
+                  {p2}%
+                </div>
+              ))}
+              <div className="fpill qa-pill" title={t("Настроить быстрые проценты")}
+                   onClick={() => {
+                     if (qpEdit) {
+                       const clean = qpcts.map((x) => Math.min(100, Math.max(1, Number(x) || 25)));
+                       setQpcts(clean);
+                       try { localStorage.setItem("hood_qp", JSON.stringify(clean)); } catch (e) { /* ignore */ }
+                     }
+                     setQpEdit(!qpEdit);
+                   }}>
+                {qpEdit ? "✓" : "✎"}
+              </div>
             </div>
 
             <div className="slip-row">
