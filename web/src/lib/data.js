@@ -332,6 +332,54 @@ export function useSplit() {
   return split;
 }
 
+// ---------------------------------------------------------------- «подушка выкупа»
+// Сколько ETH казна потратила на выкуп каждого токена (+ общий счётчик)
+// и сколько токенов сожгла. Источник — treasuryOps из Goldsky, SWR-кэш.
+let _sup = { v: null, t: 0, p: null };
+const SUP_LS = "hood_cache_support_v1";
+try {
+  const rawSup = localStorage.getItem(SUP_LS);
+  if (rawSup) _sup.v = JSON.parse(rawSup);
+} catch (e) { /* ignore */ }
+
+async function _loadSupportFresh() {
+  const ops = await subgraphTreasuryOps();
+  const per = {};
+  let totalEth = 0;
+  for (const o of ops) {
+    const tok = (o.token || "").toLowerCase();
+    if (!tok) continue;
+    if (!per[tok]) per[tok] = { eth: 0, burned: 0 };
+    if (o.kind === "buyback") {
+      const eth = Number(o.ethAmount) / 1e18;
+      totalEth += eth;
+      per[tok].eth += eth;
+    } else if (o.kind === "burn") {
+      per[tok].burned += Number(o.tokenAmount) / 1e18;
+    }
+  }
+  return { per, totalEth };
+}
+
+export function loadSupport() {
+  if (_sup.v && Date.now() - _sup.t < 60_000) return Promise.resolve(_sup.v);
+  if (_sup.p) return _sup.p;
+  _sup.p = _loadSupportFresh()
+    .then((v) => {
+      _sup = { v, t: Date.now(), p: null };
+      try { localStorage.setItem(SUP_LS, JSON.stringify(v)); } catch (e) { /* ignore */ }
+      return v;
+    })
+    .catch((e) => { _sup.p = null; if (_sup.v) return _sup.v; throw e; });
+  return _sup.p;
+}
+
+export function useSupport() {
+  const [sup, setSup] = useState(_sup.v ?? { per: {}, totalEth: 0 });
+  useEffect(() => { loadSupport().then(setSup).catch(() => {}); }, []);
+  return sup;
+}
+
 
 // ---------------------------------------------------------------- creation times
 // Основной источник — API эксплорера Blockscout (транзакция создания контракта),

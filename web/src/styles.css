@@ -608,6 +608,20 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
 
 /* -------- about page -------- */
 .about-page { padding-bottom: 60px; }
+.cushion-chip {
+  position: absolute; bottom: 8px; left: 8px;
+  font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+  background: #00000099; backdrop-filter: blur(5px); color: var(--gold);
+  white-space: nowrap;
+}
+.cushion-banner {
+  display: block; margin: 0 0 18px; padding: 12px 18px;
+  border: 1px solid var(--border-gold, var(--border)); border-radius: var(--radius);
+  background: color-mix(in srgb, var(--gold) 7%, transparent);
+  color: var(--text); font-size: 14px; text-decoration: none;
+}
+.cushion-banner b { color: var(--gold); font-variant-numeric: tabular-nums; }
+.cushion-banner:hover { background: color-mix(in srgb, var(--gold) 12%, transparent); }
 .staging-badge {
   font-size: 10px; font-weight: 800; letter-spacing: 1.5px;
   color: #101100; background: repeating-linear-gradient(45deg, var(--gold), var(--gold) 8px, #e8f56a 8px, #e8f56a 16px);

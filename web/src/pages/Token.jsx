@@ -6,7 +6,7 @@ import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
 import { poolTrades } from "../lib/data.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import Chat from "./Chat.jsx";
-import { useSplit, loadCreationTimes, timeAgo, useClock } from "../lib/data.js";
+import { useSplit, loadCreationTimes, timeAgo, useClock, useSupport } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 
 const SLIPPAGE_CHOICES = [0.5, 1, 3, 5]; // %
@@ -177,6 +177,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const { t } = useLang();
   const rate = useEthUsd();
   const split = useSplit();
+  const support = useSupport();
+  const cushion = support.per[tokenAddress?.toLowerCase()]?.eth || 0;
   const [data, setData] = useState(null);
   const [meta, setMeta] = useState({});
   const [tab, setTab] = useState("buy");
@@ -600,6 +602,12 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 {fmtEth(formatEther(extra.creatorFees ?? 0n))} ETH
               </div>
             </div>
+            {cushion > 0 && (
+              <div className="stat-card">
+                <div className="k">🛡 {t("Выкуп казны")}</div>
+                <div className="v" style={{ color: "var(--gold)" }}>{fmtEth(cushion)} ETH</div>
+              </div>
+            )}
             {extra.burned > 0n && (
               <div className="stat-card">
                 <div className="k">{t("Сожжено казной")}</div>

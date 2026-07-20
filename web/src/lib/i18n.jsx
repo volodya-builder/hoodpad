@@ -385,6 +385,10 @@ const EN = {
   "1% с трейда: создателю, команде, в казну выкупа.": "1% per trade: creator, team, buyback treasury.",
   "Каждую неделю комьюнити голосует, какие токены поддержать выкупом. Итоги видны в блокчейне, а сами выкупы — на вкладке «Казна» и на графиках токенов.":
     "Every week the community votes on which tokens to support with buybacks. Results live on-chain, and the buybacks themselves show up on the Treasury tab and token charts.",
+  // — «подушка выкупа» —
+  "Казна вернула рынку": "Treasury returned to the market",
+  "Казна потратила на выкуп этого токена": "Treasury spent buying back this token",
+  "Выкуп казны": "Treasury buyback",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });
