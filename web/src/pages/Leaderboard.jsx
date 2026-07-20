@@ -93,7 +93,11 @@ export default function Leaderboard() {
         const creators = [...lb.creators].sort((a, b) => (a[1][cKey] - b[1][cKey]) * -cSort.d).slice(0, 25);
         const tKey = { vol: "volume", pnl: "pnl", trades: "count" }[tSort.k];
         const traders = [...lb.traders].sort((a, b) => (a[1][tKey] - b[1][tKey]) * -tSort.d).slice(0, 25);
-        const ethUsd = (v) => <>{fmtEth(v)} ETH <span className="usd-sub">({usd(v * rate)})</span></>;
+        // доллары крупно, ETH мелкой подписью
+        const ethUsd = (v) => {
+          const d = v * rate;
+          return <>{d >= 1000 ? usd(d) : "$" + d.toFixed(2)} <span className="usd-sub">({fmtEth(v)} ETH)</span></>;
+        };
         return (
         <div className="lb-grid" style={{ marginTop: 18 }}>
           <div className="bottom-card" style={{ marginTop: 0 }}>
