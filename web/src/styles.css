@@ -481,10 +481,11 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 .trow.hdr { color: var(--text-dim); font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; border-top: none; }
 /* лента активности (стиль GMGN) */
 .arow {
-  display: grid; grid-template-columns: 110px 110px 1fr 1fr 80px;
-  gap: 10px; padding: 8px 4px; border-top: 1px solid #2a2a28;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) 90px;
+  gap: 16px; padding: 8px 4px; border-top: 1px solid #2a2a28;
   font-size: 13px; align-items: center; font-variant-numeric: tabular-nums;
 }
+.arow > *:last-child { text-align: right; }
 .arow.hdr { color: var(--text-dim); font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; border-top: none; }
 /* выдвижная панель трейдера */
 .arow-hov { cursor: pointer; }
