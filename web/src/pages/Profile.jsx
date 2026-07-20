@@ -66,6 +66,12 @@ export default function Profile({ wallet, onConnect }) {
     return s + "$" + a.toFixed(2);
   };
   const U = (e) => <span className="usd-sub">({dollars(e)})</span>;
+  // крупные количества токенов — компактно: 13.8M, 2.38M, 954K
+  const compactN = (n) =>
+    n >= 1e9 ? fmt(n / 1e9, 2) + "B"
+    : n >= 1e6 ? fmt(n / 1e6, 2) + "M"
+    : n >= 1e3 ? fmt(n / 1e3, 1) + "K"
+    : fmt(n, 0);
 
   useEffect(() => {
     if (!wallet) return;
@@ -300,13 +306,14 @@ export default function Profile({ wallet, onConnect }) {
                     </span>
                   </span>
                   <div className="tk-cell"><span>{t("Активность")}</span>
-                    <b>{lastTs ? timeAgo(lastTs) : "—"}</b></div>
+                    <b>{lastTs ? timeAgo(lastTs) : "—"}</b>
+                    <span>{p.mine ? p.mine.length : 0} {t("сделок")} · {holdStr}</span></div>
                   <div className="tk-cell"><span>{t("Куплено")}</span>
-                    <b>{dollars(p.invested)}</b></div>
+                    <b>{dollars(p.invested)}</b><span>{compactN(buysTok)}</span></div>
                   <div className="tk-cell"><span>{t("Продано")}</span>
-                    <b>{dollars(p.realized)}</b></div>
+                    <b>{dollars(p.realized)}</b><span>{sellsTok > 0 ? compactN(sellsTok) : "—"}</span></div>
                   <div className="tk-cell"><span>{t("Баланс")}</span>
-                    <b>{dollars(val)}</b></div>
+                    <b>{dollars(val)}</b><span>{compactN(balTok)}</span></div>
                   <div className="tk-cell"><span>uPnL</span>
                     <b style={pnlCol(uPnl)}>{dollars(uPnl)} ({uPct >= 0 ? "+" : ""}{fmt(uPct, 1)}%)</b></div>
                   <div className="tk-cell"><span>{t("Прибыль")}</span>
