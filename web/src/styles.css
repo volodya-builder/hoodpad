@@ -802,6 +802,35 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
 .ord-st.failed { color: #e06a4a; }
 .ord-x { cursor: pointer; color: var(--text-dim); padding: 2px 6px; }
 .ord-x:hover { color: var(--text); }
+/* -------- живые ховеры: всё интерактивное откликается на курсор -------- */
+.fpill { transition: background .15s, color .15s; cursor: pointer; }
+.fpill:hover { background: var(--bg-soft); color: var(--text); }
+.nav-pill { transition: background .15s, color .15s; }
+.nav-pill:hover { color: var(--text); background: var(--bg-soft); }
+.bt-tab { transition: color .15s; }
+.bt-tab:hover { color: var(--text); }
+.tab { transition: color .15s, background .15s; }
+.tab:hover { color: var(--text); }
+.trow, .tp-row, .holder-row, .order-row, .sr-item, .prow6 { transition: background .12s; }
+.trow:hover, .tp-row:hover, .holder-row:hover, .order-row:hover, .prow6:hover { background: #ffffff07; }
+.soc-btn { transition: color .15s, border-color .15s; }
+.soc-btn:hover { color: var(--gold); border-color: var(--gold); }
+.mini-btn { transition: color .15s, border-color .15s; }
+.mini-btn:hover { color: var(--text); border-color: var(--text-dim); }
+.fcol a { transition: color .15s; }
+.fcol a:hover { color: var(--gold); }
+.hero-chips .chip { transition: border-color .15s; }
+.hero-chips .chip:hover { border-color: var(--border-gold, var(--gold)); }
+.check-item { transition: border-color .15s, transform .15s; }
+.check-item:hover { border-color: #3a3b33; transform: translateY(-1px); }
+.slip-opt { transition: color .15s; }
+.slip-opt:hover { color: var(--text); }
+.pg { transition: background .15s; }
+.pg:hover { background: var(--bg-soft); }
+.stat-card, .ana-card { transition: border-color .18s; }
+.stat-card:hover, .ana-card:hover { border-color: #3a3b33; }
+.cushion-chip, .grad-chip { transition: transform .15s; }
+.tcard:hover .cushion-chip, .tcard:hover .grad-chip { transform: scale(1.04); }
 .lang-btn { width: auto !important; padding: 0 11px; font-size: 12px; font-weight: 800; letter-spacing: .5px; }
 .lang-btn span { opacity: .4; transition: opacity .15s, color .15s; }
 .lang-btn span.on { opacity: 1; color: var(--gold); }
