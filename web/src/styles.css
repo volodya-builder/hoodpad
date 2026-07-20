@@ -272,7 +272,7 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 /* -------- боковой список монет на странице токена -------- */
 .tok-sidebar {
   /* прижата к сетке: зазор до графика такой же, как между карточками (16px) */
-  position: absolute; left: -250px; top: 42px; bottom: 72px; width: 250px; z-index: 40;
+  position: absolute; left: -320px; top: 42px; bottom: 72px; width: 320px; z-index: 40;
   box-sizing: border-box;
   background: linear-gradient(180deg, #1a1a19 0%, #151514 100%);
   border: 1px solid var(--border); border-radius: var(--radius);
@@ -286,21 +286,30 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 .ts-pills .fpill { padding: 5px 10px; font-size: 11.5px; }
 .ts-list { flex: 1; overflow-y: auto; scrollbar-width: none; margin: 0 -4px; padding: 0 4px; }
 .ts-list::-webkit-scrollbar { width: 0; }
+.ts-hdr {
+  display: grid; grid-template-columns: 18px 1fr 84px 64px; gap: 8px;
+  align-items: center; padding: 2px 8px 6px;
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px;
+  color: var(--text-dim); border-bottom: 1px solid var(--border);
+}
+.ts-hdr .ts-right { text-align: right; }
 .ts-row {
-  display: flex; align-items: center; gap: 9px;
+  display: grid; grid-template-columns: 18px 28px 1fr 84px 64px; gap: 8px;
+  align-items: center;
   padding: 8px; border-radius: 11px; color: inherit; text-decoration: none;
   transition: background .13s;
 }
+.ts-price { font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+.ts-chg { font-size: 11.5px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
 .ts-row:hover { background: var(--bg-soft); }
 .ts-row.on { background: var(--bg-soft); box-shadow: inset 2px 0 0 var(--gold); }
 .ts-row img, .ts-ph { width: 28px; height: 28px; border-radius: 8px; object-fit: cover; flex: none; display: flex; align-items: center; justify-content: center; }
 .ts-name { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .ts-name b { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ts-name .dim { font-size: 10.5px; }
-.ts-metrics { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; font-size: 10.5px; }
-.ts-fav { cursor: pointer; color: var(--text-dim); font-size: 14px; padding: 2px 4px; flex: none; }
+.ts-fav { cursor: pointer; color: var(--text-dim); font-size: 14px; flex: none; text-align: center; }
 .ts-fav:hover, .ts-fav.on { color: var(--gold); }
-@media (max-width: 2000px) { .tok-sidebar { display: none; } }
+@media (max-width: 2140px) { .tok-sidebar { display: none; } }
 .grid-item { position: relative; display: flex; flex-direction: column; min-width: 0; }
 .grid-item > .card, .grid-item > .panel {
   margin: 0 !important; flex: 1; min-height: 0;
