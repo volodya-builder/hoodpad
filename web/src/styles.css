@@ -666,13 +666,19 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
 }
 /* сводка позиции в одну строку */
 .pos-row { display: flex; align-items: center; gap: 26px; margin: 16px 0 4px; flex-wrap: wrap; }
+.pos-row { gap: 18px; }
+.pos-row .tk-cell b { font-size: 12.5px; }
+.pos-row .tk-cell span { font-size: 9.5px; }
 .pos-id {
-  display: flex; align-items: center; gap: 10px; margin-right: 4px;
+  display: flex; align-items: center; gap: 8px; margin-right: 2px;
   color: inherit; text-decoration: none; cursor: pointer;
-  padding: 6px 10px; margin-left: -10px; border-radius: 12px;
+  padding: 5px 8px; margin-left: -8px; border-radius: 10px;
   transition: background .15s;
 }
 .pos-id:hover { background: var(--bg-soft); }
+.pos-id .ticker { font-size: 13px !important; }
+.pos-id .th-addr { font-size: 10.5px; }
+.pos-id img { width: 28px !important; height: 28px !important; }
 .chart-log-btn {
   position: absolute; bottom: 6px; right: 8px; z-index: 7;
   font-size: 10px; font-weight: 800; letter-spacing: .5px;
