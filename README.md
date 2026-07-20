@@ -89,3 +89,4 @@ npm install && npm run dev
 5. Индексер (The Graph поддерживает Robinhood Chain) для истории трейдов,
    графиков и ленты активности.
 ```
+<!-- automation test -->
