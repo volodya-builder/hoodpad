@@ -773,6 +773,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <div className={`bt-tab ${btTab === "holders" ? "on" : ""}`} onClick={() => setBtTab("holders")}>
               {t("Топ держателей")}
             </div>
+            <div className={`bt-tab ${btTab === "myhist" ? "on" : ""}`} onClick={() => setBtTab("myhist")}>
+              {t("История сделок")}
+            </div>
           </div>
           {btTab === "trades" && (<>
 
@@ -835,6 +838,15 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             const pnlPct = buysEth > 0 ? (pnlEth / buysEth) * 100 : 0;
             const lastTs = mine.reduce((s, x) => Math.max(s, x.ts || 0), 0);
             return [(
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14 }} key="tok">
+                {meta.image && (
+                  <img src={meta.image} alt="" style={{ width: 34, height: 34, borderRadius: 9 }}
+                       onError={(e) => (e.target.style.display = "none")} />
+                )}
+                <b style={{ fontSize: 16 }}>{data.name}</b>
+                <span className="ticker">${data.symbol}</span>
+              </div>
+            ), (
               <div className="tk-cells" style={{ margin: "14px 0 2px" }} key="sum">
                 <div className="tk-cell"><span>{t("Активность")}</span><b>{lastTs ? timeAgo(lastTs) : "—"}</b></div>
                 <div className="tk-cell"><span>{t("Куплено")}</span><b>{dollars(buysEth)}</b><span>{fmt(buysTok, 0)}</span></div>
@@ -847,7 +859,23 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 </div>
                 <div className="tk-cell"><span>{t("Комиссии")}</span><b>{dollars(feesEth)}</b></div>
               </div>
-            ), (
+            )];
+          })()}
+          </>)}
+          {btTab === "myhist" && (<>
+          {!wallet && (
+            <div className="dim" style={{ padding: "14px 0" }}>
+              {t("Подключите кошелёк, чтобы увидеть профиль.")}{" "}
+              <a href="#/" onClick={(e) => { e.preventDefault(); onConnect(); }} style={{ color: "var(--gold)" }}>
+                {t("Подключить →")}
+              </a>
+            </div>
+          )}
+          {wallet && !history && <div className="dim" style={{ padding: "14px 0" }}>{t("Читаю события…")}</div>}
+          {wallet && history && (() => {
+            const mine = history.trades.filter((tr) => tr.addr.toLowerCase() === wallet.account.toLowerCase());
+            if (mine.length === 0) return <div className="dim" style={{ padding: "14px 0" }}>{t("Сделок пока нет.")}</div>;
+            return [(
               <React.Fragment key="hdr">{tradesHeader}</React.Fragment>
             ), ...sortTrades(mine).slice(0, 20).map((tr, i) => (
               <div className="trow" key={i}>

@@ -446,6 +446,7 @@ const EN = {
   "Продано": "Sold",
   "Баланс": "Balance",
   "Комиссии": "Fees",
+  "История сделок": "Trade history",
   "Открыть транзакцию": "Open transaction",
   "Открыть адрес в эксплорере": "Open address in explorer",
   "Открыть блок в эксплорере": "Open block in explorer",
