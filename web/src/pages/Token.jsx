@@ -546,8 +546,18 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       publicClient.getBalance({ address: inspect }).catch(() => 0n),
     ]).then(([tok, eth]) => { if (alive) setInspBal({ tok, eth }); });
     const onKey = (e) => { if (e.key === "Escape") setInspect(null); };
+    // клик в любом месте вне панели (и не по строке сделки) закрывает её
+    const onDoc = (e) => {
+      if (e.target.closest && (e.target.closest(".trader-panel") || e.target.closest(".arow-hov"))) return;
+      setInspect(null);
+    };
     window.addEventListener("keydown", onKey);
-    return () => { alive = false; window.removeEventListener("keydown", onKey); };
+    document.addEventListener("mousedown", onDoc);
+    return () => {
+      alive = false;
+      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onDoc);
+    };
   }, [inspect, tokenAddress]);
   // панель открывается только по клику на сделку
   const rowHover = (addr) => ({
