@@ -648,6 +648,15 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const mcapEth = Number(formatEther(data.price)) * 1_000_000_000;
   const mcapUsd = usd(mcapEth * rate);
 
+  // активные заявки — пунктирные линии на графике (в $ капитализации)
+  const orderLines = orders
+    .filter((o) => o.status === "active")
+    .map((o) => ({
+      value: o.priceEth * 1e9 * rate,
+      color: o.type === "buy" ? "#c8f42b" : o.type === "stop" ? "#e06a4a" : "#7ac74f",
+      title: o.type === "buy" ? "LIMIT" : o.type === "stop" ? "STOP" : "TAKE",
+    }));
+
   const socials = (meta.x || meta.telegram || meta.website) ? (
     <div className="soc-row" style={{ margin: 0 }}>
       {meta.x && (
@@ -809,7 +818,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             </div>
           </div>
           {history && history.points && history.points.filter((p) => p.ts).length >= 2 ? (
-            <CandleChart points={history.points} trades={history.trades} rate={rate} marks={marks} />
+            <CandleChart points={history.points} trades={history.trades} rate={rate} marks={marks} lines={orderLines} />
           ) : (
             <MiniChart points={chartPoints} rate={rate} marks={marks} />
           )}
@@ -1110,17 +1119,18 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
 
             {ordMode === "limit" && (
             <div className="orders-box" style={{ borderTop: "none", paddingTop: 4, marginTop: 6 }}>
-              <div className="orders-head">
-                {t("Лимитные заявки")}
+              <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                {t("Цена срабатывания (ETH)")}
                 {(() => {
                   const p = Number(ordPrice), cur = Number(formatEther(data.price));
-                  if (!(p > 0) || tab === "buy") return null;
-                  return <span className={`ord-tag ${p < cur ? "stop" : "take"}`} style={{ marginLeft: 8 }}>
-                    → {p < cur ? t("Стоп-лосс") : t("Тейк-профит")}
-                  </span>;
+                  if (!(p > 0)) return null;
+                  if (tab === "buy") return <span className="ord-tag buy">{t("Лимит-покупка")}</span>;
+                  return <span className={`ord-tag ${p < cur ? "stop" : "take"}`}>{p < cur ? t("Стоп-лосс") : t("Тейк-профит")}</span>;
                 })()}
-              </div>
-              <div className="order-chips">
+              </label>
+              <input inputMode="decimal" placeholder={formatEther(data.price)}
+                     value={ordPrice} onChange={(e) => setOrdPrice(e.target.value.replace(",", "."))} />
+              <div className="order-chips" style={{ marginTop: 8 }}>
                 {(tab === "buy" ? [-10, -25, -50] : [-50, -25, +25, +50, +100]).map((d) => (
                   <div key={d} className="fpill"
                        onClick={() => setOrdPrice(
@@ -1129,39 +1139,31 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                     {d > 0 ? `+${d}%` : `${d}%`}
                   </div>
                 ))}
-                <span className="dim" style={{ fontSize: 11, alignSelf: "center" }}>{t("от текущей цены")}</span>
               </div>
-              <div className="order-form">
-                <div className="suffix-input" style={{ flex: 1 }}>
-                  <input inputMode="decimal" placeholder={data ? formatEther(data.price) : "0.0"}
-                         value={ordPrice} onChange={(e) => setOrdPrice(e.target.value.replace(",", "."))} />
-                  <b>{t("цена, ETH")}</b>
-                </div>
-                {tab === "buy" ? (
-                  <div className="suffix-input" style={{ width: 130 }}>
-                    <input inputMode="decimal" placeholder="0.01"
-                           value={ordAmt} onChange={(e) => setOrdAmt(e.target.value.replace(",", "."))} />
-                    <b>ETH</b>
-                  </div>
-                ) : (
-                  <div className="order-chips" style={{ margin: 0 }}>
-                    {[25, 50, 100].map((p) => (
-                      <div key={p} className={`fpill ${ordPct === p ? "on" : ""}`} onClick={() => setOrdPct(p)}>{p}%</div>
-                    ))}
-                  </div>
-                )}
-                <button className="btn" onClick={placeOrder}
-                        disabled={!wallet || !(Number(ordPrice) > 0) || (tab === "buy" && !(Number(ordAmt) > 0))}>
-                  {t("Создать")}
-                </button>
-              </div>
-              {Number(ordPrice) > 0 && (
-                <div className="hint">≈ {usd(Number(ordPrice) * 1e9 * rate)} {t("капитализации")}</div>
-              )}
               <div className="hint">
-                {tab === "buy"
-                  ? t("Куплю на указанную сумму, когда цена опустится до заданной.")
-                  : t("Продам выбранную долю баланса по достижении цены.")}{" "}
+                {t("Текущая цена")}: {fmtEth(formatEther(data.price))} ETH
+                {Number(ordPrice) > 0 && <> · ≈ {usd(Number(ordPrice) * 1e9 * rate)} {t("капитализации")}</>}
+              </div>
+
+              {tab === "buy" ? (<>
+                <label style={{ marginTop: 12 }}>{t("Сумма (ETH)")}</label>
+                <input inputMode="decimal" placeholder="0.01"
+                       value={ordAmt} onChange={(e) => setOrdAmt(e.target.value.replace(",", "."))} />
+              </>) : (<>
+                <label style={{ marginTop: 12 }}>{t("Доля баланса")}</label>
+                <div className="order-chips">
+                  {[25, 50, 75, 100].map((p) => (
+                    <div key={p} className={`fpill ${ordPct === p ? "on" : ""}`} onClick={() => setOrdPct(p)}>{p}%</div>
+                  ))}
+                </div>
+              </>)}
+
+              <button className={`btn btn-block ${tab === "buy" ? "btn-primary" : "btn-danger"}`}
+                      style={{ marginTop: 14 }} onClick={placeOrder}
+                      disabled={!wallet || !(Number(ordPrice) > 0) || (tab === "buy" && !(Number(ordAmt) > 0))}>
+                {t("Создать заявку")}
+              </button>
+              <div className="hint">
                 {t("Работает, пока открыта вкладка — при срабатывании кошелёк попросит подпись.")}
               </div>
               {orders.length > 0 && (

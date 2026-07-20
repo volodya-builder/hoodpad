@@ -38,11 +38,12 @@ function buildCandles(points, trades, rate, ivSec) {
   return { candles, volumes };
 }
 
-export default function CandleChart({ points, trades, rate, marks }) {
+export default function CandleChart({ points, trades, rate, marks, lines }) {
   const { t } = useLang();
   const ref = useRef(null);
   const [iv, setIv] = useState(300);
   const [logScale, setLogScale] = useState(false);
+  const [fs, setFs] = useState(false); // полноэкранный режим
 
   useEffect(() => {
     const el = ref.current;
@@ -93,12 +94,29 @@ export default function CandleChart({ points, trades, rate, marks }) {
       .sort((a, b) => a.time - b.time);
     if (markers.length) cs.setMarkers(markers);
 
+    // активные лимитные заявки — пунктирные уровни
+    for (const l of lines || []) {
+      if (!(l.value > 0)) continue;
+      cs.createPriceLine({
+        price: l.value, color: l.color, lineWidth: 1,
+        lineStyle: 2 /* dashed */, axisLabelVisible: true, title: l.title,
+      });
+    }
+
     chart.timeScale().fitContent();
     return () => chart.remove();
-  }, [points, trades, rate, iv, marks, logScale]);
+  }, [points, trades, rate, iv, marks, logScale, lines, fs]);
+
+  useEffect(() => {
+    if (!fs) return;
+    const onKey = (e) => { if (e.key === "Escape") setFs(false); };
+    window.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = ""; };
+  }, [fs]);
 
   return (
-    <div>
+    <div className={`chart-wrap ${fs ? "fs" : ""}`}>
       <div className="candle-ivs">
         {INTERVALS.map(([lbl, sec]) => (
           <div key={sec} className={`fpill ${iv === sec ? "on" : ""}`} onClick={() => setIv(sec)}>
@@ -110,8 +128,13 @@ export default function CandleChart({ points, trades, rate, marks }) {
              title={t("Логарифмическая шкала цены")}>
           LOG
         </div>
+        <div className="fpill" onClick={() => setFs(!fs)}
+             title={fs ? t("Свернуть") : t("На весь экран")}>
+          {fs ? "✕" : "⛶"}
+        </div>
       </div>
-      <div ref={ref} className="chart-resize" title={t("Потяните за нижний правый угол, чтобы изменить высоту")} />
+      <div ref={ref} className="chart-resize"
+           title={t("Потяните за правый нижний угол, чтобы изменить размер")} />
     </div>
   );
 }
