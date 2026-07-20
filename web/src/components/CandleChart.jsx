@@ -100,8 +100,15 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
     chart.subscribeCrosshairMove((param) => {
       const c = chartRef.current, el = legendRef.current;
       if (!c || !el) return;
-      const v = param && param.time != null ? c.volByTime.get(param.time) : undefined;
+      // курсор не на баре — берём ближайший бар (по логической координате)
+      let tkey = param && param.time != null ? param.time : null;
+      if (tkey == null && param && param.point && param.logical != null && c.times && c.times.length) {
+        const idx = Math.min(Math.max(Math.round(param.logical), 0), c.times.length - 1);
+        tkey = c.times[idx];
+      }
+      const v = tkey != null ? c.volByTime.get(tkey) : undefined;
       if (v != null) {
+        param = { ...param, time: tkey };
         // цвет цифр — по направлению свечи
         const up = c.dirByTime.get(param.time);
         el.innerHTML = `Volume: <span style="color:${up ? "var(--leaf, #7ac74f)" : "var(--red, #e06a4a)"}">${volUsd(v * (c.rate || 0))}</span>`;
@@ -125,6 +132,7 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
     c.volByTime = new Map(volumes.map((v) => [v.time, v.value]));
     c.volTotal = volumes.reduce((s, v) => s + v.value, 0);
     c.dirByTime = new Map(candles.map((x) => [x.time, x.close >= x.open]));
+    c.times = candles.map((x) => x.time);
     c.rate = rate;
     if (legendRef.current) legendRef.current.textContent = `Volume: ${volUsd(c.volTotal * rate)}`;
 
