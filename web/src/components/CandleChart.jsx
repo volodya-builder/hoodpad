@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { createChart } from "lightweight-charts";
 import { usd } from "../lib/price.js";
 import { useLang } from "../lib/i18n.jsx";
@@ -183,7 +184,9 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
     return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = ""; };
   }, [fs]);
 
-  return (
+  // в полноэкранном режиме — портал в body: внутри трансформированных блоков
+  // сетки position:fixed привязывается к блоку, а не к экрану
+  const content = (
     <div className={`chart-wrap ${fs ? "fs" : ""}`}>
       <div className="chart-area" style={{ position: "relative" }}>
         <div ref={ref} className="chart-resize"
@@ -216,4 +219,6 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
       </div>
     </div>
   );
+
+  return fs ? createPortal(content, document.body) : content;
 }
