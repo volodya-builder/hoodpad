@@ -749,6 +749,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               <a className="mono" href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer">
                 {short(tr.addr)}
               </a>
+              <span className="dim" title={tr.ts ? new Date(tr.ts).toLocaleString() : ""}>
+                {tr.ts ? timeAgo(tr.ts) : "—"}
+              </span>
               <span className="dim">{t("блок")} {String(tr.block)}</span>
             </div>
           ))}

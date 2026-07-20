@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createChart } from "lightweight-charts";
 import { usd } from "../lib/price.js";
+import { fmtEth } from "../lib/web3.js";
 import { useLang } from "../lib/i18n.jsx";
 
 // Профессиональный свечной график на TradingView Lightweight Charts.
@@ -43,7 +44,8 @@ function buildCandles(points, trades, rate, ivSec) {
 export default function CandleChart({ points, trades, rate, marks, lines }) {
   const { t } = useLang();
   const ref = useRef(null);
-  const chartRef = useRef(null); // { chart, cs, vs, priceLines, fitted }
+  const chartRef = useRef(null); // { chart, cs, vs, priceLines, fitted, volByTime, volTotal }
+  const legendRef = useRef(null);
   const [iv, setIv] = useState(300);
   const [logScale, setLogScale] = useState(false);
   const [fs, setFs] = useState(false); // полноэкранный режим
@@ -90,7 +92,18 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
       lastValueVisible: false, priceLineVisible: false,
     });
     chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
-    chartRef.current = { chart, cs, vs, priceLines: [], fitted: false };
+    chartRef.current = { chart, cs, vs, priceLines: [], fitted: false, volByTime: new Map(), volTotal: 0 };
+
+    // объём в левом верхнем углу: всего, а при наведении — объём свечи
+    chart.subscribeCrosshairMove((param) => {
+      const c = chartRef.current, el = legendRef.current;
+      if (!c || !el) return;
+      const v = param && param.time != null ? c.volByTime.get(param.time) : undefined;
+      el.textContent = v != null
+        ? `Volume: ${fmtEth(v)} ETH`
+        : `Volume: ${fmtEth(c.volTotal)} ETH`;
+    });
+
     return () => { chart.remove(); chartRef.current = null; };
   }, [iv, logScale, fs]);
 
@@ -103,6 +116,9 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
     const { candles, volumes } = buildCandles(points, trades, rate, iv);
     c.cs.setData(candles);
     c.vs.setData(volumes);
+    c.volByTime = new Map(volumes.map((v) => [v.time, v.value]));
+    c.volTotal = volumes.reduce((s, v) => s + v.value, 0);
+    if (legendRef.current) legendRef.current.textContent = `Volume: ${fmtEth(c.volTotal)} ETH`;
 
     // отметки казны: выкупы и сжигания
     const times = new Set(candles.map((x) => x.time));
@@ -166,8 +182,11 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
           {fs ? "✕" : "⛶"}
         </div>
       </div>
-      <div ref={ref} className="chart-resize"
-           title={t("Потяните за правый нижний угол, чтобы изменить размер")} />
+      <div style={{ position: "relative" }}>
+        <div ref={ref} className="chart-resize"
+             title={t("Потяните за правый нижний угол, чтобы изменить размер")} />
+        <div ref={legendRef} className="chart-legend" />
+      </div>
     </div>
   );
 }
