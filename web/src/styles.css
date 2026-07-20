@@ -263,7 +263,7 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 }
 .token-grid-wrap { position: relative; }
 .back-float {
-  position: absolute; top: 34px; left: -78px; z-index: 60;
+  position: fixed; top: 86px; left: 14px; z-index: 60;
   padding: 9px 16px; font-size: 13px;
 }
 @media (max-width: 1560px) {
@@ -271,7 +271,9 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 }
 /* -------- боковой список монет на странице токена -------- */
 .tok-sidebar {
-  position: fixed; left: 14px; top: 132px; bottom: 14px; width: 252px; z-index: 40;
+  /* прижата к сетке: правый край панели у левого края графика */
+  position: absolute; left: -268px; top: 26px; bottom: 72px; width: 250px; z-index: 40;
+  box-sizing: border-box;
   background: linear-gradient(180deg, #1a1a19 0%, #151514 100%);
   border: 1px solid var(--border); border-radius: var(--radius);
   padding: 12px; display: flex; flex-direction: column; gap: 10px;
@@ -298,7 +300,7 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 .ts-metrics { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; font-size: 10.5px; }
 .ts-fav { cursor: pointer; color: var(--text-dim); font-size: 14px; padding: 2px 4px; flex: none; }
 .ts-fav:hover, .ts-fav.on { color: var(--gold); }
-@media (max-width: 1900px) { .tok-sidebar { display: none; } }
+@media (max-width: 2000px) { .tok-sidebar { display: none; } }
 .grid-item { position: relative; display: flex; flex-direction: column; min-width: 0; }
 .grid-item > .card, .grid-item > .panel {
   margin: 0 !important; flex: 1; min-height: 0;
