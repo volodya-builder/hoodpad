@@ -386,7 +386,7 @@ export default function Profile({ wallet, onConnect }) {
                     </span>
                     <span>{usd(mcapEth * rate)}</span>
                     <span className="dim">{tk.graduated ? "🎯" : fmt(prog, 0) + "%"}</span>
-                    <span style={{ color: fees > 0 ? "var(--gold)" : "inherit" }}>
+                    <span style={{ color: fees > 0 ? "var(--leaf)" : "inherit" }}>
                       {fmtEth(fees)} ETH {U(fees)}
                     </span>
                     <span>
