@@ -3,7 +3,7 @@ import { parseEther, formatEther } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi } from "../lib/abi.js";
 import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
-import { poolTrades } from "../lib/data.js";
+import { poolTrades, invalidateTrades } from "../lib/data.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import Chat from "./Chat.jsx";
 import { useSplit, loadCreationTimes, timeAgo, useClock, useSupport } from "../lib/data.js";
@@ -490,6 +490,11 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       setAmount("");
       if (wallet) bindRefIfNeeded(wallet.account); // рефералка: закрепить трейдера (fire-and-forget)
       await load();
+      // график и список сделок — сразу и с повторами, пока индексатор догоняет
+      const bump = () => { if (data?.pool) invalidateTrades(data.pool); loadExtras().catch(() => {}); };
+      bump();
+      setTimeout(bump, 4000);
+      setTimeout(bump, 12000);
     } catch (err) {
       setError(err.shortMessage || err.message);
     } finally {

@@ -226,6 +226,11 @@ export const tradeEvents = parseAbi([
 /** All trades of a pool, oldest first, replayed into price points. */
 const _trades = new Map(); // pool -> { v, t, p }
 
+/** Сбросить кэш сделок пула — следующий poolTrades() пойдёт за свежими данными. */
+export function invalidateTrades(pool) {
+  _trades.delete(pool);
+}
+
 export async function poolTrades(pool) {
   const c = _trades.get(pool);
   if (c?.v) {
