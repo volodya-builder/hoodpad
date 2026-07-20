@@ -460,6 +460,7 @@ const EN = {
   "Кол-во": "Amount",
   "Капа": "MCap",
   "Объём": "Volume",
+  "Изменение цены за 24ч": "24h price change",
   "Трендовая линия": "Trend line",
   "Горизонтальный уровень": "Horizontal level",
   "Линейка (изменение в %)": "Ruler (% change)",
