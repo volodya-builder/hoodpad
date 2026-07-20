@@ -447,6 +447,7 @@ const EN = {
   "Трейдер": "Trader",
   "Доля": "Share",
   "Активность": "Activity",
+  "Токен / Активность": "Token / Last activity",
   "Итого": "Total",
   "с": "s",
   "Сделок этого трейдера по токену": "This trader's trades in this token",

@@ -294,20 +294,18 @@ export default function Profile({ wallet, onConnect }) {
                 <div className="pos-row" key={p.token}
                      onClick={() => { window.location.hash = `#/token/${p.token}`; window.scrollTo({ top: 0, behavior: "smooth" }); }}
                      title={`${p.symbol} — ${t("Открыть страницу токена")}`}>
-                  <span className="pos-id">
-                    {p.meta.image && <img src={p.meta.image} alt="" style={{ width: 28, height: 28, borderRadius: 9 }} />}
-                    <span>
-                      <b className="ticker" style={{ fontSize: 13 }}>${p.symbol}</b>
-                      <span className="mono th-addr" style={{ display: "block", marginTop: 2 }}
-                            title={t("Скопировать адрес")}
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); copyCA(p.token); }}>
-                        {short(p.token)} {caCopied === p.token ? "✓" : "⧉"}
+                  <span className="pos-id tk-cell">
+                    <span>{t("Токен / Активность")}</span>
+                    <span className="pos-id-body">
+                      {p.meta.image && <img src={p.meta.image} alt="" style={{ width: 28, height: 28, borderRadius: 9 }} />}
+                      <span>
+                        <b className="ticker" style={{ fontSize: 13 }}>${p.symbol}</b>
+                        <span className="pos-sub">
+                          {lastTs ? timeAgo(lastTs) : "—"} · {p.mine ? p.mine.length : 0} {t("сделок")}
+                        </span>
                       </span>
                     </span>
                   </span>
-                  <div className="tk-cell"><span>{t("Активность")}</span>
-                    <b>{lastTs ? timeAgo(lastTs) : "—"}</b>
-                    <span>{p.mine ? p.mine.length : 0} {t("сделок")} · {holdStr}</span></div>
                   <div className="tk-cell"><span>{t("Куплено")}</span>
                     <b>{dollars(p.invested)}</b><span>{compactN(buysTok)}</span></div>
                   <div className="tk-cell"><span>{t("Продано")}</span>

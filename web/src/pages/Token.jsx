@@ -934,26 +934,26 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             return [(
               <div className="pos-row" key="sum" title={`${data.name} — ${t("Открыть страницу токена")}`}
                    onClick={() => { window.location.hash = `#/token/${tokenAddress}`; window.scrollTo({ top: 0, behavior: "smooth" }); }}>
-                <a className="pos-id" href={`#/token/${tokenAddress}`} title={`${data.name} — ${t("Открыть страницу токена")}`}>
-                  <span className={`tok-star ${isFavTok ? "on" : ""}`} style={{ fontSize: 14 }}
-                        onClick={toggleFavTok}
-                        title={t(isFavTok ? "Убрать из избранного" : "В избранное")}>
-                    {isFavTok ? "★" : "☆"}
+                <a className="pos-id tk-cell" href={`#/token/${tokenAddress}`} title={`${data.name} — ${t("Открыть страницу токена")}`}>
+                  <span>{t("Токен / Активность")}</span>
+                  <span className="pos-id-body">
+                    <span className={`tok-star ${isFavTok ? "on" : ""}`} style={{ fontSize: 14 }}
+                          onClick={toggleFavTok}
+                          title={t(isFavTok ? "Убрать из избранного" : "В избранное")}>
+                      {isFavTok ? "★" : "☆"}
+                    </span>
+                    {meta.image && (
+                      <img src={meta.image} alt="" style={{ width: 30, height: 30, borderRadius: 9 }}
+                           onError={(e) => (e.target.style.display = "none")} />
+                    )}
+                    <span>
+                      <b className="ticker" style={{ fontSize: 14 }}>${data.symbol}</b>
+                      <span className="pos-sub">
+                        {lastTs ? timeAgo(lastTs) : "—"} · {mine.length} {t("сделок")} {totPnl >= 0 ? "💎" : ""}
+                      </span>
+                    </span>
                   </span>
-                  {meta.image && (
-                    <img src={meta.image} alt="" style={{ width: 34, height: 34, borderRadius: 9 }}
-                         onError={(e) => (e.target.style.display = "none")} />
-                  )}
-                  <div>
-                    <b className="ticker" style={{ fontSize: 15 }}>${data.symbol}</b>
-                    <div className="mono th-addr" style={{ marginTop: 2 }} title={t("Скопировать адрес")}
-                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); copyCA("pos"); }}>
-                      {short(tokenAddress)} {copiedCA === "pos" ? "✓" : "⧉"}
-                    </div>
-                  </div>
                 </a>
-                <div className="tk-cell"><span>{t("Активность")}</span><b>{lastTs ? timeAgo(lastTs) : "—"}</b>
-                  <span>{mine.length} {t("сделок")} · {holdStr} {totPnl >= 0 ? "💎" : ""}</span></div>
                 <div className="tk-cell"><span>{t("Куплено")}</span><b>{dollars(buysEth)}</b>
                   <span>{compactN(buysTok)}</span></div>
                 <div className="tk-cell"><span>{t("Продано")}</span><b>{dollars(sellsEth)}</b>
