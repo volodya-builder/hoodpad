@@ -192,7 +192,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [extra, setExtra] = useState({});       // creatorFees, treasuryOwner, treasuryHeld, burned
   const [bbAmt, setBbAmt] = useState("");
   const [copiedLink, setCopiedLink] = useState(false);
-  const [copiedCA, setCopiedCA] = useState(false);
+  const [copiedCA, setCopiedCA] = useState(null); // где нажали копирование: "about" | "head" | "pos"
   const [tf, setTf] = useState("all"); // таймфрейм графика
   const [trSort, setTrSort] = useState({ key: "ts", dir: "desc" }); // сортировка таблицы сделок
   const [hSort, setHSort] = useState("desc"); // сортировка холдеров по доле
@@ -296,11 +296,11 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     } catch (e) { /* clipboard unavailable */ }
   }
 
-  async function copyCA() {
+  async function copyCA(where = "about") {
     try {
       await navigator.clipboard.writeText(tokenAddress);
-      setCopiedCA(true);
-      setTimeout(() => setCopiedCA(false), 1500);
+      setCopiedCA(where);
+      setTimeout(() => setCopiedCA(null), 1500);
     } catch (e) { /* clipboard unavailable */ }
   }
 
@@ -679,8 +679,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <a className="mono" href={`${EXPLORER}/address/${tokenAddress}`} target="_blank" rel="noreferrer">
               {short(tokenAddress)}
             </a>{" "}
-            <button className="mini-btn" onClick={copyCA} title={t("Скопировать адрес")}>
-              {copiedCA ? "✓" : "⧉"}
+            <button className="mini-btn" onClick={() => copyCA("about")} title={t("Скопировать адрес")}>
+              {copiedCA === "about" ? "✓" : "⧉"}
             </button>
             {" · "}{t("Пул:")}{" "}
             <a className="mono" href={`${EXPLORER}/address/${data.pool}`} target="_blank" rel="noreferrer">
@@ -722,8 +722,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                   {data.graduated && <span className="badge">🎯 В яблочке</span>}
                   {socials}
                 </div>
-                <div className="mono th-addr" onClick={copyCA} title={t("Скопировать адрес")}>
-                  {short(tokenAddress)} {copiedCA ? "✓" : "⧉"}
+                <div className="mono th-addr" onClick={() => copyCA("head")} title={t("Скопировать адрес")}>
+                  {short(tokenAddress)} {copiedCA === "head" ? "✓" : "⧉"}
                 </div>
               </div>
             </h3>
@@ -857,8 +857,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                   <div>
                     <b className="ticker" style={{ fontSize: 15 }}>${data.symbol}</b>
                     <div className="mono th-addr" style={{ marginTop: 2 }} title={t("Скопировать адрес")}
-                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); copyCA(); }}>
-                      {short(tokenAddress)} {copiedCA ? "✓" : "⧉"}
+                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); copyCA("pos"); }}>
+                      {short(tokenAddress)} {copiedCA === "pos" ? "✓" : "⧉"}
                     </div>
                   </div>
                 </a>
