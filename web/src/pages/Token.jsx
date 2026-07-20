@@ -749,6 +749,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           )}
           {history && history.trades.slice(0, 12).map((tr, i) => (
             <div className="trow" key={i}>
+              <span className="dim" title={tr.ts ? new Date(tr.ts).toLocaleString() : ""}>
+                {tr.ts ? timeAgo(tr.ts) : "—"}
+              </span>
               <span className={tr.side === "buy" ? "side-buy" : "side-sell"}>
                 {t(tr.side === "buy" ? "Купил" : "Продал")}
               </span>
@@ -761,9 +764,6 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                  title={t("Открыть адрес в эксплорере")}>
                 {short(tr.addr)}
               </a>
-              <span className="dim" title={tr.ts ? new Date(tr.ts).toLocaleString() : ""}>
-                {tr.ts ? timeAgo(tr.ts) : "—"}
-              </span>
               <a className="dim" href={`${EXPLORER}/block/${tr.block}`} target="_blank" rel="noreferrer"
                  title={t("Открыть блок в эксплорере")}>
                 {t("блок")} {String(tr.block)}
@@ -786,6 +786,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             if (mine.length === 0) return <div className="dim" style={{ padding: "14px 0" }}>{t("Сделок пока нет.")}</div>;
             return mine.slice(0, 20).map((tr, i) => (
               <div className="trow" key={i}>
+                <span className="dim" title={tr.ts ? new Date(tr.ts).toLocaleString() : ""}>
+                  {tr.ts ? timeAgo(tr.ts) : "—"}
+                </span>
                 <span className={tr.side === "buy" ? "side-buy" : "side-sell"}>
                   {t(tr.side === "buy" ? "Купил" : "Продал")}
                 </span>
@@ -798,9 +801,6 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                    title={t("Открыть адрес в эксплорере")}>
                   {short(tr.addr)}
                 </a>
-                <span className="dim" title={tr.ts ? new Date(tr.ts).toLocaleString() : ""}>
-                  {tr.ts ? timeAgo(tr.ts) : "—"}
-                </span>
                 <a className="dim" href={`${EXPLORER}/block/${tr.block}`} target="_blank" rel="noreferrer"
                    title={t("Открыть блок в эксплорере")}>
                   {t("блок")} {String(tr.block)}
