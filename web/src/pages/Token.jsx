@@ -764,14 +764,14 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         <div {...blkProps("trades")}><Handle k="trades" />
         <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
           <div className="bt-tabs">
+            <div className={`bt-tab ${btTab === "mine" ? "on" : ""}`} onClick={() => setBtTab("mine")}>
+              {t("Мои позиции")}
+            </div>
             <div className={`bt-tab ${btTab === "trades" ? "on" : ""}`} onClick={() => setBtTab("trades")}>
               {t("Сделки из блокчейна")}
             </div>
             <div className={`bt-tab ${btTab === "holders" ? "on" : ""}`} onClick={() => setBtTab("holders")}>
               {t("Топ держателей")}
-            </div>
-            <div className={`bt-tab ${btTab === "mine" ? "on" : ""}`} onClick={() => setBtTab("mine")}>
-              {t("Мои сделки")}
             </div>
           </div>
           {btTab === "trades" && (<>
