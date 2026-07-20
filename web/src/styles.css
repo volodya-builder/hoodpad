@@ -405,12 +405,15 @@ html[data-theme="light"] .tcard { background: #ffffff; }
 html[data-theme="light"] .grad-wrap { background: radial-gradient(700px 260px at 25% -40px, #6e7a1c14, transparent 70%), var(--card); box-shadow: none; }
 
 /* ---------------- nav pills / header controls */
-.nav-pills { display: flex; background: #111210; border: 1px solid var(--border); border-radius: 999px; padding: 3px; gap: 3px; margin: 0 auto; }
-.nav-pill { padding: 7px 16px; border-radius: 999px; font-size: 13.5px; font-weight: 600; color: var(--text-dim); cursor: pointer; transition: all .15s; }
+.nav-pills { display: flex; background: #111210; border: 1px solid var(--border); border-radius: 999px; padding: 3px; gap: 3px; margin: 0 auto; min-width: 0; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.nav-pills::-webkit-scrollbar { display: none; }
+.nav-pill { padding: 7px 16px; border-radius: 999px; font-size: 13.5px; font-weight: 600; color: var(--text-dim); cursor: pointer; transition: all .15s; white-space: nowrap; flex: none; }
 .nav-pill.on { background: var(--bg-soft); color: var(--text); }
 .icon-btn { width: 40px; height: 40px; border-radius: 11px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
 .icon-btn:hover { background: var(--card-hover); }
 .wallet-wrap { position: relative; }
+.nav { flex: none; }
+.nav .btn { white-space: nowrap; }
 .wallet-menu { position: absolute; right: 0; top: calc(100% + 8px); background: var(--card); border: 1px solid var(--border-gold); border-radius: 12px; padding: 6px; min-width: 190px; display: none; z-index: 30; box-shadow: 0 18px 50px -20px #000c; }
 .wallet-menu.open { display: block; }
 .wallet-item { padding: 10px 13px; border-radius: 9px; font-size: 13.5px; font-weight: 700; cursor: pointer; }
@@ -608,6 +611,11 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
 
 /* -------- about page -------- */
 .about-page { padding-bottom: 60px; }
+/* На средних экранах русские подписи длиннее — ужимаем пилюли, чтобы меню не переносилось */
+@media (max-width: 1360px) {
+  .nav-pill { padding: 7px 11px; font-size: 12.5px; }
+  .header-inner { gap: 12px; }
+}
 .lang-btn { width: auto !important; padding: 0 11px; font-size: 12px; font-weight: 800; letter-spacing: .5px; }
 .lang-btn span { opacity: .4; transition: opacity .15s, color .15s; }
 .lang-btn span.on { opacity: 1; color: var(--gold); }
