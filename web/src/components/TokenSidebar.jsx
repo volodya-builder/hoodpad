@@ -106,7 +106,9 @@ export default function TokenSidebar({ current }) {
               {x.meta.image ? <img src={x.meta.image} alt="" /> : <span className="ts-ph">🖼️</span>}
               <span className="ts-name">
                 <b>${x.symbol}{x.graduated ? " 🎯" : ""}</b>
-                <span className="dim" title={t("Объём 24ч")}>{v > 0 ? `${fmtEth(v)} ETH` : "—"}</span>
+                <span className="dim" title={t("Объём 24ч")}>
+                  {v > 0 ? (v * rate >= 1000 ? usd(v * rate) : "$" + (v * rate).toFixed(2)) : "—"}
+                </span>
               </span>
               <span className="ts-price">{usd(mcapOf(x) * rate)}</span>
               <span className={`ts-chg ${ch == null ? "dim" : ch >= 0 ? "side-buy" : "side-sell"}`}

@@ -310,6 +310,10 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 .ts-fav { cursor: pointer; color: var(--text-dim); font-size: 14px; flex: none; text-align: center; }
 .ts-fav:hover, .ts-fav.on { color: var(--gold); }
 @media (max-width: 2140px) { .tok-sidebar { display: none; } }
+/* когда сайдбар виден — сдвигаем сетку вправо на его половину, чтобы всё вместе стояло по центру */
+@media (min-width: 2141px) {
+  .token-grid-wrap { margin-left: calc((100% - var(--tg-w)) / 2 + 168px); }
+}
 .grid-item { position: relative; display: flex; flex-direction: column; min-width: 0; }
 .grid-item > .card, .grid-item > .panel {
   margin: 0 !important; flex: 1; min-height: 0;
