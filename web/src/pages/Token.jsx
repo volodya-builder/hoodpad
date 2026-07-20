@@ -625,10 +625,17 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
 
   return (
     <>
-    <a className="btn back-btn" href="#/">‹ {t("Назад")}</a>
-    <div className="token-layout">
-      <div>
-        <div {...blkProps("about")}><Handle k="about" />
+    <div className="tg-topbar">
+      <a className="btn back-btn" href="#/">‹ {t("Назад")}</a>
+      <button className="btn tg-reset" onClick={resetLayout} title={t("Вернуть блоки на места по умолчанию")}>
+        ⟲ {t("Сбросить раскладку")}
+      </button>
+    </div>
+    <div className="token-grid-wrap">
+      <Grid className="layout" layout={layout} cols={12} rowHeight={26} margin={[16, 16]}
+            draggableHandle=".drag-handle" onLayoutChange={saveLayout}
+            resizeHandles={["se", "s", "e"]}>
+        <div key="about" className="grid-item"><Handle />
         <div className="card" style={{ cursor: "default", transform: "none" }}>
           <div className="card-title">
             <h3>{t("О токене")}</h3>
@@ -708,7 +715,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         </div>
         </div>
 
-        <div {...blkProps("chart")}><Handle k="chart" />
+        <div key="chart" className="grid-item"><Handle />
         <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
           <div className="card-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
             <h3 style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 22 }}>
@@ -761,7 +768,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         </div>
         </div>
 
-        <div {...blkProps("trades")}><Handle k="trades" />
+        <div key="trades" className="grid-item"><Handle />
         <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
           <div className="bt-tabs">
             <div className={`bt-tab ${btTab === "mine" ? "on" : ""}`} onClick={() => setBtTab("mine")}>
@@ -987,10 +994,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           </>)}
         </div>
         </div>
-      </div>
 
-      <div>
-        <div {...blkProps("swap")}><Handle k="swap" />
+        <div key="swap" className="grid-item"><Handle />
         {data.graduated ? (
           data.migrated ? (
             <div className="panel" style={{ margin: 0, maxWidth: "none" }}>
@@ -1168,10 +1173,10 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         )}
         </div>
 
-        <div {...blkProps("chat")}><Handle k="chat" />
+        <div key="chat" className="grid-item"><Handle />
         <Chat tokenAddress={tokenAddress} wallet={wallet} onConnect={onConnect} />
         </div>
-      </div>
+      </Grid>
     </div>
     </>
   );

@@ -242,8 +242,28 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 
 /* token page */
 .token-layout { display: grid; grid-template-columns: 1fr 390px; gap: 22px; padding: 34px 0 72px; }
-/* Терминальная компоновка: карточки-блоки можно перетаскивать за ⠿ */
-.token-layout > div:first-child, .token-layout > div:last-child { display: flex; flex-direction: column; gap: 18px; }
+/* Терминальная компоновка: свободная сетка, блоки таскаются за ⠿ и тянутся за угол */
+.tg-topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 34px; flex-wrap: wrap; }
+.tg-topbar .back-btn { margin: 0; }
+.tg-reset { font-size: 12.5px; padding: 9px 14px; color: var(--text-dim); }
+.tg-reset:hover { color: var(--text); }
+.token-grid-wrap {
+  width: calc(100vw - 40px);
+  margin-left: calc(50% - 50vw + 20px);
+  padding: 14px 0 72px;
+}
+.grid-item { position: relative; display: flex; flex-direction: column; min-width: 0; }
+.grid-item > .card, .grid-item > .panel {
+  margin: 0 !important; flex: 1; min-height: 0;
+  overflow: auto; display: flex; flex-direction: column;
+  scrollbar-width: thin;
+}
+.grid-item .chart-wrap { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.grid-item .chart-wrap > div:last-child { flex: 1; min-height: 0; position: relative; }
+.grid-item .chart-resize { height: 100% !important; max-height: none; resize: none; }
+.react-grid-item.react-grid-placeholder { background: var(--gold) !important; opacity: .12; border-radius: var(--radius); }
+.react-grid-item > .react-resizable-handle { z-index: 8; }
+.react-grid-item > .react-resizable-handle::after { border-color: var(--text-dim) !important; }
 .drag-card { position: relative; display: flex; flex-direction: column; min-width: 0; }
 .drag-card > .card, .drag-card > .panel { margin-top: 0 !important; }
 .drag-handle {
