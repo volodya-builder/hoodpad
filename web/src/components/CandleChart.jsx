@@ -62,7 +62,7 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
       autoSize: true,
       layout: { background: { color: "transparent" }, textColor: dim, fontSize: 11, attributionLogo: false },
       grid: { vertLines: { color: "#80808018" }, horzLines: { color: "#80808018" } },
-      timeScale: { timeVisible: true, secondsVisible: false, borderColor: "#80808030" },
+      timeScale: { timeVisible: true, secondsVisible: false, borderColor: "#80808030", rightOffset: 3, minBarSpacing: 0.5 },
       rightPriceScale: { borderColor: "#80808030", mode: logScale ? 1 : 0 },
       crosshair: { mode: 0 },
       localization: { priceFormatter: (v) => usd(v) },
@@ -150,7 +150,15 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
       lineStyle: 2 /* dashed */, axisLabelVisible: true, title: l.title,
     }));
 
-    if (!c.fitted && candles.length > 0) { c.chart.timeScale().fitContent(); c.fitted = true; }
+    if (!c.fitted && candles.length > 0) {
+      const ts = c.chart.timeScale();
+      ts.fitContent();
+      // мало свечей → fitContent раздувает бары на весь экран; ограничиваем ширину
+      try {
+        if (ts.options().barSpacing > 40) ts.applyOptions({ barSpacing: 28, rightOffset: 6 });
+      } catch (e) { /* ignore */ }
+      c.fitted = true;
+    }
   }, [points, trades, rate, marks, lines, iv, logScale, fs, showLines]);
 
   useEffect(() => {
