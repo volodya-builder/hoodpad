@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createChart } from "lightweight-charts";
 import { usd } from "../lib/price.js";
-import { fmtEth } from "../lib/web3.js";
 import { useLang } from "../lib/i18n.jsx";
 
 // Профессиональный свечной график на TradingView Lightweight Charts.
@@ -11,6 +10,9 @@ import { useLang } from "../lib/i18n.jsx";
 const INTERVALS = [
   ["1м", 60], ["5м", 300], ["15м", 900], ["1ч", 3600], ["4ч", 14400], ["1д", 86400],
 ];
+
+// объём в долларах: маленькие суммы с центами, большие — компактно ($3.1k)
+const volUsd = (x) => (x >= 1000 ? usd(x) : "$" + (x || 0).toFixed(2));
 
 function buildCandles(points, trades, rate, ivSec) {
   const pts = points.filter((p) => p.ts).sort((a, b) => a.ts - b.ts);
@@ -102,9 +104,9 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
       if (v != null) {
         // цвет цифр — по направлению свечи
         const up = c.dirByTime.get(param.time);
-        el.innerHTML = `Volume: <span style="color:${up ? "var(--leaf, #7ac74f)" : "var(--red, #e06a4a)"}">${fmtEth(v)} ETH</span>`;
+        el.innerHTML = `Volume: <span style="color:${up ? "var(--leaf, #7ac74f)" : "var(--red, #e06a4a)"}">${volUsd(v * (c.rate || 0))}</span>`;
       } else {
-        el.textContent = `Volume: ${fmtEth(c.volTotal)} ETH`;
+        el.textContent = `Volume: ${volUsd(c.volTotal * (c.rate || 0))}`;
       }
     });
 
@@ -123,7 +125,8 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
     c.volByTime = new Map(volumes.map((v) => [v.time, v.value]));
     c.volTotal = volumes.reduce((s, v) => s + v.value, 0);
     c.dirByTime = new Map(candles.map((x) => [x.time, x.close >= x.open]));
-    if (legendRef.current) legendRef.current.textContent = `Volume: ${fmtEth(c.volTotal)} ETH`;
+    c.rate = rate;
+    if (legendRef.current) legendRef.current.textContent = `Volume: ${volUsd(c.volTotal * rate)}`;
 
     // отметки казны: выкупы и сжигания
     const times = new Set(candles.map((x) => x.time));
