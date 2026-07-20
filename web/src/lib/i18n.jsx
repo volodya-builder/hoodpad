@@ -436,6 +436,8 @@ const EN = {
   "Капитализация срабатывания": "Trigger market cap",
   "от текущей": "from current",
   "линия появится на графике": "the level shows on the chart",
+  "Заявки": "Orders",
+  "Показывать уровни заявок на графике": "Show order levels on the chart",
   "Топ рефереров": "Top referrers",
   "кошельков": "wallets",
   "Старые": "Oldest",

@@ -47,6 +47,8 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
   const [iv, setIv] = useState(300);
   const [logScale, setLogScale] = useState(false);
   const [fs, setFs] = useState(false); // полноэкранный режим
+  const [showLines, setShowLines] = useState(true); // уровни заявок на графике
+  const linesRef = useRef([]); // для autoscale
 
   // создание графика — только при смене интервала/шкалы/полноэкрана
   useEffect(() => {
@@ -68,6 +70,19 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
       wickUpColor: "#c8f42b", wickDownColor: "#e06a4a",
       borderVisible: false,
       priceFormat: { type: "custom", formatter: (v) => usd(v), minMove: 0.000001 },
+      // автомасштаб учитывает уровни заявок, чтобы пунктирные линии были видны
+      autoscaleInfoProvider: (original) => {
+        const r = original();
+        const vals = (linesRef.current || []).map((l) => l.value).filter((v) => v > 0);
+        if (!r || !r.priceRange || vals.length === 0) return r;
+        return {
+          priceRange: {
+            minValue: Math.min(r.priceRange.minValue, ...vals),
+            maxValue: Math.max(r.priceRange.maxValue, ...vals),
+          },
+          margins: r.margins,
+        };
+      },
     });
     const vs = chart.addHistogramSeries({
       priceScaleId: "vol",
@@ -83,6 +98,8 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
   useEffect(() => {
     const c = chartRef.current;
     if (!c) return;
+    const shown = showLines ? (lines || []).filter((l) => l.value > 0) : [];
+    linesRef.current = shown; // до setData — autoscale учтёт уровни
     const { candles, volumes } = buildCandles(points, trades, rate, iv);
     c.cs.setData(candles);
     c.vs.setData(volumes);
@@ -107,15 +124,13 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
 
     // пунктирные уровни активных заявок
     for (const pl of c.priceLines) { try { c.cs.removePriceLine(pl); } catch (e) { /* ignore */ } }
-    c.priceLines = (lines || [])
-      .filter((l) => l.value > 0)
-      .map((l) => c.cs.createPriceLine({
-        price: l.value, color: l.color, lineWidth: 1,
-        lineStyle: 2 /* dashed */, axisLabelVisible: true, title: l.title,
-      }));
+    c.priceLines = shown.map((l) => c.cs.createPriceLine({
+      price: l.value, color: l.color, lineWidth: 1,
+      lineStyle: 2 /* dashed */, axisLabelVisible: true, title: l.title,
+    }));
 
     if (!c.fitted && candles.length > 0) { c.chart.timeScale().fitContent(); c.fitted = true; }
-  }, [points, trades, rate, marks, lines, iv, logScale, fs]);
+  }, [points, trades, rate, marks, lines, iv, logScale, fs, showLines]);
 
   useEffect(() => {
     if (!fs) return;
@@ -133,7 +148,15 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
             {t(lbl)}
           </div>
         ))}
-        <div className={`fpill ${logScale ? "on" : ""}`} style={{ marginLeft: "auto" }}
+        {(lines || []).length > 0 && (
+          <label className="lines-toggle" style={{ marginLeft: "auto" }}
+                 title={t("Показывать уровни заявок на графике")}>
+            <input type="checkbox" checked={showLines} onChange={(e) => setShowLines(e.target.checked)} />
+            {t("Заявки")}
+          </label>
+        )}
+        <div className={`fpill ${logScale ? "on" : ""}`}
+             style={(lines || []).length > 0 ? {} : { marginLeft: "auto" }}
              onClick={() => setLogScale(!logScale)}
              title={t("Логарифмическая шкала цены")}>
           LOG

@@ -650,7 +650,14 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
 .order-types { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
 .order-form { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
 .order-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; }
-.candle-ivs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.candle-ivs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
+.lines-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; color: var(--text-dim);
+  cursor: pointer; user-select: none; padding: 4px 6px;
+}
+.lines-toggle input { accent-color: var(--gold); cursor: pointer; }
+.lines-toggle:hover { color: var(--text); }
 .order-form .btn { padding: 0 16px; }
 .order-list { margin-top: 12px; }
 .order-row { display: flex; gap: 10px; align-items: center; font-size: 12.5px; padding: 8px 2px; border-bottom: 1px solid var(--border); }
