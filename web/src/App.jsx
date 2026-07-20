@@ -368,7 +368,7 @@ export default function App() {
           </nav>
         </div>
       </header>
-      <main className="container">
+      <main className={`container ${route.startsWith("/token/") ? "container-wide" : ""}`}>
         {factoryMissing && (
           <div className="error" style={{ marginTop: 16 }}>
             Адрес фабрики не настроен. Задеплойте контракты и укажите

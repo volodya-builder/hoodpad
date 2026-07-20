@@ -686,7 +686,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     <div className="token-flex">
       <TokenSidebar current={tokenAddress} />
       <div className="token-grid-wrap">
-      <Grid className="layout" layout={layout} cols={12} rowHeight={26} margin={[16, 16]}
+      <Grid className="layout" layout={layout} cols={12} rowHeight={26} margin={[16, 16]} containerPadding={[0, 0]}
             draggableHandle=".drag-handle" onLayoutChange={saveLayout}
             resizeHandles={["se", "s", "e"]}>
         <div key="about" className="grid-item"><Handle />
