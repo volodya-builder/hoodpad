@@ -22,8 +22,12 @@ export default function Leaderboard() {
   const rate = useEthUsd();
   const [lb, setLb] = useState(_lbRaw);
   const [error, setError] = useState("");
-  const [cSort, setCSort] = useState("fees");  // создатели: fees | vol | tokens
-  const [tSort, setTSort] = useState("vol");   // трейдеры: vol | pnl | trades
+  // сортировки: ключ + направление (-1 по убыванию, 1 по возрастанию)
+  const [cSort, setCSort] = useState({ k: "fees", d: -1 });
+  const [tSort, setTSort] = useState({ k: "vol", d: -1 });
+  const pickC = (k) => setCSort((s) => (s.k === k ? { k, d: -s.d } : { k, d: -1 }));
+  const pickT = (k) => setTSort((s) => (s.k === k ? { k, d: -s.d } : { k, d: -1 }));
+  const arrow = (s, k) => (s.k === k ? (s.d === -1 ? " ▼" : " ▲") : " ⇅");
 
   useEffect(() => {
     let alive = true;
@@ -85,10 +89,10 @@ export default function Leaderboard() {
       {!lb && !error && <div className="center">{t("Читаю блокчейн…")}</div>}
 
       {lb && (() => {
-        const cKey = { fees: "earned", vol: "volume", tokens: "tokens" }[cSort];
-        const creators = [...lb.creators].sort((a, b) => b[1][cKey] - a[1][cKey]).slice(0, 25);
-        const tKey = { vol: "volume", pnl: "pnl", trades: "count" }[tSort];
-        const traders = [...lb.traders].sort((a, b) => b[1][tKey] - a[1][tKey]).slice(0, 25);
+        const cKey = { fees: "earned", vol: "volume", tokens: "tokens" }[cSort.k];
+        const creators = [...lb.creators].sort((a, b) => (a[1][cKey] - b[1][cKey]) * -cSort.d).slice(0, 25);
+        const tKey = { vol: "volume", pnl: "pnl", trades: "count" }[tSort.k];
+        const traders = [...lb.traders].sort((a, b) => (a[1][tKey] - b[1][tKey]) * -tSort.d).slice(0, 25);
         const ethUsd = (v) => <>{fmtEth(v)} ETH <span className="usd-sub">({usd(v * rate)})</span></>;
         return (
         <div className="lb-grid" style={{ marginTop: 18 }}>
@@ -97,7 +101,9 @@ export default function Leaderboard() {
               <div className="bt-tab on">🏆 {t("Топ создателей")}</div>
               <div className="pill-group">
                 {[["fees", t("Комиссии")], ["vol", t("Объём")], ["tokens", t("Монет")]].map(([k, lbl]) => (
-                  <div key={k} className={`fpill ${cSort === k ? "on" : ""}`} onClick={() => setCSort(k)}>{lbl}</div>
+                  <div key={k} className={`fpill ${cSort.k === k ? "on" : ""}`} onClick={() => pickC(k)}>
+                    {lbl}<i style={{ fontStyle: "normal", opacity: .55, fontSize: 9 }}>{arrow(cSort, k)}</i>
+                  </div>
                 ))}
               </div>
             </div>
@@ -111,8 +117,8 @@ export default function Leaderboard() {
                     {c.tokens} {t("монет")} · {c.symbols.slice(0, 5).map((s) => `$${s}`).join(" ")}
                   </span>
                 </span>
-                <span className="lb-val" style={{ color: cSort === "fees" ? "var(--gold)" : undefined }}>
-                  {cSort === "tokens" ? c.tokens : ethUsd(cSort === "vol" ? c.volume : c.earned)}
+                <span className="lb-val" style={{ color: cSort.k === "fees" ? "var(--gold)" : undefined }}>
+                  {cSort.k === "tokens" ? c.tokens : ethUsd(cSort.k === "vol" ? c.volume : c.earned)}
                 </span>
               </a>
             ))}
@@ -122,7 +128,9 @@ export default function Leaderboard() {
               <div className="bt-tab on">⚡ {t("Топ трейдеров")}</div>
               <div className="pill-group">
                 {[["vol", t("Объём")], ["pnl", "PnL"], ["trades", t("Сделки")]].map(([k, lbl]) => (
-                  <div key={k} className={`fpill ${tSort === k ? "on" : ""}`} onClick={() => setTSort(k)}>{lbl}</div>
+                  <div key={k} className={`fpill ${tSort.k === k ? "on" : ""}`} onClick={() => pickT(k)}>
+                    {lbl}<i style={{ fontStyle: "normal", opacity: .55, fontSize: 9 }}>{arrow(tSort, k)}</i>
+                  </div>
                 ))}
               </div>
             </div>
@@ -134,9 +142,9 @@ export default function Leaderboard() {
                   <span className="mono">{short(addr)}</span>
                   <span className="lb-syms">{x.count} {t("сделок")} · {fmtEth(x.volume)} ETH</span>
                 </span>
-                <span className="lb-val" style={tSort === "pnl" ? { color: x.pnl >= 0 ? "var(--leaf)" : "var(--red)" } : undefined}>
-                  {tSort === "trades" ? x.count
-                    : tSort === "pnl" ? <>{x.pnl >= 0 ? "+" : "−"}{ethUsd(Math.abs(x.pnl))}</>
+                <span className="lb-val" style={tSort.k === "pnl" ? { color: x.pnl >= 0 ? "var(--leaf)" : "var(--red)" } : undefined}>
+                  {tSort.k === "trades" ? x.count
+                    : tSort.k === "pnl" ? <>{x.pnl >= 0 ? "+" : "−"}{ethUsd(Math.abs(x.pnl))}</>
                     : ethUsd(x.volume)}
                 </span>
               </a>
