@@ -14,6 +14,14 @@ const INTERVALS = [
 // объём в долларах: маленькие суммы с центами, большие — компактно ($3.1k)
 const volUsd = (x) => (x >= 1000 ? usd(x) : "$" + (x || 0).toFixed(2));
 
+// текст легенды объёма для конкретного бара (цвет — по направлению свечи)
+function volLegendHtml(c, tkey) {
+  const v = tkey != null ? c.volByTime.get(tkey) : null;
+  if (v == null) return `Volume: ${volUsd((c.volTotal || 0) * (c.rate || 0))}`;
+  const up = c.dirByTime.get(tkey);
+  return `Volume: <span style="color:${up ? "var(--leaf, #7ac74f)" : "var(--red, #e06a4a)"}">${volUsd(v * (c.rate || 0))}</span>`;
+}
+
 function buildCandles(points, trades, rate, ivSec) {
   const pts = points.filter((p) => p.ts).sort((a, b) => a.ts - b.ts);
   const buckets = new Map();
@@ -100,21 +108,14 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
     chart.subscribeCrosshairMove((param) => {
       const c = chartRef.current, el = legendRef.current;
       if (!c || !el) return;
-      // курсор не на баре — берём ближайший бар (по логической координате)
+      // курсор не на баре — ближайший бар; курсор вне графика — последний бар
       let tkey = param && param.time != null ? param.time : null;
       if (tkey == null && param && param.point && param.logical != null && c.times && c.times.length) {
         const idx = Math.min(Math.max(Math.round(param.logical), 0), c.times.length - 1);
         tkey = c.times[idx];
       }
-      const v = tkey != null ? c.volByTime.get(tkey) : undefined;
-      if (v != null) {
-        param = { ...param, time: tkey };
-        // цвет цифр — по направлению свечи
-        const up = c.dirByTime.get(param.time);
-        el.innerHTML = `Volume: <span style="color:${up ? "var(--leaf, #7ac74f)" : "var(--red, #e06a4a)"}">${volUsd(v * (c.rate || 0))}</span>`;
-      } else {
-        el.textContent = `Volume: ${volUsd(c.volTotal * (c.rate || 0))}`;
-      }
+      if (tkey == null && c.times && c.times.length) tkey = c.times[c.times.length - 1];
+      el.innerHTML = volLegendHtml(c, tkey);
     });
 
     return () => { chart.remove(); chartRef.current = null; };
@@ -134,7 +135,9 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
     c.dirByTime = new Map(candles.map((x) => [x.time, x.close >= x.open]));
     c.times = candles.map((x) => x.time);
     c.rate = rate;
-    if (legendRef.current) legendRef.current.textContent = `Volume: ${volUsd(c.volTotal * rate)}`;
+    if (legendRef.current) {
+      legendRef.current.innerHTML = volLegendHtml(c, c.times.length ? c.times[c.times.length - 1] : null);
+    }
 
     // отметки казны: выкупы и сжигания
     const times = new Set(candles.map((x) => x.time));

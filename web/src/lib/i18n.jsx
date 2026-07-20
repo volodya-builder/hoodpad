@@ -438,6 +438,8 @@ const EN = {
   "линия появится на графике": "the level shows on the chart",
   "Заявки": "Orders",
   "Показывать уровни заявок на графике": "Show order levels on the chart",
+  "Время": "Time",
+  "Трейдер": "Trader",
   "Открыть транзакцию": "Open transaction",
   "Открыть адрес в эксплорере": "Open address in explorer",
   "Открыть блок в эксплорере": "Open block in explorer",

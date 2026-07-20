@@ -747,6 +747,12 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           {history && history.trades.length === 0 && (
             <div className="dim" style={{ padding: "14px 0" }}>{t("Пока нет сделок.")}</div>
           )}
+          {history && history.trades.length > 0 && (
+            <div className="trow hdr" style={{ marginTop: 8 }}>
+              <span>{t("Время")}</span><span>{t("Тип")}</span><span>ETH</span>
+              <span>{t("Токены")}</span><span>{t("Трейдер")}</span><span>{t("Блок")}</span>
+            </div>
+          )}
           {history && history.trades.slice(0, 12).map((tr, i) => (
             <div className="trow" key={i}>
               <span className="dim" title={tr.ts ? new Date(tr.ts).toLocaleString() : ""}>
@@ -784,7 +790,12 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           {wallet && history && (() => {
             const mine = history.trades.filter((tr) => tr.addr.toLowerCase() === wallet.account.toLowerCase());
             if (mine.length === 0) return <div className="dim" style={{ padding: "14px 0" }}>{t("Сделок пока нет.")}</div>;
-            return mine.slice(0, 20).map((tr, i) => (
+            return [(
+              <div className="trow hdr" style={{ marginTop: 8 }} key="hdr">
+                <span>{t("Время")}</span><span>{t("Тип")}</span><span>ETH</span>
+                <span>{t("Токены")}</span><span>{t("Трейдер")}</span><span>{t("Блок")}</span>
+              </div>
+            ), ...mine.slice(0, 20).map((tr, i) => (
               <div className="trow" key={i}>
                 <span className="dim" title={tr.ts ? new Date(tr.ts).toLocaleString() : ""}>
                   {tr.ts ? timeAgo(tr.ts) : "—"}
@@ -806,7 +817,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                   {t("блок")} {String(tr.block)}
                 </a>
               </div>
-            ));
+            ))];
           })()}
           </>)}
           {btTab === "holders" && (<>
