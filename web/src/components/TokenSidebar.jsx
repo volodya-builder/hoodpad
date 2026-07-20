@@ -75,13 +75,6 @@ export default function TokenSidebar({ current }) {
     <div className="tok-sidebar">
       <input className="ts-search" placeholder={t("Поиск токенов")}
              value={q} onChange={(e) => setQ(e.target.value)} />
-      <div className="ts-pills">
-        {[["new", t("Новые")], ["raised", t("Собрано")]].map(([k, lbl]) => (
-          <div key={k} className={`fpill ${sort.k === k ? "on" : ""}`} onClick={() => pick(k)}>
-            {lbl}{sort.k === k ? (sort.d === -1 ? " ▼" : " ▲") : ""}
-          </div>
-        ))}
-      </div>
       <div className="ts-hdr">
         <span className={`ts-fav ${favOnly ? "on" : ""}`} title={t("Только избранное")}
               onClick={() => setFavOnly(!favOnly)}>★</span>
