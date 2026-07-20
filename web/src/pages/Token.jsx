@@ -747,15 +747,22 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               <span className={tr.side === "buy" ? "side-buy" : "side-sell"}>
                 {t(tr.side === "buy" ? "Купил" : "Продал")}
               </span>
-              <span>{fmtEth(tr.eth)} ETH <span className="usd-sub">({dollars(tr.eth)})</span></span>
+              <a href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer"
+                 style={{ color: "inherit" }} title={t("Открыть транзакцию")}>
+                {fmtEth(tr.eth)} ETH <span className="usd-sub">({dollars(tr.eth)})</span>
+              </a>
               <span>{fmt(tr.tokens, 0)}</span>
-              <a className="mono" href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer">
+              <a className="mono" href={`${EXPLORER}/address/${tr.addr}`} target="_blank" rel="noreferrer"
+                 title={t("Открыть адрес в эксплорере")}>
                 {short(tr.addr)}
               </a>
               <span className="dim" title={tr.ts ? new Date(tr.ts).toLocaleString() : ""}>
                 {tr.ts ? timeAgo(tr.ts) : "—"}
               </span>
-              <span className="dim">{t("блок")} {String(tr.block)}</span>
+              <a className="dim" href={`${EXPLORER}/block/${tr.block}`} target="_blank" rel="noreferrer"
+                 title={t("Открыть блок в эксплорере")}>
+                {t("блок")} {String(tr.block)}
+              </a>
             </div>
           ))}
           </>)}
@@ -777,15 +784,22 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 <span className={tr.side === "buy" ? "side-buy" : "side-sell"}>
                   {t(tr.side === "buy" ? "Купил" : "Продал")}
                 </span>
-                <span>{fmtEth(tr.eth)} ETH <span className="usd-sub">({dollars(tr.eth)})</span></span>
+                <a href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer"
+                   style={{ color: "inherit" }} title={t("Открыть транзакцию")}>
+                  {fmtEth(tr.eth)} ETH <span className="usd-sub">({dollars(tr.eth)})</span>
+                </a>
                 <span>{fmt(tr.tokens, 0)}</span>
-                <a className="mono" href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer">
+                <a className="mono" href={`${EXPLORER}/address/${tr.addr}`} target="_blank" rel="noreferrer"
+                   title={t("Открыть адрес в эксплорере")}>
                   {short(tr.addr)}
                 </a>
                 <span className="dim" title={tr.ts ? new Date(tr.ts).toLocaleString() : ""}>
                   {tr.ts ? timeAgo(tr.ts) : "—"}
                 </span>
-                <span className="dim">{t("блок")} {String(tr.block)}</span>
+                <a className="dim" href={`${EXPLORER}/block/${tr.block}`} target="_blank" rel="noreferrer"
+                   title={t("Открыть блок в эксплорере")}>
+                  {t("блок")} {String(tr.block)}
+                </a>
               </div>
             ));
           })()}
