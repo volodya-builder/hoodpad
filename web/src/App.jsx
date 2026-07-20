@@ -384,16 +384,18 @@ export default function App() {
               <div className="footer-tag">hood</div>
               <div className="dim" style={{ marginTop: 12, lineHeight: 1.55 }}>{t("Запускайте и исследуйте токены с фиксированным сапплаем на Robinhood Chain. Ваш кошелёк подписывает каждую транзакцию. hood не хранит активы.")}</div>
             </div>
-            <div className="fcol">
+            <div className="fcol fcol-product">
               <h4>{t("Продукт")}</h4>
-              <a href="#/">{t("Обзор")}</a>
-              <a href="#/create">{t("Создать")}</a>
-              <a href="#/vote">{t("Голосование")}</a>
-              <a href="#/treasury">{t("Казна")}</a>
-              <a href="#/analytics">{t("Аналитика")}</a>
-              <a href="#/earn">{t("Заработать")}</a>
-              <a href="#/profile">{t("Профиль")}</a>
-              <a href="#/about">{t("О нас")}</a>
+              <div className="fcol-links">
+                <a href="#/">{t("Обзор")}</a>
+                <a href="#/analytics">{t("Аналитика")}</a>
+                <a href="#/create">{t("Создать")}</a>
+                <a href="#/earn">{t("Заработать")}</a>
+                <a href="#/vote">{t("Голосование")}</a>
+                <a href="#/profile">{t("Профиль")}</a>
+                <a href="#/treasury">{t("Казна")}</a>
+                <a href="#/about">{t("О нас")}</a>
+              </div>
             </div>
             <div className="fcol">
               <h4>{t("Правовое")}</h4>
