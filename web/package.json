@@ -13,7 +13,8 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "viem": "^2.55.2",
-    "lightweight-charts": "^4.2.3"
+    "lightweight-charts": "^4.2.3",
+    "react-grid-layout": "^1.5.2"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.0.3",

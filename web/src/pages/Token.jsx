@@ -10,6 +10,11 @@ import { useSplit, loadCreationTimes, timeAgo, useClock, useSupport } from "../l
 import { useLang } from "../lib/i18n.jsx";
 import { bindRefIfNeeded } from "../lib/referral.js";
 import CandleChart from "../components/CandleChart.jsx";
+import RGL, { WidthProvider } from "react-grid-layout";
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
+
+const Grid = WidthProvider(RGL);
 
 const SLIPPAGE_CHOICES = [0.5, 1, 3, 5]; // %
 
@@ -196,8 +201,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [tf, setTf] = useState("all"); // таймфрейм графика
   const [trSort, setTrSort] = useState({ key: "ts", dir: "desc" }); // сортировка таблицы сделок
   const [hSort, setHSort] = useState("desc"); // сортировка холдеров по доле
+  const [tpSort, setTpSort] = useState({ key: "ts", dir: "desc" }); // сортировка в панели трейдера
   const [tradePct, setTradePct] = useState(0); // ползунок суммы
-  const [btTab, setBtTab] = useState("trades");
+  const [btTab, setBtTab] = useState("mine"); // по умолчанию — «Мои позиции»
   const [qpcts, setQpcts] = useState(() => {
     try {
       const v = JSON.parse(localStorage.getItem("hood_qp") || "null");
@@ -504,40 +510,51 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     }
   }
 
-  // ---- перетаскивание блоков: порядок карточек хранится в localStorage ----
-  const BLK_DEF = { chart: 1, trades: 2, about: 3, swap: 1, chat: 2 };
-  const LEFT_BLKS = ["chart", "trades", "about"], RIGHT_BLKS = ["swap", "chat"];
-  const [blkOrd, setBlkOrd] = useState(() => {
-    try { return { ...BLK_DEF, ...(JSON.parse(localStorage.getItem("hood_tok_blocks")) || {}) }; }
-    catch (e) { return BLK_DEF; }
+  // ---- свободная раскладка блоков (react-grid-layout), живёт в localStorage ----
+  const DEF_LAYOUT = [
+    { i: "chart", x: 0, y: 0, w: 8, h: 22, minW: 4, minH: 10 },
+    { i: "swap", x: 8, y: 0, w: 4, h: 12, minW: 3, minH: 7 },
+    { i: "chat", x: 8, y: 12, w: 4, h: 14, minW: 3, minH: 6 },
+    { i: "trades", x: 0, y: 22, w: 8, h: 14, minW: 4, minH: 5 },
+    { i: "about", x: 8, y: 26, w: 4, h: 12, minW: 3, minH: 5 },
+  ];
+  const [layout, setLayout] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("hood_tok_layout_v5"));
+      if (Array.isArray(saved) && saved.length === DEF_LAYOUT.length) return saved;
+    } catch (e) { /* ignore */ }
+    return DEF_LAYOUT;
   });
-  const dragSrc = useRef(null);
-  const startBlk = (k) => (e) => {
-    dragSrc.current = k;
-    try { e.dataTransfer.setData("text/plain", k); e.dataTransfer.effectAllowed = "move"; } catch (err) { /* ignore */ }
+  const saveLayout = (l) => {
+    setLayout(l);
+    try { localStorage.setItem("hood_tok_layout_v5", JSON.stringify(l)); } catch (e) { /* ignore */ }
   };
-  const dropBlk = (k) => (e) => {
-    e.preventDefault();
-    const a = dragSrc.current; dragSrc.current = null;
-    if (!a || a === k) return;
-    const same = (LEFT_BLKS.includes(a) && LEFT_BLKS.includes(k)) || (RIGHT_BLKS.includes(a) && RIGHT_BLKS.includes(k));
-    if (!same) return;
-    const next = { ...blkOrd, [a]: blkOrd[k], [k]: blkOrd[a] };
-    setBlkOrd(next);
-    try { localStorage.setItem("hood_tok_blocks", JSON.stringify(next)); } catch (err) { /* ignore */ }
-  };
-  const [overBlk, setOverBlk] = useState(null);
-  const blkProps = (k) => ({
-    className: `drag-card ${overBlk === k && dragSrc.current && dragSrc.current !== k ? "over" : ""}`,
-    style: { order: blkOrd[k] },
-    onDragOver: (e) => { e.preventDefault(); setOverBlk(k); },
-    onDragLeave: () => setOverBlk((v) => (v === k ? null : v)),
-    onDrop: (e) => { setOverBlk(null); dropBlk(k)(e); },
-  });
-  const Handle = ({ k }) => (
-    <span className="drag-handle" draggable onDragStart={startBlk(k)}
-          title={t("Перетащите, чтобы поменять блоки местами")}>⠿</span>
+  const resetLayout = () => saveLayout(DEF_LAYOUT.map((x) => ({ ...x })));
+  const Handle = () => (
+    <span className="drag-handle" title={t("Перетащите, чтобы переставить блок")}>⠿</span>
   );
+
+  // ---- выдвижная панель трейдера (наведение/клик на сделку в «Активности») ----
+  const [inspect, setInspect] = useState(null); // адрес трейдера
+  const hovT = useRef(null);
+  const [inspBal, setInspBal] = useState(null); // { tok, eth }
+  useEffect(() => {
+    if (!inspect) return;
+    let alive = true;
+    setInspBal(null);
+    Promise.all([
+      publicClient.readContract({ address: tokenAddress, abi: tokenAbi, functionName: "balanceOf", args: [inspect] }).catch(() => 0n),
+      publicClient.getBalance({ address: inspect }).catch(() => 0n),
+    ]).then(([tok, eth]) => { if (alive) setInspBal({ tok, eth }); });
+    const onKey = (e) => { if (e.key === "Escape") setInspect(null); };
+    window.addEventListener("keydown", onKey);
+    return () => { alive = false; window.removeEventListener("keydown", onKey); };
+  }, [inspect, tokenAddress]);
+  // панель открывается только по клику на сделку
+  const rowHover = (addr) => ({
+    onClick: () => setInspect(addr),
+    title: t("Открыть профиль трейдера"),
+  });
 
   async function migrate() {
     setError("");
@@ -562,26 +579,51 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const mcapEth = Number(formatEther(data.price)) * 1_000_000_000;
   const mcapUsd = usd(mcapEth * rate);
 
-  // сортировка таблицы сделок по клику на заголовок колонки
-  const sortTrades = (arr) => {
-    const { key, dir } = trSort;
+  // сортировка таблиц сделок по клику на заголовок колонки
+  const sortTradesBy = (arr, { key, dir }) => {
     const m = dir === "asc" ? 1 : -1;
     return [...arr].sort((a, b) => {
       if (key === "side" || key === "addr") {
         const va = String(a[key]), vb = String(b[key]);
         return va < vb ? -m : va > vb ? m : 0;
       }
+      if (key === "price") {
+        const va = a.tokens > 0 ? a.eth / a.tokens : 0;
+        const vb = b.tokens > 0 ? b.eth / b.tokens : 0;
+        return (va - vb) * m;
+      }
       const va = key === "ts" ? (a.ts || 0) : key === "block" ? Number(a.block) : Number(a[key]) || 0;
       const vb = key === "ts" ? (b.ts || 0) : key === "block" ? Number(b.block) : Number(b[key]) || 0;
       return (va - vb) * m;
     });
   };
+  const sortTrades = (arr) => sortTradesBy(arr, trSort);
+  const ThP = ({ k, children }) => (
+    <span className="sort-h"
+          onClick={() => setTpSort((s) => ({ key: k, dir: s.key === k && s.dir === "desc" ? "asc" : "desc" }))}>
+      {children} <i>{tpSort.key === k ? (tpSort.dir === "desc" ? "▼" : "▲") : "↕"}</i>
+    </span>
+  );
   const Th = ({ k, children }) => (
     <span className="sort-h"
           onClick={() => setTrSort((s) => ({ key: k, dir: s.key === k && s.dir === "desc" ? "asc" : "desc" }))}>
       {children} <i>{trSort.key === k ? (trSort.dir === "desc" ? "▼" : "▲") : "↕"}</i>
     </span>
   );
+  // компактные форматтеры для ленты активности (стиль GMGN)
+  const compactN = (n) =>
+    n >= 1e6 ? fmt(n / 1e6, 2) + "M" : n >= 1e3 ? fmt(n / 1e3, 2) + "K" : fmt(n, 0);
+  const shortAgo = (ts) => {
+    if (!ts) return "—";
+    const s = Math.max(1, Math.floor((Date.now() - ts) / 1000));
+    if (s < 60) return `${s}${t("с")}`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}${t("м")}`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}${t("ч")}`;
+    return `${Math.floor(h / 24)}${t("д")}`;
+  };
+
   const tradesHeader = (
     <div className="trow hdr" style={{ marginTop: 8 }}>
       <Th k="ts">{t("Время")}</Th>
@@ -625,10 +667,17 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
 
   return (
     <>
-    <a className="btn back-btn" href="#/">‹ {t("Назад")}</a>
-    <div className="token-layout">
-      <div>
-        <div {...blkProps("about")}><Handle k="about" />
+    <div className="tg-topbar">
+      <a className="btn back-btn" href="#/">‹ {t("Назад")}</a>
+      <button className="btn tg-reset" onClick={resetLayout} title={t("Вернуть блоки на места по умолчанию")}>
+        ⟲ {t("Сбросить раскладку")}
+      </button>
+    </div>
+    <div className="token-grid-wrap">
+      <Grid className="layout" layout={layout} cols={12} rowHeight={26} margin={[16, 16]}
+            draggableHandle=".drag-handle" onLayoutChange={saveLayout}
+            resizeHandles={["se", "s", "e"]}>
+        <div key="about" className="grid-item"><Handle />
         <div className="card" style={{ cursor: "default", transform: "none" }}>
           <div className="card-title">
             <h3>{t("О токене")}</h3>
@@ -708,7 +757,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         </div>
         </div>
 
-        <div {...blkProps("chart")}><Handle k="chart" />
+        <div key="chart" className="grid-item"><Handle />
         <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
           <div className="card-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
             <h3 style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 22 }}>
@@ -761,14 +810,14 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         </div>
         </div>
 
-        <div {...blkProps("trades")}><Handle k="trades" />
+        <div key="trades" className="grid-item"><Handle />
         <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
           <div className="bt-tabs">
             <div className={`bt-tab ${btTab === "mine" ? "on" : ""}`} onClick={() => setBtTab("mine")}>
               {t("Мои позиции")}
             </div>
             <div className={`bt-tab ${btTab === "trades" ? "on" : ""}`} onClick={() => setBtTab("trades")}>
-              {t("Сделки из блокчейна")}
+              {t("Активность")}
             </div>
             <div className={`bt-tab ${btTab === "holders" ? "on" : ""}`} onClick={() => setBtTab("holders")}>
               {t("Топ держателей")}
@@ -783,33 +832,49 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           {history && history.trades.length === 0 && (
             <div className="dim" style={{ padding: "14px 0" }}>{t("Пока нет сделок.")}</div>
           )}
-          {history && history.trades.length > 0 && tradesHeader}
-          {history && sortTrades(history.trades).slice(0, 12).map((tr, i) => {
-            const isMine = wallet && tr.addr.toLowerCase() === wallet.account.toLowerCase();
-            return (
-            <div className={`trow ${isMine ? "mine" : ""}`} key={i}>
-              <span className="dim" title={tr.ts ? new Date(tr.ts).toLocaleString() : ""}>
-                {tr.ts ? timeAgo(tr.ts) : "—"}
-              </span>
-              <span className={tr.side === "buy" ? "side-buy" : "side-sell"}>
-                {t(tr.side === "buy" ? "Купил" : "Продал")}
-              </span>
-              <a href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer"
-                 style={{ color: "inherit" }} title={t("Открыть транзакцию")}>
-                {fmtEth(tr.eth)} ETH <span className="usd-sub">({dollars(tr.eth)})</span>
-              </a>
-              <span>{fmt(tr.tokens, 0)}</span>
-              <a className="mono" href={`${EXPLORER}/address/${tr.addr}`} target="_blank" rel="noreferrer"
-                 title={t("Открыть адрес в эксплорере")}>
-                {short(tr.addr)}{isMine && <span className="badge hr-badge">{t("Вы")}</span>}
-              </a>
-              <a className="dim" href={`${EXPLORER}/block/${tr.block}`} target="_blank" rel="noreferrer"
-                 title={t("Открыть блок в эксплорере")}>
-                {t("блок")} {String(tr.block)}
-              </a>
-            </div>
-            );
-          })}
+          {history && history.trades.length > 0 && (() => {
+            const counts = {};
+            for (const x of history.trades) counts[x.addr] = (counts[x.addr] || 0) + 1;
+            const maxEth = Math.max(...history.trades.map((x) => x.eth), 1e-9);
+            return [(
+              <div className="arow hdr" key="hdr" style={{ marginTop: 8 }}>
+                <Th k="eth">{t("Итого")}</Th>
+                <Th k="price">{t("Цена")}</Th>
+                <Th k="tokens">{t("Количество")}</Th>
+                <span>{t("Трейдер")}</span>
+                <Th k="ts">{t("Время")}</Th>
+              </div>
+            ), ...sortTrades(history.trades).slice(0, 30).map((tr, i) => {
+              const isMine = wallet && tr.addr.toLowerCase() === wallet.account.toLowerCase();
+              const buy = tr.side === "buy";
+              const heat = Math.max(5, Math.round((tr.eth / maxEth) * 100));
+              const priceUsd = tr.tokens > 0 ? (tr.eth / tr.tokens) * rate : 0;
+              return (
+                <div className="arow arow-hov" key={i} {...rowHover(tr.addr)}>
+                  <span className={buy ? "side-buy" : "side-sell"} style={{
+                    background: `linear-gradient(90deg, ${buy ? "#7ac74f1c" : "#e06a4a1c"} ${heat}%, transparent ${heat}%)`,
+                    borderRadius: 6, padding: "4px 8px", marginLeft: -8,
+                  }}>
+                    {dollars(tr.eth)}
+                  </span>
+                  <span className="dim">${fmtEth(priceUsd)}</span>
+                  <span>{compactN(tr.tokens)}</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                    <a className="mono" href={`${EXPLORER}/address/${tr.addr}`} target="_blank" rel="noreferrer"
+                       title={t("Открыть адрес в эксплорере")}>
+                      {short(tr.addr)}
+                    </a>
+                    <span className="cnt-chip" title={t("Сделок этого трейдера по токену")}>{counts[tr.addr]}</span>
+                    {isMine && <span className="badge hr-badge">{t("Вы")}</span>}
+                  </span>
+                  <a className="dim" href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer"
+                     title={tr.ts ? new Date(tr.ts).toLocaleString() : t("Открыть транзакцию")}>
+                    {shortAgo(tr.ts)} ↗
+                  </a>
+                </div>
+              );
+            })];
+          })()}
           </>)}
           {btTab === "mine" && (<>
           {!wallet && (
@@ -881,6 +946,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                     {dollars(totPnl)} ({totPct >= 0 ? "+" : ""}{fmt(totPct, 1)}%)
                   </b>
                 </div>
+                <div className="tk-cell"><span>{t("Комиссии")}</span><b>{dollars(feesEth)}</b></div>
               </div>
             )];
           })()}
@@ -987,10 +1053,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           </>)}
         </div>
         </div>
-      </div>
 
-      <div>
-        <div {...blkProps("swap")}><Handle k="swap" />
+        <div key="swap" className="grid-item"><Handle />
         {data.graduated ? (
           data.migrated ? (
             <div className="panel" style={{ margin: 0, maxWidth: "none" }}>
@@ -1168,11 +1232,102 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         )}
         </div>
 
-        <div {...blkProps("chat")}><Handle k="chat" />
+        <div key="chat" className="grid-item"><Handle />
         <Chat tokenAddress={tokenAddress} wallet={wallet} onConnect={onConnect} />
         </div>
-      </div>
+      </Grid>
     </div>
+
+    {inspect && history && (() => {
+      const trs = history.trades.filter((x) => x.addr.toLowerCase() === inspect.toLowerCase());
+      const buys = trs.filter((x) => x.side === "buy");
+      const sells = trs.filter((x) => x.side === "sell");
+      const bEth = buys.reduce((s, x) => s + x.eth, 0), bTok = buys.reduce((s, x) => s + x.tokens, 0);
+      const sEth = sells.reduce((s, x) => s + x.eth, 0), sTok = sells.reduce((s, x) => s + x.tokens, 0);
+      const avgB = bTok > 0 ? bEth / bTok : 0, avgS = sTok > 0 ? sEth / sTok : 0;
+      const balTok = inspBal ? Number(formatEther(inspBal.tok)) : null;
+      const priceEth = Number(formatEther(data.price));
+      const holdVal = balTok != null ? balTok * priceEth : null;
+      const uPnl2 = holdVal != null ? holdVal - balTok * avgB : null;
+      const totPnl2 = holdVal != null ? holdVal + sEth - bEth : null;
+      const posPct = balTok != null && bTok > 0 ? Math.min(100, (balTok / bTok) * 100) : null;
+      const firstTs = trs.reduce((s, x) => (x.ts ? Math.min(s, x.ts) : s), Infinity);
+      const holdMs2 = firstTs !== Infinity ? Date.now() - firstTs : 0;
+      const holdStr2 = firstTs === Infinity ? "—"
+        : holdMs2 >= 86400000 ? `${Math.floor(holdMs2 / 86400000)}${t("д")}`
+        : holdMs2 >= 3600000 ? `${Math.floor(holdMs2 / 3600000)}${t("ч")}`
+        : `${Math.max(1, Math.floor(holdMs2 / 60000))}${t("м")}`;
+      const isMe = wallet && inspect.toLowerCase() === wallet.account.toLowerCase();
+      const pnlCol = (v) => ({ color: v >= 0 ? "var(--leaf)" : "var(--red)" });
+      return (
+        <div className="trader-panel">
+          <div className="tp-head">
+            {meta.image && <img src={meta.image} alt="" style={{ width: 26, height: 26, borderRadius: 7 }} />}
+            <a className="mono" href={`${EXPLORER}/address/${inspect}`} target="_blank" rel="noreferrer">
+              {short(inspect)}
+            </a>
+            {isMe && <span className="badge hr-badge">{t("Вы")}</span>}
+            <span className="cnt-chip">{trs.length} {t("сделок")}</span>
+            <span className="tp-close" onClick={() => setInspect(null)} title="Esc">✕</span>
+          </div>
+
+          <div className="tp-grid">
+            <div className="tp-cell"><span>{t("Общая прибыль")}</span>
+              <b style={totPnl2 != null ? pnlCol(totPnl2) : {}}>
+                {totPnl2 != null ? `${dollars(totPnl2)} (${bEth > 0 ? `${totPnl2 >= 0 ? "+" : ""}${fmt((totPnl2 / bEth) * 100, 1)}%` : "—"})` : "…"}
+              </b>
+            </div>
+            <div className="tp-cell"><span>uPnL</span>
+              <b style={uPnl2 != null ? pnlCol(uPnl2) : {}}>
+                {uPnl2 != null ? dollars(uPnl2) : "…"}
+              </b>
+            </div>
+            <div className="tp-cell"><span>{t("Баланс")} ETH</span>
+              <b>{inspBal ? `${fmtEth(Number(formatEther(inspBal.eth)))} ETH` : "…"}</b>
+            </div>
+            <div className="tp-cell"><span>{t("Текущий холд")}</span>
+              <b>{holdVal != null ? dollars(holdVal) : "…"}</b>
+            </div>
+            <div className="tp-cell"><span>{t("Позиция")}</span>
+              <b>{posPct != null ? `${fmt(posPct, 1)}% (${compactN(balTok)} ${t("из")} ${compactN(bTok)})` : "…"}</b>
+            </div>
+            <div className="tp-cell"><span>{t("Время удержания")}</span><b>{holdStr2}</b></div>
+            <div className="tp-cell"><span>{t("Ср. покупка / продажа")}</span>
+              <b>${fmtEth(avgB * rate)} / {sTok > 0 ? `$${fmtEth(avgS * rate)}` : "—"}</b>
+            </div>
+            <div className="tp-cell"><span>{t("Всего куплено")}</span>
+              <b className="side-buy">{dollars(bEth)} · {buys.length} TXs</b>
+              <span>{compactN(bTok)}</span>
+            </div>
+            <div className="tp-cell"><span>{t("Общий объём продаж")}</span>
+              <b className="side-sell">{dollars(sEth)} · {sells.length} TXs</b>
+              <span>{compactN(sTok)}</span>
+            </div>
+          </div>
+
+          <div className="orders-head" style={{ margin: "18px 0 4px" }}>{t("Сделки трейдера")}</div>
+          <div className="tp-row hdr">
+            <ThP k="side">{t("Тип")}</ThP>
+            <ThP k="price">{t("Цена")}</ThP>
+            <ThP k="tokens">{t("Кол-во")}</ThP>
+            <ThP k="eth">{t("Итого")}</ThP>
+            <ThP k="ts">{t("Время")}</ThP>
+          </div>
+          {sortTradesBy(trs, tpSort).slice(0, 40).map((x, i) => (
+            <div className="tp-row" key={i}>
+              <span className={`tp-type ${x.side}`}>{t(x.side === "buy" ? "Покупка" : "Продажа")}</span>
+              <span className="dim">${fmtEth(x.tokens > 0 ? (x.eth / x.tokens) * rate : 0)}</span>
+              <span>{compactN(x.tokens)}</span>
+              <span className={x.side === "buy" ? "side-buy" : "side-sell"}>{dollars(x.eth)}</span>
+              <a className="dim" href={`${EXPLORER}/tx/${x.tx}`} target="_blank" rel="noreferrer"
+                 title={x.ts ? new Date(x.ts).toLocaleString() : ""}>
+                {shortAgo(x.ts)} ↗
+              </a>
+            </div>
+          ))}
+        </div>
+      );
+    })()}
     </>
   );
 }

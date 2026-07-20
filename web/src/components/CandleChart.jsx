@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { createChart } from "lightweight-charts";
 import { usd } from "../lib/price.js";
 import { useLang } from "../lib/i18n.jsx";
@@ -167,9 +168,9 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
     if (!c.fitted && candles.length > 0) {
       const ts = c.chart.timeScale();
       ts.fitContent();
-      // мало свечей → fitContent раздувает бары на весь экран; ограничиваем ширину
+      // стартовый зум всегда умеренно отдалённый: бары компактные, вокруг воздух
       try {
-        if (ts.options().barSpacing > 40) ts.applyOptions({ barSpacing: 28, rightOffset: 6 });
+        if (ts.options().barSpacing > 12) ts.applyOptions({ barSpacing: 10, rightOffset: 10 });
       } catch (e) { /* ignore */ }
       c.fitted = true;
     }
@@ -183,30 +184,32 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
     return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = ""; };
   }, [fs]);
 
-  return (
+  // в полноэкранном режиме — портал в body: внутри трансформированных блоков
+  // сетки position:fixed привязывается к блоку, а не к экрану
+  const content = (
     <div className={`chart-wrap ${fs ? "fs" : ""}`}>
-      <div className="candle-ivs">
-        {INTERVALS.map(([lbl, sec]) => (
-          <div key={sec} className={`fpill ${iv === sec ? "on" : ""}`} onClick={() => setIv(sec)}>
-            {t(lbl)}
-          </div>
-        ))}
-        {(lines || []).length > 0 && (
-          <label className="lines-toggle" style={{ marginLeft: "auto" }}
-                 title={t("Показывать уровни заявок на графике")}>
-            <input type="checkbox" checked={showLines} onChange={(e) => setShowLines(e.target.checked)} />
-            {t("Заявки")}
-          </label>
-        )}
-        <div className="fpill" style={(lines || []).length > 0 ? {} : { marginLeft: "auto" }}
-             onClick={() => setFs(!fs)}
-             title={fs ? t("Свернуть") : t("На весь экран")}>
-          {fs ? "✕" : "⛶"}
-        </div>
-      </div>
-      <div style={{ position: "relative" }}>
+      <div className="chart-area" style={{ position: "relative" }}>
         <div ref={ref} className="chart-resize"
              title={t("Потяните за правый нижний угол, чтобы изменить размер")} />
+        <div className="candle-ivs candle-ivs-overlay">
+          {INTERVALS.map(([lbl, sec]) => (
+            <div key={sec} className={`fpill ${iv === sec ? "on" : ""}`} onClick={() => setIv(sec)}>
+              {t(lbl)}
+            </div>
+          ))}
+          {(lines || []).length > 0 && (
+            <label className="lines-toggle" style={{ marginLeft: "auto" }}
+                   title={t("Показывать уровни заявок на графике")}>
+              <input type="checkbox" checked={showLines} onChange={(e) => setShowLines(e.target.checked)} />
+              {t("Заявки")}
+            </label>
+          )}
+          <div className="fpill" style={(lines || []).length > 0 ? {} : { marginLeft: "auto" }}
+               onClick={() => setFs(!fs)}
+               title={fs ? t("Свернуть") : t("На весь экран")}>
+            {fs ? "✕" : "⛶"}
+          </div>
+        </div>
         <div ref={legendRef} className="chart-legend" />
         <div className={`chart-log-btn ${logScale ? "on" : ""}`}
              onClick={() => setLogScale(!logScale)}
@@ -216,4 +219,6 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
       </div>
     </div>
   );
+
+  return fs ? createPortal(content, document.body) : content;
 }
