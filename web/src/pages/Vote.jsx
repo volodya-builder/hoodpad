@@ -46,6 +46,7 @@ export default function Vote({ wallet, onConnect }) {
   const [error, setError] = useState("");
   const [expanded, setExpanded] = useState(null);
   const [q, setQ] = useState("");
+  const [vq, setVq] = useState("");           // поиск по списку токенов голосования
   const [ftoken, setFtoken] = useState("all");
 
   const enabled = VOTE_ADDRESS !== "0x0000000000000000000000000000000000000000";
@@ -218,8 +219,22 @@ export default function Vote({ wallet, onConnect }) {
       {state && state.rows.length > 0 && (
         <div className="vote-layout">
           <div className="bottom-card" style={{ marginTop: 0 }}>
+            <input
+              className="tbl-search"
+              style={{ width: "100%", boxSizing: "border-box", margin: "2px 0 10px" }}
+              value={vq}
+              onChange={(e) => setVq(e.target.value)}
+              placeholder={t("Поиск: тикер, имя или адрес…")}
+              spellCheck={false}
+            />
             <div className="vote-hint">{t("Нажмите на строку, чтобы увидеть, кто голосовал.")}</div>
-            {state.rows.map((r, i) => {
+            {state.rows.filter((r) => {
+              const n = vq.trim().toLowerCase();
+              if (!n) return true;
+              return r.symbol.toLowerCase().includes(n)
+                || (r.name || "").toLowerCase().includes(n)
+                || r.token.toLowerCase().includes(n);
+            }).map((r, i) => {
               const addr = r.token.toLowerCase();
               const sharePct = state.total > 0 ? (r.votes / state.total) * 100 : 0;
               const isMine = myVote === addr;
