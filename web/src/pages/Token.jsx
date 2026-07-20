@@ -780,8 +780,10 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <div className="dim" style={{ padding: "14px 0" }}>{t("Пока нет сделок.")}</div>
           )}
           {history && history.trades.length > 0 && tradesHeader}
-          {history && sortTrades(history.trades).slice(0, 12).map((tr, i) => (
-            <div className="trow" key={i}>
+          {history && sortTrades(history.trades).slice(0, 12).map((tr, i) => {
+            const isMine = wallet && tr.addr.toLowerCase() === wallet.account.toLowerCase();
+            return (
+            <div className={`trow ${isMine ? "mine" : ""}`} key={i}>
               <span className="dim" title={tr.ts ? new Date(tr.ts).toLocaleString() : ""}>
                 {tr.ts ? timeAgo(tr.ts) : "—"}
               </span>
@@ -795,14 +797,15 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               <span>{fmt(tr.tokens, 0)}</span>
               <a className="mono" href={`${EXPLORER}/address/${tr.addr}`} target="_blank" rel="noreferrer"
                  title={t("Открыть адрес в эксплорере")}>
-                {short(tr.addr)}
+                {short(tr.addr)}{isMine && <span className="badge hr-badge">{t("Вы")}</span>}
               </a>
               <a className="dim" href={`${EXPLORER}/block/${tr.block}`} target="_blank" rel="noreferrer"
                  title={t("Открыть блок в эксплорере")}>
                 {t("блок")} {String(tr.block)}
               </a>
             </div>
-          ))}
+            );
+          })}
           </>)}
           {btTab === "mine" && (<>
           {!wallet && (
