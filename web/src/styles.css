@@ -636,10 +636,11 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
 .cushion-banner b { color: var(--gold); font-variant-numeric: tabular-nums; }
 .cushion-banner:hover { background: color-mix(in srgb, var(--gold) 12%, transparent); }
 .staging-badge {
+  position: fixed; bottom: 12px; left: 12px; z-index: 999;
   font-size: 10px; font-weight: 800; letter-spacing: 1.5px;
   color: #101100; background: repeating-linear-gradient(45deg, var(--gold), var(--gold) 8px, #e8f56a 8px, #e8f56a 16px);
-  border-radius: 6px; padding: 4px 8px; margin-left: 10px; align-self: center;
-  text-transform: uppercase; white-space: nowrap;
+  border-radius: 6px; padding: 4px 8px; opacity: .75;
+  text-transform: uppercase; white-space: nowrap; pointer-events: none;
 }
 .hero-chips { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
 .hero-chips .chip {
