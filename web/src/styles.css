@@ -263,8 +263,12 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 }
 .token-grid-wrap { position: relative; }
 .back-float {
-  position: fixed; top: 86px; left: 14px; z-index: 60;
+  /* слева от панели монет, на уровне её верха */
+  position: fixed; top: 84px; left: calc(50vw - 976px); z-index: 60;
   padding: 9px 16px; font-size: 13px;
+}
+@media (max-width: 2140px) {
+  .back-float { left: 14px; }
 }
 @media (max-width: 1560px) {
   .back-float { position: static; display: inline-flex; margin: 16px 0 -6px 16px; }
