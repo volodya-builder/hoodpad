@@ -207,32 +207,44 @@ export default function Profile({ wallet, onConnect }) {
       {state && (
         <>
           <div className="ana-grid" style={{ margin: "18px 0 8px" }}>
-            <div className="ana-card">
+            <div className="ana-card pf-stat">
               <div className="k">{t("Общий PnL")}</div>
-              <div className="v" style={{ color: state.totPnl >= 0 ? "var(--leaf)" : "var(--red)", fontSize: 24 }}>
-                {state.totPnl >= 0 ? "+" : ""}{fmtEth(state.totPnl)} ETH
+              <div className="pf-usd" style={{ color: state.totPnl >= 0 ? "var(--leaf)" : "var(--red)" }}>
+                {state.totPnl >= 0 ? "+" : ""}{dollars(state.totPnl)}
+                {state.totInv > 0 && (
+                  <span className="pf-pct">
+                    {state.totPnl >= 0 ? "+" : ""}{fmt((state.totPnl / state.totInv) * 100, 1)}%
+                  </span>
+                )}
               </div>
-              <div className="s">{dollars(state.totPnl)} · {state.tradesCount} {t("сделок")}</div>
+              <div className="s">{fmtEth(state.totPnl)} ETH · {state.tradesCount} {t("сделок")}</div>
             </div>
-            <div className="ana-card">
+            <div className="ana-card pf-stat">
               <div className="k">{t("Стоимость позиций")}</div>
-              <div className="v" style={{ fontSize: 24 }}>{fmtEth(state.totVal)} ETH</div>
-              <div className="s">{dollars(state.totVal)} · {state.positions.length} {t("позиций")}</div>
+              <div className="pf-usd">{dollars(state.totVal)}</div>
+              <div className="s">{fmtEth(state.totVal)} ETH · {state.positions.length} {t("позиций")}</div>
             </div>
-            <div className="ana-card">
+            <div className="ana-card pf-stat">
               <div className="k">{t("Вложено")}</div>
-              <div className="v" style={{ fontSize: 24 }}>{fmtEth(state.totInv)} ETH</div>
-              <div className="s">{dollars(state.totInv)}</div>
+              <div className="pf-usd">{dollars(state.totInv)}</div>
+              <div className="s">{fmtEth(state.totInv)} ETH</div>
             </div>
-            <div className="ana-card">
+            <div className="ana-card pf-stat">
               <div className="k">{t("Реализовано")}</div>
-              <div className="v" style={{ fontSize: 24 }}>{fmtEth(state.totReal)} ETH</div>
-              <div className="s">{dollars(state.totReal)}</div>
+              <div className="pf-usd">{dollars(state.totReal)}</div>
+              <div className="s">{fmtEth(state.totReal)} ETH</div>
             </div>
           </div>
 
           <div className="bottom-card" style={{ marginTop: 18 }}>
             <div className="bt-tabs" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <input
+                className="tbl-search"
+                value={lq}
+                onChange={(e) => setLq(e.target.value)}
+                placeholder={t("Поиск: тикер или адрес…")}
+                spellCheck={false}
+              />
               <div className={`bt-tab ${pfTab === "positions" ? "on" : ""}`} onClick={() => setPfTab("positions")}>
                 {t("Мои позиции")}
               </div>
@@ -242,26 +254,17 @@ export default function Profile({ wallet, onConnect }) {
                 </div>
               )}
               {pfTab === "launches" ? (
-                <>
-                  <input
-                    className="tbl-search"
-                    value={lq}
-                    onChange={(e) => setLq(e.target.value)}
-                    placeholder={t("Поиск: тикер или адрес…")}
-                    spellCheck={false}
-                  />
-                  {(() => {
-                    const claimable = state.launched.reduce((s, tk) => s + Number(formatEther(tk.feesAccrued)), 0);
-                    return (
-                      <button className="btn btn-primary" style={{ marginLeft: "auto" }}
-                              disabled={claimable <= 0 || claiming === "__all__"}
-                              onClick={claimAll}
-                              title={t("Заберёт комиссии со всех токенов — по одной транзакции на каждый")}>
-                        {claiming === "__all__" ? "…" : <>{t("Забрать все")} · {fmtEth(claimable)} ETH {U(claimable)}</>}
-                      </button>
-                    );
-                  })()}
-                </>
+                (() => {
+                  const claimable = state.launched.reduce((s, tk) => s + Number(formatEther(tk.feesAccrued)), 0);
+                  return (
+                    <button className="btn btn-primary" style={{ marginLeft: "auto" }}
+                            disabled={claimable <= 0 || claiming === "__all__"}
+                            onClick={claimAll}
+                            title={t("Заберёт комиссии со всех токенов — по одной транзакции на каждый")}>
+                      {claiming === "__all__" ? "…" : <>{t("Забрать все")} · {fmtEth(claimable)} ETH {U(claimable)}</>}
+                    </button>
+                  );
+                })()
               ) : (
                 <span style={{ marginLeft: "auto", fontSize: 14 }}>
                   {t("Общий PnL")}:{" "}
@@ -327,7 +330,13 @@ export default function Profile({ wallet, onConnect }) {
             </>)}
 
             {pfTab === "positions" && state.positions.length === 0 && <div className="center">{t("Пока нет позиций.")}</div>}
-            {pfTab === "positions" && sortRows(state.positions, psort, (p, k) => {
+            {pfTab === "positions" && sortRows(state.positions.filter((p) => {
+              const needle = lq.trim().toLowerCase();
+              if (!needle) return true;
+              return p.symbol.toLowerCase().includes(needle)
+                || p.name.toLowerCase().includes(needle)
+                || p.token.toLowerCase().includes(needle);
+            }), psort, (p, k) => {
               const val = Number(formatEther(p.bal)) * Number(formatEther(p.price));
               return k === "bal" ? Number(formatEther(p.bal))
                 : k === "val" ? val
