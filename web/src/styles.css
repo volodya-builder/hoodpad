@@ -895,14 +895,15 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
   transition: background .15s;
   flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
 }
-/* ячейки одной высоты, разделены тонкими линиями */
+/* ячейки одной ширины и высоты, без вертикальных линий */
 .pos-row .tk-cell {
   flex: 1 1 0; min-width: 96px;
-  padding: 2px 16px; box-sizing: border-box;
-  border-left: 1px solid var(--border);
+  padding: 2px 16px 0 0; box-sizing: border-box;
   justify-content: flex-start;
 }
 .pos-row .pos-id { padding-right: 16px; }
+/* горизонтальная линия, отделяющая строку позиции от вкладок */
+.pos-row { border-top: 1px solid var(--border); margin-top: 4px; }
 .pos-row::-webkit-scrollbar { display: none; }
 .pos-row .tk-cell { white-space: nowrap; }
 .pos-row:hover { background: var(--bg-soft); }
