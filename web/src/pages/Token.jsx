@@ -201,6 +201,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [tf, setTf] = useState("all"); // таймфрейм графика
   const [trSort, setTrSort] = useState({ key: "ts", dir: "desc" }); // сортировка таблицы сделок
   const [hSort, setHSort] = useState("desc"); // сортировка холдеров по доле
+  const [tpSort, setTpSort] = useState({ key: "ts", dir: "desc" }); // сортировка в панели трейдера
   const [tradePct, setTradePct] = useState(0); // ползунок суммы
   const [btTab, setBtTab] = useState("mine"); // по умолчанию — «Мои позиции»
   const [qpcts, setQpcts] = useState(() => {
@@ -597,7 +598,6 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     });
   };
   const sortTrades = (arr) => sortTradesBy(arr, trSort);
-  const [tpSort, setTpSort] = useState({ key: "ts", dir: "desc" }); // сортировка в панели трейдера
   const ThP = ({ k, children }) => (
     <span className="sort-h"
           onClick={() => setTpSort((s) => ({ key: k, dir: s.key === k && s.dir === "desc" ? "asc" : "desc" }))}>
