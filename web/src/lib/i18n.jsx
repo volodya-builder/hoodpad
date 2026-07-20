@@ -418,6 +418,8 @@ const EN = {
   "Топ рефереров": "Top referrers",
   "кошельков": "wallets",
   "Старые": "Oldest",
+  "Тёмная тема": "Dark theme",
+  "Светлая тема": "Light theme",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

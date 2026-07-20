@@ -608,6 +608,10 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
 
 /* -------- about page -------- */
 .about-page { padding-bottom: 60px; }
+.lang-btn { width: auto !important; padding: 0 11px; font-size: 12px; font-weight: 800; letter-spacing: .5px; }
+.lang-btn span { opacity: .4; transition: opacity .15s, color .15s; }
+.lang-btn span.on { opacity: 1; color: var(--gold); }
+.lang-btn .sep { opacity: .25; margin: 0 4px; }
 .ref-link-box {
   display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
   margin-top: 22px; max-width: 760px;

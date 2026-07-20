@@ -323,11 +323,14 @@ export default function App() {
                 <path d="M4 20c1.8-3.4 4.5-5 8-5s6.2 1.6 8 5" />
               </svg>
             </a>
-            <button className="icon-btn" onClick={() => setLang(lang === "en" ? "ru" : "en")}
-                    title="Язык / Language" style={{ width: "auto", padding: "0 13px", fontSize: 12, fontWeight: 800 }}>
-              {lang === "en" ? "RU" : "EN"}
+            <button className="icon-btn lang-btn" onClick={() => setLang(lang === "en" ? "ru" : "en")}
+                    title="Язык / Language">
+              <span className={lang !== "en" ? "on" : ""}>RU</span>
+              <span className="sep">/</span>
+              <span className={lang === "en" ? "on" : ""}>EN</span>
             </button>
-            <button className="icon-btn" onClick={() => setTheme(theme === "light" ? "" : "light")} title="Сменить тему">
+            <button className="icon-btn" onClick={() => setTheme(theme === "light" ? "" : "light")}
+                    title={theme === "light" ? t("Тёмная тема") : t("Светлая тема")}>
               {theme === "light" ? "☾" : "☀"}
             </button>
             {wallet ? (
