@@ -253,6 +253,11 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 }
 .drag-handle:hover { color: var(--text); background: var(--bg-soft); }
 .drag-handle:active { cursor: grabbing; }
+.drag-card.over { outline: 2px dashed var(--gold); outline-offset: 3px; border-radius: var(--radius); }
+.th-addr { font-size: 12px; color: var(--text-dim); cursor: pointer; margin-top: 6px; font-weight: 500; }
+.th-addr:hover { color: var(--text); }
+.chart-resize { width: 100%; height: 470px; min-height: 260px; max-height: 920px; resize: vertical; overflow: hidden; margin-top: 8px; }
+.mode-sub { display: flex; gap: 6px; margin: 12px 0 2px; }
 @media (max-width: 860px) { .token-layout { grid-template-columns: 1fr; } }
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 12px; margin-top: 20px; }
 .stat-card { background: #111210; border: 1px solid var(--border); border-radius: 12px; padding: 15px; }

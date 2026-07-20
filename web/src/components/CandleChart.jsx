@@ -42,6 +42,7 @@ export default function CandleChart({ points, trades, rate, marks }) {
   const { t } = useLang();
   const ref = useRef(null);
   const [iv, setIv] = useState(300);
+  const [logScale, setLogScale] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
@@ -49,11 +50,11 @@ export default function CandleChart({ points, trades, rate, marks }) {
     const styles = getComputedStyle(document.documentElement);
     const dim = styles.getPropertyValue("--text-dim").trim() || "#9a9b90";
     const chart = createChart(el, {
-      height: 470, autoSize: true,
+      autoSize: true,
       layout: { background: { color: "transparent" }, textColor: dim, fontSize: 11, attributionLogo: false },
       grid: { vertLines: { color: "#80808018" }, horzLines: { color: "#80808018" } },
       timeScale: { timeVisible: true, secondsVisible: false, borderColor: "#80808030" },
-      rightPriceScale: { borderColor: "#80808030" },
+      rightPriceScale: { borderColor: "#80808030", mode: logScale ? 1 : 0 },
       crosshair: { mode: 0 },
       localization: { priceFormatter: (v) => usd(v) },
     });
@@ -94,7 +95,7 @@ export default function CandleChart({ points, trades, rate, marks }) {
 
     chart.timeScale().fitContent();
     return () => chart.remove();
-  }, [points, trades, rate, iv, marks]);
+  }, [points, trades, rate, iv, marks, logScale]);
 
   return (
     <div>
@@ -104,8 +105,13 @@ export default function CandleChart({ points, trades, rate, marks }) {
             {t(lbl)}
           </div>
         ))}
+        <div className={`fpill ${logScale ? "on" : ""}`} style={{ marginLeft: "auto" }}
+             onClick={() => setLogScale(!logScale)}
+             title={t("Логарифмическая шкала цены")}>
+          LOG
+        </div>
       </div>
-      <div ref={ref} style={{ width: "100%", marginTop: 8 }} />
+      <div ref={ref} className="chart-resize" title={t("Потяните за нижний правый угол, чтобы изменить высоту")} />
     </div>
   );
 }

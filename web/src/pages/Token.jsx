@@ -504,6 +504,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [ordPrice, setOrdPrice] = useState("");
   const [ordAmt, setOrdAmt] = useState("");
   const [ordPct, setOrdPct] = useState(100); // доля баланса для продажи
+  const [ordMode, setOrdMode] = useState("market"); // market | limit
 
   // ---- перетаскивание блоков: порядок карточек хранится в localStorage ----
   const BLK_DEF = { chart: 1, trades: 2, about: 3, swap: 1, chat: 2 };
@@ -527,9 +528,13 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     setBlkOrd(next);
     try { localStorage.setItem("hood_tok_blocks", JSON.stringify(next)); } catch (err) { /* ignore */ }
   };
+  const [overBlk, setOverBlk] = useState(null);
   const blkProps = (k) => ({
-    className: "drag-card", style: { order: blkOrd[k] },
-    onDragOver: (e) => e.preventDefault(), onDrop: dropBlk(k),
+    className: `drag-card ${overBlk === k && dragSrc.current && dragSrc.current !== k ? "over" : ""}`,
+    style: { order: blkOrd[k] },
+    onDragOver: (e) => { e.preventDefault(); setOverBlk(k); },
+    onDragLeave: () => setOverBlk((v) => (v === k ? null : v)),
+    onDrop: (e) => { setOverBlk(null); dropBlk(k)(e); },
   });
   const Handle = ({ k }) => (
     <span className="drag-handle" draggable onDragStart={startBlk(k)}
@@ -766,9 +771,16 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 <img src={meta.image} alt="" style={{ width: 96, height: 96, borderRadius: 18 }}
                      onError={(e) => (e.target.style.display = "none")} />
               )}
-              {data.name} <span className="ticker">${data.symbol}</span>
-              {data.graduated && <span className="badge">🎯 В яблочке</span>}
-              {socials}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  {data.name} <span className="ticker">${data.symbol}</span>
+                  {data.graduated && <span className="badge">🎯 В яблочке</span>}
+                  {socials}
+                </div>
+                <div className="mono th-addr" onClick={copyCA} title={t("Скопировать адрес")}>
+                  {short(tokenAddress)} {copiedCA ? "✓" : "⧉"}
+                </div>
+              </div>
             </h3>
             <div className="pill-group">
               {[["5m", "5M"], ["1h", "1H"], ["6h", "6H"], ["1d", "1D"], ["all", "ALL"]].map(([k, lbl]) => (
@@ -812,6 +824,11 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             </div>
             <div className={`bt-tab ${btTab === "holders" ? "on" : ""}`} onClick={() => setBtTab("holders")}>
               {t("Топ держателей")}
+            </div>
+            <div className={`bt-tab ${btTab === "orders" ? "on" : ""}`} onClick={() => setBtTab("orders")}>
+              {t("Мои заявки")}{orders.filter((o) => o.status === "active").length > 0 && (
+                <span className="count-chip" style={{ marginLeft: 6 }}>{orders.filter((o) => o.status === "active").length}</span>
+              )}
             </div>
           </div>
           {btTab === "trades" && (<>
@@ -880,6 +897,29 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             </div>
           )}
           </>)}
+          {btTab === "orders" && (
+            orders.length === 0 ? (
+              <div className="dim" style={{ padding: "14px 0" }}>{t("Заявок пока нет.")}</div>
+            ) : (
+              <div className="order-list">
+                {orders.map((o) => (
+                  <div className="order-row" key={o.id}>
+                    <span className={`ord-tag ${o.type}`}>
+                      {o.type === "buy" ? t("Лимит-покупка") : o.type === "stop" ? t("Стоп-лосс") : t("Тейк-профит")}
+                    </span>
+                    <span className="mono">@ {fmtEth(o.priceEth)} ETH</span>
+                    <span className="dim">{o.type === "buy" ? `${o.amountEth} ETH` : `${o.sellPct || 100}%`}</span>
+                    <span className={`ord-st ${o.status}`}>
+                      {o.status === "active" ? t("ждёт") : o.status === "firing" ? t("исполняется…")
+                        : o.status === "done" ? "✓ " + t("исполнена") : "✕ " + t("ошибка")}
+                    </span>
+                    <span className="ord-x" title={t("Удалить")}
+                          onClick={() => { removeOrder(o.id); setOrders(ordersFor(tokenLower)); }}>✕</span>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
         </div>
         </div>
       </div>
@@ -915,6 +955,13 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               </div>
             </div>
 
+            <div className="mode-sub">
+              {[["market", t("Рыночная")], ["limit", t("Лимитная")]].map(([k, lbl]) => (
+                <div key={k} className={`fpill ${ordMode === k ? "on" : ""}`} onClick={() => setOrdMode(k)}>{lbl}</div>
+              ))}
+            </div>
+
+            {ordMode === "market" && (<>
             <label>{tab === "buy" ? t("Вы платите (ETH)") : `${t("Вы продаёте")} (${data.symbol})`}</label>
             <input
               value={amount}
@@ -1059,8 +1106,10 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 : `${t("Продать")} ${data.symbol}`}
             </button>
             {error && <div className="error">{error}</div>}
+            </>)}
 
-            <div className="orders-box">
+            {ordMode === "limit" && (
+            <div className="orders-box" style={{ borderTop: "none", paddingTop: 4, marginTop: 6 }}>
               <div className="orders-head">
                 {t("Лимитные заявки")}
                 {(() => {
@@ -1135,6 +1184,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 </div>
               )}
             </div>
+            )}
           </div>
         )}
         </div>
