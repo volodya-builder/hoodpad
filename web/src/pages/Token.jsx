@@ -549,10 +549,10 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     window.addEventListener("keydown", onKey);
     return () => { alive = false; window.removeEventListener("keydown", onKey); };
   }, [inspect, tokenAddress]);
+  // панель открывается только по клику на сделку
   const rowHover = (addr) => ({
-    onMouseEnter: () => { clearTimeout(hovT.current); hovT.current = setTimeout(() => setInspect(addr), 350); },
-    onMouseLeave: () => clearTimeout(hovT.current),
-    onClick: () => { clearTimeout(hovT.current); setInspect(addr); },
+    onClick: () => setInspect(addr),
+    title: t("Открыть профиль трейдера"),
   });
 
   async function migrate() {
