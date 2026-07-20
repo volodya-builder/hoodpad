@@ -257,7 +257,7 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 /* страница токена: панель монет + сетка, вместе по центру; панель sticky */
 .container-wide { max-width: 1880px; }
 .token-flex {
-  display: flex; justify-content: center; align-items: flex-start; gap: 16px;
+  display: flex; justify-content: center; align-items: stretch; gap: 16px;
   padding: 26px 0 72px; box-sizing: border-box;
 }
 .token-grid-wrap {
@@ -279,9 +279,8 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 }
 /* -------- боковой список монет на странице токена -------- */
 .tok-sidebar {
-  /* липкая: едет со страницей, прилипает под шапкой, за границы не выходит */
-  position: sticky; top: 84px; flex: none;
-  width: 320px; height: calc(100vh - 98px); z-index: 40;
+  /* обычная колонка той же высоты, что сетка: скроллится вместе со всеми блоками */
+  flex: none; width: 320px;
   box-sizing: border-box;
   background: linear-gradient(180deg, #1a1a19 0%, #151514 100%);
   border: 1px solid var(--border); border-radius: var(--radius);
