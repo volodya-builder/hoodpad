@@ -666,8 +666,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
 
   return (
     <>
-    <a className="btn back-float" href="#/">‹ {t("Назад")}</a>
     <div className="token-grid-wrap">
+      <a className="btn back-float" href="#/">‹ {t("Назад")}</a>
       <Grid className="layout" layout={layout} cols={12} rowHeight={26} margin={[16, 16]}
             draggableHandle=".drag-handle" onLayoutChange={saveLayout}
             resizeHandles={["se", "s", "e"]}>

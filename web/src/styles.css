@@ -261,12 +261,13 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
   margin-left: calc((100% - var(--tg-w)) / 2);
   padding: 26px 0 72px;
 }
+.token-grid-wrap { position: relative; }
 .back-float {
-  position: fixed; top: 86px; left: 18px; z-index: 60;
+  position: absolute; top: 34px; left: -78px; z-index: 60;
   padding: 9px 16px; font-size: 13px;
 }
-@media (max-width: 1500px) {
-  .back-float { position: static; display: inline-flex; margin: 18px 0 -10px; }
+@media (max-width: 1560px) {
+  .back-float { position: static; display: inline-flex; margin: 16px 0 -6px 16px; }
 }
 .grid-item { position: relative; display: flex; flex-direction: column; min-width: 0; }
 .grid-item > .card, .grid-item > .panel {
