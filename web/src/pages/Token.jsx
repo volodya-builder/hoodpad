@@ -533,6 +533,28 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     <span className="drag-handle" title={t("Перетащите, чтобы переставить блок")}>⠿</span>
   );
 
+  // ---- выдвижная панель трейдера (наведение/клик на сделку в «Активности») ----
+  const [inspect, setInspect] = useState(null); // адрес трейдера
+  const hovT = useRef(null);
+  const [inspBal, setInspBal] = useState(null); // { tok, eth }
+  useEffect(() => {
+    if (!inspect) return;
+    let alive = true;
+    setInspBal(null);
+    Promise.all([
+      publicClient.readContract({ address: tokenAddress, abi: tokenAbi, functionName: "balanceOf", args: [inspect] }).catch(() => 0n),
+      publicClient.getBalance({ address: inspect }).catch(() => 0n),
+    ]).then(([tok, eth]) => { if (alive) setInspBal({ tok, eth }); });
+    const onKey = (e) => { if (e.key === "Escape") setInspect(null); };
+    window.addEventListener("keydown", onKey);
+    return () => { alive = false; window.removeEventListener("keydown", onKey); };
+  }, [inspect, tokenAddress]);
+  const rowHover = (addr) => ({
+    onMouseEnter: () => { clearTimeout(hovT.current); hovT.current = setTimeout(() => setInspect(addr), 350); },
+    onMouseLeave: () => clearTimeout(hovT.current),
+    onClick: () => { clearTimeout(hovT.current); setInspect(addr); },
+  });
+
   async function migrate() {
     setError("");
     if (!wallet) return onConnect();
@@ -821,7 +843,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               const heat = Math.max(5, Math.round((tr.eth / maxEth) * 100));
               const priceUsd = tr.tokens > 0 ? (tr.eth / tr.tokens) * rate : 0;
               return (
-                <div className="arow" key={i}>
+                <div className="arow arow-hov" key={i} {...rowHover(tr.addr)}>
                   <span className={buy ? "side-buy" : "side-sell"} style={{
                     background: `linear-gradient(90deg, ${buy ? "#7ac74f1c" : "#e06a4a1c"} ${heat}%, transparent ${heat}%)`,
                     borderRadius: 6, padding: "4px 8px", marginLeft: -8,
@@ -917,6 +939,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                     {dollars(totPnl)} ({totPct >= 0 ? "+" : ""}{fmt(totPct, 1)}%)
                   </b>
                 </div>
+                <div className="tk-cell"><span>{t("Комиссии")}</span><b>{dollars(feesEth)}</b></div>
               </div>
             )];
           })()}
@@ -1207,6 +1230,90 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         </div>
       </Grid>
     </div>
+
+    {inspect && history && (() => {
+      const trs = history.trades.filter((x) => x.addr.toLowerCase() === inspect.toLowerCase());
+      const buys = trs.filter((x) => x.side === "buy");
+      const sells = trs.filter((x) => x.side === "sell");
+      const bEth = buys.reduce((s, x) => s + x.eth, 0), bTok = buys.reduce((s, x) => s + x.tokens, 0);
+      const sEth = sells.reduce((s, x) => s + x.eth, 0), sTok = sells.reduce((s, x) => s + x.tokens, 0);
+      const avgB = bTok > 0 ? bEth / bTok : 0, avgS = sTok > 0 ? sEth / sTok : 0;
+      const balTok = inspBal ? Number(formatEther(inspBal.tok)) : null;
+      const priceEth = Number(formatEther(data.price));
+      const holdVal = balTok != null ? balTok * priceEth : null;
+      const uPnl2 = holdVal != null ? holdVal - balTok * avgB : null;
+      const totPnl2 = holdVal != null ? holdVal + sEth - bEth : null;
+      const posPct = balTok != null && bTok > 0 ? Math.min(100, (balTok / bTok) * 100) : null;
+      const firstTs = trs.reduce((s, x) => (x.ts ? Math.min(s, x.ts) : s), Infinity);
+      const holdMs2 = firstTs !== Infinity ? Date.now() - firstTs : 0;
+      const holdStr2 = firstTs === Infinity ? "—"
+        : holdMs2 >= 86400000 ? `${Math.floor(holdMs2 / 86400000)}${t("д")}`
+        : holdMs2 >= 3600000 ? `${Math.floor(holdMs2 / 3600000)}${t("ч")}`
+        : `${Math.max(1, Math.floor(holdMs2 / 60000))}${t("м")}`;
+      const isMe = wallet && inspect.toLowerCase() === wallet.account.toLowerCase();
+      const pnlCol = (v) => ({ color: v >= 0 ? "var(--leaf)" : "var(--red)" });
+      return (
+        <div className="trader-panel">
+          <div className="tp-head">
+            {meta.image && <img src={meta.image} alt="" style={{ width: 26, height: 26, borderRadius: 7 }} />}
+            <a className="mono" href={`${EXPLORER}/address/${inspect}`} target="_blank" rel="noreferrer">
+              {short(inspect)}
+            </a>
+            {isMe && <span className="badge hr-badge">{t("Вы")}</span>}
+            <span className="cnt-chip">{trs.length} {t("сделок")}</span>
+            <span className="tp-close" onClick={() => setInspect(null)} title="Esc">✕</span>
+          </div>
+
+          <div className="tp-grid">
+            <div className="tp-cell"><span>{t("Общая прибыль")}</span>
+              <b style={totPnl2 != null ? pnlCol(totPnl2) : {}}>
+                {totPnl2 != null ? `${dollars(totPnl2)} (${bEth > 0 ? `${totPnl2 >= 0 ? "+" : ""}${fmt((totPnl2 / bEth) * 100, 1)}%` : "—"})` : "…"}
+              </b>
+            </div>
+            <div className="tp-cell"><span>uPnL</span>
+              <b style={uPnl2 != null ? pnlCol(uPnl2) : {}}>
+                {uPnl2 != null ? dollars(uPnl2) : "…"}
+              </b>
+            </div>
+            <div className="tp-cell"><span>{t("Баланс")} ETH</span>
+              <b>{inspBal ? `${fmtEth(Number(formatEther(inspBal.eth)))} ETH` : "…"}</b>
+            </div>
+            <div className="tp-cell"><span>{t("Текущий холд")}</span>
+              <b>{holdVal != null ? dollars(holdVal) : "…"}</b>
+            </div>
+            <div className="tp-cell"><span>{t("Позиция")}</span>
+              <b>{posPct != null ? `${fmt(posPct, 1)}% (${compactN(balTok)} ${t("из")} ${compactN(bTok)})` : "…"}</b>
+            </div>
+            <div className="tp-cell"><span>{t("Время удержания")}</span><b>{holdStr2}</b></div>
+            <div className="tp-cell"><span>{t("Ср. покупка / продажа")}</span>
+              <b>${fmtEth(avgB * rate)} / {sTok > 0 ? `$${fmtEth(avgS * rate)}` : "—"}</b>
+            </div>
+            <div className="tp-cell"><span>{t("Всего куплено")}</span>
+              <b className="side-buy">{dollars(bEth)} · {buys.length} TXs</b>
+              <span>{compactN(bTok)}</span>
+            </div>
+            <div className="tp-cell"><span>{t("Общий объём продаж")}</span>
+              <b className="side-sell">{dollars(sEth)} · {sells.length} TXs</b>
+              <span>{compactN(sTok)}</span>
+            </div>
+          </div>
+
+          <div className="orders-head" style={{ margin: "18px 0 4px" }}>{t("Сделки трейдера")}</div>
+          {trs.slice(0, 40).map((x, i) => (
+            <div className="tp-row" key={i}>
+              <span className={`tp-type ${x.side}`}>{t(x.side === "buy" ? "Покупка" : "Продажа")}</span>
+              <span className="dim">${fmtEth(x.tokens > 0 ? (x.eth / x.tokens) * rate : 0)}</span>
+              <span>{compactN(x.tokens)}</span>
+              <span className={x.side === "buy" ? "side-buy" : "side-sell"}>{dollars(x.eth)}</span>
+              <a className="dim" href={`${EXPLORER}/tx/${x.tx}`} target="_blank" rel="noreferrer"
+                 title={x.ts ? new Date(x.ts).toLocaleString() : ""}>
+                {shortAgo(x.ts)} ↗
+              </a>
+            </div>
+          ))}
+        </div>
+      );
+    })()}
     </>
   );
 }

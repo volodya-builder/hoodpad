@@ -185,28 +185,28 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
 
   return (
     <div className={`chart-wrap ${fs ? "fs" : ""}`}>
-      <div className="candle-ivs">
-        {INTERVALS.map(([lbl, sec]) => (
-          <div key={sec} className={`fpill ${iv === sec ? "on" : ""}`} onClick={() => setIv(sec)}>
-            {t(lbl)}
-          </div>
-        ))}
-        {(lines || []).length > 0 && (
-          <label className="lines-toggle" style={{ marginLeft: "auto" }}
-                 title={t("Показывать уровни заявок на графике")}>
-            <input type="checkbox" checked={showLines} onChange={(e) => setShowLines(e.target.checked)} />
-            {t("Заявки")}
-          </label>
-        )}
-        <div className="fpill" style={(lines || []).length > 0 ? {} : { marginLeft: "auto" }}
-             onClick={() => setFs(!fs)}
-             title={fs ? t("Свернуть") : t("На весь экран")}>
-          {fs ? "✕" : "⛶"}
-        </div>
-      </div>
-      <div style={{ position: "relative" }}>
+      <div className="chart-area" style={{ position: "relative" }}>
         <div ref={ref} className="chart-resize"
              title={t("Потяните за правый нижний угол, чтобы изменить размер")} />
+        <div className="candle-ivs candle-ivs-overlay">
+          {INTERVALS.map(([lbl, sec]) => (
+            <div key={sec} className={`fpill ${iv === sec ? "on" : ""}`} onClick={() => setIv(sec)}>
+              {t(lbl)}
+            </div>
+          ))}
+          {(lines || []).length > 0 && (
+            <label className="lines-toggle" style={{ marginLeft: "auto" }}
+                   title={t("Показывать уровни заявок на графике")}>
+              <input type="checkbox" checked={showLines} onChange={(e) => setShowLines(e.target.checked)} />
+              {t("Заявки")}
+            </label>
+          )}
+          <div className="fpill" style={(lines || []).length > 0 ? {} : { marginLeft: "auto" }}
+               onClick={() => setFs(!fs)}
+               title={fs ? t("Свернуть") : t("На весь экран")}>
+            {fs ? "✕" : "⛶"}
+          </div>
+        </div>
         <div ref={legendRef} className="chart-legend" />
         <div className={`chart-log-btn ${logScale ? "on" : ""}`}
              onClick={() => setLogScale(!logScale)}
