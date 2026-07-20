@@ -529,7 +529,6 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     setLayout(l);
     try { localStorage.setItem("hood_tok_layout_v5", JSON.stringify(l)); } catch (e) { /* ignore */ }
   };
-  const resetLayout = () => saveLayout(DEF_LAYOUT.map((x) => ({ ...x })));
   const Handle = () => (
     <span className="drag-handle" title={t("Перетащите, чтобы переставить блок")}>⠿</span>
   );
@@ -667,12 +666,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
 
   return (
     <>
-    <div className="tg-topbar">
-      <a className="btn back-btn" href="#/">‹ {t("Назад")}</a>
-      <button className="btn tg-reset" onClick={resetLayout} title={t("Вернуть блоки на места по умолчанию")}>
-        ⟲ {t("Сбросить раскладку")}
-      </button>
-    </div>
+    <a className="btn back-float" href="#/">‹ {t("Назад")}</a>
     <div className="token-grid-wrap">
       <Grid className="layout" layout={layout} cols={12} rowHeight={26} margin={[16, 16]}
             draggableHandle=".drag-handle" onLayoutChange={saveLayout}
