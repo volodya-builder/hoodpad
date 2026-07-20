@@ -512,21 +512,21 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   // ---- свободная раскладка блоков (react-grid-layout), живёт в localStorage ----
   const DEF_LAYOUT = [
     { i: "chart", x: 0, y: 0, w: 8, h: 22, minW: 4, minH: 10 },
-    { i: "swap", x: 8, y: 0, w: 4, h: 11, minW: 3, minH: 7 },
-    { i: "chat", x: 8, y: 11, w: 4, h: 13, minW: 3, minH: 6 },
+    { i: "swap", x: 8, y: 0, w: 4, h: 10, minW: 3, minH: 7 },
+    { i: "chat", x: 8, y: 10, w: 4, h: 13, minW: 3, minH: 6 },
     { i: "trades", x: 0, y: 22, w: 8, h: 12, minW: 4, minH: 5 },
     { i: "about", x: 8, y: 24, w: 4, h: 10, minW: 3, minH: 5 },
   ];
   const [layout, setLayout] = useState(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem("hood_tok_layout_v2"));
+      const saved = JSON.parse(localStorage.getItem("hood_tok_layout_v3"));
       if (Array.isArray(saved) && saved.length === DEF_LAYOUT.length) return saved;
     } catch (e) { /* ignore */ }
     return DEF_LAYOUT;
   });
   const saveLayout = (l) => {
     setLayout(l);
-    try { localStorage.setItem("hood_tok_layout_v2", JSON.stringify(l)); } catch (e) { /* ignore */ }
+    try { localStorage.setItem("hood_tok_layout_v3", JSON.stringify(l)); } catch (e) { /* ignore */ }
   };
   const resetLayout = () => saveLayout(DEF_LAYOUT.map((x) => ({ ...x })));
   const Handle = () => (
