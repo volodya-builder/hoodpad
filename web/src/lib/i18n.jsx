@@ -375,6 +375,16 @@ const EN = {
   "Ликвидность": "Liquidity",
   "Заперта навсегда": "Locked forever",
   "Ваша покупка": "Your buy",
+  // — About page (compact redesign) —
+  "Жадные копят — hood возвращает. Треть торговых комиссий уходит в казну, которая умеет только одно: выкупать токены платформы.":
+    "The greedy hoard — hood gives back. A third of all trading fees flows into a treasury that can do only one thing: buy back platform tokens.",
+  "Комиссия трейда": "Trade fee",
+  "Имя, тикер, картинка — и токен уже в блокчейне.": "Name, ticker, image — and the token is live on-chain.",
+  "Цена растёт по кривой. Без предпродаж и инсайдеров.": "Price grows along a curve. No presales, no insiders.",
+  "6.5 ETH — и токен на DEX с запертой ликвидностью.": "6.5 ETH — and the token moves to a DEX with locked liquidity.",
+  "1% с трейда: создателю, команде, в казну выкупа.": "1% per trade: creator, team, buyback treasury.",
+  "Каждую неделю комьюнити голосует, какие токены поддержать выкупом. Итоги видны в блокчейне, а сами выкупы — на вкладке «Казна» и на графиках токенов.":
+    "Every week the community votes on which tokens to support with buybacks. Results live on-chain, and the buybacks themselves show up on the Treasury tab and token charts.",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });
