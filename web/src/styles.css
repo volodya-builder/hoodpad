@@ -267,6 +267,12 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
   overflow: auto; display: flex; flex-direction: column;
   scrollbar-width: thin;
 }
+/* форма покупки не расползается на всю ширину широкого блока */
+.grid-item > .panel > * {
+  max-width: 460px; width: 100%;
+  margin-left: auto !important; margin-right: auto !important;
+  box-sizing: border-box;
+}
 .grid-item .chart-wrap { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .grid-item .chart-wrap > div:last-child { flex: 1; min-height: 0; position: relative; }
 .grid-item .chart-resize { height: 100% !important; max-height: none; resize: none; }
