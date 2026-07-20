@@ -32,7 +32,6 @@ export default function Profile({ wallet, onConnect }) {
   const [psort, setPsort] = useState({ key: null, dir: -1 });
   const [trsort, setTrsort] = useState({ key: null, dir: -1 });
   const [lq, setLq] = useState("");           // поиск по «Моим запускам»
-  const [pfTab, setPfTab] = useState("positions"); // позиции | запуски
   const [caCopied, setCaCopied] = useState(""); // какой адрес только что скопирован
 
   const copyCA = (addr) => {
@@ -245,92 +244,18 @@ export default function Profile({ wallet, onConnect }) {
                 placeholder={t("Поиск: тикер или адрес…")}
                 spellCheck={false}
               />
-              <div className={`bt-tab ${pfTab === "positions" ? "on" : ""}`} onClick={() => setPfTab("positions")}>
-                {t("Мои позиции")}
-              </div>
-              {state.launched.length > 0 && (
-                <div className={`bt-tab ${pfTab === "launches" ? "on" : ""}`} onClick={() => setPfTab("launches")}>
-                  {t("Мои запуски")}
-                </div>
-              )}
-              {pfTab === "launches" ? (
-                (() => {
-                  const claimable = state.launched.reduce((s, tk) => s + Number(formatEther(tk.feesAccrued)), 0);
-                  return (
-                    <button className="btn btn-primary" style={{ marginLeft: "auto" }}
-                            disabled={claimable <= 0 || claiming === "__all__"}
-                            onClick={claimAll}
-                            title={t("Заберёт комиссии со всех токенов — по одной транзакции на каждый")}>
-                      {claiming === "__all__" ? "…" : <>{t("Забрать все")} · {fmtEth(claimable)} ETH {U(claimable)}</>}
-                    </button>
-                  );
-                })()
-              ) : (
-                <span style={{ marginLeft: "auto", fontSize: 14 }}>
-                  {t("Общий PnL")}:{" "}
-                  <b className={state.totPnl >= 0 ? "pnl-pos" : "pnl-neg"}>
-                    {state.totPnl >= 0 ? "+" : ""}{fmtEth(state.totPnl)} ETH {U(state.totPnl)}
-                  </b>
-                </span>
-              )}
+              <div className="bt-tab on">{t("Мои позиции")}</div>
+              <span style={{ marginLeft: "auto", fontSize: 14 }}>
+                {t("Общий PnL")}:{" "}
+                <b className={state.totPnl >= 0 ? "pnl-pos" : "pnl-neg"}>
+                  {state.totPnl >= 0 ? "+" : ""}{fmtEth(state.totPnl)} ETH {U(state.totPnl)}
+                </b>
+              </span>
             </div>
 
-            {pfTab === "launches" && state.launched.length > 0 && (<>
-              <div className="prow6 hdr" style={{ gridTemplateColumns: "1.6fr 1fr 1fr 1.4fr 120px" }}>
-                <span>{t("Токен")}</span>
-                <SortH sort={lsort} setSort={setLsort} k="mcap" label={t("Капитализация")} />
-                <SortH sort={lsort} setSort={setLsort} k="curve" label={t("Кривая")} />
-                <SortH sort={lsort} setSort={setLsort} k="fees" label={t("Комиссии к выплате")} />
-                <span></span>
-              </div>
-              {sortRows(
-                state.launched.filter((tk) => {
-                  const needle = lq.trim().toLowerCase();
-                  if (!needle) return true;
-                  return tk.symbol.toLowerCase().includes(needle)
-                    || tk.name.toLowerCase().includes(needle)
-                    || tk.token.toLowerCase().includes(needle);
-                }),
-                lsort,
-                (tk, k) =>
-                  k === "mcap" ? Number(tk.price)
-                  : k === "curve" ? Number((tk.sold * 10000n) / tk.cap)
-                  : Number(tk.feesAccrued)
-              ).map((tk) => {
-                const mcapEth = Number(formatEther(tk.price)) * 1e9;
-                const prog = Number((tk.sold * 10000n) / tk.cap) / 100;
-                const fees = Number(formatEther(tk.feesAccrued));
-                return (
-                  <div className="prow6" key={tk.token} style={{ gridTemplateColumns: "1.6fr 1fr 1fr 1.4fr 120px" }}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <a href={`#/token/${tk.token}`} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        {tk.meta.image && <img src={tk.meta.image} style={{ width: 26, height: 26, borderRadius: 7 }} alt="" />}
-                        <b>{tk.symbol}</b>
-                      </a>
-                      <span className="mono addr-copy" style={{ fontSize: 11.5 }}
-                            title={t("Скопировать адрес")}
-                            onClick={(e) => { e.preventDefault(); copyCA(tk.token); }}>
-                        {short(tk.token)} {caCopied === tk.token ? "✓" : "⧉"}
-                      </span>
-                    </span>
-                    <span>{usd(mcapEth * rate)}</span>
-                    <span className="dim">{tk.graduated ? "🎯" : fmt(prog, 0) + "%"}</span>
-                    <span style={{ color: fees > 0 ? "var(--gold)" : "inherit" }}>
-                      {fmtEth(fees)} ETH {U(fees)}
-                    </span>
-                    <span>
-                      <button className="btn" disabled={fees <= 0 || claiming === tk.token}
-                              onClick={() => claim(tk)}>
-                        {claiming === tk.token ? "…" : t("Забрать")}
-                      </button>
-                    </span>
-                  </div>
-                );
-              })}
-            </>)}
 
-            {pfTab === "positions" && state.positions.length === 0 && <div className="center">{t("Пока нет позиций.")}</div>}
-            {pfTab === "positions" && sortRows(state.positions.filter((p) => {
+            {state.positions.length === 0 && <div className="center">{t("Пока нет позиций.")}</div>}
+            {sortRows(state.positions.filter((p) => {
               const needle = lq.trim().toLowerCase();
               if (!needle) return true;
               return p.symbol.toLowerCase().includes(needle)
@@ -397,6 +322,76 @@ export default function Profile({ wallet, onConnect }) {
               );
             })}
           </div>
+
+          {state.launched.length > 0 && (
+            <div className="bottom-card" style={{ marginTop: 18 }}>
+              <div className="bt-tabs" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <div className="bt-tab on">{t("Мои запуски")}</div>
+                {(() => {
+                  const claimable = state.launched.reduce((s2, tk) => s2 + Number(formatEther(tk.feesAccrued)), 0);
+                  return (
+                    <button className="btn btn-primary" style={{ marginLeft: "auto" }}
+                            disabled={claimable <= 0 || claiming === "__all__"}
+                            onClick={claimAll}
+                            title={t("Заберёт комиссии со всех токенов — по одной транзакции на каждый")}>
+                      {claiming === "__all__" ? "…" : <>{t("Забрать все")} · {fmtEth(claimable)} ETH {U(claimable)}</>}
+                    </button>
+                  );
+                })()}
+              </div>
+              <div className="prow6 hdr" style={{ gridTemplateColumns: "1.6fr 1fr 1fr 1.4fr 120px" }}>
+                <span>{t("Токен")}</span>
+                <SortH sort={lsort} setSort={setLsort} k="mcap" label={t("Капитализация")} />
+                <SortH sort={lsort} setSort={setLsort} k="curve" label={t("Кривая")} />
+                <SortH sort={lsort} setSort={setLsort} k="fees" label={t("Комиссии к выплате")} />
+                <span></span>
+              </div>
+              {sortRows(
+                state.launched.filter((tk) => {
+                  const needle = lq.trim().toLowerCase();
+                  if (!needle) return true;
+                  return tk.symbol.toLowerCase().includes(needle)
+                    || tk.name.toLowerCase().includes(needle)
+                    || tk.token.toLowerCase().includes(needle);
+                }),
+                lsort,
+                (tk, k) =>
+                  k === "mcap" ? Number(tk.price)
+                  : k === "curve" ? Number((tk.sold * 10000n) / tk.cap)
+                  : Number(tk.feesAccrued)
+              ).map((tk) => {
+                const mcapEth = Number(formatEther(tk.price)) * 1e9;
+                const prog = Number((tk.sold * 10000n) / tk.cap) / 100;
+                const fees = Number(formatEther(tk.feesAccrued));
+                return (
+                  <div className="prow6" key={tk.token} style={{ gridTemplateColumns: "1.6fr 1fr 1fr 1.4fr 120px" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <a href={`#/token/${tk.token}`} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {tk.meta.image && <img src={tk.meta.image} style={{ width: 26, height: 26, borderRadius: 7 }} alt="" />}
+                        <b>{tk.symbol}</b>
+                      </a>
+                      <span className="mono addr-copy" style={{ fontSize: 11.5 }}
+                            title={t("Скопировать адрес")}
+                            onClick={(e) => { e.preventDefault(); copyCA(tk.token); }}>
+                        {short(tk.token)} {caCopied === tk.token ? "✓" : "⧉"}
+                      </span>
+                    </span>
+                    <span>{usd(mcapEth * rate)}</span>
+                    <span className="dim">{tk.graduated ? "🎯" : fmt(prog, 0) + "%"}</span>
+                    <span style={{ color: fees > 0 ? "var(--gold)" : "inherit" }}>
+                      {fmtEth(fees)} ETH {U(fees)}
+                    </span>
+                    <span>
+                      <button className="btn" disabled={fees <= 0 || claiming === tk.token}
+                              onClick={() => claim(tk)}>
+                        {claiming === tk.token ? "…" : t("Забрать")}
+                      </button>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
         </>
       )}

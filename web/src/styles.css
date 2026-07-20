@@ -842,7 +842,15 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
 .rank-num.rk3 { color: #cd7f32; }
 
 /* -------- about page -------- */
-.about-page { padding-bottom: 60px; }
+.about-page { padding-bottom: 80px; }
+/* больше воздуха между секциями: тонкая линия-разделитель перед заголовками */
+.about-page .sec-h2 { position: relative; padding-top: 30px; }
+.about-page .sec-h2::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0;
+  height: 1px; background: linear-gradient(90deg, var(--border), transparent 65%);
+}
+.about-page .ana-grid { margin-bottom: 8px !important; }
+.about-page .cta-row { margin-top: 52px; }
 /* На средних экранах русские подписи длиннее — ужимаем пилюли, чтобы меню не переносилось */
 @media (max-width: 1360px) {
   .nav-pill { padding: 7px 11px; font-size: 12.5px; }

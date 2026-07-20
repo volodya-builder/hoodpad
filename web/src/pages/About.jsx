@@ -35,7 +35,7 @@ export default function About() {
         <span className="chip">{t("Ликвидность")} <b>{t("Заперта навсегда")}</b></span>
       </div>
 
-      <h2 className="sec-h2" style={{ marginTop: 40 }}>{t("Как работает hood")}</h2>
+      <h2 className="sec-h2" style={{ marginTop: 68 }}>{t("Как работает hood")}</h2>
       <div className="ana-grid" style={{ margin: "18px 0 8px", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
         {steps.map(([title, text], i) => (
           <div className="ana-card step-card" key={i}>
@@ -46,7 +46,7 @@ export default function About() {
         ))}
       </div>
 
-      <h2 className="sec-h2" style={{ marginTop: 40 }}>{t("Куда идут комиссии")}</h2>
+      <h2 className="sec-h2" style={{ marginTop: 68 }}>{t("Куда идут комиссии")}</h2>
       <div className="page-sub" style={{ margin: "7px 0 0" }}>
         {t("Каждая сделка на кривой платит комиссию 1%. Смарт-контракт делит её автоматически:")}
       </div>
@@ -61,7 +61,7 @@ export default function About() {
         <span><i className="dot team" />{t("команде")}</span>
       </div>
 
-      <h2 className="sec-h2" style={{ marginTop: 40 }}>{t("Казна, из которой нельзя вывести")}</h2>
+      <h2 className="sec-h2" style={{ marginTop: 68 }}>{t("Казна, из которой нельзя вывести")}</h2>
       <div className="check-list">
         {facts.map((title, i) => (
           <div className="check-item" key={i}>
@@ -77,7 +77,7 @@ export default function About() {
         </a>
       </div>
 
-      <h2 className="sec-h2" style={{ marginTop: 40 }}>{t("Голосование направляет казну")}</h2>
+      <h2 className="sec-h2" style={{ marginTop: 68 }}>{t("Голосование направляет казну")}</h2>
       <div className="page-sub" style={{ margin: "7px 0 0", maxWidth: 680, lineHeight: 1.65 }}>
         {t("Каждую неделю комьюнити голосует, какие токены поддержать выкупом. Итоги видны в блокчейне, а сами выкупы — на вкладке «Казна» и на графиках токенов.")}
       </div>
