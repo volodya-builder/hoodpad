@@ -31,7 +31,8 @@ export default function Profile({ wallet, onConnect }) {
   const [lsort, setLsort] = useState({ key: null, dir: -1 });
   const [psort, setPsort] = useState({ key: null, dir: -1 });
   const [trsort, setTrsort] = useState({ key: null, dir: -1 });
-  const [lq, setLq] = useState("");           // поиск по «Моим запускам»
+  const [lq, setLq] = useState("");           // поиск по позициям
+  const [lq2, setLq2] = useState("");         // поиск по запускам
   const [caCopied, setCaCopied] = useState(""); // какой адрес только что скопирован
 
   const copyCA = (addr) => {
@@ -326,6 +327,13 @@ export default function Profile({ wallet, onConnect }) {
           {state.launched.length > 0 && (
             <div className="bottom-card" style={{ marginTop: 18 }}>
               <div className="bt-tabs" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <input
+                  className="tbl-search"
+                  value={lq2}
+                  onChange={(e) => setLq2(e.target.value)}
+                  placeholder={t("Поиск: тикер или адрес…")}
+                  spellCheck={false}
+                />
                 <div className="bt-tab on">{t("Мои запуски")}</div>
                 {(() => {
                   const claimable = state.launched.reduce((s2, tk) => s2 + Number(formatEther(tk.feesAccrued)), 0);
@@ -348,7 +356,7 @@ export default function Profile({ wallet, onConnect }) {
               </div>
               {sortRows(
                 state.launched.filter((tk) => {
-                  const needle = lq.trim().toLowerCase();
+                  const needle = lq2.trim().toLowerCase();
                   if (!needle) return true;
                   return tk.symbol.toLowerCase().includes(needle)
                     || tk.name.toLowerCase().includes(needle)
