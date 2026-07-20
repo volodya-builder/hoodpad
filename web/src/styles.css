@@ -265,8 +265,11 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 .grid-item > .card, .grid-item > .panel {
   margin: 0 !important; flex: 1; min-height: 0;
   overflow: auto; display: flex; flex-direction: column;
-  scrollbar-width: thin;
+  scrollbar-width: none; /* прокрутка колесом остаётся, полоса не видна */
 }
+.grid-item > .card::-webkit-scrollbar,
+.grid-item > .panel::-webkit-scrollbar,
+.grid-item > .chat-panel::-webkit-scrollbar { width: 0; height: 0; }
 /* чат вписывается в свою ячейку и не наезжает на соседей */
 .grid-item > .chat-panel {
   margin: 0 !important; flex: 1; min-height: 0; max-height: none;
