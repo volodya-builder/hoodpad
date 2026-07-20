@@ -238,7 +238,7 @@ export default function Analytics() {
                 <div className="k">{t("Казна выкупа")}</div>
                 <div className="pf-usd" style={{ color: "var(--gold)" }}>{D(bal)}</div>
                 <div className="s">
-                  {fmtEth(bal)} ETH · {t("получено")} {D(rec)} · {t("выкуплено на")} {D(spent)}
+                  {fmtEth(bal)} ETH
                   {" · "}
                   <a href={`${EXPLORER}/address/${TREASURY_ADDRESS}`} target="_blank" rel="noreferrer" style={{ color: "var(--gold)" }}>
                     {t("контракт")}
@@ -248,10 +248,7 @@ export default function Analytics() {
               <div className="ana-card">
                 <div className="k">{t("Выкуплено и сожжено")}</div>
                 <div className="pf-usd">{D(spent)}</div>
-                <div className="s">
-                  {fmtEth(spent)} ETH · {fmt(raw.burned, 0)} {t("токенов сожжено навсегда")} · {t("куплено казной")} {fmt(raw.bought, 0)}
-                  {raw.buybackCount !== null && <> · {raw.buybackCount} {t("выкупов")}</>}
-                </div>
+                <div className="s">{fmtEth(spent)} ETH</div>
               </div>
             </>);
           })()}
