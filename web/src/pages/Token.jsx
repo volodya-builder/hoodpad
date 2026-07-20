@@ -10,9 +10,11 @@ import { useSplit, loadCreationTimes, timeAgo, useClock, useSupport } from "../l
 import { useLang } from "../lib/i18n.jsx";
 import { bindRefIfNeeded } from "../lib/referral.js";
 import CandleChart from "../components/CandleChart.jsx";
-import { GridLayout, useContainerWidth } from "react-grid-layout";
+import RGL, { WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
+
+const Grid = WidthProvider(RGL);
 
 const SLIPPAGE_CHOICES = [0.5, 1, 3, 5]; // %
 
@@ -527,7 +529,6 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     try { localStorage.setItem("hood_tok_layout_v5", JSON.stringify(l)); } catch (e) { /* ignore */ }
   };
   const resetLayout = () => saveLayout(DEF_LAYOUT.map((x) => ({ ...x })));
-  const { width: gridW, containerRef: gridRef } = useContainerWidth();
   const Handle = () => (
     <span className="drag-handle" title={t("Перетащите, чтобы переставить блок")}>⠿</span>
   );
@@ -545,18 +546,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       publicClient.getBalance({ address: inspect }).catch(() => 0n),
     ]).then(([tok, eth]) => { if (alive) setInspBal({ tok, eth }); });
     const onKey = (e) => { if (e.key === "Escape") setInspect(null); };
-    // клик в любом месте вне панели (и не по строке сделки) закрывает её
-    const onDoc = (e) => {
-      if (e.target.closest && (e.target.closest(".trader-panel") || e.target.closest(".arow-hov"))) return;
-      setInspect(null);
-    };
     window.addEventListener("keydown", onKey);
-    document.addEventListener("mousedown", onDoc);
-    return () => {
-      alive = false;
-      window.removeEventListener("keydown", onKey);
-      document.removeEventListener("mousedown", onDoc);
-    };
+    return () => { alive = false; window.removeEventListener("keydown", onKey); };
   }, [inspect, tokenAddress]);
   // панель открывается только по клику на сделку
   const rowHover = (addr) => ({
@@ -682,8 +673,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         ⟲ {t("Сбросить раскладку")}
       </button>
     </div>
-    <div className="token-grid-wrap" ref={gridRef}>
-      <GridLayout className="layout" layout={layout} width={gridW} cols={12} rowHeight={26} margin={[16, 16]}
+    <div className="token-grid-wrap">
+      <Grid className="layout" layout={layout} cols={12} rowHeight={26} margin={[16, 16]}
             draggableHandle=".drag-handle" onLayoutChange={saveLayout}
             resizeHandles={["se", "s", "e"]}>
         <div key="about" className="grid-item"><Handle />
@@ -1244,7 +1235,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         <div key="chat" className="grid-item"><Handle />
         <Chat tokenAddress={tokenAddress} wallet={wallet} onConnect={onConnect} />
         </div>
-      </GridLayout>
+      </Grid>
     </div>
 
     {inspect && history && (() => {
