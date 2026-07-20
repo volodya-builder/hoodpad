@@ -16,7 +16,7 @@
   --leaf-dim: #4caf6d1f;
   --red: #e05c5c;
   --radius: 16px;
-  --font-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-ui: "Manrope", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
   font-family: var(--font-ui);
 }
