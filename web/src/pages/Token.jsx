@@ -849,18 +849,19 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               : `${Math.max(1, Math.floor(holdMs / 60000))}${t("м")}`;
             return [(
               <div className="pos-row" key="sum">
-                <div className="pos-id">
+                <a className="pos-id" href={`#/token/${tokenAddress}`} title={`${data.name} — ${t("Открыть страницу токена")}`}>
                   {meta.image && (
                     <img src={meta.image} alt="" style={{ width: 34, height: 34, borderRadius: 9 }}
                          onError={(e) => (e.target.style.display = "none")} />
                   )}
                   <div>
                     <b className="ticker" style={{ fontSize: 15 }}>${data.symbol}</b>
-                    <div className="mono th-addr" style={{ marginTop: 2 }} onClick={copyCA} title={t("Скопировать адрес")}>
+                    <div className="mono th-addr" style={{ marginTop: 2 }} title={t("Скопировать адрес")}
+                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); copyCA(); }}>
                       {short(tokenAddress)} {copiedCA ? "✓" : "⧉"}
                     </div>
                   </div>
-                </div>
+                </a>
                 <div className="tk-cell"><span>{t("Активность")}</span><b>{lastTs ? timeAgo(lastTs) : "—"}</b>
                   <span>{mine.length} {t("сделок")} · {holdStr} {totPnl >= 0 ? "💎" : ""}</span></div>
                 <div className="tk-cell"><span>{t("Куплено")}</span><b>{dollars(buysEth)}</b>

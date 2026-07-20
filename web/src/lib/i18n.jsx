@@ -448,6 +448,7 @@ const EN = {
   "Комиссии": "Fees",
   "История сделок": "Trade history",
   "Общая прибыль": "Total profit",
+  "Открыть страницу токена": "Open token page",
   "Удержание": "Holding",
   "д": "d", "ч": "h", "м": "m",
   "Открыть транзакцию": "Open transaction",
