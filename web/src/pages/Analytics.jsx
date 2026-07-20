@@ -222,25 +222,37 @@ export default function Analytics() {
             <div className="v" style={{ color: "var(--gold)" }}>{fmtEth(stats.creatorPaid)} ETH</div>
             <div className="s">{split.creator}% {t("всех комиссий — с первого трейда")}</div>
           </div>
-          <div className="ana-card">
-            <div className="k">{t("Казна выкупа")}</div>
-            <div className="v" style={{ color: "var(--gold)" }}>{fmtEth(Number(formatEther(raw.treBal)))} ETH</div>
-            <div className="s">
-              {t("получено")} {fmtEth(Number(formatEther(raw.received)))} · {t("выкуплено на")} {fmtEth(Number(formatEther(raw.spent)))}
-              {" · "}
-              <a href={`${EXPLORER}/address/${TREASURY_ADDRESS}`} target="_blank" rel="noreferrer" style={{ color: "var(--gold)" }}>
-                {t("контракт")}
-              </a>
-            </div>
-          </div>
-          <div className="ana-card">
-            <div className="k">{t("Выкуплено и сожжено")}</div>
-            <div className="v">{fmt(raw.burned, 0)}</div>
-            <div className="s">
-              {t("токенов сожжено навсегда")} · {t("куплено казной")} {fmt(raw.bought, 0)}
-              {raw.buybackCount !== null && <> · {raw.buybackCount} {t("выкупов")}</>}
-            </div>
-          </div>
+          {(() => {
+            const d = (e) => (e * rate >= 1000 ? usd(e * rate) : "$" + (e * rate).toFixed(2));
+            const bal = Number(formatEther(raw.treBal));
+            const rec = Number(formatEther(raw.received));
+            const spent = Number(formatEther(raw.spent));
+            return (<>
+              <div className="ana-card">
+                <div className="k">{t("Казна выкупа")}</div>
+                <div className="v" style={{ color: "var(--gold)" }}>
+                  {fmtEth(bal)} ETH <span className="usd-sub">({d(bal)})</span>
+                </div>
+                <div className="s">
+                  {t("получено")} {fmtEth(rec)} ETH ({d(rec)}) · {t("выкуплено на")} {fmtEth(spent)} ETH ({d(spent)})
+                  {" · "}
+                  <a href={`${EXPLORER}/address/${TREASURY_ADDRESS}`} target="_blank" rel="noreferrer" style={{ color: "var(--gold)" }}>
+                    {t("контракт")}
+                  </a>
+                </div>
+              </div>
+              <div className="ana-card">
+                <div className="k">{t("Выкуплено и сожжено")}</div>
+                <div className="v">
+                  {fmtEth(spent)} ETH <span className="usd-sub">({d(spent)})</span>
+                </div>
+                <div className="s">
+                  {fmt(raw.burned, 0)} {t("токенов сожжено навсегда")} · {t("куплено казной")} {fmt(raw.bought, 0)}
+                  {raw.buybackCount !== null && <> · {raw.buybackCount} {t("выкупов")}</>}
+                </div>
+              </div>
+            </>);
+          })()}
         </div>
       )}
 
