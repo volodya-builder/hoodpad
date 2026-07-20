@@ -7,6 +7,8 @@ import Leaderboard from "./pages/Leaderboard.jsx";
 import Profile from "./pages/Profile.jsx";
 import Vote from "./pages/Vote.jsx";
 import About from "./pages/About.jsx";
+import Earn from "./pages/Earn.jsx";
+import { captureRef } from "./lib/referral.js";
 import Treasury from "./pages/Treasury.jsx";
 import Admin from "./pages/Admin.jsx";
 import { Privacy, Terms } from "./pages/Legal.jsx";
@@ -251,6 +253,14 @@ export default function App() {
   const factoryMissing =
     FACTORY_ADDRESS === "0x0000000000000000000000000000000000000000";
 
+  // Реф-ссылка #/r/0x…: запоминаем реферера и уходим на главную.
+  useEffect(() => {
+    if (route.startsWith("/r/")) {
+      captureRef(route.split("/r/")[1]);
+      window.location.replace("#/");
+    }
+  }, [route]);
+
   let page;
   if (route.startsWith("/token/")) {
     page = <TokenPage tokenAddress={route.split("/token/")[1]} wallet={wallet} onConnect={connect} />;
@@ -268,6 +278,8 @@ export default function App() {
     page = <Admin wallet={wallet} onConnect={connect} />;
   } else if (route === "/about") {
     page = <About />;
+  } else if (route === "/earn") {
+    page = <Earn wallet={wallet} onConnect={connect} />;
   } else if (route === "/privacy") {
     page = <Privacy />;
   } else if (route === "/terms") {
@@ -291,11 +303,12 @@ export default function App() {
             <span className="staging-badge" title="Тестовая версия — данные и вид могут отличаться от боевого сайта">STAGING</span>
           )}
           <div className={`nav-pills ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(false)}>
-            <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/leaderboard") && !route.startsWith("/profile") && !route.startsWith("/vote") && !route.startsWith("/treasury") && !route.startsWith("/about") ? "on" : ""}`} href="#/">{t("Обзор")}</a>
+            <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/leaderboard") && !route.startsWith("/profile") && !route.startsWith("/vote") && !route.startsWith("/treasury") && !route.startsWith("/about") && !route.startsWith("/earn") ? "on" : ""}`} href="#/">{t("Обзор")}</a>
             <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>
             <a className={`nav-pill ${route.startsWith("/leaderboard") ? "on" : ""}`} href="#/leaderboard">{t("Лидеры")}</a>
             <a className={`nav-pill ${route.startsWith("/vote") ? "on" : ""}`} href="#/vote">{t("Голосование")}</a>
             <a className={`nav-pill ${route.startsWith("/treasury") ? "on" : ""}`} href="#/treasury">{t("Казна")}</a>
+            <a className={`nav-pill ${route.startsWith("/earn") ? "on" : ""}`} href="#/earn">{t("Заработать")}</a>
             <a className={`nav-pill ${route.startsWith("/about") ? "on" : ""}`} href="#/about">{t("О нас")}</a>
           </div>
           <nav className="nav">

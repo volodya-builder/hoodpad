@@ -391,6 +391,32 @@ const EN = {
   "Выкуп казны": "Treasury buyback",
   "копится с каждой сделки — первые выкупы после голосования":
     "grows with every trade — first buybacks after the vote",
+  // — рефералка —
+  "Заработать": "Earn",
+  "Приглашайте трейдеров — получайте {pct}% каждой их комиссии. Навсегда.":
+    "Invite traders — earn {pct}% of every fee they pay. Forever.",
+  "Подключите кошелёк, чтобы получить ссылку.": "Connect a wallet to get your link.",
+  "Скопировать": "Copy",
+  "Скопировано!": "Copied!",
+  "Приведено кошельков": "Wallets referred",
+  "Начислено": "Accrued",
+  "Выплачено": "Paid out",
+  "К выплате": "Pending",
+  "Ваши рефералы": "Your referrals",
+  "Пока никого — поделитесь ссылкой.": "No one yet — share your link.",
+  "сделок": "trades",
+  "Поделитесь ссылкой": "Share your link",
+  "Человек переходит по ней и торгует на hood.": "Someone opens it and trades on hood.",
+  "Привязка навсегда": "Bound forever",
+  "Первая сделка закрепляет трейдера за вами. Дальше учитывается каждая его комиссия.":
+    "Their first trade binds them to you. Every fee they pay counts from then on.",
+  "Получайте ETH": "Get paid in ETH",
+  "{pct}% каждой комиссии ваших трейдеров — выплаты раз в неделю на ваш кошелёк.":
+    "{pct}% of every fee your traders pay — weekly payouts to your wallet.",
+  "Доля реферера берётся из командной части комиссии — казна выкупа и доход создателей не уменьшаются.":
+    "The referrer's share comes out of the team's cut — the buyback treasury and creator earnings are untouched.",
+  "Топ рефереров": "Top referrers",
+  "кошельков": "wallets",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

@@ -8,6 +8,7 @@ import { useEthUsd, usd } from "../lib/price.js";
 import Chat from "./Chat.jsx";
 import { useSplit, loadCreationTimes, timeAgo, useClock, useSupport } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
+import { bindRefIfNeeded } from "../lib/referral.js";
 
 const SLIPPAGE_CHOICES = [0.5, 1, 3, 5]; // %
 
@@ -486,6 +487,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       }
       await publicClient.waitForTransactionReceipt({ hash });
       setAmount("");
+      if (wallet) bindRefIfNeeded(wallet.account); // рефералка: закрепить трейдера (fire-and-forget)
       await load();
     } catch (err) {
       setError(err.shortMessage || err.message);

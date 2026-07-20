@@ -89,6 +89,20 @@ export async function subgraphVotes(epoch) {
   }));
 }
 
+/** Комиссии трейдера (для рефералки): сумма fee по его сделкам с момента sinceTs. */
+export async function subgraphTraderFees(trader, sinceTs = 0) {
+  const d = await gql(`{ trades(first: 1000, orderBy: timestamp, orderDirection: desc,
+    where: { trader: "${trader.toLowerCase()}" }) { fee timestamp } }`);
+  if (!d?.trades) throw new Error("no trades field");
+  let fees = 0, n = 0;
+  for (const t of d.trades) {
+    if (Number(t.timestamp) * 1000 < sinceTs) continue;
+    fees += Number(t.fee) / 1e18;
+    n++;
+  }
+  return { fees, trades: n };
+}
+
 export async function subgraphTreasuryOps() {
   const d = await gql(`{ treasuryOps(first: 1000, orderBy: timestamp, orderDirection: desc) {
     kind from token ethAmount tokenAmount timestamp tx } }`);
