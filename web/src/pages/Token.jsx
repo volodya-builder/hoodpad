@@ -192,9 +192,10 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [extra, setExtra] = useState({});       // creatorFees, treasuryOwner, treasuryHeld, burned
   const [bbAmt, setBbAmt] = useState("");
   const [copiedLink, setCopiedLink] = useState(false);
-  const [copiedCA, setCopiedCA] = useState(false);
+  const [copiedCA, setCopiedCA] = useState(null); // где нажали копирование: "about" | "head" | "pos"
   const [tf, setTf] = useState("all"); // таймфрейм графика
   const [trSort, setTrSort] = useState({ key: "ts", dir: "desc" }); // сортировка таблицы сделок
+  const [hSort, setHSort] = useState("desc"); // сортировка холдеров по доле
   const [tradePct, setTradePct] = useState(0); // ползунок суммы
   const [btTab, setBtTab] = useState("trades");
   const [qpcts, setQpcts] = useState(() => {
@@ -295,11 +296,11 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     } catch (e) { /* clipboard unavailable */ }
   }
 
-  async function copyCA() {
+  async function copyCA(where = "about") {
     try {
       await navigator.clipboard.writeText(tokenAddress);
-      setCopiedCA(true);
-      setTimeout(() => setCopiedCA(false), 1500);
+      setCopiedCA(where);
+      setTimeout(() => setCopiedCA(null), 1500);
     } catch (e) { /* clipboard unavailable */ }
   }
 
@@ -678,8 +679,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <a className="mono" href={`${EXPLORER}/address/${tokenAddress}`} target="_blank" rel="noreferrer">
               {short(tokenAddress)}
             </a>{" "}
-            <button className="mini-btn" onClick={copyCA} title={t("Скопировать адрес")}>
-              {copiedCA ? "✓" : "⧉"}
+            <button className="mini-btn" onClick={() => copyCA("about")} title={t("Скопировать адрес")}>
+              {copiedCA === "about" ? "✓" : "⧉"}
             </button>
             {" · "}{t("Пул:")}{" "}
             <a className="mono" href={`${EXPLORER}/address/${data.pool}`} target="_blank" rel="noreferrer">
@@ -721,8 +722,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                   {data.graduated && <span className="badge">🎯 В яблочке</span>}
                   {socials}
                 </div>
-                <div className="mono th-addr" onClick={copyCA} title={t("Скопировать адрес")}>
-                  {short(tokenAddress)} {copiedCA ? "✓" : "⧉"}
+                <div className="mono th-addr" onClick={() => copyCA("head")} title={t("Скопировать адрес")}>
+                  {short(tokenAddress)} {copiedCA === "head" ? "✓" : "⧉"}
                 </div>
               </div>
             </h3>
@@ -763,14 +764,17 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         <div {...blkProps("trades")}><Handle k="trades" />
         <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
           <div className="bt-tabs">
+            <div className={`bt-tab ${btTab === "mine" ? "on" : ""}`} onClick={() => setBtTab("mine")}>
+              {t("Мои позиции")}
+            </div>
             <div className={`bt-tab ${btTab === "trades" ? "on" : ""}`} onClick={() => setBtTab("trades")}>
               {t("Сделки из блокчейна")}
             </div>
             <div className={`bt-tab ${btTab === "holders" ? "on" : ""}`} onClick={() => setBtTab("holders")}>
               {t("Топ держателей")}
             </div>
-            <div className={`bt-tab ${btTab === "mine" ? "on" : ""}`} onClick={() => setBtTab("mine")}>
-              {t("Мои сделки")}
+            <div className={`bt-tab ${btTab === "myhist" ? "on" : ""}`} onClick={() => setBtTab("myhist")}>
+              {t("История сделок")}
             </div>
           </div>
           {btTab === "trades" && (<>
@@ -820,6 +824,80 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           {wallet && history && (() => {
             const mine = history.trades.filter((tr) => tr.addr.toLowerCase() === wallet.account.toLowerCase());
             if (mine.length === 0) return <div className="dim" style={{ padding: "14px 0" }}>{t("Сделок пока нет.")}</div>;
+            // сводка позиции (как у GMGN)
+            const buys = mine.filter((x) => x.side === "buy");
+            const sells = mine.filter((x) => x.side === "sell");
+            const buysEth = buys.reduce((s, x) => s + x.eth, 0);
+            const buysTok = buys.reduce((s, x) => s + x.tokens, 0);
+            const sellsEth = sells.reduce((s, x) => s + x.eth, 0);
+            const sellsTok = sells.reduce((s, x) => s + x.tokens, 0);
+            const feesEth = mine.reduce((s, x) => s + (x.fee || 0), 0);
+            const balTok = Number(formatEther(data.balance));
+            const valEth = balTok * Number(formatEther(data.price));
+            const avgBuy = buysTok > 0 ? buysEth / buysTok : 0;   // ETH за токен
+            const avgSell = sellsTok > 0 ? sellsEth / sellsTok : 0;
+            const costRem = balTok * avgBuy;                       // себестоимость остатка
+            const uPnl = valEth - costRem;                         // нереализованный
+            const uPct = costRem > 0 ? (uPnl / costRem) * 100 : 0;
+            const totPnl = valEth + sellsEth - buysEth;            // общая прибыль
+            const totPct = buysEth > 0 ? (totPnl / buysEth) * 100 : 0;
+            const lastTs = mine.reduce((s, x) => Math.max(s, x.ts || 0), 0);
+            const firstTs = mine.reduce((s, x) => (x.ts ? Math.min(s, x.ts) : s), Infinity);
+            const holdMs = firstTs !== Infinity ? Date.now() - firstTs : 0;
+            const holdStr = holdMs >= 86400000 ? `${Math.floor(holdMs / 86400000)}${t("д")}`
+              : holdMs >= 3600000 ? `${Math.floor(holdMs / 3600000)}${t("ч")}`
+              : `${Math.max(1, Math.floor(holdMs / 60000))}${t("м")}`;
+            return [(
+              <div className="pos-row" key="sum" title={`${data.name} — ${t("Открыть страницу токена")}`}
+                   onClick={() => { window.location.hash = `#/token/${tokenAddress}`; window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+                <a className="pos-id" href={`#/token/${tokenAddress}`} title={`${data.name} — ${t("Открыть страницу токена")}`}>
+                  {meta.image && (
+                    <img src={meta.image} alt="" style={{ width: 34, height: 34, borderRadius: 9 }}
+                         onError={(e) => (e.target.style.display = "none")} />
+                  )}
+                  <div>
+                    <b className="ticker" style={{ fontSize: 15 }}>${data.symbol}</b>
+                    <div className="mono th-addr" style={{ marginTop: 2 }} title={t("Скопировать адрес")}
+                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); copyCA("pos"); }}>
+                      {short(tokenAddress)} {copiedCA === "pos" ? "✓" : "⧉"}
+                    </div>
+                  </div>
+                </a>
+                <div className="tk-cell"><span>{t("Активность")}</span><b>{lastTs ? timeAgo(lastTs) : "—"}</b>
+                  <span>{mine.length} {t("сделок")} · {holdStr} {totPnl >= 0 ? "💎" : ""}</span></div>
+                <div className="tk-cell"><span>{t("Куплено")}</span><b>{dollars(buysEth)}</b>
+                  <span>{fmt(buysTok, 0)}</span></div>
+                <div className="tk-cell"><span>{t("Продано")}</span><b>{dollars(sellsEth)}</b>
+                  <span>{sellsTok > 0 ? fmt(sellsTok, 0) : "—"}</span></div>
+                <div className="tk-cell"><span>{t("Баланс")}</span><b>{dollars(valEth)}</b>
+                  <span>{fmt(balTok, 0)} ({fmt(balTok / 1e7, 2)}%)</span></div>
+                <div className="tk-cell"><span>uPnL</span>
+                  <b style={{ color: uPnl >= 0 ? "var(--leaf)" : "var(--red)" }}>
+                    {dollars(uPnl)} ({uPct >= 0 ? "+" : ""}{fmt(uPct, 1)}%)
+                  </b>
+                </div>
+                <div className="tk-cell"><span>{t("Прибыль")}</span>
+                  <b style={{ color: totPnl >= 0 ? "var(--leaf)" : "var(--red)" }}>
+                    {dollars(totPnl)} ({totPct >= 0 ? "+" : ""}{fmt(totPct, 1)}%)
+                  </b>
+                </div>
+              </div>
+            )];
+          })()}
+          </>)}
+          {btTab === "myhist" && (<>
+          {!wallet && (
+            <div className="dim" style={{ padding: "14px 0" }}>
+              {t("Подключите кошелёк, чтобы увидеть профиль.")}{" "}
+              <a href="#/" onClick={(e) => { e.preventDefault(); onConnect(); }} style={{ color: "var(--gold)" }}>
+                {t("Подключить →")}
+              </a>
+            </div>
+          )}
+          {wallet && !history && <div className="dim" style={{ padding: "14px 0" }}>{t("Читаю события…")}</div>}
+          {wallet && history && (() => {
+            const mine = history.trades.filter((tr) => tr.addr.toLowerCase() === wallet.account.toLowerCase());
+            if (mine.length === 0) return <div className="dim" style={{ padding: "14px 0" }}>{t("Сделок пока нет.")}</div>;
             return [(
               <React.Fragment key="hdr">{tradesHeader}</React.Fragment>
             ), ...sortTrades(mine).slice(0, 20).map((tr, i) => (
@@ -850,30 +928,44 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           {btTab === "holders" && (<>
 
           {!holders && <div className="dim" style={{ padding: "14px 0" }}>{t("Читаю события…")}</div>}
-          {holders && holders.list.length > 0 && (() => {
-            const top10 = holders.list.reduce((s, h) => s + h.pct, 0);
-            const cls = top10 >= 40 ? "bad" : top10 >= 20 ? "warn" : "ok";
-            return (
-              <div className={`conc-note ${cls}`}>
-                {t("Топ-10 держат")} {fmt(top10, 1)}% {t("сапплая")}
-              </div>
-            );
-          })()}
+          {holders && holders.list.length > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              {(() => {
+                const top10 = holders.list.reduce((s, h) => s + h.pct, 0);
+                const cls = top10 >= 40 ? "bad" : top10 >= 20 ? "warn" : "ok";
+                return (
+                  <div className={`conc-note ${cls}`}>
+                    {t("Топ-10 держат")} {fmt(top10, 1)}% {t("сапплая")}
+                  </div>
+                );
+              })()}
+              <span className="sort-h dim" style={{ fontSize: 12, fontWeight: 700 }}
+                    onClick={() => setHSort((s) => (s === "desc" ? "asc" : "desc"))}>
+                {t("Доля")} <i>{hSort === "desc" ? "▼" : "▲"}</i>
+              </span>
+            </div>
+          )}
           {holders && (
             <div style={{ marginTop: 6 }}>
               <div className="holder-row">
                 <span className="hr-rank dim">—</span>
-                <span className="hr-who">📈 {t("Бондинг-кривая")}</span>
+                <span className="hr-who" style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M3 20C11 20 16 15 20 5" stroke="var(--gold)" strokeWidth="2.4" strokeLinecap="round" />
+                    <circle cx="20" cy="5" r="2.4" fill="var(--gold)" />
+                  </svg>
+                  {t("Бондинг-кривая")}
+                </span>
                 <span className="hr-bar"><span style={{ width: `${Math.min(holders.unsoldPct, 100)}%` }} /></span>
                 <span className="hr-pct">{fmt(holders.unsoldPct, 1)}%</span>
               </div>
-              {holders.list.map((h, i) => {
+              {(hSort === "desc" ? holders.list : [...holders.list].reverse()).map((h, i) => {
                 const isCre = h.addr === data.creator.toLowerCase();
                 const isTre = h.addr === TREASURY_ADDRESS.toLowerCase();
                 const isMe = wallet && h.addr === wallet.account.toLowerCase();
                 return (
                   <div className="holder-row" key={h.addr}>
-                    <span className="hr-rank dim">{i + 1}</span>
+                    <span className="hr-rank dim">{hSort === "desc" ? i + 1 : holders.list.length - i}</span>
                     <span className="hr-who">
                       <a className="mono" href={`${EXPLORER}/address/${h.addr}`} target="_blank" rel="noreferrer">
                         {short(h.addr)}

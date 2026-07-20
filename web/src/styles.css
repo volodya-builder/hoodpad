@@ -16,7 +16,7 @@
   --leaf-dim: #4caf6d1f;
   --red: #e05c5c;
   --radius: 16px;
-  --font-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-ui: "Manrope", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
   font-family: var(--font-ui);
 }
@@ -375,7 +375,6 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 .bt-tab.on { color: var(--text); background: #2a2a28; }
 .trow { display: grid; grid-template-columns: 80px 70px 1fr 1fr 1fr 80px; gap: 10px; padding: 10px 4px; border-top: 1px solid #2a2a28; font-size: 13px; align-items: center; font-variant-numeric: tabular-nums; }
 .trow.hdr { color: var(--text-dim); font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; border-top: none; }
-.trow.mine { background: color-mix(in srgb, var(--gold) 6%, transparent); box-shadow: inset 3px 0 0 var(--gold); }
 .side-buy { color: var(--leaf); font-weight: 800; }
 .side-sell { color: var(--red); font-weight: 800; }
 
@@ -665,6 +664,26 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
   font-size: 11px; color: var(--text-dim); pointer-events: none;
   font-variant-numeric: tabular-nums; font-weight: 600;
 }
+/* сводка позиции в одну строку */
+.pos-row { display: flex; align-items: center; gap: 26px; margin: 16px 0 4px; flex-wrap: wrap; }
+.pos-row {
+  gap: 14px; cursor: pointer;
+  padding: 10px 14px; margin-left: -14px; border-radius: 14px;
+  transition: background .15s;
+  flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+}
+.pos-row::-webkit-scrollbar { display: none; }
+.pos-row .tk-cell { white-space: nowrap; }
+.pos-row:hover { background: var(--bg-soft); }
+.pos-row .tk-cell b { font-size: 12.5px; }
+.pos-row .tk-cell span { font-size: 9.5px; }
+.pos-id {
+  display: flex; align-items: center; gap: 8px; margin-right: 2px;
+  color: inherit; text-decoration: none;
+}
+.pos-id .ticker { font-size: 13px !important; }
+.pos-id .th-addr { font-size: 10.5px; }
+.pos-id img { width: 28px !important; height: 28px !important; }
 .chart-log-btn {
   position: absolute; bottom: 6px; right: 8px; z-index: 7;
   font-size: 10px; font-weight: 800; letter-spacing: .5px;
