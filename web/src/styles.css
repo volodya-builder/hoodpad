@@ -663,6 +663,15 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
   font-size: 11px; color: var(--text-dim); pointer-events: none;
   font-variant-numeric: tabular-nums; font-weight: 600;
 }
+.chart-log-btn {
+  position: absolute; bottom: 32px; right: 8px; z-index: 7;
+  font-size: 10px; font-weight: 800; letter-spacing: .5px;
+  color: var(--text-dim); background: var(--bg-soft);
+  border: 1px solid var(--border); border-radius: 7px;
+  padding: 3px 7px; cursor: pointer; user-select: none;
+}
+.chart-log-btn:hover { color: var(--text); }
+.chart-log-btn.on { color: var(--gold); border-color: var(--border-gold, var(--gold)); }
 .order-form .btn { padding: 0 16px; }
 .order-list { margin-top: 12px; }
 .order-row { display: flex; gap: 10px; align-items: center; font-size: 12.5px; padding: 8px 2px; border-bottom: 1px solid var(--border); }

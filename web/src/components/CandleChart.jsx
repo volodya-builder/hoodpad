@@ -187,13 +187,8 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
             {t("Заявки")}
           </label>
         )}
-        <div className={`fpill ${logScale ? "on" : ""}`}
-             style={(lines || []).length > 0 ? {} : { marginLeft: "auto" }}
-             onClick={() => setLogScale(!logScale)}
-             title={t("Логарифмическая шкала цены")}>
-          LOG
-        </div>
-        <div className="fpill" onClick={() => setFs(!fs)}
+        <div className="fpill" style={(lines || []).length > 0 ? {} : { marginLeft: "auto" }}
+             onClick={() => setFs(!fs)}
              title={fs ? t("Свернуть") : t("На весь экран")}>
           {fs ? "✕" : "⛶"}
         </div>
@@ -202,6 +197,11 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
         <div ref={ref} className="chart-resize"
              title={t("Потяните за правый нижний угол, чтобы изменить размер")} />
         <div ref={legendRef} className="chart-legend" />
+        <div className={`chart-log-btn ${logScale ? "on" : ""}`}
+             onClick={() => setLogScale(!logScale)}
+             title={t("Логарифмическая шкала цены")}>
+          LOG
+        </div>
       </div>
     </div>
   );
