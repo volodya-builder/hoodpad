@@ -300,14 +300,13 @@ export default function Profile({ wallet, onConnect }) {
                     </span>
                   </span>
                   <div className="tk-cell"><span>{t("Активность")}</span>
-                    <b>{lastTs ? timeAgo(lastTs) : "—"}</b>
-                    <span>{p.mine ? p.mine.length : 0} {t("сделок")} · {holdStr}</span></div>
+                    <b>{lastTs ? timeAgo(lastTs) : "—"}</b></div>
                   <div className="tk-cell"><span>{t("Куплено")}</span>
-                    <b>{dollars(p.invested)}</b><span>{fmt(buysTok, 0)}</span></div>
+                    <b>{dollars(p.invested)}</b></div>
                   <div className="tk-cell"><span>{t("Продано")}</span>
-                    <b>{dollars(p.realized)}</b><span>{sellsTok > 0 ? fmt(sellsTok, 0) : "—"}</span></div>
+                    <b>{dollars(p.realized)}</b></div>
                   <div className="tk-cell"><span>{t("Баланс")}</span>
-                    <b>{dollars(val)}</b><span>{fmt(balTok, 0)}</span></div>
+                    <b>{dollars(val)}</b></div>
                   <div className="tk-cell"><span>uPnL</span>
                     <b style={pnlCol(uPnl)}>{dollars(uPnl)} ({uPct >= 0 ? "+" : ""}{fmt(uPct, 1)}%)</b></div>
                   <div className="tk-cell"><span>{t("Прибыль")}</span>
