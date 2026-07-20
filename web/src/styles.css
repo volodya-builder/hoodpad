@@ -242,6 +242,11 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 
 /* token page */
 .token-layout { display: grid; grid-template-columns: 1fr 390px; gap: 22px; padding: 34px 0 72px; }
+/* Терминальная компоновка: график первым, сделки вторыми, паспорт токена внизу */
+.token-layout > div:first-child { display: flex; flex-direction: column; }
+.token-layout > div:first-child > .card:nth-child(1) { order: 3; margin-top: 18px; }
+.token-layout > div:first-child > .card:nth-child(2) { order: 1; margin-top: 0 !important; }
+.token-layout > div:first-child > .card:nth-child(3) { order: 2; }
 @media (max-width: 860px) { .token-layout { grid-template-columns: 1fr; } }
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 12px; margin-top: 20px; }
 .stat-card { background: #111210; border: 1px solid var(--border); border-radius: 12px; padding: 15px; }

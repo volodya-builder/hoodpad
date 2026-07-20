@@ -619,10 +619,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       <div>
         <div className="card" style={{ cursor: "default", transform: "none" }}>
           <div className="card-title">
-            <h3 style={{ fontSize: 24 }}>
-              {data.name} <span className="ticker">${data.symbol}</span>
-            </h3>
-            {data.graduated && <span className="badge">🎯 В яблочке</span>}
+            <h3>{t("О токене")}</h3>
           </div>
           {meta.description && (
             <p className="dim" style={{ marginTop: 10 }}>{meta.description}</p>
@@ -664,25 +661,6 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               onError={(e) => (e.target.style.display = "none")}
             />
           )}
-
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="k">{t("Цена")}</div>
-              <div className="v">{fmtEth(formatEther(data.price))} ETH</div>
-            </div>
-            <div className="stat-card">
-              <div className="k">{t("Капитализация")}</div>
-              <div className="v">{mcapUsd}</div>
-            </div>
-            <div className="stat-card">
-              <div className="k">{t("Собрано")}</div>
-              <div className="v">{fmtEth(formatEther(data.reserve))} ETH</div>
-            </div>
-            <div className="stat-card">
-              <div className="k">{t("До градации")}</div>
-              <div className="v">{fmt(progress, 1)}%</div>
-            </div>
-          </div>
 
           {!data.graduated && (
             <div className="progress" style={{ marginTop: 18 }}>
@@ -756,7 +734,14 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
 
         <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
           <div className="card-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-            <h3>{t("Капитализация по сделкам")}</h3>
+            <h3 style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 20 }}>
+              {meta.image && (
+                <img src={meta.image} alt="" style={{ width: 34, height: 34, borderRadius: 9 }}
+                     onError={(e) => (e.target.style.display = "none")} />
+              )}
+              {data.name} <span className="ticker">${data.symbol}</span>
+              {data.graduated && <span className="badge">🎯 В яблочке</span>}
+            </h3>
             <div className="pill-group">
               {[["5m", "5M"], ["1h", "1H"], ["6h", "6H"], ["1d", "1D"], ["all", "ALL"]].map(([k, lbl]) => (
                 <div key={k} className={`fpill ${tf === k ? "on" : ""}`} onClick={() => setTf(k)}>{lbl}</div>
@@ -774,9 +759,13 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               )}
             </div>
             <div className="tk-cells">
+              <div className="tk-cell"><span>{t("Цена")}</span><b>{fmtEth(formatEther(data.price))} ETH</b></div>
               <div className="tk-cell"><span>{t("Собрано")}</span><b>{fmtEth(formatEther(data.reserve))} ETH</b></div>
               <div className="tk-cell"><span>{t("Объём 24ч")}</span><b>{tokStats ? fmtEth(tokStats.vol24) : "0"} ETH</b></div>
               <div className="tk-cell"><span>ATH</span><b>{tokStats ? usd(tokStats.ath * rate) : "—"}</b></div>
+              {!data.graduated && (
+                <div className="tk-cell"><span>{t("До градации")}</span><b>{fmt(progress, 1)}%</b></div>
+              )}
             </div>
           </div>
           {history && history.points && history.points.filter((p) => p.ts).length >= 2 ? (

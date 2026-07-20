@@ -416,6 +416,7 @@ const EN = {
   "Доля реферера берётся из командной части комиссии — казна выкупа и доход создателей не уменьшаются.":
     "The referrer's share comes out of the team's cut — the buyback treasury and creator earnings are untouched.",
   "Как это работает": "How it works",
+  "О токене": "About the token",
   "Топ рефереров": "Top referrers",
   "кошельков": "wallets",
   "Старые": "Oldest",
