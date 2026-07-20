@@ -848,7 +848,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               : holdMs >= 3600000 ? `${Math.floor(holdMs / 3600000)}${t("ч")}`
               : `${Math.max(1, Math.floor(holdMs / 60000))}${t("м")}`;
             return [(
-              <div className="pos-row" key="sum">
+              <div className="pos-row" key="sum" title={`${data.name} — ${t("Открыть страницу токена")}`}
+                   onClick={() => { window.location.hash = `#/token/${tokenAddress}`; window.scrollTo({ top: 0, behavior: "smooth" }); }}>
                 <a className="pos-id" href={`#/token/${tokenAddress}`} title={`${data.name} — ${t("Открыть страницу токена")}`}>
                   {meta.image && (
                     <img src={meta.image} alt="" style={{ width: 34, height: 34, borderRadius: 9 }}
