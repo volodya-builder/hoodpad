@@ -620,7 +620,9 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
 .orders-box { margin-top: 18px; border-top: 1px dashed var(--border); padding-top: 14px; }
 .orders-head { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: var(--text-dim); margin-bottom: 10px; }
 .order-types { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
-.order-form { display: flex; gap: 8px; align-items: stretch; }
+.order-form { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
+.order-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; }
+.candle-ivs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
 .order-form .btn { padding: 0 16px; }
 .order-list { margin-top: 12px; }
 .order-row { display: flex; gap: 10px; align-items: center; font-size: 12.5px; padding: 8px 2px; border-bottom: 1px solid var(--border); }

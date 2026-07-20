@@ -423,6 +423,11 @@ const EN = {
   "Светлая тема": "Light theme",
   // — условные заявки —
   "Условные заявки": "Conditional orders",
+  "Лимитные заявки": "Limit orders",
+  "от текущей цены": "from current price",
+  "Продам выбранную долю баланса по достижении цены.":
+    "Sells the chosen share of your balance when the price is reached.",
+  "1м": "1m", "5м": "5m", "15м": "15m", "1ч": "1h", "4ч": "4h", "1д": "1d",
   "Лимит-покупка": "Limit buy",
   "Стоп-лосс": "Stop-loss",
   "Тейк-профит": "Take-profit",

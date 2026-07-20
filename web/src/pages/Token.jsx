@@ -10,6 +10,7 @@ import { useSplit, loadCreationTimes, timeAgo, useClock, useSupport } from "../l
 import { useLang } from "../lib/i18n.jsx";
 import { bindRefIfNeeded } from "../lib/referral.js";
 import { ordersFor, addOrder, updateOrder, removeOrder, askNotifyPermission, notify } from "../lib/orders.js";
+import CandleChart from "../components/CandleChart.jsx";
 
 const SLIPPAGE_CHOICES = [0.5, 1, 3, 5]; // %
 
@@ -500,18 +501,23 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   // ---------------- условные заявки (клиентские) ----------------
   const tokenLower = tokenAddress.toLowerCase();
   const [orders, setOrders] = useState(() => ordersFor(tokenLower));
-  const [ordType, setOrdType] = useState("buy");   // buy | stop | take
   const [ordPrice, setOrdPrice] = useState("");
   const [ordAmt, setOrdAmt] = useState("");
+  const [ordPct, setOrdPct] = useState(100); // доля баланса для продажи
 
   function placeOrder() {
     const p = Number(ordPrice);
-    if (!(p > 0)) return;
-    if (ordType === "buy" && !(Number(ordAmt) > 0)) return;
+    if (!(p > 0) || !data) return;
+    const priceNow = Number(formatEther(data.price));
+    const isBuy = tab === "buy";
+    if (isBuy && !(Number(ordAmt) > 0)) return;
     askNotifyPermission();
     addOrder({
-      token: tokenLower, type: ordType, priceEth: p,
-      amountEth: ordType === "buy" ? Number(ordAmt) : undefined,
+      token: tokenLower,
+      type: isBuy ? "buy" : p < priceNow ? "stop" : "take",
+      priceEth: p,
+      amountEth: isBuy ? Number(ordAmt) : undefined,
+      sellPct: isBuy ? undefined : ordPct,
     });
     setOrders(ordersFor(tokenLower));
     setOrdPrice(""); setOrdAmt("");
@@ -532,7 +538,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           args: [minOut, wallet.account], value,
         });
       } else {
-        const tokensIn = data.balance;
+        const pctN = BigInt(Math.min(100, Math.max(1, Number(o.sellPct) || 100)));
+        const tokensIn = (data.balance * pctN) / 100n;
         if (tokensIn === 0n) throw new Error(t("Нет баланса токена"));
         const allowance = await publicClient.readContract({
           address: tokenAddress, abi: tokenAbi, functionName: "allowance",
@@ -772,7 +779,11 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               <div className="tk-cell"><span>ATH</span><b>{tokStats ? usd(tokStats.ath * rate) : "—"}</b></div>
             </div>
           </div>
-          <MiniChart points={chartPoints} rate={rate} marks={marks} />
+          {history && history.points && history.points.filter((p) => p.ts).length >= 2 ? (
+            <CandleChart points={history.points} trades={history.trades} rate={rate} marks={marks} />
+          ) : (
+            <MiniChart points={chartPoints} rate={rate} marks={marks} />
+          )}
         </div>
 
         <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
@@ -1029,11 +1040,26 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             {error && <div className="error">{error}</div>}
 
             <div className="orders-box">
-              <div className="orders-head">{t("Условные заявки")}</div>
-              <div className="order-types">
-                {[["buy", t("Лимит-покупка")], ["stop", t("Стоп-лосс")], ["take", t("Тейк-профит")]].map(([k, lbl]) => (
-                  <div key={k} className={`fpill ${ordType === k ? "on" : ""}`} onClick={() => setOrdType(k)}>{lbl}</div>
+              <div className="orders-head">
+                {t("Лимитные заявки")}
+                {(() => {
+                  const p = Number(ordPrice), cur = Number(formatEther(data.price));
+                  if (!(p > 0) || tab === "buy") return null;
+                  return <span className={`ord-tag ${p < cur ? "stop" : "take"}`} style={{ marginLeft: 8 }}>
+                    → {p < cur ? t("Стоп-лосс") : t("Тейк-профит")}
+                  </span>;
+                })()}
+              </div>
+              <div className="order-chips">
+                {(tab === "buy" ? [-10, -25, -50] : [-50, -25, +25, +50, +100]).map((d) => (
+                  <div key={d} className="fpill"
+                       onClick={() => setOrdPrice(
+                         (Number(formatEther(data.price)) * (1 + d / 100)).toPrecision(6)
+                       )}>
+                    {d > 0 ? `+${d}%` : `${d}%`}
+                  </div>
                 ))}
+                <span className="dim" style={{ fontSize: 11, alignSelf: "center" }}>{t("от текущей цены")}</span>
               </div>
               <div className="order-form">
                 <div className="suffix-input" style={{ flex: 1 }}>
@@ -1041,15 +1067,21 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                          value={ordPrice} onChange={(e) => setOrdPrice(e.target.value.replace(",", "."))} />
                   <b>{t("цена, ETH")}</b>
                 </div>
-                {ordType === "buy" && (
+                {tab === "buy" ? (
                   <div className="suffix-input" style={{ width: 130 }}>
                     <input inputMode="decimal" placeholder="0.01"
                            value={ordAmt} onChange={(e) => setOrdAmt(e.target.value.replace(",", "."))} />
                     <b>ETH</b>
                   </div>
+                ) : (
+                  <div className="order-chips" style={{ margin: 0 }}>
+                    {[25, 50, 100].map((p) => (
+                      <div key={p} className={`fpill ${ordPct === p ? "on" : ""}`} onClick={() => setOrdPct(p)}>{p}%</div>
+                    ))}
+                  </div>
                 )}
                 <button className="btn" onClick={placeOrder}
-                        disabled={!wallet || !(Number(ordPrice) > 0) || (ordType === "buy" && !(Number(ordAmt) > 0))}>
+                        disabled={!wallet || !(Number(ordPrice) > 0) || (tab === "buy" && !(Number(ordAmt) > 0))}>
                   {t("Создать")}
                 </button>
               </div>
@@ -1057,11 +1089,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 <div className="hint">≈ {usd(Number(ordPrice) * 1e9 * rate)} {t("капитализации")}</div>
               )}
               <div className="hint">
-                {ordType === "buy"
+                {tab === "buy"
                   ? t("Куплю на указанную сумму, когда цена опустится до заданной.")
-                  : ordType === "stop"
-                  ? t("Продам весь баланс, если цена упадёт до заданной.")
-                  : t("Продам весь баланс, когда цена вырастет до заданной.")}{" "}
+                  : t("Продам выбранную долю баланса по достижении цены.")}{" "}
                 {t("Работает, пока открыта вкладка — при срабатывании кошелёк попросит подпись.")}
               </div>
               {orders.length > 0 && (
@@ -1072,7 +1102,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                         {o.type === "buy" ? t("Лимит-покупка") : o.type === "stop" ? t("Стоп-лосс") : t("Тейк-профит")}
                       </span>
                       <span className="mono">@ {fmtEth(o.priceEth)} ETH</span>
-                      {o.type === "buy" && <span className="dim">{o.amountEth} ETH</span>}
+                      <span className="dim">{o.type === "buy" ? `${o.amountEth} ETH` : `${o.sellPct || 100}%`}</span>
                       <span className={`ord-st ${o.status}`}>
                         {o.status === "active" ? t("ждёт") : o.status === "firing" ? t("исполняется…")
                           : o.status === "done" ? "✓ " + t("исполнена") : "✕ " + t("ошибка")}
