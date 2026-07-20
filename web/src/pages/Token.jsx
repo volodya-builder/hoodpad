@@ -10,6 +10,11 @@ import { useSplit, loadCreationTimes, timeAgo, useClock, useSupport } from "../l
 import { useLang } from "../lib/i18n.jsx";
 import { bindRefIfNeeded } from "../lib/referral.js";
 import CandleChart from "../components/CandleChart.jsx";
+import RGL, { WidthProvider } from "react-grid-layout";
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
+
+const Grid = WidthProvider(RGL);
 
 const SLIPPAGE_CHOICES = [0.5, 1, 3, 5]; // %
 
@@ -504,39 +509,28 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     }
   }
 
-  // ---- перетаскивание блоков: порядок карточек хранится в localStorage ----
-  const BLK_DEF = { chart: 1, trades: 2, about: 3, swap: 1, chat: 2 };
-  const LEFT_BLKS = ["chart", "trades", "about"], RIGHT_BLKS = ["swap", "chat"];
-  const [blkOrd, setBlkOrd] = useState(() => {
-    try { return { ...BLK_DEF, ...(JSON.parse(localStorage.getItem("hood_tok_blocks")) || {}) }; }
-    catch (e) { return BLK_DEF; }
+  // ---- свободная раскладка блоков (react-grid-layout), живёт в localStorage ----
+  const DEF_LAYOUT = [
+    { i: "chart", x: 0, y: 0, w: 8, h: 22, minW: 4, minH: 10 },
+    { i: "swap", x: 8, y: 0, w: 4, h: 15, minW: 3, minH: 8 },
+    { i: "chat", x: 8, y: 15, w: 4, h: 16, minW: 3, minH: 6 },
+    { i: "trades", x: 0, y: 22, w: 8, h: 12, minW: 4, minH: 5 },
+    { i: "about", x: 0, y: 34, w: 8, h: 13, minW: 4, minH: 5 },
+  ];
+  const [layout, setLayout] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("hood_tok_layout_v1"));
+      if (Array.isArray(saved) && saved.length === DEF_LAYOUT.length) return saved;
+    } catch (e) { /* ignore */ }
+    return DEF_LAYOUT;
   });
-  const dragSrc = useRef(null);
-  const startBlk = (k) => (e) => {
-    dragSrc.current = k;
-    try { e.dataTransfer.setData("text/plain", k); e.dataTransfer.effectAllowed = "move"; } catch (err) { /* ignore */ }
+  const saveLayout = (l) => {
+    setLayout(l);
+    try { localStorage.setItem("hood_tok_layout_v1", JSON.stringify(l)); } catch (e) { /* ignore */ }
   };
-  const dropBlk = (k) => (e) => {
-    e.preventDefault();
-    const a = dragSrc.current; dragSrc.current = null;
-    if (!a || a === k) return;
-    const same = (LEFT_BLKS.includes(a) && LEFT_BLKS.includes(k)) || (RIGHT_BLKS.includes(a) && RIGHT_BLKS.includes(k));
-    if (!same) return;
-    const next = { ...blkOrd, [a]: blkOrd[k], [k]: blkOrd[a] };
-    setBlkOrd(next);
-    try { localStorage.setItem("hood_tok_blocks", JSON.stringify(next)); } catch (err) { /* ignore */ }
-  };
-  const [overBlk, setOverBlk] = useState(null);
-  const blkProps = (k) => ({
-    className: `drag-card ${overBlk === k && dragSrc.current && dragSrc.current !== k ? "over" : ""}`,
-    style: { order: blkOrd[k] },
-    onDragOver: (e) => { e.preventDefault(); setOverBlk(k); },
-    onDragLeave: () => setOverBlk((v) => (v === k ? null : v)),
-    onDrop: (e) => { setOverBlk(null); dropBlk(k)(e); },
-  });
-  const Handle = ({ k }) => (
-    <span className="drag-handle" draggable onDragStart={startBlk(k)}
-          title={t("Перетащите, чтобы поменять блоки местами")}>⠿</span>
+  const resetLayout = () => saveLayout(DEF_LAYOUT.map((x) => ({ ...x })));
+  const Handle = () => (
+    <span className="drag-handle" title={t("Перетащите, чтобы переставить блок")}>⠿</span>
   );
 
   async function migrate() {
@@ -571,6 +565,11 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         const va = String(a[key]), vb = String(b[key]);
         return va < vb ? -m : va > vb ? m : 0;
       }
+      if (key === "price") {
+        const va = a.tokens > 0 ? a.eth / a.tokens : 0;
+        const vb = b.tokens > 0 ? b.eth / b.tokens : 0;
+        return (va - vb) * m;
+      }
       const va = key === "ts" ? (a.ts || 0) : key === "block" ? Number(a.block) : Number(a[key]) || 0;
       const vb = key === "ts" ? (b.ts || 0) : key === "block" ? Number(b.block) : Number(b[key]) || 0;
       return (va - vb) * m;
@@ -582,6 +581,20 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       {children} <i>{trSort.key === k ? (trSort.dir === "desc" ? "▼" : "▲") : "↕"}</i>
     </span>
   );
+  // компактные форматтеры для ленты активности (стиль GMGN)
+  const compactN = (n) =>
+    n >= 1e6 ? fmt(n / 1e6, 2) + "M" : n >= 1e3 ? fmt(n / 1e3, 2) + "K" : fmt(n, 0);
+  const shortAgo = (ts) => {
+    if (!ts) return "—";
+    const s = Math.max(1, Math.floor((Date.now() - ts) / 1000));
+    if (s < 60) return `${s}${t("с")}`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}${t("м")}`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}${t("ч")}`;
+    return `${Math.floor(h / 24)}${t("д")}`;
+  };
+
   const tradesHeader = (
     <div className="trow hdr" style={{ marginTop: 8 }}>
       <Th k="ts">{t("Время")}</Th>
@@ -775,7 +788,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               {t("Мои позиции")}
             </div>
             <div className={`bt-tab ${btTab === "trades" ? "on" : ""}`} onClick={() => setBtTab("trades")}>
-              {t("Сделки из блокчейна")}
+              {t("Активность")}
             </div>
             <div className={`bt-tab ${btTab === "holders" ? "on" : ""}`} onClick={() => setBtTab("holders")}>
               {t("Топ держателей")}
@@ -790,33 +803,49 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           {history && history.trades.length === 0 && (
             <div className="dim" style={{ padding: "14px 0" }}>{t("Пока нет сделок.")}</div>
           )}
-          {history && history.trades.length > 0 && tradesHeader}
-          {history && sortTrades(history.trades).slice(0, 12).map((tr, i) => {
-            const isMine = wallet && tr.addr.toLowerCase() === wallet.account.toLowerCase();
-            return (
-            <div className={`trow ${isMine ? "mine" : ""}`} key={i}>
-              <span className="dim" title={tr.ts ? new Date(tr.ts).toLocaleString() : ""}>
-                {tr.ts ? timeAgo(tr.ts) : "—"}
-              </span>
-              <span className={tr.side === "buy" ? "side-buy" : "side-sell"}>
-                {t(tr.side === "buy" ? "Купил" : "Продал")}
-              </span>
-              <a href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer"
-                 style={{ color: "inherit" }} title={t("Открыть транзакцию")}>
-                {fmtEth(tr.eth)} ETH <span className="usd-sub">({dollars(tr.eth)})</span>
-              </a>
-              <span>{fmt(tr.tokens, 0)}</span>
-              <a className="mono" href={`${EXPLORER}/address/${tr.addr}`} target="_blank" rel="noreferrer"
-                 title={t("Открыть адрес в эксплорере")}>
-                {short(tr.addr)}{isMine && <span className="badge hr-badge">{t("Вы")}</span>}
-              </a>
-              <a className="dim" href={`${EXPLORER}/block/${tr.block}`} target="_blank" rel="noreferrer"
-                 title={t("Открыть блок в эксплорере")}>
-                {t("блок")} {String(tr.block)}
-              </a>
-            </div>
-            );
-          })}
+          {history && history.trades.length > 0 && (() => {
+            const counts = {};
+            for (const x of history.trades) counts[x.addr] = (counts[x.addr] || 0) + 1;
+            const maxEth = Math.max(...history.trades.map((x) => x.eth), 1e-9);
+            return [(
+              <div className="arow hdr" key="hdr" style={{ marginTop: 8 }}>
+                <Th k="eth">{t("Итого")}</Th>
+                <Th k="price">{t("Цена")}</Th>
+                <Th k="tokens">{t("Количество")}</Th>
+                <span>{t("Трейдер")}</span>
+                <Th k="ts">{t("Время")}</Th>
+              </div>
+            ), ...sortTrades(history.trades).slice(0, 30).map((tr, i) => {
+              const isMine = wallet && tr.addr.toLowerCase() === wallet.account.toLowerCase();
+              const buy = tr.side === "buy";
+              const heat = Math.max(5, Math.round((tr.eth / maxEth) * 100));
+              const priceUsd = tr.tokens > 0 ? (tr.eth / tr.tokens) * rate : 0;
+              return (
+                <div className="arow" key={i}>
+                  <span className={buy ? "side-buy" : "side-sell"} style={{
+                    background: `linear-gradient(90deg, ${buy ? "#7ac74f1c" : "#e06a4a1c"} ${heat}%, transparent ${heat}%)`,
+                    borderRadius: 6, padding: "4px 8px", marginLeft: -8,
+                  }}>
+                    {dollars(tr.eth)}
+                  </span>
+                  <span className="dim">${fmtEth(priceUsd)}</span>
+                  <span>{compactN(tr.tokens)}</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                    <a className="mono" href={`${EXPLORER}/address/${tr.addr}`} target="_blank" rel="noreferrer"
+                       title={t("Открыть адрес в эксплорере")}>
+                      {short(tr.addr)}
+                    </a>
+                    <span className="cnt-chip" title={t("Сделок этого трейдера по токену")}>{counts[tr.addr]}</span>
+                    {isMine && <span className="badge hr-badge">{t("Вы")}</span>}
+                  </span>
+                  <a className="dim" href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer"
+                     title={tr.ts ? new Date(tr.ts).toLocaleString() : t("Открыть транзакцию")}>
+                    {shortAgo(tr.ts)} ↗
+                  </a>
+                </div>
+              );
+            })];
+          })()}
           </>)}
           {btTab === "mine" && (<>
           {!wallet && (

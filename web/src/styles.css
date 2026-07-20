@@ -395,7 +395,21 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 .bt-tab.on { color: var(--text); background: #2a2a28; }
 .trow { display: grid; grid-template-columns: 80px 70px 1fr 1fr 1fr 80px; gap: 10px; padding: 10px 4px; border-top: 1px solid #2a2a28; font-size: 13px; align-items: center; font-variant-numeric: tabular-nums; }
 .trow.hdr { color: var(--text-dim); font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; border-top: none; }
-.side-buy { color: var(--leaf); font-weight: 800; }
+/* лента активности (стиль GMGN) */
+.arow {
+  display: grid; grid-template-columns: 110px 110px 1fr 1fr 80px;
+  gap: 10px; padding: 8px 4px; border-top: 1px solid #2a2a28;
+  font-size: 13px; align-items: center; font-variant-numeric: tabular-nums;
+}
+.arow.hdr { color: var(--text-dim); font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; border-top: none; }
+.cnt-chip {
+  font-size: 10px; background: var(--bg-soft); border: 1px solid var(--border);
+  border-radius: 6px; padding: 1px 6px; color: var(--text-dim);
+}
+/* тоньше цифры и жирный текст по всему сайту */
+b, strong { font-weight: 600; }
+.stat-card .v, .ana-card .v, .tk-mcap, .tk-chg, .tmc, .split-bar { font-weight: 600; }
+.side-buy { color: var(--leaf); font-weight: 700; }
 .side-sell { color: var(--red); font-weight: 800; }
 
 /* footer */
