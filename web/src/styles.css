@@ -1079,6 +1079,11 @@ html[data-theme="light"] .tos-ico { background: #ffffff; }
   .prow6, .trow { min-width: 560px; }
   .bt-tabs { min-width: 0; }
 
+  /* строка фильтров не должна распирать страницу — прокручиваем её саму */
+  .pill-group { max-width: 100%; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .pill-group::-webkit-scrollbar { display: none; }
+  .fpill { flex: 0 0 auto; }
+
   .pf-head { gap: 12px; margin: 26px 0 16px; }
   .pf-ava { width: 52px !important; height: 52px !important; font-size: 24px !important; }
 }
@@ -1092,11 +1097,23 @@ html[data-theme="light"] .tos-ico { background: #ffffff; }
   .tmc { font-size: 15px; }
   .logo-word { font-size: 13px; letter-spacing: 3px; }
   .icon-btn { width: 34px; height: 34px; }
+  .nav { gap: 5px; }
   .nav .btn { padding: 8px 10px; font-size: 11.5px; }
+  .nav .btn-primary { padding: 9px 13px; font-size: 12px; }
+  /* поиск на телефоне доступен отдельной строкой ниже — иконку в шапке прячем */
+  .nav-search { display: none; }
   .page-title { font-size: 23px; }
   /* прячем "ETH" в балансе кошелька, оставляем адрес — экономим место */
   .header-inner .net-pill { display: none; }
 }
+
+/* совсем узкие экраны — оставляем логотип-иконку без текста, чтобы шапка влезла */
+@media (max-width: 400px) {
+  .logo-word { display: none; }
+}
+
+/* страховка от горизонтального сдвига на мобильных (clip не ломает sticky-шапку) */
+html, body { max-width: 100%; overflow-x: clip; }
 
 /* индикатор источника данных в админке */
 .ds-badge { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--gold);

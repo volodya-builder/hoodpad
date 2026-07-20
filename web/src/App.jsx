@@ -299,7 +299,7 @@ export default function App() {
             <button className={`icon-btn burger ${menuOpen ? "on" : ""}`} onClick={() => setMenuOpen(!menuOpen)} title={t("Меню")} aria-label="menu">
               {menuOpen ? "✕" : "☰"}
             </button>
-            <button className="icon-btn" onClick={() => setSearchOpen(true)} title="Поиск (Ctrl+K)">⌕</button>
+            <button className="icon-btn nav-search" onClick={() => setSearchOpen(true)} title="Поиск (Ctrl+K)">⌕</button>
             <a className={`icon-btn ${route.startsWith("/profile") ? "on" : ""}`} href="#/profile" title={t("Профиль")}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                    strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
