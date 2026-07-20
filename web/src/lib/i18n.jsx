@@ -389,6 +389,8 @@ const EN = {
   "Казна вернула рынку": "Treasury returned to the market",
   "Казна потратила на выкуп этого токена": "Treasury spent buying back this token",
   "Выкуп казны": "Treasury buyback",
+  "копится с каждой сделки — первые выкупы после голосования":
+    "grows with every trade — first buybacks after the vote",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

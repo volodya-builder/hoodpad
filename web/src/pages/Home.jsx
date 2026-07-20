@@ -114,11 +114,10 @@ export default function Home({ onSearch }) {
           {t("+ Создать")}
         </a>
       </div>
-      {support.totalEth > 0 && (
-        <a className="cushion-banner" href="#/treasury">
-          🛡 {t("Казна вернула рынку")}: <b>{fmtEth(support.totalEth)} ETH</b> →
-        </a>
-      )}
+      <a className="cushion-banner" href="#/treasury">
+        🛡 {t("Казна вернула рынку")}: <b>{fmtEth(support.totalEth)} ETH</b>
+        {support.totalEth === 0 && <span className="dim"> · {t("копится с каждой сделки — первые выкупы после голосования")}</span>} →
+      </a>
       {error && <div className="error">{error}</div>}
       {!tokens && !error && <div className="center">{t("Загружаю токены из блокчейна…")}</div>}
 
