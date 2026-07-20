@@ -99,6 +99,7 @@ export default function Home({ onSearch }) {
     if (sort === "mcap") a.sort((x, y) => Number(y.price - x.price));
     if (sort === "raised") a.sort((x, y) => Number(y.reserve - x.reserve));
     if (sort === "cushion") a.sort((x, y) => cushionOf(y.token) - cushionOf(x.token));
+    if (sort === "old") a.reverse(); // базовый порядок — новые первыми
     return a; // "new": loader already returns newest first
   };
   const live = bySort(tokens?.filter((t) => !t.graduated) ?? []);
@@ -162,7 +163,7 @@ export default function Home({ onSearch }) {
           </div>
         </div>
         <div className="pill-group">
-          {[["new", t("Новые")], ["raised", t("Недавние покупки")], ["mcap", t("Капитализация")], ["cushion", "🛡 " + t("Выкуп казны")], ["fav", "★ " + t("Избранное")]].map(([k, lbl]) => (
+          {[["new", t("Новые")], ["old", t("Старые")], ["raised", t("Недавние покупки")], ["mcap", t("Капитализация")], ["cushion", "🛡 " + t("Выкуп казны")], ["fav", "★ " + t("Избранное")]].map(([k, lbl]) => (
             <div key={k} className={`fpill ${sort === k ? "on" : ""}`} onClick={() => setSort(k)}>
               {lbl}
             </div>

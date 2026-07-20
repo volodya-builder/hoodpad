@@ -417,6 +417,7 @@ const EN = {
     "The referrer's share comes out of the team's cut — the buyback treasury and creator earnings are untouched.",
   "Топ рефереров": "Top referrers",
   "кошельков": "wallets",
+  "Старые": "Oldest",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });
