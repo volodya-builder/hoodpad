@@ -397,7 +397,6 @@ export default function App() {
               <h4>{t("Правовое")}</h4>
               <a href="#/privacy">{t("Политика конфиденциальности")}</a>
               <a href="#/terms">{t("Условия использования")}</a>
-              <a href="mailto:contact@hoodandarrow.com">contact@hoodandarrow.com</a>
             </div>
             <div className="fcol">
               <h4>{t("Риск-нотис")}</h4>
@@ -408,9 +407,14 @@ export default function App() {
           </div>
           <div className="footer-bottom">
             <span className="dim">© 2026 hood · Robinhood Chain</span>
-            <a className="x-chip" href="https://x.com/hoodandarrow" target="_blank" rel="noreferrer">
-              @hoodandarrow <span className="x-box">𝕏</span>
-            </a>
+            <span style={{ display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap" }}>
+              <a className="dim" href="mailto:contact@hoodandarrow.com" style={{ textDecoration: "none" }}>
+                ✉ contact@hoodandarrow.com
+              </a>
+              <a className="x-chip" href="https://x.com/hoodandarrow" target="_blank" rel="noreferrer">
+                @hoodandarrow <span className="x-box">𝕏</span>
+              </a>
+            </span>
           </div>
         </div>
       </footer>
