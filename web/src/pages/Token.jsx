@@ -848,24 +848,25 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               : holdMs >= 3600000 ? `${Math.floor(holdMs / 3600000)}${t("ч")}`
               : `${Math.max(1, Math.floor(holdMs / 60000))}${t("м")}`;
             return [(
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14, flexWrap: "wrap" }} key="tok">
-                {meta.image && (
-                  <img src={meta.image} alt="" style={{ width: 34, height: 34, borderRadius: 9 }}
-                       onError={(e) => (e.target.style.display = "none")} />
-                )}
-                <b style={{ fontSize: 16 }} className="ticker">${data.symbol}</b>
-                <span className="mono th-addr" style={{ marginTop: 0 }} onClick={copyCA} title={t("Скопировать адрес")}>
-                  {short(tokenAddress)} {copiedCA ? "✓" : "⧉"}
-                </span>
-              </div>
-            ), (
-              <div className="tk-cells" style={{ margin: "14px 0 2px" }} key="sum">
+              <div className="pos-row" key="sum">
+                <div className="pos-id">
+                  {meta.image && (
+                    <img src={meta.image} alt="" style={{ width: 34, height: 34, borderRadius: 9 }}
+                         onError={(e) => (e.target.style.display = "none")} />
+                  )}
+                  <div>
+                    <b className="ticker" style={{ fontSize: 15 }}>${data.symbol}</b>
+                    <div className="mono th-addr" style={{ marginTop: 2 }} onClick={copyCA} title={t("Скопировать адрес")}>
+                      {short(tokenAddress)} {copiedCA ? "✓" : "⧉"}
+                    </div>
+                  </div>
+                </div>
                 <div className="tk-cell"><span>{t("Активность")}</span><b>{lastTs ? timeAgo(lastTs) : "—"}</b>
-                  <span>{mine.length} {t("сделок")}</span></div>
+                  <span>{mine.length} {t("сделок")} · {holdStr} {totPnl >= 0 ? "💎" : ""}</span></div>
                 <div className="tk-cell"><span>{t("Куплено")}</span><b>{dollars(buysEth)}</b>
-                  <span>{fmt(buysTok, 0)} · ${fmtEth(avgBuy * rate)}</span></div>
+                  <span>{fmt(buysTok, 0)}</span></div>
                 <div className="tk-cell"><span>{t("Продано")}</span><b>{dollars(sellsEth)}</b>
-                  <span>{sellsTok > 0 ? <>{fmt(sellsTok, 0)} · ${fmtEth(avgSell * rate)}</> : "—"}</span></div>
+                  <span>{sellsTok > 0 ? fmt(sellsTok, 0) : "—"}</span></div>
                 <div className="tk-cell"><span>{t("Баланс")}</span><b>{dollars(valEth)}</b>
                   <span>{fmt(balTok, 0)} ({fmt(balTok / 1e7, 2)}%)</span></div>
                 <div className="tk-cell"><span>uPnL</span>
@@ -878,8 +879,6 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                     {dollars(totPnl)} ({totPct >= 0 ? "+" : ""}{fmt(totPct, 1)}%)
                   </b>
                 </div>
-                <div className="tk-cell"><span>{t("Комиссии")}</span><b>{dollars(feesEth)}</b></div>
-                <div className="tk-cell"><span>{t("Удержание")}</span><b>{holdStr} {uPnl >= 0 && totPnl >= 0 ? "💎" : ""}</b></div>
               </div>
             )];
           })()}
