@@ -1,13 +1,15 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { parseEther, formatEther } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi } from "../lib/abi.js";
 import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
-import { poolTrades } from "../lib/data.js";
+import { poolTrades, invalidateTrades } from "../lib/data.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import Chat from "./Chat.jsx";
-import { useSplit, loadCreationTimes, timeAgo, useClock } from "../lib/data.js";
+import { useSplit, loadCreationTimes, timeAgo, useClock, useSupport } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
+import { bindRefIfNeeded } from "../lib/referral.js";
+import CandleChart from "../components/CandleChart.jsx";
 
 const SLIPPAGE_CHOICES = [0.5, 1, 3, 5]; // %
 
@@ -177,6 +179,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const { t } = useLang();
   const rate = useEthUsd();
   const split = useSplit();
+  const support = useSupport();
+  const cushion = support.per[tokenAddress?.toLowerCase()]?.eth || 0;
   const [data, setData] = useState(null);
   const [meta, setMeta] = useState({});
   const [tab, setTab] = useState("buy");
@@ -190,6 +194,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCA, setCopiedCA] = useState(false);
   const [tf, setTf] = useState("all"); // таймфрейм графика
+  const [trSort, setTrSort] = useState({ key: "ts", dir: "desc" }); // сортировка таблицы сделок
   const [tradePct, setTradePct] = useState(0); // ползунок суммы
   const [btTab, setBtTab] = useState("trades");
   const [qpcts, setQpcts] = useState(() => {
@@ -484,13 +489,54 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       }
       await publicClient.waitForTransactionReceipt({ hash });
       setAmount("");
+      if (wallet) bindRefIfNeeded(wallet.account); // рефералка: закрепить трейдера (fire-and-forget)
       await load();
+      // график и список сделок — сразу и с повторами, пока индексатор догоняет
+      const bump = () => { if (data?.pool) invalidateTrades(data.pool); loadExtras().catch(() => {}); };
+      bump();
+      setTimeout(bump, 4000);
+      setTimeout(bump, 12000);
     } catch (err) {
       setError(err.shortMessage || err.message);
     } finally {
       setBusy(false);
     }
   }
+
+  // ---- перетаскивание блоков: порядок карточек хранится в localStorage ----
+  const BLK_DEF = { chart: 1, trades: 2, about: 3, swap: 1, chat: 2 };
+  const LEFT_BLKS = ["chart", "trades", "about"], RIGHT_BLKS = ["swap", "chat"];
+  const [blkOrd, setBlkOrd] = useState(() => {
+    try { return { ...BLK_DEF, ...(JSON.parse(localStorage.getItem("hood_tok_blocks")) || {}) }; }
+    catch (e) { return BLK_DEF; }
+  });
+  const dragSrc = useRef(null);
+  const startBlk = (k) => (e) => {
+    dragSrc.current = k;
+    try { e.dataTransfer.setData("text/plain", k); e.dataTransfer.effectAllowed = "move"; } catch (err) { /* ignore */ }
+  };
+  const dropBlk = (k) => (e) => {
+    e.preventDefault();
+    const a = dragSrc.current; dragSrc.current = null;
+    if (!a || a === k) return;
+    const same = (LEFT_BLKS.includes(a) && LEFT_BLKS.includes(k)) || (RIGHT_BLKS.includes(a) && RIGHT_BLKS.includes(k));
+    if (!same) return;
+    const next = { ...blkOrd, [a]: blkOrd[k], [k]: blkOrd[a] };
+    setBlkOrd(next);
+    try { localStorage.setItem("hood_tok_blocks", JSON.stringify(next)); } catch (err) { /* ignore */ }
+  };
+  const [overBlk, setOverBlk] = useState(null);
+  const blkProps = (k) => ({
+    className: `drag-card ${overBlk === k && dragSrc.current && dragSrc.current !== k ? "over" : ""}`,
+    style: { order: blkOrd[k] },
+    onDragOver: (e) => { e.preventDefault(); setOverBlk(k); },
+    onDragLeave: () => setOverBlk((v) => (v === k ? null : v)),
+    onDrop: (e) => { setOverBlk(null); dropBlk(k)(e); },
+  });
+  const Handle = ({ k }) => (
+    <span className="drag-handle" draggable onDragStart={startBlk(k)}
+          title={t("Перетащите, чтобы поменять блоки местами")}>⠿</span>
+  );
 
   async function migrate() {
     setError("");
@@ -515,77 +561,80 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const mcapEth = Number(formatEther(data.price)) * 1_000_000_000;
   const mcapUsd = usd(mcapEth * rate);
 
+  // сортировка таблицы сделок по клику на заголовок колонки
+  const sortTrades = (arr) => {
+    const { key, dir } = trSort;
+    const m = dir === "asc" ? 1 : -1;
+    return [...arr].sort((a, b) => {
+      if (key === "side" || key === "addr") {
+        const va = String(a[key]), vb = String(b[key]);
+        return va < vb ? -m : va > vb ? m : 0;
+      }
+      const va = key === "ts" ? (a.ts || 0) : key === "block" ? Number(a.block) : Number(a[key]) || 0;
+      const vb = key === "ts" ? (b.ts || 0) : key === "block" ? Number(b.block) : Number(b[key]) || 0;
+      return (va - vb) * m;
+    });
+  };
+  const Th = ({ k, children }) => (
+    <span className="sort-h"
+          onClick={() => setTrSort((s) => ({ key: k, dir: s.key === k && s.dir === "desc" ? "asc" : "desc" }))}>
+      {children} <i>{trSort.key === k ? (trSort.dir === "desc" ? "▼" : "▲") : "↕"}</i>
+    </span>
+  );
+  const tradesHeader = (
+    <div className="trow hdr" style={{ marginTop: 8 }}>
+      <Th k="ts">{t("Время")}</Th>
+      <Th k="side">{t("Тип")}</Th>
+      <Th k="eth">ETH</Th>
+      <Th k="tokens">{t("Токены")}</Th>
+      <Th k="addr">{t("Трейдер")}</Th>
+      <Th k="block">{t("Блок")}</Th>
+    </div>
+  );
+
+  const socials = (meta.x || meta.telegram || meta.website) ? (
+    <div className="soc-row" style={{ margin: 0 }}>
+      {meta.x && (
+        <a className="soc-btn" title="X (Twitter)" target="_blank" rel="noreferrer"
+           href={/^https?:\/\//.test(meta.x) ? meta.x : `https://x.com/${meta.x.replace(/^@/, "")}`}>
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+            <path d="M18.9 1.2h3.7l-8.1 9.3L24 22.8h-7.5l-5.9-7.7-6.7 7.7H.2l8.7-9.9L0 1.2h7.7l5.3 7 5.9-7zm-1.3 19.4h2L6.6 3.3H4.4l13.2 17.3z"/>
+          </svg>
+        </a>
+      )}
+      {meta.telegram && (
+        <a className="soc-btn" title="Telegram" target="_blank" rel="noreferrer"
+           href={/^https?:\/\//.test(meta.telegram) ? meta.telegram : `https://t.me/${meta.telegram.replace(/^@/, "")}`}>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+            <path d="M21.9 3.4 18.6 20c-.2 1.1-.9 1.4-1.8.9l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5.1L18.1 6.5c.4-.4-.1-.6-.6-.2L6 13.5l-4.9-1.5c-1.1-.3-1.1-1.1.2-1.6L20.4 2c.9-.3 1.7.2 1.5 1.4z"/>
+          </svg>
+        </a>
+      )}
+      {meta.website && (
+        <a className="soc-btn" title={t("Сайт")} target="_blank" rel="noreferrer"
+           href={/^https?:\/\//.test(meta.website) ? meta.website : `https://${meta.website}`}>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9S14.5 18.4 12 21M12 3C9.5 5.6 8.2 8.7 8.2 12s1.3 6.4 3.8 9"/>
+          </svg>
+        </a>
+      )}
+    </div>
+  ) : null;
+
   return (
     <>
     <a className="btn back-btn" href="#/">‹ {t("Назад")}</a>
     <div className="token-layout">
       <div>
+        <div {...blkProps("about")}><Handle k="about" />
         <div className="card" style={{ cursor: "default", transform: "none" }}>
           <div className="card-title">
-            <h3 style={{ fontSize: 24 }}>
-              {data.name} <span className="ticker">${data.symbol}</span>
-            </h3>
-            {data.graduated && <span className="badge">🎯 В яблочке</span>}
+            <h3>{t("О токене")}</h3>
           </div>
           {meta.description && (
             <p className="dim" style={{ marginTop: 10 }}>{meta.description}</p>
           )}
-          {(meta.x || meta.telegram || meta.website) && (
-            <div className="soc-row">
-              {meta.x && (
-                <a className="soc-btn" title="X (Twitter)" target="_blank" rel="noreferrer"
-                   href={/^https?:\/\//.test(meta.x) ? meta.x : `https://x.com/${meta.x.replace(/^@/, "")}`}>
-                  <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
-                    <path d="M18.9 1.2h3.7l-8.1 9.3L24 22.8h-7.5l-5.9-7.7-6.7 7.7H.2l8.7-9.9L0 1.2h7.7l5.3 7 5.9-7zm-1.3 19.4h2L6.6 3.3H4.4l13.2 17.3z"/>
-                  </svg>
-                </a>
-              )}
-              {meta.telegram && (
-                <a className="soc-btn" title="Telegram" target="_blank" rel="noreferrer"
-                   href={/^https?:\/\//.test(meta.telegram) ? meta.telegram : `https://t.me/${meta.telegram.replace(/^@/, "")}`}>
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                    <path d="M21.9 3.4 18.6 20c-.2 1.1-.9 1.4-1.8.9l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5.1L18.1 6.5c.4-.4-.1-.6-.6-.2L6 13.5l-4.9-1.5c-1.1-.3-1.1-1.1.2-1.6L20.4 2c.9-.3 1.7.2 1.5 1.4z"/>
-                  </svg>
-                </a>
-              )}
-              {meta.website && (
-                <a className="soc-btn" title={t("Сайт")} target="_blank" rel="noreferrer"
-                   href={/^https?:\/\//.test(meta.website) ? meta.website : `https://${meta.website}`}>
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
-                    <circle cx="12" cy="12" r="9"/>
-                    <path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9S14.5 18.4 12 21M12 3C9.5 5.6 8.2 8.7 8.2 12s1.3 6.4 3.8 9"/>
-                  </svg>
-                </a>
-              )}
-            </div>
-          )}
-          {meta.image && (
-            <img
-              src={meta.image}
-              alt=""
-              style={{ maxWidth: 160, borderRadius: 12, marginTop: 8 }}
-              onError={(e) => (e.target.style.display = "none")}
-            />
-          )}
-
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="k">{t("Цена")}</div>
-              <div className="v">{fmtEth(formatEther(data.price))} ETH</div>
-            </div>
-            <div className="stat-card">
-              <div className="k">{t("Капитализация")}</div>
-              <div className="v">{mcapUsd}</div>
-            </div>
-            <div className="stat-card">
-              <div className="k">{t("Собрано")}</div>
-              <div className="v">{fmtEth(formatEther(data.reserve))} ETH</div>
-            </div>
-            <div className="stat-card">
-              <div className="k">{t("До градации")}</div>
-              <div className="v">{fmt(progress, 1)}%</div>
-            </div>
-          </div>
 
           {!data.graduated && (
             <div className="progress" style={{ marginTop: 18 }}>
@@ -600,6 +649,12 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 {fmtEth(formatEther(extra.creatorFees ?? 0n))} ETH
               </div>
             </div>
+            {cushion > 0 && (
+              <div className="stat-card">
+                <div className="k">🛡 {t("Выкуп казны")}</div>
+                <div className="v" style={{ color: "var(--gold)" }}>{fmtEth(cushion)} ETH</div>
+              </div>
+            )}
             {extra.burned > 0n && (
               <div className="stat-card">
                 <div className="k">{t("Сожжено казной")}</div>
@@ -650,10 +705,27 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             </a>
           </div>
         </div>
+        </div>
 
+        <div {...blkProps("chart")}><Handle k="chart" />
         <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
           <div className="card-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-            <h3>{t("Капитализация по сделкам")}</h3>
+            <h3 style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 22 }}>
+              {meta.image && (
+                <img src={meta.image} alt="" style={{ width: 96, height: 96, borderRadius: 18 }}
+                     onError={(e) => (e.target.style.display = "none")} />
+              )}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  {data.name} <span className="ticker">${data.symbol}</span>
+                  {data.graduated && <span className="badge">🎯 В яблочке</span>}
+                  {socials}
+                </div>
+                <div className="mono th-addr" onClick={copyCA} title={t("Скопировать адрес")}>
+                  {short(tokenAddress)} {copiedCA ? "✓" : "⧉"}
+                </div>
+              </div>
+            </h3>
             <div className="pill-group">
               {[["5m", "5M"], ["1h", "1H"], ["6h", "6H"], ["1d", "1D"], ["all", "ALL"]].map(([k, lbl]) => (
                 <div key={k} className={`fpill ${tf === k ? "on" : ""}`} onClick={() => setTf(k)}>{lbl}</div>
@@ -671,14 +743,24 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               )}
             </div>
             <div className="tk-cells">
+              <div className="tk-cell"><span>{t("Цена")}</span><b>{fmtEth(formatEther(data.price))} ETH</b></div>
               <div className="tk-cell"><span>{t("Собрано")}</span><b>{fmtEth(formatEther(data.reserve))} ETH</b></div>
               <div className="tk-cell"><span>{t("Объём 24ч")}</span><b>{tokStats ? fmtEth(tokStats.vol24) : "0"} ETH</b></div>
               <div className="tk-cell"><span>ATH</span><b>{tokStats ? usd(tokStats.ath * rate) : "—"}</b></div>
+              {!data.graduated && (
+                <div className="tk-cell"><span>{t("До градации")}</span><b>{fmt(progress, 1)}%</b></div>
+              )}
             </div>
           </div>
-          <MiniChart points={chartPoints} rate={rate} marks={marks} />
+          {history && history.points && history.points.filter((p) => p.ts).length >= 2 ? (
+            <CandleChart points={history.points} trades={history.trades} rate={rate} marks={marks} />
+          ) : (
+            <MiniChart points={chartPoints} rate={rate} marks={marks} />
+          )}
+        </div>
         </div>
 
+        <div {...blkProps("trades")}><Handle k="trades" />
         <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
           <div className="bt-tabs">
             <div className={`bt-tab ${btTab === "trades" ? "on" : ""}`} onClick={() => setBtTab("trades")}>
@@ -687,6 +769,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <div className={`bt-tab ${btTab === "holders" ? "on" : ""}`} onClick={() => setBtTab("holders")}>
               {t("Топ держателей")}
             </div>
+            <div className={`bt-tab ${btTab === "mine" ? "on" : ""}`} onClick={() => setBtTab("mine")}>
+              {t("Мои сделки")}
+            </div>
           </div>
           {btTab === "trades" && (<>
 
@@ -694,19 +779,73 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           {history && history.trades.length === 0 && (
             <div className="dim" style={{ padding: "14px 0" }}>{t("Пока нет сделок.")}</div>
           )}
-          {history && history.trades.slice(0, 12).map((tr, i) => (
-            <div className="trow" key={i}>
+          {history && history.trades.length > 0 && tradesHeader}
+          {history && sortTrades(history.trades).slice(0, 12).map((tr, i) => {
+            const isMine = wallet && tr.addr.toLowerCase() === wallet.account.toLowerCase();
+            return (
+            <div className={`trow ${isMine ? "mine" : ""}`} key={i}>
+              <span className="dim" title={tr.ts ? new Date(tr.ts).toLocaleString() : ""}>
+                {tr.ts ? timeAgo(tr.ts) : "—"}
+              </span>
               <span className={tr.side === "buy" ? "side-buy" : "side-sell"}>
                 {t(tr.side === "buy" ? "Купил" : "Продал")}
               </span>
-              <span>{fmtEth(tr.eth)} ETH <span className="usd-sub">({dollars(tr.eth)})</span></span>
-              <span>{fmt(tr.tokens, 0)}</span>
-              <a className="mono" href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer">
-                {short(tr.addr)}
+              <a href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer"
+                 style={{ color: "inherit" }} title={t("Открыть транзакцию")}>
+                {fmtEth(tr.eth)} ETH <span className="usd-sub">({dollars(tr.eth)})</span>
               </a>
-              <span className="dim">{t("блок")} {String(tr.block)}</span>
+              <span>{fmt(tr.tokens, 0)}</span>
+              <a className="mono" href={`${EXPLORER}/address/${tr.addr}`} target="_blank" rel="noreferrer"
+                 title={t("Открыть адрес в эксплорере")}>
+                {short(tr.addr)}{isMine && <span className="badge hr-badge">{t("Вы")}</span>}
+              </a>
+              <a className="dim" href={`${EXPLORER}/block/${tr.block}`} target="_blank" rel="noreferrer"
+                 title={t("Открыть блок в эксплорере")}>
+                {t("блок")} {String(tr.block)}
+              </a>
             </div>
-          ))}
+            );
+          })}
+          </>)}
+          {btTab === "mine" && (<>
+          {!wallet && (
+            <div className="dim" style={{ padding: "14px 0" }}>
+              {t("Подключите кошелёк, чтобы увидеть профиль.")}{" "}
+              <a href="#/" onClick={(e) => { e.preventDefault(); onConnect(); }} style={{ color: "var(--gold)" }}>
+                {t("Подключить →")}
+              </a>
+            </div>
+          )}
+          {wallet && !history && <div className="dim" style={{ padding: "14px 0" }}>{t("Читаю события…")}</div>}
+          {wallet && history && (() => {
+            const mine = history.trades.filter((tr) => tr.addr.toLowerCase() === wallet.account.toLowerCase());
+            if (mine.length === 0) return <div className="dim" style={{ padding: "14px 0" }}>{t("Сделок пока нет.")}</div>;
+            return [(
+              <React.Fragment key="hdr">{tradesHeader}</React.Fragment>
+            ), ...sortTrades(mine).slice(0, 20).map((tr, i) => (
+              <div className="trow" key={i}>
+                <span className="dim" title={tr.ts ? new Date(tr.ts).toLocaleString() : ""}>
+                  {tr.ts ? timeAgo(tr.ts) : "—"}
+                </span>
+                <span className={tr.side === "buy" ? "side-buy" : "side-sell"}>
+                  {t(tr.side === "buy" ? "Купил" : "Продал")}
+                </span>
+                <a href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer"
+                   style={{ color: "inherit" }} title={t("Открыть транзакцию")}>
+                  {fmtEth(tr.eth)} ETH <span className="usd-sub">({dollars(tr.eth)})</span>
+                </a>
+                <span>{fmt(tr.tokens, 0)}</span>
+                <a className="mono" href={`${EXPLORER}/address/${tr.addr}`} target="_blank" rel="noreferrer"
+                   title={t("Открыть адрес в эксплорере")}>
+                  {short(tr.addr)}
+                </a>
+                <a className="dim" href={`${EXPLORER}/block/${tr.block}`} target="_blank" rel="noreferrer"
+                   title={t("Открыть блок в эксплорере")}>
+                  {t("блок")} {String(tr.block)}
+                </a>
+              </div>
+            ))];
+          })()}
           </>)}
           {btTab === "holders" && (<>
 
@@ -755,9 +894,11 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           )}
           </>)}
         </div>
+        </div>
       </div>
 
       <div>
+        <div {...blkProps("swap")}><Handle k="swap" />
         {data.graduated ? (
           data.migrated ? (
             <div className="panel" style={{ margin: 0, maxWidth: "none" }}>
@@ -933,9 +1074,11 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             {error && <div className="error">{error}</div>}
           </div>
         )}
+        </div>
 
-
+        <div {...blkProps("chat")}><Handle k="chat" />
         <Chat tokenAddress={tokenAddress} wallet={wallet} onConnect={onConnect} />
+        </div>
       </div>
     </div>
     </>

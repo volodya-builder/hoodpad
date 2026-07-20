@@ -7,6 +7,8 @@ import Leaderboard from "./pages/Leaderboard.jsx";
 import Profile from "./pages/Profile.jsx";
 import Vote from "./pages/Vote.jsx";
 import About from "./pages/About.jsx";
+import Earn from "./pages/Earn.jsx";
+import { captureRef } from "./lib/referral.js";
 import Treasury from "./pages/Treasury.jsx";
 import Admin from "./pages/Admin.jsx";
 import { Privacy, Terms } from "./pages/Legal.jsx";
@@ -251,6 +253,14 @@ export default function App() {
   const factoryMissing =
     FACTORY_ADDRESS === "0x0000000000000000000000000000000000000000";
 
+  // Реф-ссылка #/r/0x…: запоминаем реферера и уходим на главную.
+  useEffect(() => {
+    if (route.startsWith("/r/")) {
+      captureRef(route.split("/r/")[1]);
+      window.location.replace("#/");
+    }
+  }, [route]);
+
   let page;
   if (route.startsWith("/token/")) {
     page = <TokenPage tokenAddress={route.split("/token/")[1]} wallet={wallet} onConnect={connect} />;
@@ -268,6 +278,8 @@ export default function App() {
     page = <Admin wallet={wallet} onConnect={connect} />;
   } else if (route === "/about") {
     page = <About />;
+  } else if (route === "/earn") {
+    page = <Earn wallet={wallet} onConnect={connect} />;
   } else if (route === "/privacy") {
     page = <Privacy />;
   } else if (route === "/terms") {
@@ -288,14 +300,17 @@ export default function App() {
             <span className="logo-word">HOOD</span>
           </a>
           {import.meta.env.BASE_URL !== "/" && (
-            <span className="staging-badge" title="Тестовая версия — данные и вид могут отличаться от боевого сайта">STAGING</span>
+            <span className="staging-badge" title="Тестовая версия — данные и вид могут отличаться от боевого сайта">
+              STAGING{import.meta.env.VITE_BUILD ? ` #${import.meta.env.VITE_BUILD}` : ""}
+            </span>
           )}
           <div className={`nav-pills ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(false)}>
-            <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/leaderboard") && !route.startsWith("/profile") && !route.startsWith("/vote") && !route.startsWith("/treasury") && !route.startsWith("/about") ? "on" : ""}`} href="#/">{t("Обзор")}</a>
-            <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>
-            <a className={`nav-pill ${route.startsWith("/leaderboard") ? "on" : ""}`} href="#/leaderboard">{t("Лидеры")}</a>
+            <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/leaderboard") && !route.startsWith("/profile") && !route.startsWith("/vote") && !route.startsWith("/treasury") && !route.startsWith("/about") && !route.startsWith("/earn") ? "on" : ""}`} href="#/">{t("Обзор")}</a>
             <a className={`nav-pill ${route.startsWith("/vote") ? "on" : ""}`} href="#/vote">{t("Голосование")}</a>
             <a className={`nav-pill ${route.startsWith("/treasury") ? "on" : ""}`} href="#/treasury">{t("Казна")}</a>
+            <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>
+            <a className={`nav-pill ${route.startsWith("/leaderboard") ? "on" : ""}`} href="#/leaderboard">{t("Лидеры")}</a>
+            <a className={`nav-pill ${route.startsWith("/earn") ? "on" : ""}`} href="#/earn">{t("Заработать")}</a>
             <a className={`nav-pill ${route.startsWith("/about") ? "on" : ""}`} href="#/about">{t("О нас")}</a>
           </div>
           <nav className="nav">
@@ -310,11 +325,14 @@ export default function App() {
                 <path d="M4 20c1.8-3.4 4.5-5 8-5s6.2 1.6 8 5" />
               </svg>
             </a>
-            <button className="icon-btn" onClick={() => setLang(lang === "en" ? "ru" : "en")}
-                    title="Язык / Language" style={{ width: "auto", padding: "0 13px", fontSize: 12, fontWeight: 800 }}>
-              {lang === "en" ? "RU" : "EN"}
+            <button className="icon-btn lang-btn" onClick={() => setLang(lang === "en" ? "ru" : "en")}
+                    title="Язык / Language">
+              <span className={lang !== "en" ? "on" : ""}>RU</span>
+              <span className="sep">/</span>
+              <span className={lang === "en" ? "on" : ""}>EN</span>
             </button>
-            <button className="icon-btn" onClick={() => setTheme(theme === "light" ? "" : "light")} title="Сменить тему">
+            <button className="icon-btn" onClick={() => setTheme(theme === "light" ? "" : "light")}
+                    title={theme === "light" ? t("Тёмная тема") : t("Светлая тема")}>
               {theme === "light" ? "☾" : "☀"}
             </button>
             {wallet ? (
@@ -369,18 +387,18 @@ export default function App() {
             <div className="fcol">
               <h4>{t("Продукт")}</h4>
               <a href="#/">{t("Обзор")}</a>
-              <a href="#/analytics">{t("Аналитика")}</a>
+              <a href="#/create">{t("Создать")}</a>
               <a href="#/vote">{t("Голосование")}</a>
               <a href="#/treasury">{t("Казна")}</a>
-              <a href="#/about">{t("О нас")}</a>
-              <a href="#/create">{t("Создать")}</a>
+              <a href="#/analytics">{t("Аналитика")}</a>
+              <a href="#/earn">{t("Заработать")}</a>
               <a href="#/profile">{t("Профиль")}</a>
+              <a href="#/about">{t("О нас")}</a>
             </div>
             <div className="fcol">
               <h4>{t("Правовое")}</h4>
               <a href="#/privacy">{t("Политика конфиденциальности")}</a>
               <a href="#/terms">{t("Условия использования")}</a>
-              <a href="mailto:contact@hoodandarrow.com">contact@hoodandarrow.com</a>
             </div>
             <div className="fcol">
               <h4>{t("Риск-нотис")}</h4>
@@ -391,9 +409,14 @@ export default function App() {
           </div>
           <div className="footer-bottom">
             <span className="dim">© 2026 hood · Robinhood Chain</span>
-            <a className="x-chip" href="https://x.com/hoodandarrow" target="_blank" rel="noreferrer">
-              @hoodandarrow <span className="x-box">𝕏</span>
-            </a>
+            <span style={{ display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap" }}>
+              <a className="dim" href="mailto:contact@hoodandarrow.com" style={{ textDecoration: "none" }}>
+                ✉ contact@hoodandarrow.com
+              </a>
+              <a className="x-chip" href="https://x.com/hoodandarrow" target="_blank" rel="noreferrer">
+                @hoodandarrow <span className="x-box">𝕏</span>
+              </a>
+            </span>
           </div>
         </div>
       </footer>

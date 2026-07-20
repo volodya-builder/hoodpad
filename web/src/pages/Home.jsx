@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { formatEther } from "viem";
 import { fmt, fmtEth } from "../lib/web3.js";
 import { useEthUsd, usd } from "../lib/price.js";
-import { timeAgo, loadTokens, useClock } from "../lib/data.js";
+import { timeAgo, loadTokens, useClock, useSupport } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 
 function loadFavs() {
@@ -13,7 +13,7 @@ function saveFavs(s) {
   try { localStorage.setItem("hood_favs", JSON.stringify([...s])); } catch (e) { /* ignore */ }
 }
 
-function TokenCard({ t, fav, onFav }) {
+function TokenCard({ t, fav, onFav, cushion = 0 }) {
   const { t: tr } = useLang();
   const rate = useEthUsd();
   const [cp, setCp] = useState(false);
@@ -29,6 +29,11 @@ function TokenCard({ t, fav, onFav }) {
       <div className="timg">
         {t.meta.image ? <img src={t.meta.image} alt="" /> : "🖼️"}
         {t.graduated && <span className="grad-chip">{tr("Градуировал")}</span>}
+        {cushion > 0 && (
+          <span className="cushion-chip" title={tr("Казна потратила на выкуп этого токена")}>
+            🛡 {fmtEth(cushion)} ETH
+          </span>
+        )}
         <button className={`fav-btn ${fav ? "on" : ""}`}
                 title={tr(fav ? "Убрать из избранного" : "В избранное")}
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onFav(t.token); }}>
@@ -65,6 +70,8 @@ export default function Home({ onSearch }) {
   const [error, setError] = useState("");
   const [sort, setSort] = useState("new");
   const [favs, setFavs] = useState(loadFavs);
+  const support = useSupport();
+  const cushionOf = (addr) => support.per[addr.toLowerCase()]?.eth || 0;
 
   const toggleFav = (addr) => {
     setFavs((prev) => {
@@ -91,6 +98,8 @@ export default function Home({ onSearch }) {
     if (sort === "fav") a = a.filter((x) => favs.has(x.token));
     if (sort === "mcap") a.sort((x, y) => Number(y.price - x.price));
     if (sort === "raised") a.sort((x, y) => Number(y.reserve - x.reserve));
+    if (sort === "cushion") a.sort((x, y) => cushionOf(y.token) - cushionOf(x.token));
+    if (sort === "old") a.reverse(); // базовый порядок — новые первыми
     return a; // "new": loader already returns newest first
   };
   const live = bySort(tokens?.filter((t) => !t.graduated) ?? []);
@@ -106,6 +115,10 @@ export default function Home({ onSearch }) {
           {t("+ Создать")}
         </a>
       </div>
+      <a className="cushion-banner" href="#/treasury">
+        🛡 {t("Казна вернула рынку")}: <b>{fmtEth(support.totalEth)} ETH</b>
+        {support.totalEth === 0 && <span className="dim"> · {t("копится с каждой сделки — первые выкупы после голосования")}</span>} →
+      </a>
       {error && <div className="error">{error}</div>}
       {!tokens && !error && <div className="center">{t("Загружаю токены из блокчейна…")}</div>}
 
@@ -124,7 +137,7 @@ export default function Home({ onSearch }) {
           <>
             <div className="tgrid">
               {grad.slice((gpage - 1) * GRAD_PER_PAGE, gpage * GRAD_PER_PAGE)
-                   .map((t2) => <TokenCard key={t2.token} t={t2} fav={favs.has(t2.token)} onFav={toggleFav} />)}
+                   .map((t2) => <TokenCard key={t2.token} t={t2} fav={favs.has(t2.token)} onFav={toggleFav} cushion={cushionOf(t2.token)} />)}
             </div>
             {grad.length > GRAD_PER_PAGE && (
               <div className="pager">
@@ -150,7 +163,7 @@ export default function Home({ onSearch }) {
           </div>
         </div>
         <div className="pill-group">
-          {[["new", t("Новые")], ["raised", t("Недавние покупки")], ["mcap", t("Капитализация")], ["fav", "★ " + t("Избранное")]].map(([k, lbl]) => (
+          {[["new", t("Новые")], ["old", t("Старые")], ["raised", t("Недавние покупки")], ["mcap", t("Капитализация")], ["cushion", "🛡 " + t("Выкуп казны")], ["fav", "★ " + t("Избранное")]].map(([k, lbl]) => (
             <div key={k} className={`fpill ${sort === k ? "on" : ""}`} onClick={() => setSort(k)}>
               {lbl}
             </div>
@@ -170,7 +183,7 @@ export default function Home({ onSearch }) {
         </div>
       ) : (
         <div className="tgrid" style={{ paddingBottom: 60 }}>
-          {live.map((t2) => <TokenCard key={t2.token} t={t2} fav={favs.has(t2.token)} onFav={toggleFav} />)}
+          {live.map((t2) => <TokenCard key={t2.token} t={t2} fav={favs.has(t2.token)} onFav={toggleFav} cushion={cushionOf(t2.token)} />)}
         </div>
       )}
     </>
