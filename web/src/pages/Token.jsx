@@ -195,6 +195,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [copiedCA, setCopiedCA] = useState(false);
   const [tf, setTf] = useState("all"); // таймфрейм графика
   const [trSort, setTrSort] = useState({ key: "ts", dir: "desc" }); // сортировка таблицы сделок
+  const [hSort, setHSort] = useState("desc"); // сортировка холдеров по доле
   const [tradePct, setTradePct] = useState(0); // ползунок суммы
   const [btTab, setBtTab] = useState("trades");
   const [qpcts, setQpcts] = useState(() => {
@@ -850,15 +851,23 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           {btTab === "holders" && (<>
 
           {!holders && <div className="dim" style={{ padding: "14px 0" }}>{t("Читаю события…")}</div>}
-          {holders && holders.list.length > 0 && (() => {
-            const top10 = holders.list.reduce((s, h) => s + h.pct, 0);
-            const cls = top10 >= 40 ? "bad" : top10 >= 20 ? "warn" : "ok";
-            return (
-              <div className={`conc-note ${cls}`}>
-                {t("Топ-10 держат")} {fmt(top10, 1)}% {t("сапплая")}
-              </div>
-            );
-          })()}
+          {holders && holders.list.length > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              {(() => {
+                const top10 = holders.list.reduce((s, h) => s + h.pct, 0);
+                const cls = top10 >= 40 ? "bad" : top10 >= 20 ? "warn" : "ok";
+                return (
+                  <div className={`conc-note ${cls}`}>
+                    {t("Топ-10 держат")} {fmt(top10, 1)}% {t("сапплая")}
+                  </div>
+                );
+              })()}
+              <span className="sort-h dim" style={{ fontSize: 12, fontWeight: 700 }}
+                    onClick={() => setHSort((s) => (s === "desc" ? "asc" : "desc"))}>
+                {t("Доля")} <i>{hSort === "desc" ? "▼" : "▲"}</i>
+              </span>
+            </div>
+          )}
           {holders && (
             <div style={{ marginTop: 6 }}>
               <div className="holder-row">
@@ -867,13 +876,13 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 <span className="hr-bar"><span style={{ width: `${Math.min(holders.unsoldPct, 100)}%` }} /></span>
                 <span className="hr-pct">{fmt(holders.unsoldPct, 1)}%</span>
               </div>
-              {holders.list.map((h, i) => {
+              {(hSort === "desc" ? holders.list : [...holders.list].reverse()).map((h, i) => {
                 const isCre = h.addr === data.creator.toLowerCase();
                 const isTre = h.addr === TREASURY_ADDRESS.toLowerCase();
                 const isMe = wallet && h.addr === wallet.account.toLowerCase();
                 return (
                   <div className="holder-row" key={h.addr}>
-                    <span className="hr-rank dim">{i + 1}</span>
+                    <span className="hr-rank dim">{hSort === "desc" ? i + 1 : holders.list.length - i}</span>
                     <span className="hr-who">
                       <a className="mono" href={`${EXPLORER}/address/${h.addr}`} target="_blank" rel="noreferrer">
                         {short(h.addr)}

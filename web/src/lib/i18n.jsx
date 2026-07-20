@@ -440,6 +440,7 @@ const EN = {
   "Показывать уровни заявок на графике": "Show order levels on the chart",
   "Время": "Time",
   "Трейдер": "Trader",
+  "Доля": "Share",
   "Открыть транзакцию": "Open transaction",
   "Открыть адрес в эксплорере": "Open address in explorer",
   "Открыть блок в эксплорере": "Open block in explorer",
