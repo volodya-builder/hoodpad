@@ -300,7 +300,9 @@ export default function App() {
             <span className="logo-word">HOOD</span>
           </a>
           {import.meta.env.BASE_URL !== "/" && (
-            <span className="staging-badge" title="Тестовая версия — данные и вид могут отличаться от боевого сайта">STAGING</span>
+            <span className="staging-badge" title="Тестовая версия — данные и вид могут отличаться от боевого сайта">
+              STAGING{import.meta.env.VITE_BUILD ? ` #${import.meta.env.VITE_BUILD}` : ""}
+            </span>
           )}
           <div className={`nav-pills ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(false)}>
             <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/leaderboard") && !route.startsWith("/profile") && !route.startsWith("/vote") && !route.startsWith("/treasury") && !route.startsWith("/about") && !route.startsWith("/earn") ? "on" : ""}`} href="#/">{t("Обзор")}</a>

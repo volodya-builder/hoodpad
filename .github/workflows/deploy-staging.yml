@@ -32,6 +32,8 @@ jobs:
 
       - name: Build (base /staging/)
         working-directory: web
+        env:
+          VITE_BUILD: ${{ github.run_number }}
         run: |
           npm install
           npx vite build --base=/staging/
