@@ -32,6 +32,7 @@ export default function Profile({ wallet, onConnect }) {
   const [psort, setPsort] = useState({ key: null, dir: -1 });
   const [trsort, setTrsort] = useState({ key: null, dir: -1 });
   const [lq, setLq] = useState("");           // поиск по «Моим запускам»
+  const [pfTab, setPfTab] = useState("positions"); // позиции | запуски
   const [caCopied, setCaCopied] = useState(""); // какой адрес только что скопирован
 
   const copyCA = (addr) => {
@@ -230,29 +231,48 @@ export default function Profile({ wallet, onConnect }) {
             </div>
           </div>
 
-          {state.launched.length > 0 && (
-            <div className="bottom-card" style={{ marginTop: 18 }}>
-              <div className="bt-tabs" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                <div className="bt-tab on">{t("Мои запуски")}</div>
-                <input
-                  className="tbl-search"
-                  value={lq}
-                  onChange={(e) => setLq(e.target.value)}
-                  placeholder={t("Поиск: тикер или адрес…")}
-                  spellCheck={false}
-                />
-                {(() => {
-                  const claimable = state.launched.reduce((s, tk) => s + Number(formatEther(tk.feesAccrued)), 0);
-                  return (
-                    <button className="btn btn-primary" style={{ marginLeft: "auto" }}
-                            disabled={claimable <= 0 || claiming === "__all__"}
-                            onClick={claimAll}
-                            title={t("Заберёт комиссии со всех токенов — по одной транзакции на каждый")}>
-                      {claiming === "__all__" ? "…" : <>{t("Забрать все")} · {fmtEth(claimable)} ETH {U(claimable)}</>}
-                    </button>
-                  );
-                })()}
+          <div className="bottom-card" style={{ marginTop: 18 }}>
+            <div className="bt-tabs" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <div className={`bt-tab ${pfTab === "positions" ? "on" : ""}`} onClick={() => setPfTab("positions")}>
+                {t("Мои позиции")}
               </div>
+              {state.launched.length > 0 && (
+                <div className={`bt-tab ${pfTab === "launches" ? "on" : ""}`} onClick={() => setPfTab("launches")}>
+                  {t("Мои запуски")}
+                </div>
+              )}
+              {pfTab === "launches" ? (
+                <>
+                  <input
+                    className="tbl-search"
+                    value={lq}
+                    onChange={(e) => setLq(e.target.value)}
+                    placeholder={t("Поиск: тикер или адрес…")}
+                    spellCheck={false}
+                  />
+                  {(() => {
+                    const claimable = state.launched.reduce((s, tk) => s + Number(formatEther(tk.feesAccrued)), 0);
+                    return (
+                      <button className="btn btn-primary" style={{ marginLeft: "auto" }}
+                              disabled={claimable <= 0 || claiming === "__all__"}
+                              onClick={claimAll}
+                              title={t("Заберёт комиссии со всех токенов — по одной транзакции на каждый")}>
+                        {claiming === "__all__" ? "…" : <>{t("Забрать все")} · {fmtEth(claimable)} ETH {U(claimable)}</>}
+                      </button>
+                    );
+                  })()}
+                </>
+              ) : (
+                <span style={{ marginLeft: "auto", fontSize: 14 }}>
+                  {t("Общий PnL")}:{" "}
+                  <b className={state.totPnl >= 0 ? "pnl-pos" : "pnl-neg"}>
+                    {state.totPnl >= 0 ? "+" : ""}{fmtEth(state.totPnl)} ETH {U(state.totPnl)}
+                  </b>
+                </span>
+              )}
+            </div>
+
+            {pfTab === "launches" && state.launched.length > 0 && (<>
               <div className="prow6 hdr" style={{ gridTemplateColumns: "1.6fr 1fr 1fr 1.4fr 120px" }}>
                 <span>{t("Токен")}</span>
                 <SortH sort={lsort} setSort={setLsort} k="mcap" label={t("Капитализация")} />
@@ -304,21 +324,10 @@ export default function Profile({ wallet, onConnect }) {
                   </div>
                 );
               })}
-            </div>
-          )}
+            </>)}
 
-          <div className="bottom-card" style={{ marginTop: 18 }}>
-            <div className="bt-tabs" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-              <div className="bt-tab on">{t("Мои позиции")}</div>
-              <span style={{ marginLeft: "auto", fontSize: 14 }}>
-                {t("Общий PnL")}:{" "}
-                <b className={state.totPnl >= 0 ? "pnl-pos" : "pnl-neg"}>
-                  {state.totPnl >= 0 ? "+" : ""}{fmtEth(state.totPnl)} ETH {U(state.totPnl)}
-                </b>
-              </span>
-            </div>
-            {state.positions.length === 0 && <div className="center">{t("Пока нет позиций.")}</div>}
-            {sortRows(state.positions, psort, (p, k) => {
+            {pfTab === "positions" && state.positions.length === 0 && <div className="center">{t("Пока нет позиций.")}</div>}
+            {pfTab === "positions" && sortRows(state.positions, psort, (p, k) => {
               const val = Number(formatEther(p.bal)) * Number(formatEther(p.price));
               return k === "bal" ? Number(formatEther(p.bal))
                 : k === "val" ? val
