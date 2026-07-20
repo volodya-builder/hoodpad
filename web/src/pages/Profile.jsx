@@ -246,12 +246,6 @@ export default function Profile({ wallet, onConnect }) {
                 spellCheck={false}
               />
               <div className="bt-tab on">{t("Мои позиции")}</div>
-              <span style={{ marginLeft: "auto", fontSize: 14 }}>
-                {t("Общий PnL")}:{" "}
-                <b className={state.totPnl >= 0 ? "pnl-pos" : "pnl-neg"}>
-                  {state.totPnl >= 0 ? "+" : ""}{fmtEth(state.totPnl)} ETH {U(state.totPnl)}
-                </b>
-              </span>
             </div>
 
 
