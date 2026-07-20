@@ -393,6 +393,7 @@ const EN = {
     "grows with every trade — first buybacks after the vote",
   // — рефералка —
   "Заработать": "Earn",
+  "Реферал": "Referral",
   "Приглашайте трейдеров — получайте {pct}% каждой их комиссии. Навсегда.":
     "Invite traders — earn {pct}% of every fee they pay. Forever.",
   "Подключите кошелёк, чтобы получить ссылку.": "Connect a wallet to get your link.",

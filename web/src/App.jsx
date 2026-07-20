@@ -310,7 +310,6 @@ export default function App() {
             <a className={`nav-pill ${route.startsWith("/treasury") ? "on" : ""}`} href="#/treasury">{t("Казна")}</a>
             <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>
             <a className={`nav-pill ${route.startsWith("/leaderboard") ? "on" : ""}`} href="#/leaderboard">{t("Лидеры")}</a>
-            <a className={`nav-pill ${route.startsWith("/earn") ? "on" : ""}`} href="#/earn">{t("Заработать")}</a>
             <a className={`nav-pill ${route.startsWith("/about") ? "on" : ""}`} href="#/about">{t("О нас")}</a>
           </div>
           <nav className="nav">
@@ -348,6 +347,8 @@ export default function App() {
                 <div className={`wallet-menu ${walletMenu ? "open" : ""}`}>
                   <a className="wallet-item" href="#/profile" onClick={() => setWalletMenu(false)}
                      style={{ display: "block" }}>{t("Профиль")}</a>
+                  <a className="wallet-item" href="#/earn" onClick={() => setWalletMenu(false)}
+                     style={{ display: "block" }}>{t("Реферал")}</a>
                   {isOwner && (
                     <a className="wallet-item" href="#/admin" onClick={() => setWalletMenu(false)}
                        style={{ display: "block" }}>⚙ {t("Админ-панель")}</a>
@@ -390,7 +391,7 @@ export default function App() {
                 <a href="#/">{t("Обзор")}</a>
                 <a href="#/analytics">{t("Аналитика")}</a>
                 <a href="#/create">{t("Создать")}</a>
-                <a href="#/earn">{t("Заработать")}</a>
+                <a href="#/earn">{t("Реферал")}</a>
                 <a href="#/vote">{t("Голосование")}</a>
                 <a href="#/profile">{t("Профиль")}</a>
                 <a href="#/treasury">{t("Казна")}</a>
