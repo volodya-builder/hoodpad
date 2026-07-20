@@ -333,6 +333,48 @@ const EN = {
     "Transactions are submitted by your wallet and are irreversible. Tokens are volatile and can lose all value. hood does not provide custody, warranties, or financial advice.",
   "только что": "just now",
   "назад": "ago",
+  // — Create page —
+  "Название токена": "Token name",
+  "СИМВОЛ": "SYMBOL",
+  "Буквы, цифры и пробелы. Максимум 32 символа.": "Letters, digits and spaces. Max 32 characters.",
+  "Буквы и цифры. Максимум 10 символов.": "Letters and digits. Max 10 characters.",
+  "Только буквы и цифры!": "Letters and digits only!",
+  "Короткое описание токена": "Short token description",
+  "Я понимаю, что изображение будет опубликовано в блокчейне и станет частью неизменяемых метаданных токена.":
+    "I understand the image will be published on-chain and becomes part of the token's immutable metadata.",
+  "Картинка загружена — нажмите, чтобы заменить": "Image uploaded — click to replace",
+  "Выбрать картинку токена": "Choose a token image",
+  "Сначала подтвердите публикацию": "Confirm publication first",
+  "Профиль X": "X profile",
+  "Макс {max} ETH · 5% сапплая. Исполняется в той же транзакции — защита от снайперов.":
+    "Max {max} ETH · 5% of supply. Executed in the same transaction — sniper protection.",
+  "Больше лимита: максимум {max} ETH (5% сапплая).": "Over the limit: max {max} ETH (5% of supply).",
+  "Получает долю создателя в комиссиях ({pct}%) и покупку создателя. Оставьте пустым, чтобы использовать подключённый кошелёк.":
+    "Receives the creator's fee share ({pct}%) and the developer buy. Leave empty to use the connected wallet.",
+  "Неверный адрес: нужен формат 0x… (42 символа).": "Invalid address: expected 0x… (42 characters).",
+  "Uniswap V3 после градации · ликвидность запирается навсегда":
+    "Uniswap V3 after graduation · liquidity locks forever",
+  "Комиссия запуска": "Launch fee",
+  "Запускаем…": "Launching…",
+  "Подключите кошелёк": "Connect wallet",
+  "Добавьте картинку токена": "Add a token image",
+  "Укажите название и тикер": "Enter a name and ticker",
+  "Запустить токен и купить на {eth} ETH": "Launch token and buy {eth} ETH",
+  "Не удалось прочитать изображение": "Couldn't read the image",
+  "Добавьте картинку токена.": "Add a token image.",
+  "Нужны название и тикер.": "Name and ticker are required.",
+  "Тикер: только буквы и цифры.": "Ticker: letters and digits only.",
+  "Покупка создателя ограничена {max} ETH (5% сапплая).": "Developer buy is capped at {max} ETH (5% of supply).",
+  "Кошелёк создателя: неверный адрес (нужен 0x… из 42 символов).":
+    "Creator wallet: invalid address (expected 0x…, 42 characters).",
+  "Ваш токен": "Your token",
+  "тикер": "ticker",
+  "Вам с каждого трейда": "You earn on every trade",
+  "{pct}% комиссии": "{pct}% of fees",
+  "Градация": "Graduation",
+  "Ликвидность": "Liquidity",
+  "Заперта навсегда": "Locked forever",
+  "Ваша покупка": "Your buy",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });
