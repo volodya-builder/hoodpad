@@ -5,6 +5,8 @@ import { useLang } from "../lib/i18n.jsx";
 
 // Профессиональный свечной график на TradingView Lightweight Charts.
 // Свечи строятся из сделок кривой (points: mcap после каждой сделки).
+// График создаётся ОДИН раз и обновляется данными — зум/скролл пользователя
+// не сбрасываются при фоновом обновлении.
 const INTERVALS = [
   ["1м", 60], ["5м", 300], ["15м", 900], ["1ч", 3600], ["4ч", 14400], ["1д", 86400],
 ];
@@ -41,10 +43,12 @@ function buildCandles(points, trades, rate, ivSec) {
 export default function CandleChart({ points, trades, rate, marks, lines }) {
   const { t } = useLang();
   const ref = useRef(null);
+  const chartRef = useRef(null); // { chart, cs, vs, priceLines, fitted }
   const [iv, setIv] = useState(300);
   const [logScale, setLogScale] = useState(false);
   const [fs, setFs] = useState(false); // полноэкранный режим
 
+  // создание графика — только при смене интервала/шкалы/полноэкрана
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -71,13 +75,20 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
       lastValueVisible: false, priceLineVisible: false,
     });
     chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+    chartRef.current = { chart, cs, vs, priceLines: [], fitted: false };
+    return () => { chart.remove(); chartRef.current = null; };
+  }, [iv, logScale, fs]);
 
+  // обновление данных — без пересоздания и без сброса зума
+  useEffect(() => {
+    const c = chartRef.current;
+    if (!c) return;
     const { candles, volumes } = buildCandles(points, trades, rate, iv);
-    cs.setData(candles);
-    vs.setData(volumes);
+    c.cs.setData(candles);
+    c.vs.setData(volumes);
 
     // отметки казны: выкупы и сжигания
-    const times = new Set(candles.map((c) => c.time));
+    const times = new Set(candles.map((x) => x.time));
     const markers = (marks || [])
       .map((m) => {
         const tb = Math.floor(m.ts / 1000 / iv) * iv;
@@ -92,20 +103,19 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
       })
       .filter(Boolean)
       .sort((a, b) => a.time - b.time);
-    if (markers.length) cs.setMarkers(markers);
+    c.cs.setMarkers(markers);
 
-    // активные лимитные заявки — пунктирные уровни
-    for (const l of lines || []) {
-      if (!(l.value > 0)) continue;
-      cs.createPriceLine({
+    // пунктирные уровни активных заявок
+    for (const pl of c.priceLines) { try { c.cs.removePriceLine(pl); } catch (e) { /* ignore */ } }
+    c.priceLines = (lines || [])
+      .filter((l) => l.value > 0)
+      .map((l) => c.cs.createPriceLine({
         price: l.value, color: l.color, lineWidth: 1,
         lineStyle: 2 /* dashed */, axisLabelVisible: true, title: l.title,
-      });
-    }
+      }));
 
-    chart.timeScale().fitContent();
-    return () => chart.remove();
-  }, [points, trades, rate, iv, marks, logScale, lines, fs]);
+    if (!c.fitted && candles.length > 0) { c.chart.timeScale().fitContent(); c.fitted = true; }
+  }, [points, trades, rate, marks, lines, iv, logScale, fs]);
 
   useEffect(() => {
     if (!fs) return;
