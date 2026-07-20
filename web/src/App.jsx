@@ -304,10 +304,10 @@ export default function App() {
           )}
           <div className={`nav-pills ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(false)}>
             <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/leaderboard") && !route.startsWith("/profile") && !route.startsWith("/vote") && !route.startsWith("/treasury") && !route.startsWith("/about") && !route.startsWith("/earn") ? "on" : ""}`} href="#/">{t("Обзор")}</a>
-            <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>
-            <a className={`nav-pill ${route.startsWith("/leaderboard") ? "on" : ""}`} href="#/leaderboard">{t("Лидеры")}</a>
             <a className={`nav-pill ${route.startsWith("/vote") ? "on" : ""}`} href="#/vote">{t("Голосование")}</a>
             <a className={`nav-pill ${route.startsWith("/treasury") ? "on" : ""}`} href="#/treasury">{t("Казна")}</a>
+            <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>
+            <a className={`nav-pill ${route.startsWith("/leaderboard") ? "on" : ""}`} href="#/leaderboard">{t("Лидеры")}</a>
             <a className={`nav-pill ${route.startsWith("/earn") ? "on" : ""}`} href="#/earn">{t("Заработать")}</a>
             <a className={`nav-pill ${route.startsWith("/about") ? "on" : ""}`} href="#/about">{t("О нас")}</a>
           </div>
@@ -382,12 +382,13 @@ export default function App() {
             <div className="fcol">
               <h4>{t("Продукт")}</h4>
               <a href="#/">{t("Обзор")}</a>
-              <a href="#/analytics">{t("Аналитика")}</a>
+              <a href="#/create">{t("Создать")}</a>
               <a href="#/vote">{t("Голосование")}</a>
               <a href="#/treasury">{t("Казна")}</a>
-              <a href="#/about">{t("О нас")}</a>
-              <a href="#/create">{t("Создать")}</a>
+              <a href="#/analytics">{t("Аналитика")}</a>
+              <a href="#/earn">{t("Заработать")}</a>
               <a href="#/profile">{t("Профиль")}</a>
+              <a href="#/about">{t("О нас")}</a>
             </div>
             <div className="fcol">
               <h4>{t("Правовое")}</h4>
