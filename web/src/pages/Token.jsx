@@ -876,7 +876,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                     {dollars(uPnl)} ({uPct >= 0 ? "+" : ""}{fmt(uPct, 1)}%)
                   </b>
                 </div>
-                <div className="tk-cell"><span>{t("Общая прибыль")}</span>
+                <div className="tk-cell"><span>{t("Прибыль")}</span>
                   <b style={{ color: totPnl >= 0 ? "var(--leaf)" : "var(--red)" }}>
                     {dollars(totPnl)} ({totPct >= 0 ? "+" : ""}{fmt(totPct, 1)}%)
                   </b>
