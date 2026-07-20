@@ -834,30 +834,53 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             const feesEth = mine.reduce((s, x) => s + (x.fee || 0), 0);
             const balTok = Number(formatEther(data.balance));
             const valEth = balTok * Number(formatEther(data.price));
-            const pnlEth = valEth + sellsEth - buysEth;
-            const pnlPct = buysEth > 0 ? (pnlEth / buysEth) * 100 : 0;
+            const avgBuy = buysTok > 0 ? buysEth / buysTok : 0;   // ETH за токен
+            const avgSell = sellsTok > 0 ? sellsEth / sellsTok : 0;
+            const costRem = balTok * avgBuy;                       // себестоимость остатка
+            const uPnl = valEth - costRem;                         // нереализованный
+            const uPct = costRem > 0 ? (uPnl / costRem) * 100 : 0;
+            const totPnl = valEth + sellsEth - buysEth;            // общая прибыль
+            const totPct = buysEth > 0 ? (totPnl / buysEth) * 100 : 0;
             const lastTs = mine.reduce((s, x) => Math.max(s, x.ts || 0), 0);
+            const firstTs = mine.reduce((s, x) => (x.ts ? Math.min(s, x.ts) : s), Infinity);
+            const holdMs = firstTs !== Infinity ? Date.now() - firstTs : 0;
+            const holdStr = holdMs >= 86400000 ? `${Math.floor(holdMs / 86400000)}${t("д")}`
+              : holdMs >= 3600000 ? `${Math.floor(holdMs / 3600000)}${t("ч")}`
+              : `${Math.max(1, Math.floor(holdMs / 60000))}${t("м")}`;
             return [(
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14 }} key="tok">
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14, flexWrap: "wrap" }} key="tok">
                 {meta.image && (
                   <img src={meta.image} alt="" style={{ width: 34, height: 34, borderRadius: 9 }}
                        onError={(e) => (e.target.style.display = "none")} />
                 )}
                 <b style={{ fontSize: 16 }}>{data.name}</b>
                 <span className="ticker">${data.symbol}</span>
+                <span className="mono th-addr" style={{ marginTop: 0 }} onClick={copyCA} title={t("Скопировать адрес")}>
+                  {short(tokenAddress)} {copiedCA ? "✓" : "⧉"}
+                </span>
               </div>
             ), (
               <div className="tk-cells" style={{ margin: "14px 0 2px" }} key="sum">
-                <div className="tk-cell"><span>{t("Активность")}</span><b>{lastTs ? timeAgo(lastTs) : "—"}</b></div>
-                <div className="tk-cell"><span>{t("Куплено")}</span><b>{dollars(buysEth)}</b><span>{fmt(buysTok, 0)}</span></div>
-                <div className="tk-cell"><span>{t("Продано")}</span><b>{dollars(sellsEth)}</b><span>{fmt(sellsTok, 0)}</span></div>
-                <div className="tk-cell"><span>{t("Баланс")}</span><b>{dollars(valEth)}</b><span>{fmt(balTok, 0)} ({fmt(balTok / 1e7, 2)}%)</span></div>
+                <div className="tk-cell"><span>{t("Активность")}</span><b>{lastTs ? timeAgo(lastTs) : "—"}</b>
+                  <span>{mine.length} {t("сделок")}</span></div>
+                <div className="tk-cell"><span>{t("Куплено")}</span><b>{dollars(buysEth)}</b>
+                  <span>{fmt(buysTok, 0)} · ${fmtEth(avgBuy * rate)}</span></div>
+                <div className="tk-cell"><span>{t("Продано")}</span><b>{dollars(sellsEth)}</b>
+                  <span>{sellsTok > 0 ? <>{fmt(sellsTok, 0)} · ${fmtEth(avgSell * rate)}</> : "—"}</span></div>
+                <div className="tk-cell"><span>{t("Баланс")}</span><b>{dollars(valEth)}</b>
+                  <span>{fmt(balTok, 0)} ({fmt(balTok / 1e7, 2)}%)</span></div>
                 <div className="tk-cell"><span>uPnL</span>
-                  <b style={{ color: pnlEth >= 0 ? "var(--leaf)" : "var(--red)" }}>
-                    {dollars(pnlEth)} ({pnlPct >= 0 ? "+" : ""}{fmt(pnlPct, 1)}%)
+                  <b style={{ color: uPnl >= 0 ? "var(--leaf)" : "var(--red)" }}>
+                    {dollars(uPnl)} ({uPct >= 0 ? "+" : ""}{fmt(uPct, 1)}%)
+                  </b>
+                </div>
+                <div className="tk-cell"><span>{t("Общая прибыль")}</span>
+                  <b style={{ color: totPnl >= 0 ? "var(--leaf)" : "var(--red)" }}>
+                    {dollars(totPnl)} ({totPct >= 0 ? "+" : ""}{fmt(totPct, 1)}%)
                   </b>
                 </div>
                 <div className="tk-cell"><span>{t("Комиссии")}</span><b>{dollars(feesEth)}</b></div>
+                <div className="tk-cell"><span>{t("Удержание")}</span><b>{holdStr} {uPnl >= 0 && totPnl >= 0 ? "💎" : ""}</b></div>
               </div>
             )];
           })()}
