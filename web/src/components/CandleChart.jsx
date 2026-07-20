@@ -92,16 +92,20 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
       lastValueVisible: false, priceLineVisible: false,
     });
     chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
-    chartRef.current = { chart, cs, vs, priceLines: [], fitted: false, volByTime: new Map(), volTotal: 0 };
+    chartRef.current = { chart, cs, vs, priceLines: [], fitted: false, volByTime: new Map(), volTotal: 0, dirByTime: new Map() };
 
     // объём в левом верхнем углу: всего, а при наведении — объём свечи
     chart.subscribeCrosshairMove((param) => {
       const c = chartRef.current, el = legendRef.current;
       if (!c || !el) return;
       const v = param && param.time != null ? c.volByTime.get(param.time) : undefined;
-      el.textContent = v != null
-        ? `Volume: ${fmtEth(v)} ETH`
-        : `Volume: ${fmtEth(c.volTotal)} ETH`;
+      if (v != null) {
+        // цвет цифр — по направлению свечи
+        const up = c.dirByTime.get(param.time);
+        el.innerHTML = `Volume: <span style="color:${up ? "var(--leaf, #7ac74f)" : "var(--red, #e06a4a)"}">${fmtEth(v)} ETH</span>`;
+      } else {
+        el.textContent = `Volume: ${fmtEth(c.volTotal)} ETH`;
+      }
     });
 
     return () => { chart.remove(); chartRef.current = null; };
@@ -118,6 +122,7 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
     c.vs.setData(volumes);
     c.volByTime = new Map(volumes.map((v) => [v.time, v.value]));
     c.volTotal = volumes.reduce((s, v) => s + v.value, 0);
+    c.dirByTime = new Map(candles.map((x) => [x.time, x.close >= x.open]));
     if (legendRef.current) legendRef.current.textContent = `Volume: ${fmtEth(c.volTotal)} ETH`;
 
     // отметки казны: выкупы и сжигания
