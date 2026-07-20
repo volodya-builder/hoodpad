@@ -206,7 +206,7 @@ export default function Profile({ wallet, onConnect }) {
 
       {state && (
         <>
-          <div className="ana-grid" style={{ margin: "18px 0 8px" }}>
+          <div className="ana-grid" style={{ margin: "34px 0 8px" }}>
             <div className="ana-card pf-stat">
               <div className="k">{t("Общий PnL")}</div>
               <div className="pf-usd" style={{ color: state.totPnl >= 0 ? "var(--leaf)" : "var(--red)" }}>
