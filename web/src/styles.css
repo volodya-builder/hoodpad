@@ -267,9 +267,9 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 }
 .token-grid-wrap { position: relative; }
 .back-float {
-  /* слева от панели монет, на уровне её верха */
-  position: fixed; top: 84px; left: calc(50vw - 982px); z-index: 60;
-  padding: 9px 16px; font-size: 13px;
+  /* слева от панели монет, вровень с верхом карточек */
+  position: fixed; top: 112px; left: calc(50vw - 1000px); z-index: 60;
+  padding: 12px 22px; font-size: 14px;
 }
 @media (max-width: 2140px) {
   .back-float { left: 14px; }
