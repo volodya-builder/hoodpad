@@ -421,6 +421,29 @@ const EN = {
   "Старые": "Oldest",
   "Тёмная тема": "Dark theme",
   "Светлая тема": "Light theme",
+  // — условные заявки —
+  "Условные заявки": "Conditional orders",
+  "Лимит-покупка": "Limit buy",
+  "Стоп-лосс": "Stop-loss",
+  "Тейк-профит": "Take-profit",
+  "цена, ETH": "price, ETH",
+  "Создать": "Place",
+  "капитализации": "market cap",
+  "Куплю на указанную сумму, когда цена опустится до заданной.":
+    "Buys for the given amount when the price drops to the target.",
+  "Продам весь баланс, если цена упадёт до заданной.":
+    "Sells your entire balance if the price falls to the target.",
+  "Продам весь баланс, когда цена вырастет до заданной.":
+    "Sells your entire balance when the price rises to the target.",
+  "Работает, пока открыта вкладка — при срабатывании кошелёк попросит подпись.":
+    "Active while this tab is open — your wallet will ask for a signature when triggered.",
+  "Заявка сработала": "Order triggered",
+  "Нет баланса токена": "No token balance",
+  "ждёт": "waiting",
+  "исполняется…": "executing…",
+  "исполнена": "filled",
+  "ошибка": "failed",
+  "Удалить": "Remove",
   "Меню": "Menu",
   "Реализовано": "Realized",
   "Контракт": "Contract",

@@ -616,6 +616,25 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
   .nav-pill { padding: 7px 11px; font-size: 12.5px; }
   .header-inner { gap: 12px; }
 }
+/* -------- условные заявки -------- */
+.orders-box { margin-top: 18px; border-top: 1px dashed var(--border); padding-top: 14px; }
+.orders-head { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: var(--text-dim); margin-bottom: 10px; }
+.order-types { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.order-form { display: flex; gap: 8px; align-items: stretch; }
+.order-form .btn { padding: 0 16px; }
+.order-list { margin-top: 12px; }
+.order-row { display: flex; gap: 10px; align-items: center; font-size: 12.5px; padding: 8px 2px; border-bottom: 1px solid var(--border); }
+.order-row:last-child { border-bottom: none; }
+.order-row .dim { color: var(--text-dim); }
+.ord-tag { font-weight: 700; }
+.ord-tag.buy { color: var(--gold); }
+.ord-tag.stop { color: #e06a4a; }
+.ord-tag.take { color: var(--leaf, #7ac74f); }
+.ord-st { margin-left: auto; color: var(--text-dim); }
+.ord-st.done { color: var(--leaf, #7ac74f); }
+.ord-st.failed { color: #e06a4a; }
+.ord-x { cursor: pointer; color: var(--text-dim); padding: 2px 6px; }
+.ord-x:hover { color: var(--text); }
 .lang-btn { width: auto !important; padding: 0 11px; font-size: 12px; font-weight: 800; letter-spacing: .5px; }
 .lang-btn span { opacity: .4; transition: opacity .15s, color .15s; }
 .lang-btn span.on { opacity: 1; color: var(--gold); }

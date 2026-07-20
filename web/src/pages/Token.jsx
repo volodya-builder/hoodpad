@@ -9,6 +9,7 @@ import Chat from "./Chat.jsx";
 import { useSplit, loadCreationTimes, timeAgo, useClock, useSupport } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 import { bindRefIfNeeded } from "../lib/referral.js";
+import { ordersFor, addOrder, updateOrder, removeOrder, askNotifyPermission, notify } from "../lib/orders.js";
 
 const SLIPPAGE_CHOICES = [0.5, 1, 3, 5]; // %
 
@@ -496,6 +497,91 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     }
   }
 
+  // ---------------- условные заявки (клиентские) ----------------
+  const tokenLower = tokenAddress.toLowerCase();
+  const [orders, setOrders] = useState(() => ordersFor(tokenLower));
+  const [ordType, setOrdType] = useState("buy");   // buy | stop | take
+  const [ordPrice, setOrdPrice] = useState("");
+  const [ordAmt, setOrdAmt] = useState("");
+
+  function placeOrder() {
+    const p = Number(ordPrice);
+    if (!(p > 0)) return;
+    if (ordType === "buy" && !(Number(ordAmt) > 0)) return;
+    askNotifyPermission();
+    addOrder({
+      token: tokenLower, type: ordType, priceEth: p,
+      amountEth: ordType === "buy" ? Number(ordAmt) : undefined,
+    });
+    setOrders(ordersFor(tokenLower));
+    setOrdPrice(""); setOrdAmt("");
+  }
+
+  async function execOrder(o) {
+    try {
+      const slipBps = 4000n; // авто 40% — заявка должна исполниться
+      let hash;
+      if (o.type === "buy") {
+        const value = parseEther(String(o.amountEth));
+        const out = await publicClient.readContract({
+          address: data.pool, abi: poolAbi, functionName: "quoteBuy", args: [value],
+        });
+        const minOut = out - (out * slipBps) / 10000n;
+        hash = await wallet.walletClient.writeContract({
+          address: data.pool, abi: poolAbi, functionName: "buy",
+          args: [minOut, wallet.account], value,
+        });
+      } else {
+        const tokensIn = data.balance;
+        if (tokensIn === 0n) throw new Error(t("Нет баланса токена"));
+        const allowance = await publicClient.readContract({
+          address: tokenAddress, abi: tokenAbi, functionName: "allowance",
+          args: [wallet.account, data.pool],
+        });
+        if (allowance < tokensIn) {
+          const ah = await wallet.walletClient.writeContract({
+            address: tokenAddress, abi: tokenAbi, functionName: "approve",
+            args: [data.pool, tokensIn],
+          });
+          await publicClient.waitForTransactionReceipt({ hash: ah });
+        }
+        const gross = await publicClient.readContract({
+          address: data.pool, abi: poolAbi, functionName: "quoteSell", args: [tokensIn],
+        });
+        const net = gross - (gross * 100n) / 10000n;
+        const minOut = net - (net * slipBps) / 10000n;
+        hash = await wallet.walletClient.writeContract({
+          address: data.pool, abi: poolAbi, functionName: "sell", args: [tokensIn, minOut],
+        });
+      }
+      await publicClient.waitForTransactionReceipt({ hash });
+      updateOrder(o.id, { status: "done" });
+      bindRefIfNeeded(wallet.account);
+      await load();
+    } catch (err) {
+      updateOrder(o.id, { status: "failed", err: err.shortMessage || err.message });
+    }
+    setOrders(ordersFor(tokenLower));
+  }
+
+  // следим за ценой (data обновляется каждые 12с)
+  useEffect(() => {
+    if (!data || !wallet || data.graduated) return;
+    const priceNow = Number(formatEther(data.price));
+    for (const o of ordersFor(tokenLower)) {
+      if (o.status !== "active") continue;
+      const hit =
+        (o.type === "buy" && priceNow <= o.priceEth) ||
+        (o.type === "stop" && priceNow <= o.priceEth) ||
+        (o.type === "take" && priceNow >= o.priceEth);
+      if (!hit) continue;
+      updateOrder(o.id, { status: "firing" });
+      setOrders(ordersFor(tokenLower));
+      notify("hood", `${t("Заявка сработала")}: ${data.symbol} @ ${o.priceEth} ETH`);
+      execOrder({ ...o });
+    }
+  }, [data && data.price, wallet && wallet.account]); // eslint-disable-line
+
   async function migrate() {
     setError("");
     if (!wallet) return onConnect();
@@ -941,6 +1027,63 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 : `${t("Продать")} ${data.symbol}`}
             </button>
             {error && <div className="error">{error}</div>}
+
+            <div className="orders-box">
+              <div className="orders-head">{t("Условные заявки")}</div>
+              <div className="order-types">
+                {[["buy", t("Лимит-покупка")], ["stop", t("Стоп-лосс")], ["take", t("Тейк-профит")]].map(([k, lbl]) => (
+                  <div key={k} className={`fpill ${ordType === k ? "on" : ""}`} onClick={() => setOrdType(k)}>{lbl}</div>
+                ))}
+              </div>
+              <div className="order-form">
+                <div className="suffix-input" style={{ flex: 1 }}>
+                  <input inputMode="decimal" placeholder={data ? formatEther(data.price) : "0.0"}
+                         value={ordPrice} onChange={(e) => setOrdPrice(e.target.value.replace(",", "."))} />
+                  <b>{t("цена, ETH")}</b>
+                </div>
+                {ordType === "buy" && (
+                  <div className="suffix-input" style={{ width: 130 }}>
+                    <input inputMode="decimal" placeholder="0.01"
+                           value={ordAmt} onChange={(e) => setOrdAmt(e.target.value.replace(",", "."))} />
+                    <b>ETH</b>
+                  </div>
+                )}
+                <button className="btn" onClick={placeOrder}
+                        disabled={!wallet || !(Number(ordPrice) > 0) || (ordType === "buy" && !(Number(ordAmt) > 0))}>
+                  {t("Создать")}
+                </button>
+              </div>
+              {Number(ordPrice) > 0 && (
+                <div className="hint">≈ {usd(Number(ordPrice) * 1e9 * rate)} {t("капитализации")}</div>
+              )}
+              <div className="hint">
+                {ordType === "buy"
+                  ? t("Куплю на указанную сумму, когда цена опустится до заданной.")
+                  : ordType === "stop"
+                  ? t("Продам весь баланс, если цена упадёт до заданной.")
+                  : t("Продам весь баланс, когда цена вырастет до заданной.")}{" "}
+                {t("Работает, пока открыта вкладка — при срабатывании кошелёк попросит подпись.")}
+              </div>
+              {orders.length > 0 && (
+                <div className="order-list">
+                  {orders.map((o) => (
+                    <div className="order-row" key={o.id}>
+                      <span className={`ord-tag ${o.type}`}>
+                        {o.type === "buy" ? t("Лимит-покупка") : o.type === "stop" ? t("Стоп-лосс") : t("Тейк-профит")}
+                      </span>
+                      <span className="mono">@ {fmtEth(o.priceEth)} ETH</span>
+                      {o.type === "buy" && <span className="dim">{o.amountEth} ETH</span>}
+                      <span className={`ord-st ${o.status}`}>
+                        {o.status === "active" ? t("ждёт") : o.status === "firing" ? t("исполняется…")
+                          : o.status === "done" ? "✓ " + t("исполнена") : "✕ " + t("ошибка")}
+                      </span>
+                      <span className="ord-x" title={t("Удалить")}
+                            onClick={() => { removeOrder(o.id); setOrders(ordersFor(tokenLower)); }}>✕</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
