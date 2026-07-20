@@ -889,12 +889,20 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
 /* сводка позиции в одну строку */
 .pos-row { display: flex; align-items: center; gap: 26px; margin: 16px 0 4px; flex-wrap: wrap; }
 .pos-row {
-  gap: 14px; cursor: pointer;
-  justify-content: space-between;
-  padding: 10px 14px; margin-left: -14px; border-radius: 14px;
+  gap: 0; cursor: pointer;
+  justify-content: flex-start; align-items: stretch;
+  padding: 12px 14px; margin-left: -14px; border-radius: 14px;
   transition: background .15s;
   flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
 }
+/* ячейки одной высоты, разделены тонкими линиями */
+.pos-row .tk-cell {
+  flex: 1 1 0; min-width: 96px;
+  padding: 2px 16px; box-sizing: border-box;
+  border-left: 1px solid var(--border);
+  justify-content: flex-start;
+}
+.pos-row .pos-id { padding-right: 16px; }
 .pos-row::-webkit-scrollbar { display: none; }
 .pos-row .tk-cell { white-space: nowrap; }
 .pos-row:hover { background: var(--bg-soft); }
