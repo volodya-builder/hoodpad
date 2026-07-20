@@ -271,8 +271,9 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 }
 /* -------- боковой список монет на странице токена -------- */
 .tok-sidebar {
-  /* прижата к сетке: зазор до графика такой же, как между карточками (16px) */
-  position: absolute; left: -320px; top: 42px; bottom: 88px; width: 320px; z-index: 40;
+  /* фиксирована к экрану: при прокрутке остаётся на месте, под шапкой.
+     left = центр − половина сетки (1456/2) − ширина панели + сдвиг сетки (168) */
+  position: fixed; left: calc(50vw - 880px); top: 84px; bottom: 14px; width: 320px; z-index: 40;
   box-sizing: border-box;
   background: linear-gradient(180deg, #1a1a19 0%, #151514 100%);
   border: 1px solid var(--border); border-radius: var(--radius);
