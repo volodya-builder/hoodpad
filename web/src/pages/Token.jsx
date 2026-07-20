@@ -853,8 +853,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                   <img src={meta.image} alt="" style={{ width: 34, height: 34, borderRadius: 9 }}
                        onError={(e) => (e.target.style.display = "none")} />
                 )}
-                <b style={{ fontSize: 16 }}>{data.name}</b>
-                <span className="ticker">${data.symbol}</span>
+                <b style={{ fontSize: 16 }} className="ticker">${data.symbol}</b>
                 <span className="mono th-addr" style={{ marginTop: 0 }} onClick={copyCA} title={t("Скопировать адрес")}>
                   {short(tokenAddress)} {copiedCA ? "✓" : "⧉"}
                 </span>
