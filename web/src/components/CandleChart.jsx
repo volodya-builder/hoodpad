@@ -52,7 +52,7 @@ function buildCandles(points, trades, rate, ivSec) {
   return { candles, volumes };
 }
 
-export default function CandleChart({ points, trades, rate, marks, lines }) {
+export default function CandleChart({ points, trades, rate, marks, lines, drawKey = "" }) {
   const { t } = useLang();
   const ref = useRef(null);
   const chartRef = useRef(null); // { chart, cs, vs, priceLines, fitted, volByTime, volTotal }
@@ -62,6 +62,111 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
   const [fs, setFs] = useState(false); // полноэкранный режим
   const [showLines, setShowLines] = useState(true); // уровни заявок на графике
   const linesRef = useRef([]); // для autoscale
+
+  // ---- инструменты рисования (тренд, уровень, линейка) ----
+  const [tool, setTool] = useState(null); // null | "trend" | "hline" | "ruler"
+  const toolRef = useRef(null);
+  toolRef.current = tool;
+  const drawCvRef = useRef(null);
+  const drawingsRef = useRef([]);
+  const tempRef = useRef(null);
+  const storeKey = () => `hood_draw_${drawKey}_${iv}`;
+  const persistDraw = () => {
+    try { localStorage.setItem(storeKey(), JSON.stringify(drawingsRef.current)); } catch (e) { /* ignore */ }
+  };
+  const redrawRef = useRef(() => {});
+  redrawRef.current = () => {
+    const c = chartRef.current, cv = drawCvRef.current, host = ref.current;
+    if (!c || !cv || !host) return;
+    const dpr = window.devicePixelRatio || 1;
+    const w = host.clientWidth, h = host.clientHeight;
+    if (cv.width !== w * dpr || cv.height !== h * dpr) {
+      cv.width = w * dpr; cv.height = h * dpr;
+      cv.style.width = w + "px"; cv.style.height = h + "px";
+    }
+    const ctx = cv.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    const X = (lg) => c.chart.timeScale().logicalToCoordinate(lg);
+    const Y = (p) => c.cs.priceToCoordinate(p);
+    const all = tempRef.current ? [...drawingsRef.current, tempRef.current] : drawingsRef.current;
+    for (const d of all) {
+      ctx.strokeStyle = d.type === "ruler" ? "#e2ff5c" : "var(--gold)";
+      ctx.strokeStyle = d.type === "ruler" ? "#e2ff5c" : "#d3b136";
+      ctx.lineWidth = 1.5;
+      if (d.type === "hline") {
+        const y = Y(d.price);
+        if (y == null) continue;
+        ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+        ctx.fillStyle = "#d3b136"; ctx.font = "10px monospace";
+        ctx.fillText(usd(d.price), 6, y - 4);
+      } else {
+        const x1 = X(d.p1.lg), y1 = Y(d.p1.price), x2 = X(d.p2.lg), y2 = Y(d.p2.price);
+        if (x1 == null || y1 == null || x2 == null || y2 == null) continue;
+        ctx.setLineDash(d.type === "ruler" ? [5, 4] : []);
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        ctx.setLineDash([]);
+        for (const [px, py] of [[x1, y1], [x2, y2]]) {
+          ctx.fillStyle = "#0b0b0b"; ctx.beginPath(); ctx.arc(px, py, 3.5, 0, 7); ctx.fill();
+          ctx.strokeStyle = "#d3b136"; ctx.beginPath(); ctx.arc(px, py, 3.5, 0, 7); ctx.stroke();
+        }
+        if (d.type === "ruler") {
+          const pct = d.p1.price !== 0 ? ((d.p2.price - d.p1.price) / d.p1.price) * 100 : 0;
+          const label = `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`;
+          ctx.font = "600 12px sans-serif";
+          const tw = ctx.measureText(label).width + 12;
+          const lx = Math.min(x1, x2) + Math.abs(x2 - x1) / 2 - tw / 2;
+          const ly = Math.min(y1, y2) - 22;
+          ctx.fillStyle = pct >= 0 ? "#7ac74f" : "#e06a4a";
+          ctx.beginPath(); ctx.roundRect(lx, ly, tw, 17, 5); ctx.fill();
+          ctx.fillStyle = "#0b0b0b";
+          ctx.fillText(label, lx + 6, ly + 12.5);
+        }
+      }
+    }
+  };
+
+  // загрузка рисунков при смене монеты/интервала
+  useEffect(() => {
+    try { drawingsRef.current = JSON.parse(localStorage.getItem(storeKey())) || []; }
+    catch (e) { drawingsRef.current = []; }
+    redrawRef.current();
+  }, [drawKey, iv]); // eslint-disable-line
+
+  const cvPoint = (e) => {
+    const c = chartRef.current, cv = drawCvRef.current;
+    const r = cv.getBoundingClientRect();
+    const x = e.clientX - r.left, y = e.clientY - r.top;
+    return { lg: c.chart.timeScale().coordinateToLogical(x), price: c.cs.coordinateToPrice(y), x, y };
+  };
+  const onDrawDown = (e) => {
+    if (!toolRef.current || !chartRef.current) return;
+    const p = cvPoint(e);
+    if (p.lg == null || p.price == null) return;
+    if (toolRef.current === "hline") {
+      drawingsRef.current.push({ type: "hline", price: p.price });
+      persistDraw(); setTool(null); redrawRef.current();
+      return;
+    }
+    tempRef.current = { type: toolRef.current, p1: { lg: p.lg, price: p.price }, p2: { lg: p.lg, price: p.price } };
+    redrawRef.current();
+  };
+  const onDrawMove = (e) => {
+    if (!tempRef.current) return;
+    const p = cvPoint(e);
+    if (p.lg == null || p.price == null) return;
+    tempRef.current.p2 = { lg: p.lg, price: p.price };
+    redrawRef.current();
+  };
+  const onDrawUp = () => {
+    const tmp = tempRef.current;
+    tempRef.current = null;
+    if (tmp && tmp.type === "trend") { drawingsRef.current.push(tmp); persistDraw(); }
+    setTool(null);
+    redrawRef.current();
+  };
+  const clearDraw = () => { drawingsRef.current = []; persistDraw(); redrawRef.current(); };
 
   // создание графика — только при смене интервала/шкалы/полноэкрана
   useEffect(() => {
@@ -104,6 +209,11 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
     });
     chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
     chartRef.current = { chart, cs, vs, priceLines: [], fitted: false, volByTime: new Map(), volTotal: 0, dirByTime: new Map() };
+    // рисунки следуют за скроллом/зумом
+    chart.timeScale().subscribeVisibleLogicalRangeChange(() => redrawRef.current());
+    const ro = new ResizeObserver(() => redrawRef.current());
+    ro.observe(el);
+    chartRef.current.ro = ro;
 
     // объём в левом верхнем углу: всего, а при наведении — объём свечи
     chart.subscribeCrosshairMove((param) => {
@@ -119,7 +229,7 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
       el.innerHTML = volLegendHtml(c, tkey);
     });
 
-    return () => { chart.remove(); chartRef.current = null; };
+    return () => { try { ro.disconnect(); } catch (e) { /* ignore */ } chart.remove(); chartRef.current = null; };
   }, [iv, logScale, fs]);
 
   // обновление данных — без пересоздания и без сброса зума
@@ -165,6 +275,7 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
       lineStyle: 2 /* dashed */, axisLabelVisible: true, title: l.title,
     }));
 
+    redrawRef.current();
     if (!c.fitted && candles.length > 0) {
       const ts = c.chart.timeScale();
       ts.fitContent();
@@ -191,6 +302,36 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
       <div className="chart-area" style={{ position: "relative" }}>
         <div ref={ref} className="chart-resize"
              title={t("Потяните за правый нижний угол, чтобы изменить размер")} />
+        <canvas ref={drawCvRef} className="draw-canvas"
+                style={{ pointerEvents: tool ? "auto" : "none", cursor: tool ? "crosshair" : "default" }}
+                onMouseDown={onDrawDown} onMouseMove={onDrawMove} onMouseUp={onDrawUp} />
+        <div className="draw-tools">
+          <button className={`dt-btn ${tool === "trend" ? "on" : ""}`} title={t("Трендовая линия")}
+                  onClick={() => setTool(tool === "trend" ? null : "trend")}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="4" y1="20" x2="20" y2="4" /><circle cx="4" cy="20" r="2.4" fill="currentColor" /><circle cx="20" cy="4" r="2.4" fill="currentColor" />
+            </svg>
+          </button>
+          <button className={`dt-btn ${tool === "hline" ? "on" : ""}`} title={t("Горизонтальный уровень")}
+                  onClick={() => setTool(tool === "hline" ? null : "hline")}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="3" y1="12" x2="21" y2="12" /><circle cx="12" cy="12" r="2.4" fill="currentColor" />
+            </svg>
+          </button>
+          <button className={`dt-btn ${tool === "ruler" ? "on" : ""}`} title={t("Линейка (изменение в %)")}
+                  onClick={() => setTool(tool === "ruler" ? null : "ruler")}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="10" width="18" height="6" rx="1" transform="rotate(-25 12 13)" />
+              <line x1="8" y1="13" x2="8" y2="16" transform="rotate(-25 12 13)" />
+              <line x1="13" y1="11" x2="13" y2="14" transform="rotate(-25 12 13)" />
+            </svg>
+          </button>
+          <button className="dt-btn" title={t("Удалить все рисунки")} onClick={clearDraw}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
         <div className="candle-ivs candle-ivs-overlay">
           {INTERVALS.map(([lbl, sec]) => (
             <div key={sec} className={`fpill ${iv === sec ? "on" : ""}`} onClick={() => setIv(sec)}>

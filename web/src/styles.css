@@ -793,7 +793,7 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
 .candle-ivs-overlay .fpill { background: #11121088; backdrop-filter: blur(4px); }
 .chart-wrap .chart-area { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .chart-legend {
-  position: absolute; top: 48px; left: 14px; z-index: 7;
+  position: absolute; top: 52px; left: 50px; z-index: 7;
   font-size: 11px; color: var(--text-dim); pointer-events: none;
   font-variant-numeric: tabular-nums; font-weight: 600;
 }
@@ -818,6 +818,21 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
 .pos-id .ticker { font-size: 13px !important; }
 .pos-id .th-addr { font-size: 10.5px; }
 .pos-id img { width: 28px !important; height: 28px !important; }
+/* инструменты рисования на графике */
+.draw-canvas { position: absolute; inset: 0; z-index: 6; }
+.draw-tools {
+  position: absolute; top: 52px; left: 10px; z-index: 8;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.dt-btn {
+  width: 30px; height: 30px; border-radius: 8px; cursor: pointer;
+  background: #11121088; backdrop-filter: blur(4px);
+  border: 1px solid var(--border); color: var(--text-dim);
+  display: flex; align-items: center; justify-content: center;
+  transition: color .15s, border-color .15s;
+}
+.dt-btn:hover { color: var(--text); }
+.dt-btn.on { color: var(--gold); border-color: var(--gold); }
 .chart-log-btn {
   position: absolute; bottom: 6px; right: 8px; z-index: 7;
   font-size: 10px; font-weight: 800; letter-spacing: .5px;
