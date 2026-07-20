@@ -10,6 +10,7 @@ import { useSplit, loadCreationTimes, timeAgo, useClock, useSupport } from "../l
 import { useLang } from "../lib/i18n.jsx";
 import { bindRefIfNeeded } from "../lib/referral.js";
 import CandleChart from "../components/CandleChart.jsx";
+import TokenSidebar from "../components/TokenSidebar.jsx";
 import RGL, { WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -668,6 +669,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     <>
     <div className="token-grid-wrap">
       <a className="btn back-float" href="#/">‹ {t("Назад")}</a>
+      <TokenSidebar current={tokenAddress} />
       <Grid className="layout" layout={layout} cols={12} rowHeight={26} margin={[16, 16]}
             draggableHandle=".drag-handle" onLayoutChange={saveLayout}
             resizeHandles={["se", "s", "e"]}>

@@ -89,6 +89,22 @@ export async function subgraphVotes(epoch) {
   }));
 }
 
+/** Объём торгов за 24ч по всем пулам одним запросом: poolLower -> ETH. */
+let _vol24 = { v: null, t: 0 };
+export async function subgraphVolumes24() {
+  if (_vol24.v && Date.now() - _vol24.t < 60_000) return _vol24.v;
+  const since = Math.floor(Date.now() / 1000) - 86400;
+  const d = await gql(`{ trades(first: 1000, orderBy: timestamp, orderDirection: desc,
+    where: { timestamp_gt: "${since}" }) { pool ethAmount } }`);
+  const m = {};
+  for (const tr of d.trades || []) {
+    const p = tr.pool.toLowerCase();
+    m[p] = (m[p] || 0) + Number(tr.ethAmount) / 1e18;
+  }
+  _vol24 = { v: m, t: Date.now() };
+  return m;
+}
+
 /** Комиссии трейдера (для рефералки): сумма fee по его сделкам с момента sinceTs. */
 export async function subgraphTraderFees(trader, sinceTs = 0) {
   const d = await gql(`{ trades(first: 1000, orderBy: timestamp, orderDirection: desc,

@@ -458,6 +458,8 @@ const EN = {
   "Сделки трейдера": "Trader's trades",
   "Открыть профиль трейдера": "Open trader profile",
   "Кол-во": "Amount",
+  "Капа": "MCap",
+  "Объём": "Volume",
   "Покупка": "Buy",
   "Продажа": "Sell",
   "Куплено": "Bought",
