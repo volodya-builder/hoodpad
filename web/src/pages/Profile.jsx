@@ -380,34 +380,6 @@ export default function Profile({ wallet, onConnect }) {
             })}
           </div>
 
-          <div className="bottom-card">
-            <div className="bt-tabs"><div className="bt-tab on">{t("Мои сделки")}</div></div>
-            {state.myTrades.length === 0 && <div className="center">{t("Сделок пока нет.")}</div>}
-            {state.myTrades.length > 0 && (
-              <>
-                <div className="trow hdr">
-                  <span>{t("Тип")}</span>
-                  <span>{t("Токен")}</span>
-                  <SortH sort={trsort} setSort={setTrsort} k="eth" label="ETH" />
-                  <SortH sort={trsort} setSort={setTrsort} k="tokens" label={t("Токены")} />
-                  <SortH sort={trsort} setSort={setTrsort} k="block" label={t("Блок")} />
-                </div>
-                {sortRows(state.myTrades, trsort, (tr, k) =>
-                  k === "eth" ? tr.eth : k === "tokens" ? tr.tokens : Number(tr.block)
-                ).map((tr, i) => (
-                  <a className="trow" key={i} href={`#/token/${tr.token}`} style={{ cursor: "pointer" }}>
-                    <span className={tr.side === "buy" ? "side-buy" : "side-sell"}>
-                      {t(tr.side === "buy" ? "Купил" : "Продал")}
-                    </span>
-                    <span><b>{tr.sym}</b></span>
-                    <span>{fmtEth(tr.eth)} {U(tr.eth)}</span>
-                    <span>{fmt(tr.tokens, 0)}</span>
-                    <span className="dim">{String(tr.block)}</span>
-                  </a>
-                ))}
-              </>
-            )}
-          </div>
         </>
       )}
     </>
