@@ -202,7 +202,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [trSort, setTrSort] = useState({ key: "ts", dir: "desc" }); // сортировка таблицы сделок
   const [hSort, setHSort] = useState("desc"); // сортировка холдеров по доле
   const [tradePct, setTradePct] = useState(0); // ползунок суммы
-  const [btTab, setBtTab] = useState("trades");
+  const [btTab, setBtTab] = useState("mine"); // по умолчанию — «Мои позиции»
   const [qpcts, setQpcts] = useState(() => {
     try {
       const v = JSON.parse(localStorage.getItem("hood_qp") || "null");
@@ -511,22 +511,22 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
 
   // ---- свободная раскладка блоков (react-grid-layout), живёт в localStorage ----
   const DEF_LAYOUT = [
-    { i: "chart", x: 0, y: 0, w: 8, h: 24, minW: 4, minH: 10 },
-    { i: "swap", x: 8, y: 0, w: 4, h: 11, minW: 3, minH: 7 },
-    { i: "chat", x: 8, y: 11, w: 4, h: 12, minW: 3, minH: 6 },
-    { i: "trades", x: 0, y: 24, w: 8, h: 14, minW: 4, minH: 5 },
-    { i: "about", x: 8, y: 23, w: 4, h: 14, minW: 3, minH: 5 },
+    { i: "chart", x: 0, y: 0, w: 8, h: 22, minW: 4, minH: 10 },
+    { i: "swap", x: 8, y: 0, w: 4, h: 12, minW: 3, minH: 7 },
+    { i: "chat", x: 8, y: 12, w: 4, h: 14, minW: 3, minH: 6 },
+    { i: "trades", x: 0, y: 22, w: 8, h: 14, minW: 4, minH: 5 },
+    { i: "about", x: 8, y: 26, w: 4, h: 12, minW: 3, minH: 5 },
   ];
   const [layout, setLayout] = useState(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem("hood_tok_layout_v4"));
+      const saved = JSON.parse(localStorage.getItem("hood_tok_layout_v5"));
       if (Array.isArray(saved) && saved.length === DEF_LAYOUT.length) return saved;
     } catch (e) { /* ignore */ }
     return DEF_LAYOUT;
   });
   const saveLayout = (l) => {
     setLayout(l);
-    try { localStorage.setItem("hood_tok_layout_v4", JSON.stringify(l)); } catch (e) { /* ignore */ }
+    try { localStorage.setItem("hood_tok_layout_v5", JSON.stringify(l)); } catch (e) { /* ignore */ }
   };
   const resetLayout = () => saveLayout(DEF_LAYOUT.map((x) => ({ ...x })));
   const Handle = () => (
