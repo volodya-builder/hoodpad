@@ -462,6 +462,8 @@ const EN = {
   "Объём": "Volume",
   "Изменение цены за 24ч": "24h price change",
   "Только избранное": "Favorites only",
+  "Лидер раунда": "Round leader",
+  "не отдан": "not cast",
   "24ч": "24h",
   "Трендовая линия": "Trend line",
   "Горизонтальный уровень": "Horizontal level",

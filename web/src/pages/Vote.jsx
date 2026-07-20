@@ -175,26 +175,38 @@ export default function Vote({ wallet, onConnect }) {
         {t("Каждую неделю комьюнити подсказывает казне, какой токен поддержать выкупом: один кошелёк — один голос за раунд, всё в блокчейне. Итоговое решение о выкупе принимает платформа — голосование совещательное.")}
       </div>
 
-      {state && (
-        <div className="about-card" style={{ marginTop: 0 }}>
-          <div className="about-stat">
-            <div className="k">{t("Голосов в раунде")}</div>
-            <div className="v">{state.total}</div>
-          </div>
-          <div className="about-stat">
-            <div className="k">{t("До конца раунда")}</div>
-            <div className="v">{countdown(EPOCH_LEN - (Math.floor(Date.now() / 1000) % EPOCH_LEN))}</div>
-          </div>
-          {myVote && (
-            <div className="about-stat">
-              <div className="k">{t("Ваш голос")}</div>
-              <div className="v" style={{ fontSize: 18 }}>
-                {state.rows.find((r) => r.token.toLowerCase() === myVote)?.symbol ?? short(myVote)} ✓
-              </div>
+      {state && (() => {
+        const left = EPOCH_LEN - (Math.floor(Date.now() / 1000) % EPOCH_LEN);
+        const passed = ((EPOCH_LEN - left) / EPOCH_LEN) * 100;
+        const leader = state.rows.find((r) => r.votes > 0);
+        return (
+          <div className="vote-bar">
+            <div className="vb-cell">
+              <span className="k">{t("Голосов в раунде")}</span>
+              <b>{state.total}</b>
             </div>
-          )}
-        </div>
-      )}
+            <div className="vb-cell">
+              <span className="k">{t("Лидер раунда")}</span>
+              <b>{leader ? `$${leader.symbol}` : "—"}</b>
+            </div>
+            <div className="vb-cell vb-grow">
+              <span className="k">{t("До конца раунда")}</span>
+              <b className="vb-time">{countdown(left)}</b>
+              <div className="vb-track"><div style={{ width: `${passed}%` }} /></div>
+            </div>
+            <div className="vb-cell vb-right">
+              <span className="k">{t("Ваш голос")}</span>
+              {myVote ? (
+                <b className="vb-mine">
+                  ${state.rows.find((r) => r.token.toLowerCase() === myVote)?.symbol ?? short(myVote)} ✓
+                </b>
+              ) : (
+                <b className="dim" style={{ fontSize: 15 }}>{t("не отдан")}</b>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {error && <div className="error">{error}</div>}
       {!state && !error && <div className="center">{t("Читаю блокчейн…")}</div>}

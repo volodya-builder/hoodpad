@@ -199,8 +199,32 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 .create-layout { display: grid; grid-template-columns: 1fr 350px; gap: 22px; padding: 34px 0 72px; align-items: start; }
 @media (max-width: 900px) { .create-layout { grid-template-columns: 1fr; } }
 .back-btn { margin-top: 26px; display: inline-flex; align-items: center; gap: 6px; }
-.check-row { display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; color: var(--text-dim); margin: 8px 0 10px; cursor: pointer; line-height: 1.5; text-transform: none; letter-spacing: 0; font-weight: 500; }
-.check-row input { width: 15px; height: 15px; margin: 1px 0 0; accent-color: var(--gold); flex: none; }
+/* согласие на публикацию картинки: аккуратная карточка с кастомным чекбоксом */
+.check-row {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 12.5px; color: var(--text-dim); margin: 8px 0 12px;
+  cursor: pointer; line-height: 1.5; text-transform: none; letter-spacing: 0; font-weight: 500;
+  background: var(--bg-soft); border: 1px solid var(--border);
+  border-radius: 13px; padding: 12px 14px;
+  transition: border-color .18s, background .18s, color .18s;
+}
+.check-row:hover { border-color: #3a3b33; color: var(--text); }
+.check-row input { position: absolute; opacity: 0; width: 0; height: 0; }
+.check-row input + span::before {
+  content: ""; float: left; margin: 1px 12px 0 0;
+  width: 20px; height: 20px; border-radius: 7px;
+  border: 1.5px solid var(--border); background: var(--card);
+  transition: all .18s; box-sizing: border-box;
+}
+.check-row input:checked + span::before {
+  background: var(--gold); border-color: var(--gold);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 18%, transparent);
+}
+.check-row input:checked + span::after {
+  content: "✓"; position: absolute; margin: -1px 0 0 -30px;
+  color: #101100; font-size: 14px; font-weight: 900; line-height: 22px;
+}
+.check-row:has(input:checked) { border-color: color-mix(in srgb, var(--gold) 45%, transparent); color: var(--text); }
 .upload-box {
   border: 1.5px dashed var(--border); border-radius: 13px; padding: 18px;
   display: flex; align-items: center; gap: 14px; cursor: pointer;
@@ -404,6 +428,22 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 .about-stat .k { font-size: 11.5px; color: var(--text-dim); font-weight: 800; text-transform: uppercase; letter-spacing: .4px; }
 .about-stat .v { font-size: 26px; font-weight: 800; color: var(--gold); font-variant-numeric: tabular-nums; }
 .about-stat .s { font-size: 12px; color: var(--text-dim); }
+/* компактная шапка голосования */
+.vote-bar {
+  display: flex; align-items: center; gap: 26px; flex-wrap: wrap;
+  background: linear-gradient(180deg, #1a1a19 0%, #151514 100%);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 20px; margin-top: 18px;
+}
+.vb-cell { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.vb-cell .k { font-size: 10.5px; color: var(--text-dim); font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+.vb-cell b { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.vb-grow { flex: 1; min-width: 200px; }
+.vb-time { color: var(--gold); }
+.vb-right { margin-left: auto; text-align: right; }
+.vb-mine { color: var(--leaf); font-size: 17px !important; }
+.vb-track { height: 4px; border-radius: 3px; background: #ffffff12; overflow: hidden; margin-top: 6px; }
+.vb-track > div { height: 100%; background: linear-gradient(90deg, var(--gold), #6d762a); }
 .pons-layout { display: grid; grid-template-columns: 320px 1fr 300px; gap: 18px; margin-top: 18px; align-items: start; }
 @media (max-width: 1080px) { .pons-layout { grid-template-columns: 1fr 1fr; } .chart-panel { grid-column: 1 / -1; order: -1; } }
 @media (max-width: 720px) { .pons-layout { grid-template-columns: 1fr; } .chart-panel { grid-column: auto; } }
