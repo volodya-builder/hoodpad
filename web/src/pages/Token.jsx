@@ -627,7 +627,10 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   );
   // компактные форматтеры для ленты активности (стиль GMGN)
   const compactN = (n) =>
-    n >= 1e6 ? fmt(n / 1e6, 2) + "M" : n >= 1e3 ? fmt(n / 1e3, 2) + "K" : fmt(n, 0);
+    n >= 1e9 ? fmt(n / 1e9, 2) + "B"
+    : n >= 1e6 ? fmt(n / 1e6, 2) + "M"
+    : n >= 1e3 ? fmt(n / 1e3, 1) + "K"
+    : fmt(n, 0);
   const shortAgo = (ts) => {
     if (!ts) return "—";
     const s = Math.max(1, Math.floor((Date.now() - ts) / 1000));
@@ -952,11 +955,11 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 <div className="tk-cell"><span>{t("Активность")}</span><b>{lastTs ? timeAgo(lastTs) : "—"}</b>
                   <span>{mine.length} {t("сделок")} · {holdStr} {totPnl >= 0 ? "💎" : ""}</span></div>
                 <div className="tk-cell"><span>{t("Куплено")}</span><b>{dollars(buysEth)}</b>
-                  <span>{fmt(buysTok, 0)}</span></div>
+                  <span>{compactN(buysTok)}</span></div>
                 <div className="tk-cell"><span>{t("Продано")}</span><b>{dollars(sellsEth)}</b>
-                  <span>{sellsTok > 0 ? fmt(sellsTok, 0) : "—"}</span></div>
+                  <span>{sellsTok > 0 ? compactN(sellsTok) : "—"}</span></div>
                 <div className="tk-cell"><span>{t("Баланс")}</span><b>{dollars(valEth)}</b>
-                  <span>{fmt(balTok, 0)} ({fmt(balTok / 1e7, 2)}%)</span></div>
+                  <span>{compactN(balTok)} ({fmt(balTok / 1e7, 2)}%)</span></div>
                 <div className="tk-cell"><span>uPnL</span>
                   <b style={{ color: uPnl >= 0 ? "var(--leaf)" : "var(--red)" }}>
                     {dollars(uPnl)} ({uPct >= 0 ? "+" : ""}{fmt(uPct, 1)}%)
