@@ -415,11 +415,17 @@ const EN = {
     "{pct}% of every fee your traders pay — weekly payouts to your wallet.",
   "Доля реферера берётся из командной части комиссии — казна выкупа и доход создателей не уменьшаются.":
     "The referrer's share comes out of the team's cut — the buyback treasury and creator earnings are untouched.",
+  "Как это работает": "How it works",
   "Топ рефереров": "Top referrers",
   "кошельков": "wallets",
   "Старые": "Oldest",
   "Тёмная тема": "Dark theme",
   "Светлая тема": "Light theme",
+  "Меню": "Menu",
+  "Реализовано": "Realized",
+  "Контракт": "Contract",
+  "Не верьте на слово — откройте контракт казны в эксплорере и убедитесь сами:":
+    "Don't take our word — open the treasury contract in the explorer and see for yourself:",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });
