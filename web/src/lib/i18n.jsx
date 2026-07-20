@@ -417,6 +417,7 @@ const EN = {
     "The referrer's share comes out of the team's cut — the buyback treasury and creator earnings are untouched.",
   "Как это работает": "How it works",
   "О токене": "About the token",
+  "Перетащите, чтобы поменять блоки местами": "Drag to rearrange blocks",
   "Топ рефереров": "Top referrers",
   "кошельков": "wallets",
   "Старые": "Oldest",

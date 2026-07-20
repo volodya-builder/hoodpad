@@ -242,11 +242,17 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 
 /* token page */
 .token-layout { display: grid; grid-template-columns: 1fr 390px; gap: 22px; padding: 34px 0 72px; }
-/* Терминальная компоновка: график первым, сделки вторыми, паспорт токена внизу */
-.token-layout > div:first-child { display: flex; flex-direction: column; }
-.token-layout > div:first-child > .card:nth-child(1) { order: 3; margin-top: 18px; }
-.token-layout > div:first-child > .card:nth-child(2) { order: 1; margin-top: 0 !important; }
-.token-layout > div:first-child > .card:nth-child(3) { order: 2; }
+/* Терминальная компоновка: карточки-блоки можно перетаскивать за ⠿ */
+.token-layout > div:first-child, .token-layout > div:last-child { display: flex; flex-direction: column; gap: 18px; }
+.drag-card { position: relative; display: flex; flex-direction: column; min-width: 0; }
+.drag-card > .card, .drag-card > .panel { margin-top: 0 !important; }
+.drag-handle {
+  position: absolute; top: 10px; right: 12px; z-index: 6;
+  cursor: grab; color: var(--text-dim); font-size: 15px;
+  padding: 4px 7px; user-select: none; border-radius: 8px;
+}
+.drag-handle:hover { color: var(--text); background: var(--bg-soft); }
+.drag-handle:active { cursor: grabbing; }
 @media (max-width: 860px) { .token-layout { grid-template-columns: 1fr; } }
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 12px; margin-top: 20px; }
 .stat-card { background: #111210; border: 1px solid var(--border); border-radius: 12px; padding: 15px; }

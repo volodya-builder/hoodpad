@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { parseEther, formatEther } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi } from "../lib/abi.js";
@@ -505,6 +505,37 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [ordAmt, setOrdAmt] = useState("");
   const [ordPct, setOrdPct] = useState(100); // доля баланса для продажи
 
+  // ---- перетаскивание блоков: порядок карточек хранится в localStorage ----
+  const BLK_DEF = { chart: 1, trades: 2, about: 3, swap: 1, chat: 2 };
+  const LEFT_BLKS = ["chart", "trades", "about"], RIGHT_BLKS = ["swap", "chat"];
+  const [blkOrd, setBlkOrd] = useState(() => {
+    try { return { ...BLK_DEF, ...(JSON.parse(localStorage.getItem("hood_tok_blocks")) || {}) }; }
+    catch (e) { return BLK_DEF; }
+  });
+  const dragSrc = useRef(null);
+  const startBlk = (k) => (e) => {
+    dragSrc.current = k;
+    try { e.dataTransfer.setData("text/plain", k); e.dataTransfer.effectAllowed = "move"; } catch (err) { /* ignore */ }
+  };
+  const dropBlk = (k) => (e) => {
+    e.preventDefault();
+    const a = dragSrc.current; dragSrc.current = null;
+    if (!a || a === k) return;
+    const same = (LEFT_BLKS.includes(a) && LEFT_BLKS.includes(k)) || (RIGHT_BLKS.includes(a) && RIGHT_BLKS.includes(k));
+    if (!same) return;
+    const next = { ...blkOrd, [a]: blkOrd[k], [k]: blkOrd[a] };
+    setBlkOrd(next);
+    try { localStorage.setItem("hood_tok_blocks", JSON.stringify(next)); } catch (err) { /* ignore */ }
+  };
+  const blkProps = (k) => ({
+    className: "drag-card", style: { order: blkOrd[k] },
+    onDragOver: (e) => e.preventDefault(), onDrop: dropBlk(k),
+  });
+  const Handle = ({ k }) => (
+    <span className="drag-handle" draggable onDragStart={startBlk(k)}
+          title={t("Перетащите, чтобы поменять блоки местами")}>⠿</span>
+  );
+
   function placeOrder() {
     const p = Number(ordPrice);
     if (!(p > 0) || !data) return;
@@ -612,54 +643,48 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const mcapEth = Number(formatEther(data.price)) * 1_000_000_000;
   const mcapUsd = usd(mcapEth * rate);
 
+  const socials = (meta.x || meta.telegram || meta.website) ? (
+    <div className="soc-row" style={{ margin: 0 }}>
+      {meta.x && (
+        <a className="soc-btn" title="X (Twitter)" target="_blank" rel="noreferrer"
+           href={/^https?:\/\//.test(meta.x) ? meta.x : `https://x.com/${meta.x.replace(/^@/, "")}`}>
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+            <path d="M18.9 1.2h3.7l-8.1 9.3L24 22.8h-7.5l-5.9-7.7-6.7 7.7H.2l8.7-9.9L0 1.2h7.7l5.3 7 5.9-7zm-1.3 19.4h2L6.6 3.3H4.4l13.2 17.3z"/>
+          </svg>
+        </a>
+      )}
+      {meta.telegram && (
+        <a className="soc-btn" title="Telegram" target="_blank" rel="noreferrer"
+           href={/^https?:\/\//.test(meta.telegram) ? meta.telegram : `https://t.me/${meta.telegram.replace(/^@/, "")}`}>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+            <path d="M21.9 3.4 18.6 20c-.2 1.1-.9 1.4-1.8.9l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5.1L18.1 6.5c.4-.4-.1-.6-.6-.2L6 13.5l-4.9-1.5c-1.1-.3-1.1-1.1.2-1.6L20.4 2c.9-.3 1.7.2 1.5 1.4z"/>
+          </svg>
+        </a>
+      )}
+      {meta.website && (
+        <a className="soc-btn" title={t("Сайт")} target="_blank" rel="noreferrer"
+           href={/^https?:\/\//.test(meta.website) ? meta.website : `https://${meta.website}`}>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9S14.5 18.4 12 21M12 3C9.5 5.6 8.2 8.7 8.2 12s1.3 6.4 3.8 9"/>
+          </svg>
+        </a>
+      )}
+    </div>
+  ) : null;
+
   return (
     <>
     <a className="btn back-btn" href="#/">‹ {t("Назад")}</a>
     <div className="token-layout">
       <div>
+        <div {...blkProps("about")}><Handle k="about" />
         <div className="card" style={{ cursor: "default", transform: "none" }}>
           <div className="card-title">
             <h3>{t("О токене")}</h3>
           </div>
           {meta.description && (
             <p className="dim" style={{ marginTop: 10 }}>{meta.description}</p>
-          )}
-          {(meta.x || meta.telegram || meta.website) && (
-            <div className="soc-row">
-              {meta.x && (
-                <a className="soc-btn" title="X (Twitter)" target="_blank" rel="noreferrer"
-                   href={/^https?:\/\//.test(meta.x) ? meta.x : `https://x.com/${meta.x.replace(/^@/, "")}`}>
-                  <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
-                    <path d="M18.9 1.2h3.7l-8.1 9.3L24 22.8h-7.5l-5.9-7.7-6.7 7.7H.2l8.7-9.9L0 1.2h7.7l5.3 7 5.9-7zm-1.3 19.4h2L6.6 3.3H4.4l13.2 17.3z"/>
-                  </svg>
-                </a>
-              )}
-              {meta.telegram && (
-                <a className="soc-btn" title="Telegram" target="_blank" rel="noreferrer"
-                   href={/^https?:\/\//.test(meta.telegram) ? meta.telegram : `https://t.me/${meta.telegram.replace(/^@/, "")}`}>
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                    <path d="M21.9 3.4 18.6 20c-.2 1.1-.9 1.4-1.8.9l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5.1L18.1 6.5c.4-.4-.1-.6-.6-.2L6 13.5l-4.9-1.5c-1.1-.3-1.1-1.1.2-1.6L20.4 2c.9-.3 1.7.2 1.5 1.4z"/>
-                  </svg>
-                </a>
-              )}
-              {meta.website && (
-                <a className="soc-btn" title={t("Сайт")} target="_blank" rel="noreferrer"
-                   href={/^https?:\/\//.test(meta.website) ? meta.website : `https://${meta.website}`}>
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
-                    <circle cx="12" cy="12" r="9"/>
-                    <path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9S14.5 18.4 12 21M12 3C9.5 5.6 8.2 8.7 8.2 12s1.3 6.4 3.8 9"/>
-                  </svg>
-                </a>
-              )}
-            </div>
-          )}
-          {meta.image && (
-            <img
-              src={meta.image}
-              alt=""
-              style={{ maxWidth: 160, borderRadius: 12, marginTop: 8 }}
-              onError={(e) => (e.target.style.display = "none")}
-            />
           )}
 
           {!data.graduated && (
@@ -731,16 +756,19 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             </a>
           </div>
         </div>
+        </div>
 
+        <div {...blkProps("chart")}><Handle k="chart" />
         <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
           <div className="card-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-            <h3 style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 20 }}>
+            <h3 style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 22 }}>
               {meta.image && (
-                <img src={meta.image} alt="" style={{ width: 34, height: 34, borderRadius: 9 }}
+                <img src={meta.image} alt="" style={{ width: 96, height: 96, borderRadius: 18 }}
                      onError={(e) => (e.target.style.display = "none")} />
               )}
               {data.name} <span className="ticker">${data.symbol}</span>
               {data.graduated && <span className="badge">🎯 В яблочке</span>}
+              {socials}
             </h3>
             <div className="pill-group">
               {[["5m", "5M"], ["1h", "1H"], ["6h", "6H"], ["1d", "1D"], ["all", "ALL"]].map(([k, lbl]) => (
@@ -774,7 +802,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <MiniChart points={chartPoints} rate={rate} marks={marks} />
           )}
         </div>
+        </div>
 
+        <div {...blkProps("trades")}><Handle k="trades" />
         <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
           <div className="bt-tabs">
             <div className={`bt-tab ${btTab === "trades" ? "on" : ""}`} onClick={() => setBtTab("trades")}>
@@ -851,9 +881,11 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           )}
           </>)}
         </div>
+        </div>
       </div>
 
       <div>
+        <div {...blkProps("swap")}><Handle k="swap" />
         {data.graduated ? (
           data.migrated ? (
             <div className="panel" style={{ margin: 0, maxWidth: "none" }}>
@@ -1105,9 +1137,11 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             </div>
           </div>
         )}
+        </div>
 
-
+        <div {...blkProps("chat")}><Handle k="chat" />
         <Chat tokenAddress={tokenAddress} wallet={wallet} onConnect={onConnect} />
+        </div>
       </div>
     </div>
     </>

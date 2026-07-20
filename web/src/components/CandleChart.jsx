@@ -49,7 +49,7 @@ export default function CandleChart({ points, trades, rate, marks }) {
     const styles = getComputedStyle(document.documentElement);
     const dim = styles.getPropertyValue("--text-dim").trim() || "#9a9b90";
     const chart = createChart(el, {
-      height: 330, autoSize: true,
+      height: 470, autoSize: true,
       layout: { background: { color: "transparent" }, textColor: dim, fontSize: 11, attributionLogo: false },
       grid: { vertLines: { color: "#80808018" }, horzLines: { color: "#80808018" } },
       timeScale: { timeVisible: true, secondsVisible: false, borderColor: "#80808030" },
