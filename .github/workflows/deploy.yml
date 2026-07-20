@@ -45,4 +45,6 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./web/dist
           publish_branch: gh-pages
+          # не стирать /staging/ (тестовый сайт деплоится туда отдельным workflow)
+          keep_files: true
     

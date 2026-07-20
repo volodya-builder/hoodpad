@@ -1,0 +1,46 @@
+name: Deploy staging
+
+# Тестовый сайт: собирает web/ из ветки staging и публикует в gh-pages/staging.
+# Живёт на hoodandarrow.com/staging/ — основной сайт (корень gh-pages) не трогает.
+
+on:
+  push:
+    branches: [staging]
+    paths:
+      - 'web/**'
+      - '.github/workflows/deploy-staging.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build (base /staging/)
+        working-directory: web
+        run: |
+          npm install
+          npx vite build --base=/staging/
+
+      - name: Deploy to gh-pages/staging
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./web/dist
+          publish_branch: gh-pages
+          destination_dir: staging
+          keep_files: true
