@@ -457,6 +457,7 @@ const EN = {
   "Общий объём продаж": "Total sold",
   "Сделки трейдера": "Trader's trades",
   "Открыть профиль трейдера": "Open trader profile",
+  "Кол-во": "Amount",
   "Покупка": "Buy",
   "Продажа": "Sell",
   "Куплено": "Bought",

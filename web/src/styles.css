@@ -452,6 +452,7 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
   gap: 8px; align-items: center; padding: 7px 0;
   border-top: 1px solid #2a2a28; font-size: 12.5px; font-variant-numeric: tabular-nums;
 }
+.tp-row.hdr { border-top: none; color: var(--text-dim); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; padding-bottom: 2px; }
 .tp-type { font-size: 11px; font-weight: 700; text-align: center; padding: 3px 0; border-radius: 7px; }
 .tp-type.buy { color: var(--leaf); background: #7ac74f1a; border: 1px solid #7ac74f3a; }
 .tp-type.sell { color: var(--red); background: #e06a4a1a; border: 1px solid #e06a4a3a; }

@@ -578,9 +578,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const mcapEth = Number(formatEther(data.price)) * 1_000_000_000;
   const mcapUsd = usd(mcapEth * rate);
 
-  // сортировка таблицы сделок по клику на заголовок колонки
-  const sortTrades = (arr) => {
-    const { key, dir } = trSort;
+  // сортировка таблиц сделок по клику на заголовок колонки
+  const sortTradesBy = (arr, { key, dir }) => {
     const m = dir === "asc" ? 1 : -1;
     return [...arr].sort((a, b) => {
       if (key === "side" || key === "addr") {
@@ -597,6 +596,14 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       return (va - vb) * m;
     });
   };
+  const sortTrades = (arr) => sortTradesBy(arr, trSort);
+  const [tpSort, setTpSort] = useState({ key: "ts", dir: "desc" }); // сортировка в панели трейдера
+  const ThP = ({ k, children }) => (
+    <span className="sort-h"
+          onClick={() => setTpSort((s) => ({ key: k, dir: s.key === k && s.dir === "desc" ? "asc" : "desc" }))}>
+      {children} <i>{tpSort.key === k ? (tpSort.dir === "desc" ? "▼" : "▲") : "↕"}</i>
+    </span>
+  );
   const Th = ({ k, children }) => (
     <span className="sort-h"
           onClick={() => setTrSort((s) => ({ key: k, dir: s.key === k && s.dir === "desc" ? "asc" : "desc" }))}>
@@ -1299,7 +1306,14 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           </div>
 
           <div className="orders-head" style={{ margin: "18px 0 4px" }}>{t("Сделки трейдера")}</div>
-          {trs.slice(0, 40).map((x, i) => (
+          <div className="tp-row hdr">
+            <ThP k="side">{t("Тип")}</ThP>
+            <ThP k="price">{t("Цена")}</ThP>
+            <ThP k="tokens">{t("Кол-во")}</ThP>
+            <ThP k="eth">{t("Итого")}</ThP>
+            <ThP k="ts">{t("Время")}</ThP>
+          </div>
+          {sortTradesBy(trs, tpSort).slice(0, 40).map((x, i) => (
             <div className="tp-row" key={i}>
               <span className={`tp-type ${x.side}`}>{t(x.side === "buy" ? "Покупка" : "Продажа")}</span>
               <span className="dim">${fmtEth(x.tokens > 0 ? (x.eth / x.tokens) * rate : 0)}</span>
