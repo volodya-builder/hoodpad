@@ -732,6 +732,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <div className={`bt-tab ${btTab === "holders" ? "on" : ""}`} onClick={() => setBtTab("holders")}>
               {t("Топ держателей")}
             </div>
+            <div className={`bt-tab ${btTab === "mine" ? "on" : ""}`} onClick={() => setBtTab("mine")}>
+              {t("Мои сделки")}
+            </div>
           </div>
           {btTab === "trades" && (<>
 
@@ -755,6 +758,37 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               <span className="dim">{t("блок")} {String(tr.block)}</span>
             </div>
           ))}
+          </>)}
+          {btTab === "mine" && (<>
+          {!wallet && (
+            <div className="dim" style={{ padding: "14px 0" }}>
+              {t("Подключите кошелёк, чтобы увидеть профиль.")}{" "}
+              <a href="#/" onClick={(e) => { e.preventDefault(); onConnect(); }} style={{ color: "var(--gold)" }}>
+                {t("Подключить →")}
+              </a>
+            </div>
+          )}
+          {wallet && !history && <div className="dim" style={{ padding: "14px 0" }}>{t("Читаю события…")}</div>}
+          {wallet && history && (() => {
+            const mine = history.trades.filter((tr) => tr.addr.toLowerCase() === wallet.account.toLowerCase());
+            if (mine.length === 0) return <div className="dim" style={{ padding: "14px 0" }}>{t("Сделок пока нет.")}</div>;
+            return mine.slice(0, 20).map((tr, i) => (
+              <div className="trow" key={i}>
+                <span className={tr.side === "buy" ? "side-buy" : "side-sell"}>
+                  {t(tr.side === "buy" ? "Купил" : "Продал")}
+                </span>
+                <span>{fmtEth(tr.eth)} ETH <span className="usd-sub">({dollars(tr.eth)})</span></span>
+                <span>{fmt(tr.tokens, 0)}</span>
+                <a className="mono" href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer">
+                  {short(tr.addr)}
+                </a>
+                <span className="dim" title={tr.ts ? new Date(tr.ts).toLocaleString() : ""}>
+                  {tr.ts ? timeAgo(tr.ts) : "—"}
+                </span>
+                <span className="dim">{t("блок")} {String(tr.block)}</span>
+              </div>
+            ));
+          })()}
           </>)}
           {btTab === "holders" && (<>
 
