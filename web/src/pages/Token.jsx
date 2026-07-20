@@ -517,18 +517,18 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     { i: "swap", x: 8, y: 0, w: 4, h: 12, minW: 3, minH: 7 },
     { i: "chat", x: 8, y: 12, w: 4, h: 14, minW: 3, minH: 6 },
     { i: "trades", x: 0, y: 22, w: 8, h: 14, minW: 4, minH: 5 },
-    { i: "about", x: 8, y: 26, w: 4, h: 12, minW: 3, minH: 5 },
+    { i: "about", x: 8, y: 26, w: 4, h: 10, minW: 3, minH: 5 },
   ];
   const [layout, setLayout] = useState(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem("hood_tok_layout_v5"));
+      const saved = JSON.parse(localStorage.getItem("hood_tok_layout_v6"));
       if (Array.isArray(saved) && saved.length === DEF_LAYOUT.length) return saved;
     } catch (e) { /* ignore */ }
     return DEF_LAYOUT;
   });
   const saveLayout = (l) => {
     setLayout(l);
-    try { localStorage.setItem("hood_tok_layout_v5", JSON.stringify(l)); } catch (e) { /* ignore */ }
+    try { localStorage.setItem("hood_tok_layout_v6", JSON.stringify(l)); } catch (e) { /* ignore */ }
   };
   const Handle = () => (
     <span className="drag-handle" title={t("Перетащите, чтобы переставить блок")}>⠿</span>
