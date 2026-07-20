@@ -948,7 +948,13 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <div style={{ marginTop: 6 }}>
               <div className="holder-row">
                 <span className="hr-rank dim">—</span>
-                <span className="hr-who">📈 {t("Бондинг-кривая")}</span>
+                <span className="hr-who" style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M3 20C11 20 16 15 20 5" stroke="var(--gold)" strokeWidth="2.4" strokeLinecap="round" />
+                    <circle cx="20" cy="5" r="2.4" fill="var(--gold)" />
+                  </svg>
+                  {t("Бондинг-кривая")}
+                </span>
                 <span className="hr-bar"><span style={{ width: `${Math.min(holders.unsoldPct, 100)}%` }} /></span>
                 <span className="hr-pct">{fmt(holders.unsoldPct, 1)}%</span>
               </div>
