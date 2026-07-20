@@ -9,7 +9,6 @@ import Chat from "./Chat.jsx";
 import { useSplit, loadCreationTimes, timeAgo, useClock, useSupport } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 import { bindRefIfNeeded } from "../lib/referral.js";
-import { ordersFor, addOrder, updateOrder, removeOrder, askNotifyPermission, notify } from "../lib/orders.js";
 import CandleChart from "../components/CandleChart.jsx";
 
 const SLIPPAGE_CHOICES = [0.5, 1, 3, 5]; // %
@@ -498,14 +497,6 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     }
   }
 
-  // ---------------- условные заявки (клиентские) ----------------
-  const tokenLower = tokenAddress.toLowerCase();
-  const [orders, setOrders] = useState(() => ordersFor(tokenLower));
-  const [ordCap, setOrdCap] = useState(""); // триггер — капитализация в $
-  const [ordAmt, setOrdAmt] = useState("");
-  const [ordPct, setOrdPct] = useState(100); // доля баланса для продажи
-  const [ordMode, setOrdMode] = useState("market"); // market | limit
-
   // ---- перетаскивание блоков: порядок карточек хранится в localStorage ----
   const BLK_DEF = { chart: 1, trades: 2, about: 3, swap: 1, chat: 2 };
   const LEFT_BLKS = ["chart", "trades", "about"], RIGHT_BLKS = ["swap", "chat"];
@@ -541,92 +532,6 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           title={t("Перетащите, чтобы поменять блоки местами")}>⠿</span>
   );
 
-  function placeOrder() {
-    if (!data || !(rate > 0)) return;
-    const capTrig = Number(ordCap);
-    if (!(capTrig > 0)) return;
-    const p = capTrig / (1e9 * rate); // $ капы → цена в ETH
-    const priceNow = Number(formatEther(data.price));
-    const isBuy = tab === "buy";
-    if (isBuy && !(Number(ordAmt) > 0)) return;
-    askNotifyPermission();
-    addOrder({
-      token: tokenLower,
-      type: isBuy ? "buy" : p < priceNow ? "stop" : "take",
-      priceEth: p,
-      amountEth: isBuy ? Number(ordAmt) : undefined,
-      sellPct: isBuy ? undefined : ordPct,
-    });
-    setOrders(ordersFor(tokenLower));
-    setOrdCap(""); setOrdAmt("");
-  }
-
-  async function execOrder(o) {
-    try {
-      const slipBps = 4000n; // авто 40% — заявка должна исполниться
-      let hash;
-      if (o.type === "buy") {
-        const value = parseEther(String(o.amountEth));
-        const out = await publicClient.readContract({
-          address: data.pool, abi: poolAbi, functionName: "quoteBuy", args: [value],
-        });
-        const minOut = out - (out * slipBps) / 10000n;
-        hash = await wallet.walletClient.writeContract({
-          address: data.pool, abi: poolAbi, functionName: "buy",
-          args: [minOut, wallet.account], value,
-        });
-      } else {
-        const pctN = BigInt(Math.min(100, Math.max(1, Number(o.sellPct) || 100)));
-        const tokensIn = (data.balance * pctN) / 100n;
-        if (tokensIn === 0n) throw new Error(t("Нет баланса токена"));
-        const allowance = await publicClient.readContract({
-          address: tokenAddress, abi: tokenAbi, functionName: "allowance",
-          args: [wallet.account, data.pool],
-        });
-        if (allowance < tokensIn) {
-          const ah = await wallet.walletClient.writeContract({
-            address: tokenAddress, abi: tokenAbi, functionName: "approve",
-            args: [data.pool, tokensIn],
-          });
-          await publicClient.waitForTransactionReceipt({ hash: ah });
-        }
-        const gross = await publicClient.readContract({
-          address: data.pool, abi: poolAbi, functionName: "quoteSell", args: [tokensIn],
-        });
-        const net = gross - (gross * 100n) / 10000n;
-        const minOut = net - (net * slipBps) / 10000n;
-        hash = await wallet.walletClient.writeContract({
-          address: data.pool, abi: poolAbi, functionName: "sell", args: [tokensIn, minOut],
-        });
-      }
-      await publicClient.waitForTransactionReceipt({ hash });
-      updateOrder(o.id, { status: "done" });
-      bindRefIfNeeded(wallet.account);
-      await load();
-    } catch (err) {
-      updateOrder(o.id, { status: "failed", err: err.shortMessage || err.message });
-    }
-    setOrders(ordersFor(tokenLower));
-  }
-
-  // следим за ценой (data обновляется каждые 12с)
-  useEffect(() => {
-    if (!data || !wallet || data.graduated) return;
-    const priceNow = Number(formatEther(data.price));
-    for (const o of ordersFor(tokenLower)) {
-      if (o.status !== "active") continue;
-      const hit =
-        (o.type === "buy" && priceNow <= o.priceEth) ||
-        (o.type === "stop" && priceNow <= o.priceEth) ||
-        (o.type === "take" && priceNow >= o.priceEth);
-      if (!hit) continue;
-      updateOrder(o.id, { status: "firing" });
-      setOrders(ordersFor(tokenLower));
-      notify("hood", `${t("Заявка сработала")}: ${data.symbol} @ ${o.priceEth} ETH`);
-      execOrder({ ...o });
-    }
-  }, [data && data.price, wallet && wallet.account]); // eslint-disable-line
-
   async function migrate() {
     setError("");
     if (!wallet) return onConnect();
@@ -649,22 +554,6 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const progress = Number((data.sold * 10000n) / data.cap) / 100;
   const mcapEth = Number(formatEther(data.price)) * 1_000_000_000;
   const mcapUsd = usd(mcapEth * rate);
-
-  // расчёты лимитной формы (триггер в $ капитализации, как у GMGN)
-  const capNow = data ? Number(formatEther(data.price)) * 1e9 * rate : 0;
-  const capTrigN = Number(ordCap) || 0;
-  const capPct = capNow > 0 && capTrigN > 0 ? (capTrigN / capNow - 1) * 100 : 0;
-  const capSlider = Math.max(-90, Math.min(200, Math.round(capPct)));
-  const priceTrigEth = capTrigN > 0 && rate > 0 ? capTrigN / (1e9 * rate) : 0;
-
-  // активные заявки — пунктирные линии на графике (в $ капитализации)
-  const orderLines = orders
-    .filter((o) => o.status === "active")
-    .map((o) => ({
-      value: o.priceEth * 1e9 * rate,
-      color: o.type === "buy" ? "#c8f42b" : o.type === "stop" ? "#e06a4a" : "#7ac74f",
-      title: o.type === "buy" ? "LIMIT" : o.type === "stop" ? "STOP" : "TAKE",
-    }));
 
   const socials = (meta.x || meta.telegram || meta.website) ? (
     <div className="soc-row" style={{ margin: 0 }}>
@@ -827,7 +716,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             </div>
           </div>
           {history && history.points && history.points.filter((p) => p.ts).length >= 2 ? (
-            <CandleChart points={history.points} trades={history.trades} rate={rate} marks={marks} lines={orderLines} />
+            <CandleChart points={history.points} trades={history.trades} rate={rate} marks={marks} />
           ) : (
             <MiniChart points={chartPoints} rate={rate} marks={marks} />
           )}
@@ -842,11 +731,6 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             </div>
             <div className={`bt-tab ${btTab === "holders" ? "on" : ""}`} onClick={() => setBtTab("holders")}>
               {t("Топ держателей")}
-            </div>
-            <div className={`bt-tab ${btTab === "orders" ? "on" : ""}`} onClick={() => setBtTab("orders")}>
-              {t("Мои заявки")}{orders.filter((o) => o.status === "active").length > 0 && (
-                <span className="count-chip" style={{ marginLeft: 6 }}>{orders.filter((o) => o.status === "active").length}</span>
-              )}
             </div>
           </div>
           {btTab === "trades" && (<>
@@ -915,29 +799,6 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             </div>
           )}
           </>)}
-          {btTab === "orders" && (
-            orders.length === 0 ? (
-              <div className="dim" style={{ padding: "14px 0" }}>{t("Заявок пока нет.")}</div>
-            ) : (
-              <div className="order-list">
-                {orders.map((o) => (
-                  <div className="order-row" key={o.id}>
-                    <span className={`ord-tag ${o.type}`}>
-                      {o.type === "buy" ? t("Лимит-покупка") : o.type === "stop" ? t("Стоп-лосс") : t("Тейк-профит")}
-                    </span>
-                    <span className="mono">@ {fmtEth(o.priceEth)} ETH</span>
-                    <span className="dim">{o.type === "buy" ? `${o.amountEth} ETH` : `${o.sellPct || 100}%`}</span>
-                    <span className={`ord-st ${o.status}`}>
-                      {o.status === "active" ? t("ждёт") : o.status === "firing" ? t("исполняется…")
-                        : o.status === "done" ? "✓ " + t("исполнена") : "✕ " + t("ошибка")}
-                    </span>
-                    <span className="ord-x" title={t("Удалить")}
-                          onClick={() => { removeOrder(o.id); setOrders(ordersFor(tokenLower)); }}>✕</span>
-                  </div>
-                ))}
-              </div>
-            )
-          )}
         </div>
         </div>
       </div>
@@ -973,13 +834,6 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               </div>
             </div>
 
-            <div className="mode-sub">
-              {[["market", t("Рыночная")], ["limit", t("Лимитная")]].map(([k, lbl]) => (
-                <div key={k} className={`fpill ${ordMode === k ? "on" : ""}`} onClick={() => setOrdMode(k)}>{lbl}</div>
-              ))}
-            </div>
-
-            {ordMode === "market" && (<>
             <label>{tab === "buy" ? t("Вы платите (ETH)") : `${t("Вы продаёте")} (${data.symbol})`}</label>
             <input
               value={amount}
@@ -1124,82 +978,6 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 : `${t("Продать")} ${data.symbol}`}
             </button>
             {error && <div className="error">{error}</div>}
-            </>)}
-
-            {ordMode === "limit" && (
-            <div className="orders-box" style={{ borderTop: "none", paddingTop: 4, marginTop: 6 }}>
-              {tab === "buy" ? (<>
-                <label>{t("Количество")} (ETH)</label>
-                <input inputMode="decimal" placeholder="0.01"
-                       value={ordAmt} onChange={(e) => setOrdAmt(e.target.value.replace(",", "."))} />
-                <div className="order-chips" style={{ marginTop: 8 }}>
-                  {[0.005, 0.01, 0.02, 0.05].map((v) => (
-                    <div key={v} className={`fpill ${Number(ordAmt) === v ? "on" : ""}`}
-                         onClick={() => setOrdAmt(String(v))}>{v}</div>
-                  ))}
-                </div>
-              </>) : (<>
-                <label>{t("Доля баланса")}</label>
-                <div className="order-chips">
-                  {[25, 50, 75, 100].map((p) => (
-                    <div key={p} className={`fpill ${ordPct === p ? "on" : ""}`} onClick={() => setOrdPct(p)}>{p}%</div>
-                  ))}
-                </div>
-              </>)}
-
-              <label style={{ marginTop: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                {t("Капитализация срабатывания")} ($)
-                {capTrigN > 0 && (tab === "buy"
-                  ? <span className="ord-tag buy">{t("Лимит-покупка")}</span>
-                  : <span className={`ord-tag ${capTrigN < capNow ? "stop" : "take"}`}>
-                      {capTrigN < capNow ? t("Стоп-лосс") : t("Тейк-профит")}
-                    </span>)}
-              </label>
-              <input inputMode="numeric" placeholder={capNow > 0 ? String(Math.round(capNow)) : "0"}
-                     value={ordCap}
-                     onChange={(e) => setOrdCap(e.target.value.replace(/[^0-9]/g, ""))} />
-              <div className="slider-row" style={{ marginTop: 10 }}>
-                <span className="dim">{t("от текущей")} {usd(capNow)}</span>
-                <b style={{ color: capPct >= 0 ? "var(--leaf)" : "var(--red)" }}>
-                  {capTrigN > 0 ? `${capPct >= 0 ? "+" : ""}${fmt(capPct, 0)}%` : "—"}
-                </b>
-              </div>
-              <input type="range" className={`adm-slider ${capPct < 0 ? "burn" : ""}`}
-                     min="-90" max="200" step="5" value={capSlider}
-                     onChange={(e) => setOrdCap(String(Math.round(capNow * (1 + Number(e.target.value) / 100))))} />
-              {priceTrigEth > 0 && (
-                <div className="hint">{t("Цена")}: {fmtEth(priceTrigEth)} ETH · {t("линия появится на графике")}</div>
-              )}
-
-              <button className={`btn btn-block ${tab === "buy" ? "btn-primary" : "btn-danger"}`}
-                      style={{ marginTop: 14 }} onClick={placeOrder}
-                      disabled={!wallet || !(capTrigN > 0) || (tab === "buy" && !(Number(ordAmt) > 0))}>
-                {t("Создать заявку")}
-              </button>
-              <div className="hint">
-                {t("Работает, пока открыта вкладка — при срабатывании кошелёк попросит подпись.")}
-              </div>
-              {orders.length > 0 && (
-                <div className="order-list">
-                  {orders.map((o) => (
-                    <div className="order-row" key={o.id}>
-                      <span className={`ord-tag ${o.type}`}>
-                        {o.type === "buy" ? t("Лимит-покупка") : o.type === "stop" ? t("Стоп-лосс") : t("Тейк-профит")}
-                      </span>
-                      <span className="mono">@ {fmtEth(o.priceEth)} ETH</span>
-                      <span className="dim">{o.type === "buy" ? `${o.amountEth} ETH` : `${o.sellPct || 100}%`}</span>
-                      <span className={`ord-st ${o.status}`}>
-                        {o.status === "active" ? t("ждёт") : o.status === "firing" ? t("исполняется…")
-                          : o.status === "done" ? "✓ " + t("исполнена") : "✕ " + t("ошибка")}
-                      </span>
-                      <span className="ord-x" title={t("Удалить")}
-                            onClick={() => { removeOrder(o.id); setOrders(ordersFor(tokenLower)); }}>✕</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            )}
           </div>
         )}
         </div>
