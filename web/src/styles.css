@@ -409,8 +409,9 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
   border-radius: 6px; padding: 1px 6px; color: var(--text-dim);
 }
 /* тоньше цифры и жирный текст по всему сайту */
-b, strong { font-weight: 600; }
-.stat-card .v, .ana-card .v, .tk-mcap, .tk-chg, .tmc, .split-bar { font-weight: 600; }
+b, strong { font-weight: 500; }
+.stat-card .v, .ana-card .v, .tk-mcap, .tk-chg, .tmc, .split-bar { font-weight: 500; }
+.pv, .usd-sub, .trow, .arow, .prow6, .preview-stats .v, .quote-box b, .tk-cell b { font-weight: 500; }
 .side-buy { color: var(--leaf); font-weight: 700; }
 .side-sell { color: var(--red); font-weight: 800; }
 
