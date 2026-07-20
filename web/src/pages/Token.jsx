@@ -194,6 +194,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCA, setCopiedCA] = useState(false);
   const [tf, setTf] = useState("all"); // таймфрейм графика
+  const [trSort, setTrSort] = useState({ key: "ts", dir: "desc" }); // сортировка таблицы сделок
   const [tradePct, setTradePct] = useState(0); // ползунок суммы
   const [btTab, setBtTab] = useState("trades");
   const [qpcts, setQpcts] = useState(() => {
@@ -560,6 +561,37 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const mcapEth = Number(formatEther(data.price)) * 1_000_000_000;
   const mcapUsd = usd(mcapEth * rate);
 
+  // сортировка таблицы сделок по клику на заголовок колонки
+  const sortTrades = (arr) => {
+    const { key, dir } = trSort;
+    const m = dir === "asc" ? 1 : -1;
+    return [...arr].sort((a, b) => {
+      if (key === "side" || key === "addr") {
+        const va = String(a[key]), vb = String(b[key]);
+        return va < vb ? -m : va > vb ? m : 0;
+      }
+      const va = key === "ts" ? (a.ts || 0) : key === "block" ? Number(a.block) : Number(a[key]) || 0;
+      const vb = key === "ts" ? (b.ts || 0) : key === "block" ? Number(b.block) : Number(b[key]) || 0;
+      return (va - vb) * m;
+    });
+  };
+  const Th = ({ k, children }) => (
+    <span className="sort-h"
+          onClick={() => setTrSort((s) => ({ key: k, dir: s.key === k && s.dir === "desc" ? "asc" : "desc" }))}>
+      {children} <i>{trSort.key === k ? (trSort.dir === "desc" ? "▼" : "▲") : "↕"}</i>
+    </span>
+  );
+  const tradesHeader = (
+    <div className="trow hdr" style={{ marginTop: 8 }}>
+      <Th k="ts">{t("Время")}</Th>
+      <Th k="side">{t("Тип")}</Th>
+      <Th k="eth">ETH</Th>
+      <Th k="tokens">{t("Токены")}</Th>
+      <Th k="addr">{t("Трейдер")}</Th>
+      <Th k="block">{t("Блок")}</Th>
+    </div>
+  );
+
   const socials = (meta.x || meta.telegram || meta.website) ? (
     <div className="soc-row" style={{ margin: 0 }}>
       {meta.x && (
@@ -747,13 +779,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           {history && history.trades.length === 0 && (
             <div className="dim" style={{ padding: "14px 0" }}>{t("Пока нет сделок.")}</div>
           )}
-          {history && history.trades.length > 0 && (
-            <div className="trow hdr" style={{ marginTop: 8 }}>
-              <span>{t("Время")}</span><span>{t("Тип")}</span><span>ETH</span>
-              <span>{t("Токены")}</span><span>{t("Трейдер")}</span><span>{t("Блок")}</span>
-            </div>
-          )}
-          {history && history.trades.slice(0, 12).map((tr, i) => (
+          {history && history.trades.length > 0 && tradesHeader}
+          {history && sortTrades(history.trades).slice(0, 12).map((tr, i) => (
             <div className="trow" key={i}>
               <span className="dim" title={tr.ts ? new Date(tr.ts).toLocaleString() : ""}>
                 {tr.ts ? timeAgo(tr.ts) : "—"}
@@ -791,11 +818,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             const mine = history.trades.filter((tr) => tr.addr.toLowerCase() === wallet.account.toLowerCase());
             if (mine.length === 0) return <div className="dim" style={{ padding: "14px 0" }}>{t("Сделок пока нет.")}</div>;
             return [(
-              <div className="trow hdr" style={{ marginTop: 8 }} key="hdr">
-                <span>{t("Время")}</span><span>{t("Тип")}</span><span>ETH</span>
-                <span>{t("Токены")}</span><span>{t("Трейдер")}</span><span>{t("Блок")}</span>
-              </div>
-            ), ...mine.slice(0, 20).map((tr, i) => (
+              <React.Fragment key="hdr">{tradesHeader}</React.Fragment>
+            ), ...sortTrades(mine).slice(0, 20).map((tr, i) => (
               <div className="trow" key={i}>
                 <span className="dim" title={tr.ts ? new Date(tr.ts).toLocaleString() : ""}>
                   {tr.ts ? timeAgo(tr.ts) : "—"}
