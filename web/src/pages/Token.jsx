@@ -821,7 +821,33 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           {wallet && history && (() => {
             const mine = history.trades.filter((tr) => tr.addr.toLowerCase() === wallet.account.toLowerCase());
             if (mine.length === 0) return <div className="dim" style={{ padding: "14px 0" }}>{t("Сделок пока нет.")}</div>;
+            // сводка позиции (как у GMGN)
+            const buys = mine.filter((x) => x.side === "buy");
+            const sells = mine.filter((x) => x.side === "sell");
+            const buysEth = buys.reduce((s, x) => s + x.eth, 0);
+            const buysTok = buys.reduce((s, x) => s + x.tokens, 0);
+            const sellsEth = sells.reduce((s, x) => s + x.eth, 0);
+            const sellsTok = sells.reduce((s, x) => s + x.tokens, 0);
+            const feesEth = mine.reduce((s, x) => s + (x.fee || 0), 0);
+            const balTok = Number(formatEther(data.balance));
+            const valEth = balTok * Number(formatEther(data.price));
+            const pnlEth = valEth + sellsEth - buysEth;
+            const pnlPct = buysEth > 0 ? (pnlEth / buysEth) * 100 : 0;
+            const lastTs = mine.reduce((s, x) => Math.max(s, x.ts || 0), 0);
             return [(
+              <div className="tk-cells" style={{ margin: "14px 0 2px" }} key="sum">
+                <div className="tk-cell"><span>{t("Активность")}</span><b>{lastTs ? timeAgo(lastTs) : "—"}</b></div>
+                <div className="tk-cell"><span>{t("Куплено")}</span><b>{dollars(buysEth)}</b><span>{fmt(buysTok, 0)}</span></div>
+                <div className="tk-cell"><span>{t("Продано")}</span><b>{dollars(sellsEth)}</b><span>{fmt(sellsTok, 0)}</span></div>
+                <div className="tk-cell"><span>{t("Баланс")}</span><b>{dollars(valEth)}</b><span>{fmt(balTok, 0)} ({fmt(balTok / 1e7, 2)}%)</span></div>
+                <div className="tk-cell"><span>uPnL</span>
+                  <b style={{ color: pnlEth >= 0 ? "var(--leaf)" : "var(--red)" }}>
+                    {dollars(pnlEth)} ({pnlPct >= 0 ? "+" : ""}{fmt(pnlPct, 1)}%)
+                  </b>
+                </div>
+                <div className="tk-cell"><span>{t("Комиссии")}</span><b>{dollars(feesEth)}</b></div>
+              </div>
+            ), (
               <React.Fragment key="hdr">{tradesHeader}</React.Fragment>
             ), ...sortTrades(mine).slice(0, 20).map((tr, i) => (
               <div className="trow" key={i}>
