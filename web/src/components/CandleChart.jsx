@@ -167,9 +167,9 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
     if (!c.fitted && candles.length > 0) {
       const ts = c.chart.timeScale();
       ts.fitContent();
-      // мало свечей → fitContent раздувает бары на весь экран; ограничиваем ширину
+      // стартовый зум всегда умеренно отдалённый: бары компактные, вокруг воздух
       try {
-        if (ts.options().barSpacing > 40) ts.applyOptions({ barSpacing: 28, rightOffset: 6 });
+        if (ts.options().barSpacing > 12) ts.applyOptions({ barSpacing: 10, rightOffset: 10 });
       } catch (e) { /* ignore */ }
       c.fitted = true;
     }
