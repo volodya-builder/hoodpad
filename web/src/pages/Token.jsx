@@ -201,6 +201,21 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [copiedCA, setCopiedCA] = useState(null); // где нажали копирование: "about" | "head" | "pos"
   const [tf, setTf] = useState("all"); // таймфрейм графика
   const [trSort, setTrSort] = useState({ key: "ts", dir: "desc" }); // сортировка таблицы сделок
+  // избранное (общий список с главной и сайдбаром)
+  const [favSet, setFavSet] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("hood_favs") || "[]")); }
+    catch (e) { return new Set(); }
+  });
+  const isFavTok = favSet.has(tokenAddress);
+  const toggleFavTok = (e) => {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    setFavSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(tokenAddress)) next.delete(tokenAddress); else next.add(tokenAddress);
+      try { localStorage.setItem("hood_favs", JSON.stringify([...next])); } catch (err) { /* ignore */ }
+      return next;
+    });
+  };
   const [hSort, setHSort] = useState("desc"); // сортировка холдеров по доле
   const [tpSort, setTpSort] = useState({ key: "ts", dir: "desc" }); // сортировка в панели трейдера
   const [tradePct, setTradePct] = useState(0); // ползунок суммы
@@ -757,6 +772,10 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
           <div className="card-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
             <h3 style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 22 }}>
+              <span className={`tok-star ${isFavTok ? "on" : ""}`} onClick={toggleFavTok}
+                    title={t(isFavTok ? "Убрать из избранного" : "В избранное")}>
+                {isFavTok ? "★" : "☆"}
+              </span>
               {meta.image && (
                 <img src={meta.image} alt="" style={{ width: 96, height: 96, borderRadius: 18 }}
                      onError={(e) => (e.target.style.display = "none")} />
@@ -912,6 +931,11 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               <div className="pos-row" key="sum" title={`${data.name} — ${t("Открыть страницу токена")}`}
                    onClick={() => { window.location.hash = `#/token/${tokenAddress}`; window.scrollTo({ top: 0, behavior: "smooth" }); }}>
                 <a className="pos-id" href={`#/token/${tokenAddress}`} title={`${data.name} — ${t("Открыть страницу токена")}`}>
+                  <span className={`tok-star ${isFavTok ? "on" : ""}`} style={{ fontSize: 14 }}
+                        onClick={toggleFavTok}
+                        title={t(isFavTok ? "Убрать из избранного" : "В избранное")}>
+                    {isFavTok ? "★" : "☆"}
+                  </span>
                   {meta.image && (
                     <img src={meta.image} alt="" style={{ width: 34, height: 34, borderRadius: 9 }}
                          onError={(e) => (e.target.style.display = "none")} />

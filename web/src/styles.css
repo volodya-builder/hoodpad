@@ -307,6 +307,9 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 .ts-name { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .ts-name b { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ts-name .dim { font-size: 10.5px; }
+.tok-star { cursor: pointer; color: var(--text-dim); font-size: 19px; line-height: 1; transition: color .15s, transform .15s; }
+.tok-star:hover { color: var(--gold); transform: scale(1.12); }
+.tok-star.on { color: var(--gold); }
 .ts-fav { cursor: pointer; color: var(--text-dim); font-size: 14px; flex: none; text-align: center; }
 .ts-fav:hover, .ts-fav.on { color: var(--gold); }
 @media (max-width: 2140px) { .tok-sidebar { display: none; } }
