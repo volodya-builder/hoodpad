@@ -619,6 +619,11 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     </span>
   );
   // компактные форматтеры для ленты активности (стиль GMGN)
+  // обрезаем «хвост» дробной части, чтобы длинное число не ломало вёрстку поля
+  const trimAmt = (s) => {
+    const [i, f = ""] = String(s).split(".");
+    return f ? `${i}.${f.slice(0, 4).replace(/0+$/, "")}`.replace(/\.$/, "") : i;
+  };
   const compactN = (n) =>
     n >= 1e9 ? fmt(n / 1e9, 2) + "B"
     : n >= 1e6 ? fmt(n / 1e6, 2) + "M"
@@ -1137,15 +1142,15 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                            const avail = Math.max(0, Number(formatEther(data.walletEth ?? 0n)) - 0.0003);
                            setAmount(v > 0 ? (avail * v / 100).toFixed(6) : "");
                          } else {
-                           setAmount(v > 0 ? formatEther((data.balance * BigInt(v)) / 100n) : "");
+                           setAmount(v > 0 ? trimAmt(formatEther((data.balance * BigInt(v)) / 100n)) : "");
                          }
                        }} />
               </>
             )}
             {tab === "sell" && wallet && (
               <p className="dim" style={{ margin: "6px 0 0" }}>
-                {t("Баланс:")} {fmt(formatEther(data.balance), 2)}{" "}
-                <a href="#/" onClick={(e) => { e.preventDefault(); setAmount(formatEther(data.balance)); }}>
+                {t("Баланс:")} {compactN(Number(formatEther(data.balance)))}{" "}
+                <a href="#/" onClick={(e) => { e.preventDefault(); setAmount(trimAmt(formatEther(data.balance))); }}>
                   {t("макс")}
                 </a>
               </p>
@@ -1171,7 +1176,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                          const avail = Math.max(0, Number(formatEther(data.walletEth ?? 0n)) - 0.0003);
                          setAmount(v > 0 ? (avail * v / 100).toFixed(6) : "");
                        } else {
-                         setAmount(v > 0 ? formatEther((data.balance * BigInt(v)) / 100n) : "");
+                         setAmount(v > 0 ? trimAmt(formatEther((data.balance * BigInt(v)) / 100n)) : "");
                        }
                      }}>
                   {p2}%
