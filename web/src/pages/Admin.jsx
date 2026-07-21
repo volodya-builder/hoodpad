@@ -28,6 +28,8 @@ export default function Admin({ wallet, onConnect }) {
   const [online, setOnline] = useState(null);
   const [bans, setBans] = useState({});
   const [banInput, setBanInput] = useState("");
+  const [visitors, setVisitors] = useState(null);   // { pid: {first,last,w,addr} }
+  const [vq, setVq] = useState("");
 
   // онлайн + баны из Firebase
   useEffect(() => {
@@ -43,6 +45,9 @@ export default function Admin({ wallet, onConnect }) {
         const now = Date.now();
         const cnt = Object.values(pres).filter((p) => p && now - (p.ts || 0) < 45_000).length;
         if (alive) { setOnline(cnt); setBans((await br.json()) || {}); }
+        // посетители за всё время (анонимные id)
+        const vr = await fetch(`${CHAT_DB_URL}/visitors.json`).then((r) => r.json()).catch(() => null);
+        if (alive) setVisitors(vr || {});
       } catch (e) { /* ignore */ }
     };
     load();
@@ -261,6 +266,61 @@ export default function Admin({ wallet, onConnect }) {
               </div>
               <div className="s">{t("посетителей на сайте за последнюю минуту")}</div>
             </div>
+            <div className="ana-card">
+              <div className="k">{t("Всего посетителей")}</div>
+              <div className="v" style={{ fontSize: 24 }}>
+                {visitors === null ? "…" : Object.keys(visitors).length}
+              </div>
+              <div className="s">
+                {visitors === null ? "" : <>
+                  {Object.values(visitors).filter((v) => v && v.w).length} {t("с кошельком")}
+                  {" · "}
+                  {Object.values(visitors).filter((v) => v && Date.now() - (v.last || 0) < 86400000).length} {t("за 24ч")}
+                </>}
+              </div>
+            </div>
+          </div>
+
+          <div className="bottom-card" style={{ marginTop: 18 }}>
+            <div className="bt-tabs" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <div className="bt-tab on">{t("Посетители")}</div>
+              <input className="tbl-search" value={vq} onChange={(e) => setVq(e.target.value)}
+                     placeholder={t("Поиск: id или адрес…")} spellCheck={false} />
+            </div>
+            <div className="page-sub" style={{ margin: "4px 0 12px" }}>
+              {t("Анонимные идентификаторы браузеров. Персональные данные и IP не собираются.")}
+            </div>
+            {visitors === null && <div className="dim">{t("Загружаю…")}</div>}
+            {visitors && Object.keys(visitors).length === 0 && <div className="dim">{t("Пока пусто.")}</div>}
+            {visitors && Object.keys(visitors).length > 0 && (<>
+              <div className="trow hdr" style={{ gridTemplateColumns: "150px 1fr 150px 150px" }}>
+                <span>ID</span><span>{t("Кошелёк")}</span><span>{t("Первый визит")}</span><span>{t("Последний визит")}</span>
+              </div>
+              {Object.entries(visitors)
+                .filter(([pid, v]) => {
+                  const n = vq.trim().toLowerCase();
+                  if (!n) return true;
+                  return pid.toLowerCase().includes(n) || (v?.addr || "").toLowerCase().includes(n);
+                })
+                .sort((a, b) => (b[1]?.last || 0) - (a[1]?.last || 0))
+                .slice(0, 200)
+                .map(([pid, v]) => (
+                  <div className="trow" key={pid} style={{ gridTemplateColumns: "150px 1fr 150px 150px" }}>
+                    <span className="mono dim">{pid}</span>
+                    <span className="mono">
+                      {v?.addr ? (
+                        <a href={`${EXPLORER}/address/${v.addr}`} target="_blank" rel="noreferrer">{short(v.addr)}</a>
+                      ) : <span className="dim">—</span>}
+                    </span>
+                    <span className="dim" title={v?.first ? new Date(v.first).toLocaleString() : ""}>
+                      {v?.first ? timeAgo(v.first) : "—"}
+                    </span>
+                    <span className="dim" title={v?.last ? new Date(v.last).toLocaleString() : ""}>
+                      {v?.last ? timeAgo(v.last) : "—"}
+                    </span>
+                  </div>
+                ))}
+            </>)}
           </div>
 
           <div className="bottom-card" style={{ marginTop: 18 }}>
