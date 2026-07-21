@@ -1533,10 +1533,17 @@ html[data-theme="light"] .tos-ico { background: #ffffff; }
   .nav-pill { padding: 13px 14px; font-size: 15px; border-radius: 12px; }
   html[data-theme="light"] .nav-pills { background: #fff; }
 
-  .nav { gap: 6px; }
-  .icon-btn { width: 36px; height: 36px; border-radius: 10px; font-size: 15px; }
-  /* компактная кнопка кошелька: прячем баланс и ▾ выносим */
-  .nav .btn { padding: 9px 12px; font-size: 12.5px; }
+  /* шапка обязана влезать: правый блок ужимается, кнопка кошелька обрезается */
+  .header-inner { gap: 8px; }
+  .logo { flex: none; }
+  .nav { gap: 6px; flex: 1 1 auto !important; min-width: 0; justify-content: flex-end; }
+  .icon-btn { width: 36px; height: 36px; border-radius: 10px; font-size: 15px; flex: none; }
+  .nav .btn {
+    padding: 9px 12px; font-size: 12.5px;
+    max-width: 44vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  /* плашка STAGING на телефоне мешает шапке — прячем (номер сборки виден на десктопе) */
+  .staging-badge { display: none; }
 
   .page-title { font-size: 26px; }
   .page-sub { font-size: 13.5px; }
@@ -1611,8 +1618,9 @@ html[data-theme="light"] .tos-ico { background: #ffffff; }
   .logo-word { font-size: 13px; letter-spacing: 3px; }
   .icon-btn { width: 34px; height: 34px; }
   .nav { gap: 5px; }
-  .nav .btn { padding: 8px 10px; font-size: 11.5px; }
+  .nav .btn { padding: 8px 10px; font-size: 11.5px; max-width: 40vw; }
   .nav .btn-primary { padding: 9px 13px; font-size: 12px; }
+  .lang-btn { padding: 0 8px !important; font-size: 11px; }
   /* поиск на телефоне доступен отдельной строкой ниже — иконку в шапке прячем */
   .nav-search { display: none; }
   .page-title { font-size: 23px; }
