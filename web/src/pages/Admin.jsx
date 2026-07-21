@@ -29,6 +29,7 @@ export default function Admin({ wallet, onConnect }) {
   const [bans, setBans] = useState({});
   const [banInput, setBanInput] = useState("");
   const [visitors, setVisitors] = useState(null);   // { pid: {first,last,w,addr} }
+  const [activity, setActivity] = useState(null);   // 12 слотов по 5 минут (график за час)
   const [vq, setVq] = useState("");
 
   // онлайн + баны из Firebase
@@ -48,6 +49,8 @@ export default function Admin({ wallet, onConnect }) {
         // посетители за всё время (анонимные id)
         const vr = await fetch(`${CHAT_DB_URL}/visitors.json`).then((r) => r.json()).catch(() => null);
         if (alive) setVisitors(vr || {});
+        const ar = await fetch(`${CHAT_DB_URL}/activity.json`).then((r) => r.json()).catch(() => null);
+        if (alive) setActivity(ar || {});
       } catch (e) { /* ignore */ }
     };
     load();
@@ -265,6 +268,42 @@ export default function Admin({ wallet, onConnect }) {
                 </span>
               </div>
               <div className="s">{t("посетителей на сайте за последнюю минуту")}</div>
+            </div>
+            <div className="ana-card">
+              <div className="k">{t("Посетители за час")}</div>
+              {(() => {
+                if (activity === null) return <div className="v" style={{ fontSize: 24 }}>…</div>;
+                const curB = Math.floor(Date.now() / 300_000);
+                // 12 корзин по 5 минут: от часа назад до сейчас
+                const bins = Array.from({ length: 12 }, (_, i) => {
+                  const b = curB - 11 + i;
+                  const slot = Object.values(activity || {}).find((s) => s && s.b === b);
+                  return { b, n: slot ? Object.keys(slot.p || {}).length : 0 };
+                });
+                const uniq = new Set();
+                for (const s of Object.values(activity || {})) {
+                  if (s && s.b > curB - 12) for (const p of Object.keys(s.p || {})) uniq.add(p);
+                }
+                const max = Math.max(...bins.map((x) => x.n), 1);
+                const tf = (b) => {
+                  const d = new Date(b * 300_000);
+                  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                };
+                return (<>
+                  <div className="v" style={{ fontSize: 24 }}>{uniq.size}</div>
+                  <div className="ana-bars" style={{ marginTop: 10 }}>
+                    {bins.map((x, i) => (
+                      <div key={i} className={`ana-bar ${x.n > 0 ? "on" : ""}`}
+                           title={`${x.n} ${t("чел.")} · ${tf(x.b)}–${tf(x.b + 1)}`}
+                           style={{ height: x.n > 0 ? `${Math.max(10, (x.n / max) * 100)}%` : "3px" }} />
+                    ))}
+                  </div>
+                  <div className="ana-axis">
+                    <span>{tf(curB - 11)}</span>
+                    <span>{t("сейчас")}</span>
+                  </div>
+                </>);
+              })()}
             </div>
             <div className="ana-card">
               <div className="k">{t("Всего посетителей")}</div>

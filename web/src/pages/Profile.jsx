@@ -145,14 +145,15 @@ export default function Profile({ wallet, onConnect }) {
         ethBal, positions, launched,
         totVal, totInv, totReal, totPnl: totVal + totReal - totInv,
         tradesCount: enriched.reduce((s, tk) => s + tk.mine.length, 0),
-        myTrades: enriched.flatMap((tk) => tk.mine.map((tr) => ({ ...tr, sym: tk.symbol, token: tk.token })))
+        myTrades: enriched.flatMap((tk) => tk.mine.map((tr) => ({ ...tr, sym: tk.symbol, token: tk.token, img: tk.meta?.image || "" })))
           .sort((a, b) => Number(b.block - a.block)).slice(0, 50),
       };
       _profCache[me] = next;
       // в localStorage кладём облегчённую версию (без тяжёлых картинок), чтобы влезло
       try {
         const strip = (arr) => arr.map(({ meta, mine, ...r }) => ({ ...r, meta: {} }));
-        const lite = { ...next, positions: strip(positions), launched: strip(launched) };
+        const lite = { ...next, positions: strip(positions), launched: strip(launched),
+                       myTrades: next.myTrades.map(({ img, ...r }) => r) }; // без картинок — берегём localStorage
         localStorage.setItem(PROF_LS, JSON.stringify({ [me]: lite }, _bigR));
       } catch (e) { /* переполнение localStorage — не страшно, память сессии остаётся */ }
       setState(next);
@@ -287,35 +288,41 @@ export default function Profile({ wallet, onConnect }) {
               )}
               {state.myTrades && state.myTrades.length > 0 && (
                 <>
-                  <div className="trow hdr" style={{ marginTop: 8 }}>
-                    <span>{t("Время")}</span>
-                    <span>{t("Тип")}</span>
+                  <div className="trow phist hdr" style={{ marginTop: 8 }}>
                     <span>{t("Монета")}</span>
-                    <span>ETH</span>
-                    <span>{t("Токены")}</span>
-                    <span>{t("Блок")}</span>
+                    <SortH sort={trsort} setSort={setTrsort} k="ts" label={t("Время")} />
+                    <span>{t("Тип")}</span>
+                    <SortH sort={trsort} setSort={setTrsort} k="eth" label="ETH" />
+                    <SortH sort={trsort} setSort={setTrsort} k="tokens" label={t("Токены")} />
+                    <SortH sort={trsort} setSort={setTrsort} k="block" label={t("Блок")} />
                   </div>
-                  {state.myTrades
-                    .filter((tr) => {
+                  {sortRows(state.myTrades.filter((tr) => {
                       const needle = lq.trim().toLowerCase();
                       if (!needle) return true;
                       return tr.sym.toLowerCase().includes(needle) || tr.token.toLowerCase().includes(needle);
-                    })
+                    }), trsort, (tr, k) =>
+                      k === "ts" ? (tr.ts || 0)
+                      : k === "eth" ? tr.eth
+                      : k === "tokens" ? tr.tokens
+                      : Number(tr.block))
                     .map((tr, i) => (
-                    <div className="trow" key={i}>
-                      <span className="dim" title={tr.ts ? new Date(tr.ts).toLocaleString() : ""}>
-                        {tr.ts ? timeAgo(tr.ts) : "—"}
-                      </span>
-                      <span className={tr.side === "buy" ? "side-buy" : "side-sell"}>
-                        {t(tr.side === "buy" ? "Купил" : "Продал")}
-                      </span>
+                    <div className="trow phist" key={i}>
                       <span className="hist-coin" onClick={() => copyCA(tr.token)}
                             title={t("Скопировать адрес контракта")}>
+                        {tr.img
+                          ? <img src={tr.img} alt="" />
+                          : <span className="ts-ph" style={{ fontSize: 14 }}>🖼️</span>}
                         <a href={`#/token/${tr.token}`} onClick={(e) => e.stopPropagation()}
                            style={{ color: "inherit" }}><b>${tr.sym}</b></a>
                         <span className="mono dim">
                           {caCopied === tr.token ? "✓" : `${tr.token.slice(0, 6)}…${tr.token.slice(-4)} ⧉`}
                         </span>
+                      </span>
+                      <span className="dim" title={tr.ts ? new Date(tr.ts).toLocaleString() : ""}>
+                        {tr.ts ? timeAgo(tr.ts) : "—"}
+                      </span>
+                      <span className={tr.side === "buy" ? "side-buy" : "side-sell"}>
+                        {t(tr.side === "buy" ? "Купил" : "Продал")}
                       </span>
                       <a href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer"
                          style={{ color: "inherit" }} title={t("Открыть транзакцию")}>

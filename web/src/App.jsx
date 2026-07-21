@@ -207,6 +207,23 @@ export default function App() {
             addr: wallet ? wallet.account : null,
           }),
         }).catch(() => {});
+        // активность по 5-минутным корзинам для графика «за час» в админке:
+        // 12 слотов по кругу, старые перезаписываются сами — база не растёт.
+        const bucket = Math.floor(now / 300_000);
+        if (window.__hoodActBucket !== bucket) {
+          window.__hoodActBucket = bucket;
+          const slot = bucket % 12;
+          fetch(`${CHAT_DB_URL}/activity/${slot}.json`)
+            .then((r) => r.json())
+            .then((cur) => (cur && cur.b === bucket
+              ? fetch(`${CHAT_DB_URL}/activity/${slot}/p/${pid}.json`, { method: "PUT", body: "1" })
+              : fetch(`${CHAT_DB_URL}/activity/${slot}.json`, {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ b: bucket, p: { [pid]: 1 } }),
+                })))
+            .catch(() => {});
+        }
       };
       beat();
       id = setInterval(beat, 20_000);
