@@ -930,6 +930,24 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             const holdStr = holdMs >= 86400000 ? `${Math.floor(holdMs / 86400000)}${t("д")}`
               : holdMs >= 3600000 ? `${Math.floor(holdMs / 3600000)}${t("ч")}`
               : `${Math.max(1, Math.floor(holdMs / 60000))}${t("м")}`;
+            // позиция закрыта: на балансе только «пыль» от округления (<1 токена)
+            if (balTok < 1) {
+              return (
+                <div className="pos-closed">
+                  {t("Позиция закрыта")} ·{" "}
+                  {t("итог")}:{" "}
+                  <b style={{ color: totPnl >= 0 ? "var(--leaf)" : "var(--red)" }}>
+                    {dollars(totPnl)} ({totPct >= 0 ? "+" : ""}{fmt(totPct, 1)}%)
+                  </b>{" "}
+                  · {t("куплено")} {dollars(buysEth)} · {t("продано")} {dollars(sellsEth)} ·{" "}
+                  {mine.length} {t("сделок")} —{" "}
+                  <a href="#/" onClick={(e) => { e.preventDefault(); setBtTab("myhist"); }}
+                     style={{ color: "var(--gold)" }}>
+                    {t("история сделок")} →
+                  </a>
+                </div>
+              );
+            }
             return [(
               <div className="pos-row" key="sum" title={`${data.name} — ${t("Открыть страницу токена")}`}
                    onClick={() => { window.location.hash = `#/token/${tokenAddress}`; window.scrollTo({ top: 0, behavior: "smooth" }); }}>

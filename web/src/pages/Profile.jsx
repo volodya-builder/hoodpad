@@ -129,10 +129,14 @@ export default function Profile({ wallet, onConnect }) {
         if (!alive) return;
       }
       if (!alive) return;
-      const positions = enriched.filter((tk) => tk.bal > 0n || tk.mine.length > 0);
+      // позиция активна, только если на балансе больше «пыли» (>=1 токена);
+      // закрытые (всё продано) в списке не висят
+      const positions = enriched.filter((tk) => Number(formatEther(tk.bal)) >= 1);
       const launched = enriched.filter((tk) => tk.isMine);
+      // итоги считаем по ВСЕМ токенам с моими сделками (включая закрытые позиции),
+      // чтобы общий PnL не терял реализованную прибыль
       let totVal = 0, totInv = 0, totReal = 0;
-      positions.forEach((tk) => {
+      enriched.filter((tk) => tk.mine.length > 0 || tk.bal > 0n).forEach((tk) => {
         totVal += Number(formatEther(tk.bal)) * Number(formatEther(tk.price));
         totInv += tk.invested; totReal += tk.realized;
       });
