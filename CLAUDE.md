@@ -33,6 +33,18 @@
 - Чат/онлайн/баны: Firebase RTDB `https://hood-chat-4b664-default-rtdb.europe-west1.firebasedatabase.app` (REST).
 - **Бот-миррор** Pons-токенов: `.github/workflows/mirror.yml` + `bot/` — GitHub Actions cron, следит за двумя фабриками Pons. **НИКОГДА не редактируй mirror.yml.**
 
+### Шпаргалка «кто есть кто» (владелец просит напоминать простыми словами)
+
+- **GitHub Pages** — полка с файлами сайта. **Cloudflare** — охранник/щит перед ней (DDoS, кэш). **Alchemy** — телефонная линия к блокчейну (цены, графики, сделки). **Goldsky** — библиотекарь блокчейна (готовые списки/истории одним запросом). **Firebase** — комната с чатом (чат, онлайн, баны, посетители). **Namecheap** — паспортный стол (владение именем hoodandarrow.com).
+
+### Масштабирование (сделано 21.07.2026)
+
+- **Firebase Blaze включён** (биллинг Google Cloud, карта привязана, предоплата €25 зачтена, бюджет-алерт €25/мес): чат держит до 200 000 подключений (было 100). Blaze активирован как full account.
+- **Alchemy Pay As You Go** (карта привязана, 30M CU/мес бесплатно, далее ~$0.45/1M): ключ фронтенда ограничен доменами `hoodandarrow.com` + `*.hoodandarrow.com` (Apps → Security → Domain allowlist). Полоса 10 000 CU/с — поднять одной кнопкой (Upgrade у Peak Throughput), когда стабильно 200+ онлайн.
+- **Cloudflare**: аккаунт заведён (email-регистрация, 2FA включена), домен добавлен (план Pro), DNS-записи GitHub Pages импортированы (4×A + CNAME www, Proxied). НЕ ЗАВЕРШЕНО: смена nameservers на `carol.ns.cloudflare.com`/`damon.ns.cloudflare.com` у Namecheap — ждёт разблокировки аккаунта Namecheap (тикет NC-CGJ-9448, верификация оплаты; дескриптор NAME-CHEAP.COM* OCDV72 отправлен). После активации: настроить SSL-режим Full и проверить почтовую пересылку (MX eforward — может отвалиться на чужом DNS).
+- **Код** (в staging → main): subgraph-first загрузка (allTrades/subgraphUserTrades вместо обхода пулов; Analytics ~200 запросов → 4), пагинация главной, джиттер поллинга, SWR-кэши. Сайт реалистично держит тысячи онлайн; следующие узкие места — лимиты Goldsky (платный план за 10 мин) и полоса Alchemy (кнопка).
+- Не сделано из плана: платный Goldsky (по мере роста), платный аудит контрактов (отложен владельцем).
+
 ## Карта кода
 
 - `contracts/` — Solidity 0.8.28 (LaunchpadFactory, BondingCurvePool, FeeSplitter, BuybackTreasury, UniswapV3Migrator, Vote). Компиляция: `scripts/compile.js` (solc-js, optimizer 200, evmVersion paris).
