@@ -1527,7 +1527,11 @@ html[data-theme="light"] .tos-ico { background: #ffffff; }
 @media (max-width: 800px) {
   .burger { display: flex; }
   .header-inner { height: 58px; }
-  .logo-word { font-size: 15px; letter-spacing: 4px; }
+  /* на телефоне логотип — только иконка: слово не влезает рядом с бургером */
+  .logo-word { display: none; }
+  /* непрозрачная шапка: in-app браузеры (Telegram и др.) не умеют blur,
+     и контент просвечивал сквозь полупрозрачный фон */
+  header { background: var(--bg); backdrop-filter: none; }
 
   /* навигация превращается в выпадающую панель */
   .nav-pills {
