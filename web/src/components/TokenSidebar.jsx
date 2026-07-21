@@ -4,16 +4,10 @@ import { loadTokens, subgraphStats24 } from "../lib/data.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { fmtEth, fmt } from "../lib/web3.js";
 import { useLang } from "../lib/i18n.jsx";
+import { useFavs, toggleFav } from "../lib/favs.js";
 
 // Боковой список монет в стиле биржи: колонки Имя/Объём, Капа, 24ч %
 // с сортировкой по клику, звёздочка слева от логотипа.
-function loadFavs() {
-  try { return new Set(JSON.parse(localStorage.getItem("hood_favs") || "[]")); }
-  catch (e) { return new Set(); }
-}
-function saveFavs(s) {
-  try { localStorage.setItem("hood_favs", JSON.stringify([...s])); } catch (e) { /* ignore */ }
-}
 
 export default function TokenSidebar({ current }) {
   const { t } = useLang();
@@ -23,7 +17,7 @@ export default function TokenSidebar({ current }) {
   const [q, setQ] = useState("");
   const [sort, setSort] = useState({ k: "vol", d: -1 }); // d: -1 убывание, 1 возрастание
   const [favOnly, setFavOnly] = useState(false);
-  const [favs, setFavs] = useState(loadFavs);
+  const favs = useFavs();
 
   useEffect(() => {
     let alive = true;
@@ -36,14 +30,6 @@ export default function TokenSidebar({ current }) {
     return () => { alive = false; clearInterval(id); };
   }, []);
 
-  const toggleFav = (addr) => {
-    setFavs((prev) => {
-      const next = new Set(prev);
-      if (next.has(addr)) next.delete(addr); else next.add(addr);
-      saveFavs(next);
-      return next;
-    });
-  };
 
   const volOf = (tok) => st.vol[(tok.pool || "").toLowerCase()] || 0;
   const mcapOf = (tok) => Number(formatEther(tok.price)) * 1e9;

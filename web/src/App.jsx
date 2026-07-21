@@ -186,10 +186,26 @@ export default function App() {
       let pid = localStorage.getItem("hood_pid");
       if (!pid) { pid = Math.random().toString(36).slice(2, 12); localStorage.setItem("hood_pid", pid); }
       const beat = () => {
+        const now = Date.now();
         fetch(`${CHAT_DB_URL}/presence/${pid}.json`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ts: Date.now(), w: wallet ? 1 : 0 }),
+          body: JSON.stringify({ ts: now, w: wallet ? 1 : 0 }),
+        }).catch(() => {});
+        // анонимная статистика посещений: случайный id, время первого и последнего визита,
+        // подключался ли кошелёк. Никаких персональных данных и IP не собираем.
+        let first = 0;
+        try {
+          first = Number(localStorage.getItem("hood_first_seen") || 0);
+          if (!first) { first = now; localStorage.setItem("hood_first_seen", String(first)); }
+        } catch (e) { first = now; }
+        fetch(`${CHAT_DB_URL}/visitors/${pid}.json`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            first, last: now, w: wallet ? 1 : 0,
+            addr: wallet ? wallet.account : null,
+          }),
         }).catch(() => {});
       };
       beat();
@@ -336,13 +352,13 @@ export default function App() {
             </a>
             {wallet ? (
               <div className="wallet-wrap">
-                <button className="btn mono" onClick={() => setWalletMenu(!walletMenu)}>
+                <button className="btn mono wal-btn" onClick={() => setWalletMenu(!walletMenu)}>
                   {hdrBal !== null && (
-                    <span style={{ color: "var(--gold)", marginRight: 8 }}>
+                    <span className="wal-bal" style={{ color: "var(--gold)", marginRight: 8 }}>
                       {fmtEth(Number(formatEther(hdrBal)))} ETH
                     </span>
                   )}
-                  {short(wallet.account)} ▾
+                  <span className="wal-addr">{short(wallet.account)}</span> ▾
                 </button>
                 <div className={`wallet-menu ${walletMenu ? "open" : ""}`}>
                   <a className="wallet-item" href="#/profile" onClick={() => setWalletMenu(false)}

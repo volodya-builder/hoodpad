@@ -4,14 +4,8 @@ import { fmt, fmtEth } from "../lib/web3.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { timeAgo, loadTokens, useClock, useSupport } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
+import { useFavs, toggleFav } from "../lib/favs.js";
 
-function loadFavs() {
-  try { return new Set(JSON.parse(localStorage.getItem("hood_favs") || "[]")); }
-  catch (e) { return new Set(); }
-}
-function saveFavs(s) {
-  try { localStorage.setItem("hood_favs", JSON.stringify([...s])); } catch (e) { /* ignore */ }
-}
 
 function TokenCard({ t, fav, onFav, cushion = 0 }) {
   const { t: tr } = useLang();
@@ -69,18 +63,10 @@ export default function Home({ onSearch }) {
   const [tokens, setTokens] = useState(null);
   const [error, setError] = useState("");
   const [sort, setSort] = useState("new");
-  const [favs, setFavs] = useState(loadFavs);
+  const favs = useFavs();
   const support = useSupport();
   const cushionOf = (addr) => support.per[addr.toLowerCase()]?.eth || 0;
 
-  const toggleFav = (addr) => {
-    setFavs((prev) => {
-      const next = new Set(prev);
-      if (next.has(addr)) next.delete(addr); else next.add(addr);
-      saveFavs(next);
-      return next;
-    });
-  };
 
   useEffect(() => {
     let alive = true;

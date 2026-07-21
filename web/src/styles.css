@@ -366,6 +366,9 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
   margin-left: auto !important; margin-right: auto !important;
   box-sizing: border-box;
 }
+/* длинное количество токенов не должно распирать поле и ломать вёрстку */
+.grid-item > .panel input[inputmode="decimal"],
+.grid-item > .panel > input { text-overflow: ellipsis; }
 .grid-item .chart-wrap { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .grid-item .chart-wrap .chart-area { flex: 1; min-height: 0; position: relative; }
 .grid-item .chart-resize { height: 100% !important; max-height: none; resize: none; }
@@ -713,6 +716,9 @@ html[data-theme="light"] header { background: rgba(242,242,238,.85); border-bott
 html[data-theme="light"] .card, html[data-theme="light"] .panel, html[data-theme="light"] .preview-card,
 html[data-theme="light"] .chart-panel, html[data-theme="light"] .chat-panel, html[data-theme="light"] .about-card,
 html[data-theme="light"] .bottom-card, html[data-theme="light"] .ana-card { background: var(--card); }
+html[data-theme="light"] .vote-bar, html[data-theme="light"] .tok-sidebar,
+html[data-theme="light"] .card, html[data-theme="light"] .preview-card,
+html[data-theme="light"] .trader-panel, html[data-theme="light"] .chart-wrap.fs { background: var(--card); }
 html[data-theme="light"] input, html[data-theme="light"] textarea, html[data-theme="light"] .swap-box,
 html[data-theme="light"] .prefix-input, html[data-theme="light"] .suffix-input, html[data-theme="light"] .quote-box,
 html[data-theme="light"] .stat-card, html[data-theme="light"] .mode-tabs, html[data-theme="light"] .pill-group,
@@ -907,6 +913,24 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
   padding-bottom: 7px; margin-bottom: 6px;
 }
 .pos-row .pos-id { padding-right: 16px; }
+/* мини-графики аналитики: подсказка при наведении + ось времени */
+.ana-bars-wrap { position: relative; }
+.ana-bars .ana-bar { transition: opacity .12s, filter .12s; cursor: default; }
+.ana-bars .ana-bar.hl { filter: brightness(1.35); }
+.ana-tip {
+  position: absolute; top: -6px; left: 0; right: 0; z-index: 5;
+  display: flex; flex-direction: column; gap: 1px;
+  background: var(--card, #1a1a19); border: 1px solid var(--border);
+  border-radius: 9px; padding: 6px 9px; pointer-events: none;
+  font-size: 11px; box-shadow: 0 12px 30px -14px #000c;
+}
+.ana-tip b { font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.ana-tip span { color: var(--text-dim); font-size: 10.5px; }
+.ana-axis {
+  display: flex; justify-content: space-between;
+  margin-top: 6px; font-size: 10px; color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
 .pos-sub {
   display: block; margin-top: 4px;
   font-size: 9.5px; font-weight: 700; letter-spacing: .4px;
@@ -1509,10 +1533,25 @@ html[data-theme="light"] .tos-ico { background: #ffffff; }
   .nav-pill { padding: 13px 14px; font-size: 15px; border-radius: 12px; }
   html[data-theme="light"] .nav-pills { background: #fff; }
 
-  .nav { gap: 6px; }
-  .icon-btn { width: 36px; height: 36px; border-radius: 10px; font-size: 15px; }
-  /* компактная кнопка кошелька: прячем баланс и ▾ выносим */
-  .nav .btn { padding: 9px 12px; font-size: 12.5px; }
+  /* шапка обязана влезать: правый блок ужимается, кнопка кошелька обрезается */
+  .header-inner { gap: 8px; }
+  .logo { flex: none; }
+  .nav { gap: 6px; flex: 1 1 auto !important; min-width: 0; justify-content: flex-end; }
+  .icon-btn { width: 36px; height: 36px; border-radius: 10px; font-size: 15px; flex: none; }
+  .nav .btn {
+    padding: 9px 12px; font-size: 12.5px;
+    max-width: 44vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  /* плашка STAGING на телефоне мешает шапке — прячем (номер сборки виден на десктопе) */
+  .staging-badge { display: none; }
+
+  /* подключённый кошелёк: баланс прячем, оставляем короткий адрес —
+     иначе длинная кнопка наезжает на логотип */
+  .wal-bal { display: none; }
+  .wal-btn { max-width: 34vw; }
+  .wal-btn .wal-addr { overflow: hidden; text-overflow: ellipsis; }
+  /* шапка ни при каких условиях не выпускает контент за края */
+  .header-inner { overflow: hidden; }
 
   .page-title { font-size: 26px; }
   .page-sub { font-size: 13.5px; }
@@ -1537,6 +1576,44 @@ html[data-theme="light"] .tos-ico { background: #ffffff; }
 
   .pf-head { gap: 12px; margin: 26px 0 16px; }
   .pf-ava { width: 52px !important; height: 52px !important; font-size: 24px !important; }
+
+  /* ---- страница токена на телефоне: обычная колонка вместо перетаскиваемой сетки ---- */
+  .token-flex { flex-direction: column; padding: 12px 0 48px; }
+  .token-grid-wrap { width: 100% !important; margin: 0 !important; padding: 0; }
+  .tok-sidebar { display: none; }
+  .back-float {
+    position: static !important; display: inline-flex;
+    margin: 14px 0 4px; padding: 9px 16px; font-size: 13px;
+  }
+  /* react-grid-layout: отключаем абсолютное позиционирование, блоки идут потоком */
+  .react-grid-layout { height: auto !important; }
+  .react-grid-item {
+    position: static !important; transform: none !important;
+    width: 100% !important; height: auto !important;
+    margin-bottom: 14px;
+  }
+  .react-grid-item > .react-resizable-handle { display: none; }
+  .drag-handle { display: none; }
+  .grid-item > .card, .grid-item > .panel, .grid-item > .chat-panel { overflow: visible; }
+  .grid-item > .panel > * { max-width: none; }
+  .chart-resize { height: 300px !important; width: 100% !important; resize: none; max-width: 100%; }
+  .chat-panel { max-height: 420px; }
+
+  /* строка позиции: сетка 2 колонки вместо длинного ряда */
+  .pos-row {
+    flex-wrap: wrap; overflow: visible;
+    gap: 10px 0; padding: 12px 0; margin-left: 0;
+  }
+  .pos-row .pos-id { flex: 0 0 100% !important; min-width: 0 !important; }
+  .pos-row .tk-cell { flex: 0 0 50% !important; min-width: 0; }
+  .pos-row .tk-cell > span:first-child { border-bottom: none; padding-bottom: 2px; margin-bottom: 2px; }
+
+  /* панель трейдера — на всю ширину */
+  .trader-panel { width: 100vw; }
+  .tp-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* таблицы активности прокручиваются вместе с карточкой */
+  .arow { min-width: 560px; }
 }
 
 /* маленькие телефоны */
@@ -1549,8 +1626,9 @@ html[data-theme="light"] .tos-ico { background: #ffffff; }
   .logo-word { font-size: 13px; letter-spacing: 3px; }
   .icon-btn { width: 34px; height: 34px; }
   .nav { gap: 5px; }
-  .nav .btn { padding: 8px 10px; font-size: 11.5px; }
+  .nav .btn { padding: 8px 10px; font-size: 11.5px; max-width: 40vw; }
   .nav .btn-primary { padding: 9px 13px; font-size: 12px; }
+  .lang-btn { padding: 0 8px !important; font-size: 11px; }
   /* поиск на телефоне доступен отдельной строкой ниже — иконку в шапке прячем */
   .nav-search { display: none; }
   .page-title { font-size: 23px; }
@@ -1561,6 +1639,19 @@ html[data-theme="light"] .tos-ico { background: #ffffff; }
 /* совсем узкие экраны — оставляем логотип-иконку без текста, чтобы шапка влезла */
 @media (max-width: 400px) {
   .logo-word { display: none; }
+}
+
+/* мелкие телефоны: позиции в одну колонку, компактнее цифры */
+@media (max-width: 560px) {
+  .pos-row .tk-cell { flex: 0 0 50% !important; }
+  .pos-row .tk-cell b { font-size: 13px; }
+  .pf-usd { font-size: 24px; }
+  .vote-bar { gap: 16px; padding: 12px 14px; }
+  .vb-cell b { font-size: 17px; }
+  .vb-right { margin-left: 0; text-align: left; }
+  .tp-grid { grid-template-columns: 1fr; }
+  .chart-resize { height: 240px !important; }
+  .fcol-links { grid-template-columns: 1fr 1fr; }
 }
 
 /* страховка от горизонтального сдвига на мобильных.

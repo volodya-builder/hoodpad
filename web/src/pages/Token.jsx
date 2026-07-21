@@ -11,6 +11,7 @@ import { useLang } from "../lib/i18n.jsx";
 import { bindRefIfNeeded } from "../lib/referral.js";
 import CandleChart from "../components/CandleChart.jsx";
 import TokenSidebar from "../components/TokenSidebar.jsx";
+import { useFavs, toggleFav } from "../lib/favs.js";
 import RGL, { WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -201,20 +202,12 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [copiedCA, setCopiedCA] = useState(null); // где нажали копирование: "about" | "head" | "pos"
   const [tf, setTf] = useState("all"); // таймфрейм графика
   const [trSort, setTrSort] = useState({ key: "ts", dir: "desc" }); // сортировка таблицы сделок
-  // избранное (общий список с главной и сайдбаром)
-  const [favSet, setFavSet] = useState(() => {
-    try { return new Set(JSON.parse(localStorage.getItem("hood_favs") || "[]")); }
-    catch (e) { return new Set(); }
-  });
+  // избранное (общий список с главной и боковой панелью)
+  const favSet = useFavs();
   const isFavTok = favSet.has(tokenAddress);
   const toggleFavTok = (e) => {
     if (e) { e.preventDefault(); e.stopPropagation(); }
-    setFavSet((prev) => {
-      const next = new Set(prev);
-      if (next.has(tokenAddress)) next.delete(tokenAddress); else next.add(tokenAddress);
-      try { localStorage.setItem("hood_favs", JSON.stringify([...next])); } catch (err) { /* ignore */ }
-      return next;
-    });
+    toggleFav(tokenAddress);
   };
   const [hSort, setHSort] = useState("desc"); // сортировка холдеров по доле
   const [tpSort, setTpSort] = useState({ key: "ts", dir: "desc" }); // сортировка в панели трейдера
@@ -626,6 +619,11 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     </span>
   );
   // компактные форматтеры для ленты активности (стиль GMGN)
+  // обрезаем «хвост» дробной части, чтобы длинное число не ломало вёрстку поля
+  const trimAmt = (s) => {
+    const [i, f = ""] = String(s).split(".");
+    return f ? `${i}.${f.slice(0, 4).replace(/0+$/, "")}`.replace(/\.$/, "") : i;
+  };
   const compactN = (n) =>
     n >= 1e9 ? fmt(n / 1e9, 2) + "B"
     : n >= 1e6 ? fmt(n / 1e6, 2) + "M"
@@ -1144,15 +1142,15 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                            const avail = Math.max(0, Number(formatEther(data.walletEth ?? 0n)) - 0.0003);
                            setAmount(v > 0 ? (avail * v / 100).toFixed(6) : "");
                          } else {
-                           setAmount(v > 0 ? formatEther((data.balance * BigInt(v)) / 100n) : "");
+                           setAmount(v > 0 ? trimAmt(formatEther((data.balance * BigInt(v)) / 100n)) : "");
                          }
                        }} />
               </>
             )}
             {tab === "sell" && wallet && (
               <p className="dim" style={{ margin: "6px 0 0" }}>
-                {t("Баланс:")} {fmt(formatEther(data.balance), 2)}{" "}
-                <a href="#/" onClick={(e) => { e.preventDefault(); setAmount(formatEther(data.balance)); }}>
+                {t("Баланс:")} {compactN(Number(formatEther(data.balance)))}{" "}
+                <a href="#/" onClick={(e) => { e.preventDefault(); setAmount(trimAmt(formatEther(data.balance))); }}>
                   {t("макс")}
                 </a>
               </p>
@@ -1178,7 +1176,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                          const avail = Math.max(0, Number(formatEther(data.walletEth ?? 0n)) - 0.0003);
                          setAmount(v > 0 ? (avail * v / 100).toFixed(6) : "");
                        } else {
-                         setAmount(v > 0 ? formatEther((data.balance * BigInt(v)) / 100n) : "");
+                         setAmount(v > 0 ? trimAmt(formatEther((data.balance * BigInt(v)) / 100n)) : "");
                        }
                      }}>
                   {p2}%
