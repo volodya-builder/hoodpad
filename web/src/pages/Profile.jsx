@@ -301,7 +301,7 @@ export default function Profile({ wallet, onConnect }) {
                       <span>
                         <b className="ticker" style={{ fontSize: 13 }}>${p.symbol}</b>
                         <span className="pos-sub">
-                          {lastTs ? timeAgo(lastTs) : "—"} · {p.mine ? p.mine.length : 0} {t("сделок")}
+                          {lastTs ? timeAgo(lastTs) : "—"}
                         </span>
                       </span>
                     </span>

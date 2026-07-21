@@ -949,7 +949,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                     <span>
                       <b className="ticker" style={{ fontSize: 14 }}>${data.symbol}</b>
                       <span className="pos-sub">
-                        {lastTs ? timeAgo(lastTs) : "—"} · {mine.length} {t("сделок")} {totPnl >= 0 ? "💎" : ""}
+                        {lastTs ? timeAgo(lastTs) : "—"} {totPnl >= 0 ? "💎" : ""}
                       </span>
                     </span>
                   </span>
