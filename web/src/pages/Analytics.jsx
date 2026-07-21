@@ -25,18 +25,41 @@ const buybackEvent = parseAbiItem(
   "event Buyback(address indexed token, address indexed pool, uint256 ethIn, uint256 tokensOut)"
 );
 
-/** Мини-гистограмма как на карточках аналитики. */
-function Bars({ data }) {
+/** Мини-гистограмма как на карточках аналитики.
+ *  bins: [{ v, from, to }] — значение и границы корзины по времени. */
+function Bars({ data, bins, fmtVal, axis }) {
   const max = Math.max(...data, 0);
+  const [hover, setHover] = React.useState(null);
+  const tf = (ts) => {
+    const d = new Date(ts);
+    const p = (x) => String(x).padStart(2, "0");
+    return `${p(d.getDate())}.${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
   return (
-    <div className="ana-bars">
+    <div className="ana-bars-wrap">
+      {hover !== null && bins && bins[hover] && (
+        <div className="ana-tip">
+          <b>{fmtVal ? fmtVal(data[hover]) : data[hover]}</b>
+          <span>{tf(bins[hover].from)} — {tf(bins[hover].to)}</span>
+        </div>
+      )}
+      <div className="ana-bars" onMouseLeave={() => setHover(null)}>
       {data.map((v, i) => (
         <div
           key={i}
-          className={`ana-bar ${v > 0 ? "on" : ""}`}
+          className={`ana-bar ${v > 0 ? "on" : ""} ${hover === i ? "hl" : ""}`}
+          onMouseEnter={() => setHover(i)}
+          title={bins && bins[i] ? `${fmtVal ? fmtVal(v) : v} · ${tf(bins[i].from)} — ${tf(bins[i].to)}` : ""}
           style={{ height: max > 0 && v > 0 ? `${Math.max(6, (v / max) * 100)}%` : "3px" }}
         />
       ))}
+      </div>
+      {axis && (
+        <div className="ana-axis">
+          <span>{axis[0]}</span>
+          <span>{axis[1]}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -174,13 +197,26 @@ export default function Analytics() {
     const w = Math.max(1, (raw.now - t0) / N);
     const volBars = Array(N).fill(0);
     const cntBars = Array(N).fill(0);
+    const bins = Array.from({ length: N }, (_, i) => ({ from: t0 + i * w, to: t0 + (i + 1) * w }));
     for (const tr of filtered) {
       const i = Math.min(N - 1, Math.max(0, Math.floor(((tr.ts ?? raw.now) - t0) / w)));
       volBars[i] += tr.eth + tr.fee;
       cntBars[i] += 1;
     }
-    return { volume, creatorPaid, count: filtered.length, volBars, cntBars };
+    return { volume, creatorPaid, count: filtered.length, volBars, cntBars, bins, t0, tEnd: raw.now };
   }, [raw, period]);
+
+  // подписи оси времени под мини-графиками
+  const axisLabels = React.useMemo(() => {
+    if (!stats) return null;
+    const f = (ts) => {
+      const d = new Date(ts);
+      const p = (x) => String(x).padStart(2, "0");
+      return period === "24h" ? `${p(d.getHours())}:${p(d.getMinutes())}`
+        : `${p(d.getDate())}.${p(d.getMonth() + 1)}`;
+    };
+    return [f(stats.t0), f(stats.tEnd)];
+  }, [stats, period]);
 
   const gradRate = raw && raw.launches > 0
     ? Math.round((raw.grads / raw.launches) * 100) : 0;
@@ -207,13 +243,15 @@ export default function Analytics() {
             <div className="k">{t("Объём торгов")}</div>
             <div className="pf-usd">{D(stats.volume)}</div>
             <div className="s">{fmtEth(stats.volume)} ETH · {stats.count} {t("сделок")} · {t(PERIOD_LABEL[period])}</div>
-            <Bars data={stats.volBars} />
+            <Bars data={stats.volBars} bins={stats.bins} fmtVal={(v) => `${D(v)} · ${fmtEth(v)} ETH`}
+                  axis={axisLabels} />
           </div>
           <div className="ana-card">
             <div className="k">{t("Сделки")}</div>
             <div className="v">{stats.count}</div>
             <div className="s">{t(PERIOD_LABEL[period])}</div>
-            <Bars data={stats.cntBars} />
+            <Bars data={stats.cntBars} bins={stats.bins}
+                  fmtVal={(v) => `${v} ${t("сделок")}`} axis={axisLabels} />
           </div>
           <div className="ana-card">
             <div className="k">{t("Запуски токенов")}</div>

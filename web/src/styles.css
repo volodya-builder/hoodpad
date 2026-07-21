@@ -910,6 +910,24 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
   padding-bottom: 7px; margin-bottom: 6px;
 }
 .pos-row .pos-id { padding-right: 16px; }
+/* мини-графики аналитики: подсказка при наведении + ось времени */
+.ana-bars-wrap { position: relative; }
+.ana-bars .ana-bar { transition: opacity .12s, filter .12s; cursor: default; }
+.ana-bars .ana-bar.hl { filter: brightness(1.35); }
+.ana-tip {
+  position: absolute; top: -6px; left: 0; right: 0; z-index: 5;
+  display: flex; flex-direction: column; gap: 1px;
+  background: var(--card, #1a1a19); border: 1px solid var(--border);
+  border-radius: 9px; padding: 6px 9px; pointer-events: none;
+  font-size: 11px; box-shadow: 0 12px 30px -14px #000c;
+}
+.ana-tip b { font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.ana-tip span { color: var(--text-dim); font-size: 10.5px; }
+.ana-axis {
+  display: flex; justify-content: space-between;
+  margin-top: 6px; font-size: 10px; color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
 .pos-sub {
   display: block; margin-top: 4px;
   font-size: 9.5px; font-weight: 700; letter-spacing: .4px;
