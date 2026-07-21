@@ -33,6 +33,7 @@ export default function Profile({ wallet, onConnect }) {
   const [trsort, setTrsort] = useState({ key: null, dir: -1 });
   const [lq, setLq] = useState("");           // поиск по позициям
   const [lq2, setLq2] = useState("");         // поиск по запускам
+  const [posTab, setPosTab] = useState("pos"); // «Мои позиции» | «История сделок»
   const [caCopied, setCaCopied] = useState(""); // какой адрес только что скопирован
 
   const copyCA = (addr) => {
@@ -145,7 +146,7 @@ export default function Profile({ wallet, onConnect }) {
         totVal, totInv, totReal, totPnl: totVal + totReal - totInv,
         tradesCount: enriched.reduce((s, tk) => s + tk.mine.length, 0),
         myTrades: enriched.flatMap((tk) => tk.mine.map((tr) => ({ ...tr, sym: tk.symbol, token: tk.token })))
-          .sort((a, b) => Number(b.block - a.block)).slice(0, 20),
+          .sort((a, b) => Number(b.block - a.block)).slice(0, 50),
       };
       _profCache[me] = next;
       // в localStorage кладём облегчённую версию (без тяжёлых картинок), чтобы влезло
@@ -272,10 +273,66 @@ export default function Profile({ wallet, onConnect }) {
                 placeholder={t("Поиск: тикер или адрес…")}
                 spellCheck={false}
               />
-              <div className="bt-tab on">{t("Мои позиции")}</div>
+              <div className={`bt-tab ${posTab === "pos" ? "on" : ""}`} onClick={() => setPosTab("pos")}>
+                {t("Мои позиции")}
+              </div>
+              <div className={`bt-tab ${posTab === "hist" ? "on" : ""}`} onClick={() => setPosTab("hist")}>
+                {t("История сделок")}
+              </div>
             </div>
 
+            {posTab === "hist" && (<>
+              {(!state.myTrades || state.myTrades.length === 0) && (
+                <div className="center">{t("Сделок пока нет.")}</div>
+              )}
+              {state.myTrades && state.myTrades.length > 0 && (
+                <>
+                  <div className="trow hdr" style={{ marginTop: 8 }}>
+                    <span>{t("Время")}</span>
+                    <span>{t("Тип")}</span>
+                    <span>{t("Монета")}</span>
+                    <span>ETH</span>
+                    <span>{t("Токены")}</span>
+                    <span>{t("Блок")}</span>
+                  </div>
+                  {state.myTrades
+                    .filter((tr) => {
+                      const needle = lq.trim().toLowerCase();
+                      if (!needle) return true;
+                      return tr.sym.toLowerCase().includes(needle) || tr.token.toLowerCase().includes(needle);
+                    })
+                    .map((tr, i) => (
+                    <div className="trow" key={i}>
+                      <span className="dim" title={tr.ts ? new Date(tr.ts).toLocaleString() : ""}>
+                        {tr.ts ? timeAgo(tr.ts) : "—"}
+                      </span>
+                      <span className={tr.side === "buy" ? "side-buy" : "side-sell"}>
+                        {t(tr.side === "buy" ? "Купил" : "Продал")}
+                      </span>
+                      <span className="hist-coin" onClick={() => copyCA(tr.token)}
+                            title={t("Скопировать адрес контракта")}>
+                        <a href={`#/token/${tr.token}`} onClick={(e) => e.stopPropagation()}
+                           style={{ color: "inherit" }}><b>${tr.sym}</b></a>
+                        <span className="mono dim">
+                          {caCopied === tr.token ? "✓" : `${tr.token.slice(0, 6)}…${tr.token.slice(-4)} ⧉`}
+                        </span>
+                      </span>
+                      <a href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer"
+                         style={{ color: "inherit" }} title={t("Открыть транзакцию")}>
+                        {fmtEth(tr.eth)} ETH <span className="usd-sub">({dollars(tr.eth)})</span>
+                      </a>
+                      <span>{compactN(tr.tokens)}</span>
+                      <a className="dim" href={`${EXPLORER}/block/${tr.block}`} target="_blank" rel="noreferrer"
+                         title={t("Открыть блок в эксплорере")}>
+                        {String(tr.block)}
+                      </a>
+                    </div>
+                  ))}
+                </>
+              )}
+            </>)}
 
+            {posTab === "pos" && (<>
             {state.positions.length === 0 && <div className="center">{t("Пока нет позиций.")}</div>}
             {sortRows(state.positions.filter((p) => {
               const needle = lq.trim().toLowerCase();
@@ -341,6 +398,7 @@ export default function Profile({ wallet, onConnect }) {
                 </div>
               );
             })}
+            </>)}
           </div>
 
           {state.launched.length > 0 && (
