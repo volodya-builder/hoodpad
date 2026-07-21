@@ -1561,6 +1561,44 @@ html[data-theme="light"] .tos-ico { background: #ffffff; }
 
   .pf-head { gap: 12px; margin: 26px 0 16px; }
   .pf-ava { width: 52px !important; height: 52px !important; font-size: 24px !important; }
+
+  /* ---- страница токена на телефоне: обычная колонка вместо перетаскиваемой сетки ---- */
+  .token-flex { flex-direction: column; padding: 12px 0 48px; }
+  .token-grid-wrap { width: 100% !important; margin: 0 !important; padding: 0; }
+  .tok-sidebar { display: none; }
+  .back-float {
+    position: static !important; display: inline-flex;
+    margin: 14px 0 4px; padding: 9px 16px; font-size: 13px;
+  }
+  /* react-grid-layout: отключаем абсолютное позиционирование, блоки идут потоком */
+  .react-grid-layout { height: auto !important; }
+  .react-grid-item {
+    position: static !important; transform: none !important;
+    width: 100% !important; height: auto !important;
+    margin-bottom: 14px;
+  }
+  .react-grid-item > .react-resizable-handle { display: none; }
+  .drag-handle { display: none; }
+  .grid-item > .card, .grid-item > .panel, .grid-item > .chat-panel { overflow: visible; }
+  .grid-item > .panel > * { max-width: none; }
+  .chart-resize { height: 300px !important; width: 100% !important; resize: none; max-width: 100%; }
+  .chat-panel { max-height: 420px; }
+
+  /* строка позиции: сетка 2 колонки вместо длинного ряда */
+  .pos-row {
+    flex-wrap: wrap; overflow: visible;
+    gap: 10px 0; padding: 12px 0; margin-left: 0;
+  }
+  .pos-row .pos-id { flex: 0 0 100% !important; min-width: 0 !important; }
+  .pos-row .tk-cell { flex: 0 0 50% !important; min-width: 0; }
+  .pos-row .tk-cell > span:first-child { border-bottom: none; padding-bottom: 2px; margin-bottom: 2px; }
+
+  /* панель трейдера — на всю ширину */
+  .trader-panel { width: 100vw; }
+  .tp-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* таблицы активности прокручиваются вместе с карточкой */
+  .arow { min-width: 560px; }
 }
 
 /* маленькие телефоны */
@@ -1585,6 +1623,19 @@ html[data-theme="light"] .tos-ico { background: #ffffff; }
 /* совсем узкие экраны — оставляем логотип-иконку без текста, чтобы шапка влезла */
 @media (max-width: 400px) {
   .logo-word { display: none; }
+}
+
+/* мелкие телефоны: позиции в одну колонку, компактнее цифры */
+@media (max-width: 560px) {
+  .pos-row .tk-cell { flex: 0 0 50% !important; }
+  .pos-row .tk-cell b { font-size: 13px; }
+  .pf-usd { font-size: 24px; }
+  .vote-bar { gap: 16px; padding: 12px 14px; }
+  .vb-cell b { font-size: 17px; }
+  .vb-right { margin-left: 0; text-align: left; }
+  .tp-grid { grid-template-columns: 1fr; }
+  .chart-resize { height: 240px !important; }
+  .fcol-links { grid-template-columns: 1fr 1fr; }
 }
 
 /* страховка от горизонтального сдвига на мобильных.
