@@ -212,7 +212,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [hSort, setHSort] = useState("desc"); // сортировка холдеров по доле
   const [tpSort, setTpSort] = useState({ key: "ts", dir: "desc" }); // сортировка в панели трейдера
   const [tradePct, setTradePct] = useState(0); // ползунок суммы
-  const [btTab, setBtTab] = useState("mine"); // по умолчанию — «Мои позиции»
+  const [btTab, setBtTab] = useState("holders"); // по умолчанию — «Топ держателей»
   const [sideTab, setSideTab] = useState("act"); // боковая панель: «Активность» | «Чат»
   const [qpcts, setQpcts] = useState(() => {
     try {
@@ -530,14 +530,14 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   ];
   const [layout, setLayout] = useState(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem("hood_tok_layout_v6"));
+      const saved = JSON.parse(localStorage.getItem("hood_tok_layout_v7"));
       if (Array.isArray(saved) && saved.length === DEF_LAYOUT.length) return saved;
     } catch (e) { /* ignore */ }
     return DEF_LAYOUT;
   });
   const saveLayout = (l) => {
     setLayout(l);
-    try { localStorage.setItem("hood_tok_layout_v6", JSON.stringify(l)); } catch (e) { /* ignore */ }
+    try { localStorage.setItem("hood_tok_layout_v7", JSON.stringify(l)); } catch (e) { /* ignore */ }
   };
   const Handle = () => (
     <span className="drag-handle" title={t("Перетащите, чтобы переставить блок")}>⠿</span>
