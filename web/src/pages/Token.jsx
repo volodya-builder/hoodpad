@@ -641,8 +641,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   };
 
   const tradesHeader = (
-    <div className="trow hdr" style={{ marginTop: 8 }}>
+    <div className="trow t7 hdr" style={{ marginTop: 8 }}>
       <Th k="ts">{t("Время")}</Th>
+      <span>{t("Монета")}</span>
       <Th k="side">{t("Тип")}</Th>
       <Th k="eth">ETH</Th>
       <Th k="tokens">{t("Токены")}</Th>
@@ -989,9 +990,15 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             return [(
               <React.Fragment key="hdr">{tradesHeader}</React.Fragment>
             ), ...sortTrades(mine).slice(0, 20).map((tr, i) => (
-              <div className="trow" key={i}>
+              <div className="trow t7" key={i}>
                 <span className="dim" title={tr.ts ? new Date(tr.ts).toLocaleString() : ""}>
                   {tr.ts ? timeAgo(tr.ts) : "—"}
+                </span>
+                <span className="hist-coin" onClick={() => copyCA("hist")}
+                      title={t("Скопировать адрес контракта")}>
+                  {meta.image ? <img src={meta.image} alt="" /> : <span className="ts-ph">🖼️</span>}
+                  <b>${data.symbol}</b>
+                  <span className="mono dim">{copiedCA === "hist" ? "✓" : `${tokenAddress.slice(0, 6)}…${tokenAddress.slice(-4)} ⧉`}</span>
                 </span>
                 <span className={tr.side === "buy" ? "side-buy" : "side-sell"}>
                   {t(tr.side === "buy" ? "Купил" : "Продал")}
