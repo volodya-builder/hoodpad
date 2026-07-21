@@ -352,13 +352,13 @@ export default function App() {
             </a>
             {wallet ? (
               <div className="wallet-wrap">
-                <button className="btn mono" onClick={() => setWalletMenu(!walletMenu)}>
+                <button className="btn mono wal-btn" onClick={() => setWalletMenu(!walletMenu)}>
                   {hdrBal !== null && (
-                    <span style={{ color: "var(--gold)", marginRight: 8 }}>
+                    <span className="wal-bal" style={{ color: "var(--gold)", marginRight: 8 }}>
                       {fmtEth(Number(formatEther(hdrBal)))} ETH
                     </span>
                   )}
-                  {short(wallet.account)} ▾
+                  <span className="wal-addr">{short(wallet.account)}</span> ▾
                 </button>
                 <div className={`wallet-menu ${walletMenu ? "open" : ""}`}>
                   <a className="wallet-item" href="#/profile" onClick={() => setWalletMenu(false)}

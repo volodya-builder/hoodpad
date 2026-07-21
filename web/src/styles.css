@@ -1545,6 +1545,14 @@ html[data-theme="light"] .tos-ico { background: #ffffff; }
   /* плашка STAGING на телефоне мешает шапке — прячем (номер сборки виден на десктопе) */
   .staging-badge { display: none; }
 
+  /* подключённый кошелёк: баланс прячем, оставляем короткий адрес —
+     иначе длинная кнопка наезжает на логотип */
+  .wal-bal { display: none; }
+  .wal-btn { max-width: 34vw; }
+  .wal-btn .wal-addr { overflow: hidden; text-overflow: ellipsis; }
+  /* шапка ни при каких условиях не выпускает контент за края */
+  .header-inner { overflow: hidden; }
+
   .page-title { font-size: 26px; }
   .page-sub { font-size: 13.5px; }
   .search-row { flex-direction: column; }
