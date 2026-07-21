@@ -713,6 +713,9 @@ html[data-theme="light"] header { background: rgba(242,242,238,.85); border-bott
 html[data-theme="light"] .card, html[data-theme="light"] .panel, html[data-theme="light"] .preview-card,
 html[data-theme="light"] .chart-panel, html[data-theme="light"] .chat-panel, html[data-theme="light"] .about-card,
 html[data-theme="light"] .bottom-card, html[data-theme="light"] .ana-card { background: var(--card); }
+html[data-theme="light"] .vote-bar, html[data-theme="light"] .tok-sidebar,
+html[data-theme="light"] .card, html[data-theme="light"] .preview-card,
+html[data-theme="light"] .trader-panel, html[data-theme="light"] .chart-wrap.fs { background: var(--card); }
 html[data-theme="light"] input, html[data-theme="light"] textarea, html[data-theme="light"] .swap-box,
 html[data-theme="light"] .prefix-input, html[data-theme="light"] .suffix-input, html[data-theme="light"] .quote-box,
 html[data-theme="light"] .stat-card, html[data-theme="light"] .mode-tabs, html[data-theme="light"] .pill-group,
