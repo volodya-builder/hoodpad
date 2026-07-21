@@ -3,3 +3,4 @@ artifacts/
 dist/
 .env
 *.log
+hood-passport.docx
