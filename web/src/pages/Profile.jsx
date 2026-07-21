@@ -3,7 +3,7 @@ import { formatEther } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { tokenAbi, poolAbi } from "../lib/abi.js";
 import { EXPLORER } from "../lib/config.js";
-import { loadTokens, poolTrades, timeAgo, useClock } from "../lib/data.js";
+import { loadTokens, poolTrades, subgraphUserTrades, timeAgo, useClock } from "../lib/data.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { useLang } from "../lib/i18n.jsx";
 
@@ -84,22 +84,39 @@ export default function Profile({ wallet, onConnect }) {
         loadTokens(),
         publicClient.getBalance({ address: wallet.account }).catch(() => 0n),
       ]);
+
+      // Масштабируемый путь: ВСЕ мои сделки — одним запросом к индексатору,
+      // RPC дёргаем только по токенам, которые я реально трогал или создал.
+      let myByPool = null;
+      try {
+        const mineAll = await subgraphUserTrades(me);
+        myByPool = {};
+        for (const tr of mineAll) (myByPool[tr.pool] ??= []).push({ ...tr, addr: wallet.account });
+      } catch (e) { /* индексатор недоступен — фолбэк ниже */ }
+
+      const candidates = myByPool
+        ? tokens.filter((tk) => myByPool[(tk.pool || "").toLowerCase()]
+            || (tk.creator || "").toLowerCase() === me)
+        : tokens; // фолбэк: старый полный обход (редкий случай)
+
       // грузим токены пачками, чтобы не завалить RPC десятками запросов сразу
       const CHUNK = 5;
       const enriched = [];
-      for (let i = 0; i < tokens.length; i += CHUNK) {
-        const part = await Promise.all(tokens.slice(i, i + CHUNK).map(async (tk) => {
-          const [bal, hist, creatorRpc, feesAccrued] = await Promise.all([
+      for (let i = 0; i < candidates.length; i += CHUNK) {
+        const part = await Promise.all(candidates.slice(i, i + CHUNK).map(async (tk) => {
+          const poolKey = (tk.pool || "").toLowerCase();
+          const [bal, mine, creatorRpc, feesAccrued] = await Promise.all([
             publicClient.readContract({
               address: tk.token, abi: tokenAbi, functionName: "balanceOf", args: [wallet.account],
             }).catch(() => 0n),
-            poolTrades(tk.pool).catch(() => ({ trades: [] })),
+            myByPool
+              ? Promise.resolve(myByPool[poolKey] || [])
+              : poolTrades(tk.pool).then((h) => h.trades.filter((tr) => tr.addr.toLowerCase() === me)).catch(() => []),
             // creator из субграфа, если есть — экономим RPC-вызов
             tk.creator ? Promise.resolve(tk.creator)
               : publicClient.readContract({ address: tk.pool, abi: poolAbi, functionName: "creator" }).catch(() => null),
             publicClient.readContract({ address: tk.pool, abi: poolAbi, functionName: "creatorFeesAccrued" }).catch(() => 0n),
           ]);
-          const mine = hist.trades.filter((tr) => tr.addr.toLowerCase() === me);
           const invested = mine.filter((x) => x.side === "buy").reduce((s, x) => s + x.eth + x.fee, 0);
           const realized = mine.filter((x) => x.side === "sell").reduce((s, x) => s + x.eth, 0);
           return {

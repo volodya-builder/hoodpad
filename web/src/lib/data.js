@@ -123,6 +123,54 @@ export async function subgraphTraderFees(trader, sinceTs = 0) {
   return { fees, trades: n };
 }
 
+/** Последние сделки ВСЕХ пулов одним запросом (для аналитики и лидербордов).
+ *  Вместо обхода каждого пула по отдельности — до 3000 свежих сделок за 1-3 запроса.
+ *  SWR-кэш 60с: сто посетителей = те же 1-3 запроса в минуту, а не сотни. */
+let _allTr = { v: null, t: 0, p: null };
+export async function allTrades() {
+  if (_allTr.v && Date.now() - _allTr.t < 60_000) return _allTr.v;
+  if (_allTr.p) return _allTr.p;
+  _allTr.p = (async () => {
+    const out = [];
+    let beforeTs = null;
+    for (let page = 0; page < 3; page++) {
+      const cond = beforeTs ? `, where: { timestamp_lt: "${beforeTs}" }` : "";
+      const d = await gql(`{ trades(first: 1000, orderBy: timestamp, orderDirection: desc${cond}) {
+        pool trader isBuy ethAmount tokenAmount fee timestamp block tx } }`);
+      const rows = d?.trades || [];
+      for (const l of rows) {
+        out.push({
+          pool: l.pool.toLowerCase(),
+          side: l.isBuy ? "buy" : "sell", addr: l.trader,
+          eth: Number(l.ethAmount) / 1e18, tokens: Number(l.tokenAmount) / 1e18,
+          fee: Number(l.fee) / 1e18,
+          ts: Number(l.timestamp) * 1000, block: BigInt(l.block), tx: l.tx,
+        });
+      }
+      if (rows.length < 1000) break;
+      beforeTs = rows[rows.length - 1].timestamp;
+    }
+    _allTr = { v: out, t: Date.now(), p: null };
+    return out;
+  })().catch((e) => { _allTr.p = null; if (_allTr.v) return _allTr.v; throw e; });
+  return _allTr.p;
+}
+
+/** Все сделки одного пользователя одним запросом (для профиля). */
+export async function subgraphUserTrades(trader) {
+  const d = await gql(`{ trades(first: 1000, orderBy: timestamp, orderDirection: desc,
+    where: { trader: "${trader.toLowerCase()}" }) {
+    pool isBuy ethAmount tokenAmount fee timestamp block tx } }`);
+  if (!d?.trades) throw new Error("no trades field");
+  return d.trades.map((l) => ({
+    pool: l.pool.toLowerCase(),
+    side: l.isBuy ? "buy" : "sell",
+    eth: Number(l.ethAmount) / 1e18, tokens: Number(l.tokenAmount) / 1e18,
+    fee: Number(l.fee) / 1e18,
+    ts: Number(l.timestamp) * 1000, block: BigInt(l.block), tx: l.tx,
+  }));
+}
+
 export async function subgraphTreasuryOps() {
   const d = await gql(`{ treasuryOps(first: 1000, orderBy: timestamp, orderDirection: desc) {
     kind from token ethAmount tokenAmount timestamp tx } }`);
@@ -186,7 +234,7 @@ function refreshTokens() {
 
 export async function loadTokens() {
   if (_tok.v) {
-    if (Date.now() - _tok.t > 10_000) refreshTokens(); // фоновое обновление, не ждём
+    if (Date.now() - _tok.t > 20_000) refreshTokens(); // фоновое обновление, не ждём
     return _tok.v; // мгновенный ответ
   }
   return refreshTokens();
@@ -384,20 +432,24 @@ try {
 async function _loadSupportFresh() {
   const ops = await subgraphTreasuryOps();
   const per = {};
-  let totalEth = 0;
+  let totalEth = 0, totalBought = 0, totalBurned = 0, buybackCount = 0;
   for (const o of ops) {
     const tok = (o.token || "").toLowerCase();
     if (!tok) continue;
-    if (!per[tok]) per[tok] = { eth: 0, burned: 0 };
+    if (!per[tok]) per[tok] = { eth: 0, bought: 0, burned: 0 };
     if (o.kind === "buyback") {
       const eth = Number(o.ethAmount) / 1e18;
-      totalEth += eth;
+      const bought = Number(o.tokenAmount) / 1e18;
+      totalEth += eth; totalBought += bought; buybackCount += 1;
       per[tok].eth += eth;
+      per[tok].bought += bought;
     } else if (o.kind === "burn") {
-      per[tok].burned += Number(o.tokenAmount) / 1e18;
+      const b = Number(o.tokenAmount) / 1e18;
+      totalBurned += b;
+      per[tok].burned += b;
     }
   }
-  return { per, totalEth };
+  return { per, totalEth, totalBought, totalBurned, buybackCount };
 }
 
 export function loadSupport() {

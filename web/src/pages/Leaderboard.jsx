@@ -1,13 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { publicClient, fmtEth, short } from "../lib/web3.js";
-import { poolExtraAbi } from "../lib/abi.js";
-import { parseAbi } from "viem";
+import { fmtEth, short } from "../lib/web3.js";
 import { EXPLORER } from "../lib/config.js";
-import { loadTokens, poolTrades } from "../lib/data.js";
+import { loadTokens, allTrades, loadSplit } from "../lib/data.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { useLang } from "../lib/i18n.jsx";
-
-const creatorAbi = parseAbi(["function creator() view returns (address)"]);
 
 // Память вкладки: мгновенно при переключении и после перезагрузки.
 let _lbRaw = null;
@@ -32,33 +28,27 @@ export default function Leaderboard() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const tokens = await loadTokens();
-      const all = await Promise.all(tokens.map(async (tk) => {
-        const [h, shareBps, creator] = await Promise.all([
-          poolTrades(tk.pool).catch(() => ({ trades: [] })),
-          publicClient.readContract({ address: tk.pool, abi: poolExtraAbi, functionName: "creatorFeeShareBps" }).catch(() => 2000),
-          tk.creator ? Promise.resolve(tk.creator)
-            : publicClient.readContract({ address: tk.pool, abi: creatorAbi, functionName: "creator" }).catch(() => null),
-        ]);
-        return { tk, creator, shareBps: Number(shareBps), trades: h.trades };
-      }));
+      // 2 запроса к индексатору вместо обхода каждого пула — держит тысячи токенов
+      const [tokens, trades, split] = await Promise.all([loadTokens(), allTrades(), loadSplit()]);
+      const shareBps = (split?.creator ?? 50) * 100;
+      const byPool = {};
+      for (const tk of tokens) byPool[(tk.pool || "").toLowerCase()] = tk;
 
       const creatorsMap = {};
-      for (const a of all) {
-        if (!a.creator) continue;
-        const key = a.creator.toLowerCase();
-        const earned = a.trades.reduce((s, tr) => s + tr.fee, 0) * (a.shareBps / 10000);
-        const vol = a.trades.reduce((s, tr) => s + tr.eth + tr.fee, 0);
-        const c = creatorsMap[key] ?? { earned: 0, volume: 0, tokens: 0, symbols: [] };
-        c.earned += earned;
-        c.volume += vol;
-        c.tokens += 1;
-        c.symbols.push(a.tk.symbol);
-        creatorsMap[key] = c;
-      }
-      // трейдеры: объём, число сделок и реализованный PnL (продажи − покупки)
       const tradersMap = {};
-      for (const a of all) for (const tr of a.trades) {
+      const seenTok = new Set();
+      for (const tr of trades) {
+        const tk = byPool[tr.pool];
+        if (tk?.creator) {
+          const key = tk.creator.toLowerCase();
+          const c = creatorsMap[key] ?? { earned: 0, volume: 0, tokens: 0, symbols: [] };
+          c.earned += tr.fee * (shareBps / 10000);
+          c.volume += tr.eth + tr.fee;
+          const tkKey = key + "|" + tk.token;
+          if (!seenTok.has(tkKey)) { seenTok.add(tkKey); c.tokens += 1; c.symbols.push(tk.symbol); }
+          creatorsMap[key] = c;
+        }
+        // трейдеры: объём, число сделок и реализованный PnL (продажи − покупки)
         const k = tr.addr.toLowerCase();
         const x = tradersMap[k] ?? { volume: 0, count: 0, pnl: 0 };
         x.volume += tr.eth + tr.fee;

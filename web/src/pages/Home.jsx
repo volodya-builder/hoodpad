@@ -60,6 +60,8 @@ export default function Home({ onSearch }) {
   useClock(1000); // «Nс назад» на карточках тикает каждую секунду
   const [gpage, setGpage] = useState(1);
   const GRAD_PER_PAGE = 10;
+  const [lpage, setLpage] = useState(1);
+  const LIVE_PER_PAGE = 24; // страницами: вёрстка не тонет при тысячах токенов
   const [tokens, setTokens] = useState(null);
   const [error, setError] = useState("");
   const [sort, setSort] = useState("new");
@@ -73,9 +75,10 @@ export default function Home({ onSearch }) {
     loadTokens()
       .then((t) => alive && setTokens(t))
       .catch((e) => alive && setError(e.shortMessage || e.message));
+    // 25-35с со случайным сдвигом: тысячи вкладок не бьют в индексатор синхронно
     const id = setInterval(() => {
       loadTokens().then((t) => alive && setTokens(t)).catch(() => {});
-    }, 15000);
+    }, 25000 + Math.random() * 10000);
     return () => { alive = false; clearInterval(id); };
   }, []);
 
@@ -168,9 +171,24 @@ export default function Home({ onSearch }) {
           )}
         </div>
       ) : (
-        <div className="tgrid" style={{ paddingBottom: 60 }}>
-          {live.map((t2) => <TokenCard key={t2.token} t={t2} fav={favs.has(t2.token)} onFav={toggleFav} cushion={cushionOf(t2.token)} />)}
-        </div>
+        <>
+          <div className="tgrid">
+            {live.slice((lpage - 1) * LIVE_PER_PAGE, lpage * LIVE_PER_PAGE)
+                 .map((t2) => <TokenCard key={t2.token} t={t2} fav={favs.has(t2.token)} onFav={toggleFav} cushion={cushionOf(t2.token)} />)}
+          </div>
+          <div className="pager" style={{ paddingBottom: 60 }}>
+            {live.length > LIVE_PER_PAGE && (
+              <>
+                <div className="pg nav" onClick={() => setLpage(Math.max(1, lpage - 1))}>‹</div>
+                {Array.from({ length: Math.ceil(live.length / LIVE_PER_PAGE) }, (_, k) => k + 1).map((p) => (
+                  <div key={p} className={`pg ${p === lpage ? "on" : ""}`} onClick={() => setLpage(p)}>{p}</div>
+                ))}
+                <div className="pg nav"
+                     onClick={() => setLpage(Math.min(Math.ceil(live.length / LIVE_PER_PAGE), lpage + 1))}>›</div>
+              </>
+            )}
+          </div>
+        </>
       )}
     </>
   );

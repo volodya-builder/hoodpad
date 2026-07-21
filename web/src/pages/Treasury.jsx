@@ -3,7 +3,7 @@ import { formatEther, parseAbiItem } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { treasuryAbi } from "../lib/abi.js";
 import { TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
-import { loadTokens, timeAgo, subgraphTreasuryOps, useClock, recentFromBlock } from "../lib/data.js";
+import { loadTokens, timeAgo, subgraphTreasuryOps, loadSupport, useClock, recentFromBlock } from "../lib/data.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { useLang } from "../lib/i18n.jsx";
 
@@ -46,11 +46,8 @@ export default function Treasury() {
       const symByAddr = {};
       for (const tk of tokens) symByAddr[tk.token.toLowerCase()] = tk.symbol;
 
-      // Сжигания суммарно по данным контракта
-      const burnedPer = await Promise.all(tokens.map((tk) =>
-        publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "burnedOf", args: [tk.token] }).catch(() => 0n)
-      ));
-      const burnedTotal = burnedPer.reduce((s, b) => s + Number(formatEther(b)), 0);
+      // Сжигания суммарно — из индексатора (1 кэшированный запрос вместо N контрактных)
+      const burnedTotal = await loadSupport().then((s) => s.totalBurned ?? 0).catch(() => 0);
 
       // История операций: сначала индексатор, при ошибке — события из блокчейна
       let rows;

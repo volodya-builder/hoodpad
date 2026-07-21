@@ -26,7 +26,7 @@ export default function TokenSidebar({ current }) {
       subgraphStats24().then((v) => alive && setSt(v)).catch(() => {});
     };
     pull();
-    const id = setInterval(pull, 30000);
+    const id = setInterval(pull, 40000 + Math.random() * 15000); // джиттер против синхронных всплесков
     return () => { alive = false; clearInterval(id); };
   }, []);
 

@@ -1,13 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { formatEther, parseAbiItem } from "viem";
+import { formatEther } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
-import { parseAbi } from "viem";
-import { treasuryAbi, poolExtraAbi } from "../lib/abi.js";
-
-const poolExtraAbi2 = parseAbi(["function creator() view returns (address)"]);
+import { treasuryAbi } from "../lib/abi.js";
 import { TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
 import { useEthUsd, usd } from "../lib/price.js";
-import { loadTokens, poolTrades, useSplit, recentFromBlock } from "../lib/data.js";
+import { loadTokens, allTrades, loadSplit, loadSupport, useSplit } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 
 const PERIODS = [
@@ -20,10 +17,6 @@ const PERIODS = [
 const PERIOD_LABEL = {
   "24h": "за 24 часа", week: "за неделю", month: "за месяц", all: "за всё время",
 };
-
-const buybackEvent = parseAbiItem(
-  "event Buyback(address indexed token, address indexed pool, uint256 ethIn, uint256 tokensOut)"
-);
 
 /** Мини-гистограмма как на карточках аналитики.
  *  bins: [{ v, from, to }] — значение и границы корзины по времени. */
@@ -90,35 +83,33 @@ export default function Analytics() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const tokens = await loadTokens();
+      // Масштабируемая схема: 2 запроса к индексатору (токены + сделки),
+      // казна — из кэша treasuryOps, и всего 3 RPC-вызова. Никаких циклов по пулам.
+      const [tokens, trades, split2, sup] = await Promise.all([
+        loadTokens(),
+        allTrades(),
+        loadSplit(),
+        loadSupport().catch(() => ({ totalBought: 0, totalBurned: 0, buybackCount: null })),
+      ]);
+      const shareBps = (split2?.creator ?? 50) * 100;
+      for (const tr of trades) tr.shareBps = shareBps;
 
-      // Все сделки всех пулов + доля создателя конкретного пула на каждой сделке.
-      const all = await Promise.all(tokens.map(async (tk) => {
-        const [h, shareBps, creator] = await Promise.all([
-          poolTrades(tk.pool).catch(() => ({ trades: [] })),
-          publicClient.readContract({ address: tk.pool, abi: poolExtraAbi, functionName: "creatorFeeShareBps" }).catch(() => 2000),
-          tk.creator
-            ? Promise.resolve(tk.creator)
-            : publicClient.readContract({ address: tk.pool, abi: poolExtraAbi2, functionName: "creator" }).catch(() => null),
-        ]);
-        return { tk, creator, shareBps: Number(shareBps),
-                 trades: h.trades.map((tr) => ({ ...tr, shareBps: Number(shareBps) })) };
-      }));
-      const trades = all.flatMap((a) => a.trades);
+      // Карта пул → токен (создатель, тикер)
+      const byPool = {};
+      for (const tk of tokens) byPool[(tk.pool || "").toLowerCase()] = tk;
 
       // Лидерборды: создатели по заработанным комиссиям, трейдеры по объёму
       const creatorsMap = {};
-      for (const a of all) {
-        if (!a.creator) continue;
-        const key = a.creator.toLowerCase();
-        const earned = a.trades.reduce((s, tr) => s + tr.fee, 0) * (a.shareBps / 10000);
-        const c = creatorsMap[key] ?? { earned: 0, symbols: [] };
-        c.earned += earned;
-        c.symbols.push(a.tk.symbol);
-        creatorsMap[key] = c;
-      }
       const tradersMap = {};
       for (const tr of trades) {
+        const tk = byPool[tr.pool];
+        if (tk?.creator) {
+          const key = tk.creator.toLowerCase();
+          const c = creatorsMap[key] ?? { earned: 0, symbols: [] };
+          c.earned += tr.fee * (shareBps / 10000);
+          if (!c.symbols.includes(tk.symbol)) c.symbols.push(tk.symbol);
+          creatorsMap[key] = c;
+        }
         const k = tr.addr.toLowerCase();
         const x = tradersMap[k] ?? { volume: 0, count: 0 };
         x.volume += tr.eth + tr.fee;
@@ -130,49 +121,21 @@ export default function Analytics() {
         traders: Object.entries(tradersMap).sort((a, b) => b[1].volume - a[1].volume).slice(0, 10),
       };
 
-      // Оценка времени каждой сделки: интерполяция по номерам блоков
-      // (2 RPC-вызова вместо сотен getBlock).
-      let now = Date.now();
-      if (trades.length > 0) {
-        const blocks = trades.map((tr) => Number(tr.block));
-        const minB = Math.min(...blocks);
-        const [latest, oldest] = await Promise.all([
-          publicClient.getBlock(),
-          publicClient.getBlock({ blockNumber: BigInt(minB) }),
-        ]);
-        const span = Number(latest.number) - minB;
-        const avg = span > 0
-          ? (Number(latest.timestamp) - Number(oldest.timestamp)) / span
-          : 0;
-        for (const tr of trades) {
-          tr.ts = (Number(oldest.timestamp) + (Number(tr.block) - minB) * avg) * 1000;
-        }
-        now = Number(latest.timestamp) * 1000;
-      }
-
-      // Казна: баланс, счётчики, сколько токенов куплено и сожжено.
+      // Казна: 3 лёгких вызова (баланс и два счётчика)
       const [treBal, received, spent] = await Promise.all([
         publicClient.getBalance({ address: TREASURY_ADDRESS }),
         publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "totalReceived" }).catch(() => 0n),
         publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "totalSpent" }).catch(() => 0n),
       ]);
-      const bb = await Promise.all(tokens.map((tk) => Promise.all([
-        publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "boughtOf", args: [tk.token] }).catch(() => 0n),
-        publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "burnedOf", args: [tk.token] }).catch(() => 0n),
-      ])));
-      const bought = bb.reduce((s, [b]) => s + Number(formatEther(b)), 0);
-      const burned = bb.reduce((s, [, x]) => s + Number(formatEther(x)), 0);
-      const buybackCount = await publicClient
-        .getLogs({ address: TREASURY_ADDRESS, event: buybackEvent, fromBlock: await recentFromBlock(), toBlock: "latest" })
-        .then((l) => l.length)
-        .catch(() => null);
 
       if (!alive) return;
       _anaRaw = {
-        trades, now,
+        trades, now: Date.now(),
         launches: tokens.length,
         grads: tokens.filter((tk) => tk.graduated).length,
-        treBal, received, spent, bought, burned, buybackCount, leaders,
+        treBal, received, spent,
+        bought: sup.totalBought ?? 0, burned: sup.totalBurned ?? 0,
+        buybackCount: sup.buybackCount ?? null, leaders,
       };
       try { localStorage.setItem(ANA_LS, JSON.stringify(_anaRaw, _bigR)); } catch (e) { /* ignore */ }
       setRaw(_anaRaw);
