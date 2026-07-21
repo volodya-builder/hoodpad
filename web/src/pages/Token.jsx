@@ -11,6 +11,7 @@ import { useLang } from "../lib/i18n.jsx";
 import { bindRefIfNeeded } from "../lib/referral.js";
 import CandleChart from "../components/CandleChart.jsx";
 import TokenSidebar from "../components/TokenSidebar.jsx";
+import { useFavs, toggleFav } from "../lib/favs.js";
 import RGL, { WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -201,20 +202,12 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [copiedCA, setCopiedCA] = useState(null); // где нажали копирование: "about" | "head" | "pos"
   const [tf, setTf] = useState("all"); // таймфрейм графика
   const [trSort, setTrSort] = useState({ key: "ts", dir: "desc" }); // сортировка таблицы сделок
-  // избранное (общий список с главной и сайдбаром)
-  const [favSet, setFavSet] = useState(() => {
-    try { return new Set(JSON.parse(localStorage.getItem("hood_favs") || "[]")); }
-    catch (e) { return new Set(); }
-  });
+  // избранное (общий список с главной и боковой панелью)
+  const favSet = useFavs();
   const isFavTok = favSet.has(tokenAddress);
   const toggleFavTok = (e) => {
     if (e) { e.preventDefault(); e.stopPropagation(); }
-    setFavSet((prev) => {
-      const next = new Set(prev);
-      if (next.has(tokenAddress)) next.delete(tokenAddress); else next.add(tokenAddress);
-      try { localStorage.setItem("hood_favs", JSON.stringify([...next])); } catch (err) { /* ignore */ }
-      return next;
-    });
+    toggleFav(tokenAddress);
   };
   const [hSort, setHSort] = useState("desc"); // сортировка холдеров по доле
   const [tpSort, setTpSort] = useState({ key: "ts", dir: "desc" }); // сортировка в панели трейдера
