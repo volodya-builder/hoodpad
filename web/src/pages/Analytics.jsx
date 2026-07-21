@@ -55,6 +55,11 @@ export default function Analytics() {
   const { t } = useLang();
   const split = useSplit();
   const rate = useEthUsd();
+  // ETH → доллары: крупная сумма на карточках
+  const D = (e) => {
+    const v = (e || 0) * rate;
+    return v >= 1000 ? usd(v) : "$" + v.toFixed(2);
+  };
   const [raw, setRaw] = useState(_anaRaw);
   const [error, setError] = useState("");
   const [period, setPeriod] = useState("all");
@@ -200,8 +205,8 @@ export default function Analytics() {
         <div className="ana-grid">
           <div className="ana-card">
             <div className="k">{t("Объём торгов")}</div>
-            <div className="v">{fmtEth(stats.volume)} ETH</div>
-            <div className="s">{stats.count} {t("сделок")} · {t(PERIOD_LABEL[period])}</div>
+            <div className="pf-usd">{D(stats.volume)}</div>
+            <div className="s">{fmtEth(stats.volume)} ETH · {stats.count} {t("сделок")} · {t(PERIOD_LABEL[period])}</div>
             <Bars data={stats.volBars} />
           </div>
           <div className="ana-card">
@@ -219,28 +224,34 @@ export default function Analytics() {
           </div>
           <div className="ana-card">
             <div className="k">{t("Выплачено создателям")}</div>
-            <div className="v" style={{ color: "var(--gold)" }}>{fmtEth(stats.creatorPaid)} ETH</div>
-            <div className="s">{split.creator}% {t("всех комиссий — с первого трейда")}</div>
-          </div>
-          <div className="ana-card">
-            <div className="k">{t("Казна выкупа")}</div>
-            <div className="v" style={{ color: "var(--gold)" }}>{fmtEth(Number(formatEther(raw.treBal)))} ETH</div>
+            <div className="pf-usd" style={{ color: "var(--gold)" }}>{D(stats.creatorPaid)}</div>
             <div className="s">
-              {t("получено")} {fmtEth(Number(formatEther(raw.received)))} · {t("выкуплено на")} {fmtEth(Number(formatEther(raw.spent)))}
-              {" · "}
-              <a href={`${EXPLORER}/address/${TREASURY_ADDRESS}`} target="_blank" rel="noreferrer" style={{ color: "var(--gold)" }}>
-                {t("контракт")}
-              </a>
+              {fmtEth(stats.creatorPaid)} ETH · {split.creator}% {t("всех комиссий — с первого трейда")}
             </div>
           </div>
-          <div className="ana-card">
-            <div className="k">{t("Выкуплено и сожжено")}</div>
-            <div className="v">{fmt(raw.burned, 0)}</div>
-            <div className="s">
-              {t("токенов сожжено навсегда")} · {t("куплено казной")} {fmt(raw.bought, 0)}
-              {raw.buybackCount !== null && <> · {raw.buybackCount} {t("выкупов")}</>}
-            </div>
-          </div>
+          {(() => {
+            const bal = Number(formatEther(raw.treBal));
+            const rec = Number(formatEther(raw.received));
+            const spent = Number(formatEther(raw.spent));
+            return (<>
+              <div className="ana-card">
+                <div className="k">{t("Казна выкупа")}</div>
+                <div className="pf-usd" style={{ color: "var(--gold)" }}>{D(bal)}</div>
+                <div className="s">
+                  {fmtEth(bal)} ETH
+                  {" · "}
+                  <a href={`${EXPLORER}/address/${TREASURY_ADDRESS}`} target="_blank" rel="noreferrer" style={{ color: "var(--gold)" }}>
+                    {t("контракт")}
+                  </a>
+                </div>
+              </div>
+              <div className="ana-card">
+                <div className="k">{t("Выкуплено и сожжено")}</div>
+                <div className="pf-usd">{D(spent)}</div>
+                <div className="s">{fmtEth(spent)} ETH</div>
+              </div>
+            </>);
+          })()}
         </div>
       )}
 

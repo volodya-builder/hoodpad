@@ -3,7 +3,7 @@ import { formatEther } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { tokenAbi, poolAbi } from "../lib/abi.js";
 import { EXPLORER } from "../lib/config.js";
-import { loadTokens, poolTrades } from "../lib/data.js";
+import { loadTokens, poolTrades, timeAgo, useClock } from "../lib/data.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { useLang } from "../lib/i18n.jsx";
 
@@ -20,6 +20,7 @@ try {
 export default function Profile({ wallet, onConnect }) {
   const { t } = useLang();
   const rate = useEthUsd();
+  useClock(30000); // «Nч назад» в позициях обновляется само
   const acc = wallet?.account?.toLowerCase();
   const [state, setState] = useState(() => (acc ? _profCache[acc] ?? null : null));
   const [error, setError] = useState("");
@@ -30,7 +31,8 @@ export default function Profile({ wallet, onConnect }) {
   const [lsort, setLsort] = useState({ key: null, dir: -1 });
   const [psort, setPsort] = useState({ key: null, dir: -1 });
   const [trsort, setTrsort] = useState({ key: null, dir: -1 });
-  const [lq, setLq] = useState("");           // поиск по «Моим запускам»
+  const [lq, setLq] = useState("");           // поиск по позициям
+  const [lq2, setLq2] = useState("");         // поиск по запускам
   const [caCopied, setCaCopied] = useState(""); // какой адрес только что скопирован
 
   const copyCA = (addr) => {
@@ -64,6 +66,12 @@ export default function Profile({ wallet, onConnect }) {
     return s + "$" + a.toFixed(2);
   };
   const U = (e) => <span className="usd-sub">({dollars(e)})</span>;
+  // крупные количества токенов — компактно: 13.8M, 2.38M, 954K
+  const compactN = (n) =>
+    n >= 1e9 ? fmt(n / 1e9, 2) + "B"
+    : n >= 1e6 ? fmt(n / 1e6, 2) + "M"
+    : n >= 1e3 ? fmt(n / 1e3, 1) + "K"
+    : fmt(n, 0);
 
   useEffect(() => {
     if (!wallet) return;
@@ -204,44 +212,129 @@ export default function Profile({ wallet, onConnect }) {
 
       {state && (
         <>
-          <div className="ana-grid" style={{ margin: "18px 0 8px" }}>
-            <div className="ana-card">
+          <div className="ana-grid" style={{ margin: "34px 0 8px" }}>
+            <div className="ana-card pf-stat">
               <div className="k">{t("Общий PnL")}</div>
-              <div className="v" style={{ color: state.totPnl >= 0 ? "var(--leaf)" : "var(--red)", fontSize: 24 }}>
-                {state.totPnl >= 0 ? "+" : ""}{fmtEth(state.totPnl)} ETH
+              <div className="pf-usd" style={{ color: state.totPnl >= 0 ? "var(--leaf)" : "var(--red)" }}>
+                {state.totPnl >= 0 ? "+" : ""}{dollars(state.totPnl)}
+                {state.totInv > 0 && (
+                  <span className="pf-pct">
+                    {state.totPnl >= 0 ? "+" : ""}{fmt((state.totPnl / state.totInv) * 100, 1)}%
+                  </span>
+                )}
               </div>
-              <div className="s">{dollars(state.totPnl)} · {state.tradesCount} {t("сделок")}</div>
+              <div className="s">{fmtEth(state.totPnl)} ETH · {state.tradesCount} {t("сделок")}</div>
             </div>
-            <div className="ana-card">
+            <div className="ana-card pf-stat">
               <div className="k">{t("Стоимость позиций")}</div>
-              <div className="v" style={{ fontSize: 24 }}>{fmtEth(state.totVal)} ETH</div>
-              <div className="s">{dollars(state.totVal)} · {state.positions.length} {t("позиций")}</div>
+              <div className="pf-usd">{dollars(state.totVal)}</div>
+              <div className="s">{fmtEth(state.totVal)} ETH · {state.positions.length} {t("позиций")}</div>
             </div>
-            <div className="ana-card">
+            <div className="ana-card pf-stat">
               <div className="k">{t("Вложено")}</div>
-              <div className="v" style={{ fontSize: 24 }}>{fmtEth(state.totInv)} ETH</div>
-              <div className="s">{dollars(state.totInv)}</div>
+              <div className="pf-usd">{dollars(state.totInv)}</div>
+              <div className="s">{fmtEth(state.totInv)} ETH</div>
             </div>
-            <div className="ana-card">
+            <div className="ana-card pf-stat">
               <div className="k">{t("Реализовано")}</div>
-              <div className="v" style={{ fontSize: 24 }}>{fmtEth(state.totReal)} ETH</div>
-              <div className="s">{dollars(state.totReal)}</div>
+              <div className="pf-usd">{dollars(state.totReal)}</div>
+              <div className="s">{fmtEth(state.totReal)} ETH</div>
             </div>
+          </div>
+
+          <div className="bottom-card" style={{ marginTop: 18 }}>
+            <div className="bt-tabs" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <input
+                className="tbl-search"
+                value={lq}
+                onChange={(e) => setLq(e.target.value)}
+                placeholder={t("Поиск: тикер или адрес…")}
+                spellCheck={false}
+              />
+              <div className="bt-tab on">{t("Мои позиции")}</div>
+            </div>
+
+
+            {state.positions.length === 0 && <div className="center">{t("Пока нет позиций.")}</div>}
+            {sortRows(state.positions.filter((p) => {
+              const needle = lq.trim().toLowerCase();
+              if (!needle) return true;
+              return p.symbol.toLowerCase().includes(needle)
+                || p.name.toLowerCase().includes(needle)
+                || p.token.toLowerCase().includes(needle);
+            }), psort, (p, k) => {
+              const val = Number(formatEther(p.bal)) * Number(formatEther(p.price));
+              return k === "bal" ? Number(formatEther(p.bal))
+                : k === "val" ? val
+                : k === "inv" ? p.invested
+                : k === "pnl" ? val + p.realized - p.invested
+                : Number((p.sold * 10000n) / p.cap);
+            }).map((p) => {
+              const balTok = Number(formatEther(p.bal));
+              const val = Number(formatEther(p.bal)) * Number(formatEther(p.price));
+              const buys = p.mine ? p.mine.filter((x) => x.side === "buy") : [];
+              const sells = p.mine ? p.mine.filter((x) => x.side === "sell") : [];
+              const buysTok = buys.reduce((s, x) => s + x.tokens, 0);
+              const sellsTok = sells.reduce((s, x) => s + x.tokens, 0);
+              const feesEth = p.mine ? p.mine.reduce((s, x) => s + (x.fee || 0), 0) : 0;
+              const avgB = buysTok > 0 ? p.invested / buysTok : 0;
+              const uPnl = val - balTok * avgB;
+              const uPct = balTok * avgB > 0 ? (uPnl / (balTok * avgB)) * 100 : 0;
+              const totPnl = val + p.realized - p.invested;
+              const totPct = p.invested > 0 ? (totPnl / p.invested) * 100 : 0;
+              const lastTs = p.mine ? p.mine.reduce((s, x) => Math.max(s, x.ts || 0), 0) : 0;
+              const firstTs = p.mine ? p.mine.reduce((s, x) => (x.ts ? Math.min(s, x.ts) : s), Infinity) : Infinity;
+              const holdMs = firstTs !== Infinity ? Date.now() - firstTs : 0;
+              const holdStr = firstTs === Infinity ? "—"
+                : holdMs >= 86400000 ? `${Math.floor(holdMs / 86400000)}${t("д")}`
+                : holdMs >= 3600000 ? `${Math.floor(holdMs / 3600000)}${t("ч")}`
+                : `${Math.max(1, Math.floor(holdMs / 60000))}${t("м")}`;
+              const pnlCol = (v) => ({ color: v >= 0 ? "var(--leaf)" : "var(--red)" });
+              return (
+                <div className="pos-row" key={p.token}
+                     onClick={() => { window.location.hash = `#/token/${p.token}`; window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                     title={`${p.symbol} — ${t("Открыть страницу токена")}`}>
+                  <span className="pos-id tk-cell">
+                    <span>{t("Токен / Активность")}</span>
+                    <span className="pos-id-body">
+                      {p.meta.image && <img src={p.meta.image} alt="" style={{ width: 28, height: 28, borderRadius: 9 }} />}
+                      <span>
+                        <b className="ticker" style={{ fontSize: 13 }}>${p.symbol}</b>
+                        <span className="pos-sub">
+                          {lastTs ? timeAgo(lastTs) : "—"}
+                        </span>
+                      </span>
+                    </span>
+                  </span>
+                  <div className="tk-cell"><span>{t("Куплено")}</span>
+                    <b>{dollars(p.invested)}</b><span>{compactN(buysTok)}</span></div>
+                  <div className="tk-cell"><span>{t("Продано")}</span>
+                    <b>{dollars(p.realized)}</b><span>{sellsTok > 0 ? compactN(sellsTok) : "—"}</span></div>
+                  <div className="tk-cell"><span>{t("Баланс")}</span>
+                    <b>{dollars(val)}</b><span>{compactN(balTok)}</span></div>
+                  <div className="tk-cell"><span>uPnL</span>
+                    <b style={pnlCol(uPnl)}>{dollars(uPnl)} ({uPct >= 0 ? "+" : ""}{fmt(uPct, 1)}%)</b></div>
+                  <div className="tk-cell"><span>{t("Прибыль")}</span>
+                    <b style={pnlCol(totPnl)}>{dollars(totPnl)} ({totPct >= 0 ? "+" : ""}{fmt(totPct, 1)}%)</b></div>
+                  <div className="tk-cell"><span>{t("Комиссии")}</span><b>{dollars(feesEth)}</b></div>
+                </div>
+              );
+            })}
           </div>
 
           {state.launched.length > 0 && (
             <div className="bottom-card" style={{ marginTop: 18 }}>
               <div className="bt-tabs" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                <div className="bt-tab on">{t("Мои запуски")}</div>
                 <input
                   className="tbl-search"
-                  value={lq}
-                  onChange={(e) => setLq(e.target.value)}
+                  value={lq2}
+                  onChange={(e) => setLq2(e.target.value)}
                   placeholder={t("Поиск: тикер или адрес…")}
                   spellCheck={false}
                 />
+                <div className="bt-tab on">{t("Мои запуски")}</div>
                 {(() => {
-                  const claimable = state.launched.reduce((s, tk) => s + Number(formatEther(tk.feesAccrued)), 0);
+                  const claimable = state.launched.reduce((s2, tk) => s2 + Number(formatEther(tk.feesAccrued)), 0);
                   return (
                     <button className="btn btn-primary" style={{ marginLeft: "auto" }}
                             disabled={claimable <= 0 || claiming === "__all__"}
@@ -261,7 +354,7 @@ export default function Profile({ wallet, onConnect }) {
               </div>
               {sortRows(
                 state.launched.filter((tk) => {
-                  const needle = lq.trim().toLowerCase();
+                  const needle = lq2.trim().toLowerCase();
                   if (!needle) return true;
                   return tk.symbol.toLowerCase().includes(needle)
                     || tk.name.toLowerCase().includes(needle)
@@ -291,7 +384,7 @@ export default function Profile({ wallet, onConnect }) {
                     </span>
                     <span>{usd(mcapEth * rate)}</span>
                     <span className="dim">{tk.graduated ? "🎯" : fmt(prog, 0) + "%"}</span>
-                    <span style={{ color: fees > 0 ? "var(--gold)" : "inherit" }}>
+                    <span style={{ color: fees > 0 ? "var(--leaf)" : "inherit" }}>
                       {fmtEth(fees)} ETH {U(fees)}
                     </span>
                     <span>
@@ -306,91 +399,6 @@ export default function Profile({ wallet, onConnect }) {
             </div>
           )}
 
-          <div className="bottom-card" style={{ marginTop: 18 }}>
-            <div className="bt-tabs" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-              <div className="bt-tab on">{t("Мои позиции")}</div>
-              <span style={{ marginLeft: "auto", fontSize: 14 }}>
-                {t("Общий PnL")}:{" "}
-                <b className={state.totPnl >= 0 ? "pnl-pos" : "pnl-neg"}>
-                  {state.totPnl >= 0 ? "+" : ""}{fmtEth(state.totPnl)} ETH {U(state.totPnl)}
-                </b>
-              </span>
-            </div>
-            {state.positions.length === 0 && <div className="center">{t("Пока нет позиций.")}</div>}
-            {state.positions.length > 0 && (
-              <>
-                <div className="prow6 hdr">
-                  <span>{t("Токен")}</span>
-                  <SortH sort={psort} setSort={setPsort} k="bal" label={t("Баланс")} />
-                  <SortH sort={psort} setSort={setPsort} k="val" label={t("Стоимость")} />
-                  <SortH sort={psort} setSort={setPsort} k="inv" label={t("Вложено")} />
-                  <SortH sort={psort} setSort={setPsort} k="pnl" label="PnL" />
-                  <SortH sort={psort} setSort={setPsort} k="curve" label={t("Кривая")} />
-                </div>
-                {sortRows(state.positions, psort, (p, k) => {
-                  const val = Number(formatEther(p.bal)) * Number(formatEther(p.price));
-                  return k === "bal" ? Number(formatEther(p.bal))
-                    : k === "val" ? val
-                    : k === "inv" ? p.invested
-                    : k === "pnl" ? val + p.realized - p.invested
-                    : Number((p.sold * 10000n) / p.cap);
-                }).map((p) => {
-                  const val = Number(formatEther(p.bal)) * Number(formatEther(p.price));
-                  const pnl = val + p.realized - p.invested;
-                  const prog = Number((p.sold * 10000n) / p.cap) / 100;
-                  return (
-                    <a className="prow6" key={p.token} href={`#/token/${p.token}`} style={{ cursor: "pointer" }}>
-                      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        {p.meta.image && <img src={p.meta.image} style={{ width: 26, height: 26, borderRadius: 7 }} alt="" />}
-                        <b>{p.symbol}</b>
-                        <span className="mono addr-copy" style={{ fontSize: 11.5 }}
-                              title={t("Скопировать адрес")}
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); copyCA(p.token); }}>
-                          {short(p.token)} {caCopied === p.token ? "✓" : "⧉"}
-                        </span>
-                      </span>
-                      <span>{fmt(Number(formatEther(p.bal)), 0)}</span>
-                      <span>{fmtEth(val)} ETH {U(val)}</span>
-                      <span>{fmtEth(p.invested)} ETH {U(p.invested)}</span>
-                      <span className={pnl >= 0 ? "pnl-pos" : "pnl-neg"}>
-                        {pnl >= 0 ? "+" : ""}{fmtEth(pnl)} ETH {U(pnl)}
-                      </span>
-                      <span className="dim">{p.graduated ? "🎯" : fmt(prog, 0) + "%"}</span>
-                    </a>
-                  );
-                })}
-              </>
-            )}
-          </div>
-
-          <div className="bottom-card">
-            <div className="bt-tabs"><div className="bt-tab on">{t("Мои сделки")}</div></div>
-            {state.myTrades.length === 0 && <div className="center">{t("Сделок пока нет.")}</div>}
-            {state.myTrades.length > 0 && (
-              <>
-                <div className="trow hdr">
-                  <span>{t("Тип")}</span>
-                  <span>{t("Токен")}</span>
-                  <SortH sort={trsort} setSort={setTrsort} k="eth" label="ETH" />
-                  <SortH sort={trsort} setSort={setTrsort} k="tokens" label={t("Токены")} />
-                  <SortH sort={trsort} setSort={setTrsort} k="block" label={t("Блок")} />
-                </div>
-                {sortRows(state.myTrades, trsort, (tr, k) =>
-                  k === "eth" ? tr.eth : k === "tokens" ? tr.tokens : Number(tr.block)
-                ).map((tr, i) => (
-                  <a className="trow" key={i} href={`#/token/${tr.token}`} style={{ cursor: "pointer" }}>
-                    <span className={tr.side === "buy" ? "side-buy" : "side-sell"}>
-                      {t(tr.side === "buy" ? "Купил" : "Продал")}
-                    </span>
-                    <span><b>{tr.sym}</b></span>
-                    <span>{fmtEth(tr.eth)} {U(tr.eth)}</span>
-                    <span>{fmt(tr.tokens, 0)}</span>
-                    <span className="dim">{String(tr.block)}</span>
-                  </a>
-                ))}
-              </>
-            )}
-          </div>
         </>
       )}
     </>

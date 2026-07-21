@@ -10,6 +10,7 @@ import { useSplit, loadCreationTimes, timeAgo, useClock, useSupport } from "../l
 import { useLang } from "../lib/i18n.jsx";
 import { bindRefIfNeeded } from "../lib/referral.js";
 import CandleChart from "../components/CandleChart.jsx";
+import TokenSidebar from "../components/TokenSidebar.jsx";
 import RGL, { WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -200,6 +201,21 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [copiedCA, setCopiedCA] = useState(null); // где нажали копирование: "about" | "head" | "pos"
   const [tf, setTf] = useState("all"); // таймфрейм графика
   const [trSort, setTrSort] = useState({ key: "ts", dir: "desc" }); // сортировка таблицы сделок
+  // избранное (общий список с главной и сайдбаром)
+  const [favSet, setFavSet] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("hood_favs") || "[]")); }
+    catch (e) { return new Set(); }
+  });
+  const isFavTok = favSet.has(tokenAddress);
+  const toggleFavTok = (e) => {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    setFavSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(tokenAddress)) next.delete(tokenAddress); else next.add(tokenAddress);
+      try { localStorage.setItem("hood_favs", JSON.stringify([...next])); } catch (err) { /* ignore */ }
+      return next;
+    });
+  };
   const [hSort, setHSort] = useState("desc"); // сортировка холдеров по доле
   const [tpSort, setTpSort] = useState({ key: "ts", dir: "desc" }); // сортировка в панели трейдера
   const [tradePct, setTradePct] = useState(0); // ползунок суммы
@@ -516,20 +532,19 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     { i: "swap", x: 8, y: 0, w: 4, h: 12, minW: 3, minH: 7 },
     { i: "chat", x: 8, y: 12, w: 4, h: 14, minW: 3, minH: 6 },
     { i: "trades", x: 0, y: 22, w: 8, h: 14, minW: 4, minH: 5 },
-    { i: "about", x: 8, y: 26, w: 4, h: 12, minW: 3, minH: 5 },
+    { i: "about", x: 8, y: 26, w: 4, h: 10, minW: 3, minH: 5 },
   ];
   const [layout, setLayout] = useState(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem("hood_tok_layout_v5"));
+      const saved = JSON.parse(localStorage.getItem("hood_tok_layout_v6"));
       if (Array.isArray(saved) && saved.length === DEF_LAYOUT.length) return saved;
     } catch (e) { /* ignore */ }
     return DEF_LAYOUT;
   });
   const saveLayout = (l) => {
     setLayout(l);
-    try { localStorage.setItem("hood_tok_layout_v5", JSON.stringify(l)); } catch (e) { /* ignore */ }
+    try { localStorage.setItem("hood_tok_layout_v6", JSON.stringify(l)); } catch (e) { /* ignore */ }
   };
-  const resetLayout = () => saveLayout(DEF_LAYOUT.map((x) => ({ ...x })));
   const Handle = () => (
     <span className="drag-handle" title={t("Перетащите, чтобы переставить блок")}>⠿</span>
   );
@@ -612,7 +627,10 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   );
   // компактные форматтеры для ленты активности (стиль GMGN)
   const compactN = (n) =>
-    n >= 1e6 ? fmt(n / 1e6, 2) + "M" : n >= 1e3 ? fmt(n / 1e3, 2) + "K" : fmt(n, 0);
+    n >= 1e9 ? fmt(n / 1e9, 2) + "B"
+    : n >= 1e6 ? fmt(n / 1e6, 2) + "M"
+    : n >= 1e3 ? fmt(n / 1e3, 1) + "K"
+    : fmt(n, 0);
   const shortAgo = (ts) => {
     if (!ts) return "—";
     const s = Math.max(1, Math.floor((Date.now() - ts) / 1000));
@@ -667,14 +685,11 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
 
   return (
     <>
-    <div className="tg-topbar">
-      <a className="btn back-btn" href="#/">‹ {t("Назад")}</a>
-      <button className="btn tg-reset" onClick={resetLayout} title={t("Вернуть блоки на места по умолчанию")}>
-        ⟲ {t("Сбросить раскладку")}
-      </button>
-    </div>
-    <div className="token-grid-wrap">
-      <Grid className="layout" layout={layout} cols={12} rowHeight={26} margin={[16, 16]}
+    <a className="btn back-float" href="#/">‹ {t("Назад")}</a>
+    <div className="token-flex">
+      <TokenSidebar current={tokenAddress} />
+      <div className="token-grid-wrap">
+      <Grid className="layout" layout={layout} cols={12} rowHeight={26} margin={[16, 16]} containerPadding={[0, 0]}
             draggableHandle=".drag-handle" onLayoutChange={saveLayout}
             resizeHandles={["se", "s", "e"]}>
         <div key="about" className="grid-item"><Handle />
@@ -761,6 +776,10 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
           <div className="card-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
             <h3 style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 22 }}>
+              <span className={`tok-star ${isFavTok ? "on" : ""}`} onClick={toggleFavTok}
+                    title={t(isFavTok ? "Убрать из избранного" : "В избранное")}>
+                {isFavTok ? "★" : "☆"}
+              </span>
               {meta.image && (
                 <img src={meta.image} alt="" style={{ width: 96, height: 96, borderRadius: 18 }}
                      onError={(e) => (e.target.style.display = "none")} />
@@ -915,27 +934,32 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             return [(
               <div className="pos-row" key="sum" title={`${data.name} — ${t("Открыть страницу токена")}`}
                    onClick={() => { window.location.hash = `#/token/${tokenAddress}`; window.scrollTo({ top: 0, behavior: "smooth" }); }}>
-                <a className="pos-id" href={`#/token/${tokenAddress}`} title={`${data.name} — ${t("Открыть страницу токена")}`}>
-                  {meta.image && (
-                    <img src={meta.image} alt="" style={{ width: 34, height: 34, borderRadius: 9 }}
-                         onError={(e) => (e.target.style.display = "none")} />
-                  )}
-                  <div>
-                    <b className="ticker" style={{ fontSize: 15 }}>${data.symbol}</b>
-                    <div className="mono th-addr" style={{ marginTop: 2 }} title={t("Скопировать адрес")}
-                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); copyCA("pos"); }}>
-                      {short(tokenAddress)} {copiedCA === "pos" ? "✓" : "⧉"}
-                    </div>
-                  </div>
+                <a className="pos-id tk-cell" href={`#/token/${tokenAddress}`} title={`${data.name} — ${t("Открыть страницу токена")}`}>
+                  <span>{t("Токен / Активность")}</span>
+                  <span className="pos-id-body">
+                    <span className={`tok-star ${isFavTok ? "on" : ""}`} style={{ fontSize: 14 }}
+                          onClick={toggleFavTok}
+                          title={t(isFavTok ? "Убрать из избранного" : "В избранное")}>
+                      {isFavTok ? "★" : "☆"}
+                    </span>
+                    {meta.image && (
+                      <img src={meta.image} alt="" style={{ width: 30, height: 30, borderRadius: 9 }}
+                           onError={(e) => (e.target.style.display = "none")} />
+                    )}
+                    <span>
+                      <b className="ticker" style={{ fontSize: 14 }}>${data.symbol}</b>
+                      <span className="pos-sub">
+                        {lastTs ? timeAgo(lastTs) : "—"} {totPnl >= 0 ? "💎" : ""}
+                      </span>
+                    </span>
+                  </span>
                 </a>
-                <div className="tk-cell"><span>{t("Активность")}</span><b>{lastTs ? timeAgo(lastTs) : "—"}</b>
-                  <span>{mine.length} {t("сделок")} · {holdStr} {totPnl >= 0 ? "💎" : ""}</span></div>
                 <div className="tk-cell"><span>{t("Куплено")}</span><b>{dollars(buysEth)}</b>
-                  <span>{fmt(buysTok, 0)}</span></div>
+                  <span>{compactN(buysTok)}</span></div>
                 <div className="tk-cell"><span>{t("Продано")}</span><b>{dollars(sellsEth)}</b>
-                  <span>{sellsTok > 0 ? fmt(sellsTok, 0) : "—"}</span></div>
+                  <span>{sellsTok > 0 ? compactN(sellsTok) : "—"}</span></div>
                 <div className="tk-cell"><span>{t("Баланс")}</span><b>{dollars(valEth)}</b>
-                  <span>{fmt(balTok, 0)} ({fmt(balTok / 1e7, 2)}%)</span></div>
+                  <span>{compactN(balTok)} ({fmt(balTok / 1e7, 2)}%)</span></div>
                 <div className="tk-cell"><span>uPnL</span>
                   <b style={{ color: uPnl >= 0 ? "var(--leaf)" : "var(--red)" }}>
                     {dollars(uPnl)} ({uPct >= 0 ? "+" : ""}{fmt(uPct, 1)}%)
@@ -1236,6 +1260,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         <Chat tokenAddress={tokenAddress} wallet={wallet} onConnect={onConnect} />
         </div>
       </Grid>
+      </div>
     </div>
 
     {inspect && history && (() => {

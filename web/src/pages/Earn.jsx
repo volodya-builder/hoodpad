@@ -2,10 +2,16 @@ import React, { useEffect, useState } from "react";
 import { fmtEth, short } from "../lib/web3.js";
 import { timeAgo } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
+import { useEthUsd, usd } from "../lib/price.js";
 import { REF_RATE, refStats, loadAllReferrals } from "../lib/referral.js";
 
 export default function Earn({ wallet, onConnect }) {
   const { t } = useLang();
+  const rate = useEthUsd();
+  const D = (e) => {
+    const v = (e || 0) * rate;
+    return v >= 1000 ? usd(v) : "$" + v.toFixed(2);
+  };
   const [stats, setStats] = useState(null);
   const [board, setBoard] = useState(null);
   const [cp, setCp] = useState(false);
@@ -71,17 +77,19 @@ export default function Earn({ wallet, onConnect }) {
             <div className="stat-card">
               <div className="k">{t("Начислено")}</div>
               <div className="v" style={{ color: "var(--gold)" }}>
-                {stats ? `${fmtEth(stats.accrued)} ETH` : "…"}
+                {stats ? <>{D(stats.accrued)} <span className="usd-sub">({fmtEth(stats.accrued)} ETH)</span></> : "…"}
               </div>
             </div>
             <div className="stat-card">
               <div className="k">{t("Выплачено")}</div>
-              <div className="v">{stats ? `${fmtEth(stats.paid)} ETH` : "…"}</div>
+              <div className="v">
+                {stats ? <>{D(stats.paid)} <span className="usd-sub">({fmtEth(stats.paid)} ETH)</span></> : "…"}
+              </div>
             </div>
             <div className="stat-card">
               <div className="k">{t("К выплате")}</div>
               <div className="v" style={{ color: "var(--gold)" }}>
-                {stats ? `${fmtEth(stats.pending)} ETH` : "…"}
+                {stats ? <>{D(stats.pending)} <span className="usd-sub">({fmtEth(stats.pending)} ETH)</span></> : "…"}
               </div>
             </div>
           </div>
@@ -98,7 +106,9 @@ export default function Earn({ wallet, onConnect }) {
                   <span className="mono">{short(r.trader)}</span>
                   <span className="dim">{r.trades} {t("сделок")}</span>
                   <span className="dim">{timeAgo(r.ts)}</span>
-                  <span style={{ color: "var(--gold)", fontWeight: 700 }}>+{fmtEth(r.accrued)} ETH</span>
+                  <span style={{ color: "var(--gold)", fontWeight: 700 }}>
+                    +{D(r.accrued)} <span className="usd-sub">({fmtEth(r.accrued)} ETH)</span>
+                  </span>
                 </div>
               ))
             )}

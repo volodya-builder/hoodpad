@@ -89,6 +89,26 @@ export async function subgraphVotes(epoch) {
   }));
 }
 
+/** Статистика за 24ч по всем пулам одним запросом:
+ *  vol: poolLower -> ETH объёма; first: poolLower -> цена первой сделки окна (ETH/токен). */
+let _st24 = { v: null, t: 0 };
+export async function subgraphStats24() {
+  if (_st24.v && Date.now() - _st24.t < 60_000) return _st24.v;
+  const since = Math.floor(Date.now() / 1000) - 86400;
+  const d = await gql(`{ trades(first: 1000, orderBy: timestamp, orderDirection: asc,
+    where: { timestamp_gt: "${since}" }) { pool ethAmount tokenAmount } }`);
+  const vol = {}, first = {};
+  for (const tr of d.trades || []) {
+    const p = tr.pool.toLowerCase();
+    const eth = Number(tr.ethAmount) / 1e18;
+    const tok = Number(tr.tokenAmount) / 1e18;
+    vol[p] = (vol[p] || 0) + eth;
+    if (first[p] == null && tok > 0) first[p] = eth / tok;
+  }
+  _st24 = { v: { vol, first }, t: Date.now() };
+  return _st24.v;
+}
+
 /** Комиссии трейдера (для рефералки): сумма fee по его сделкам с момента sinceTs. */
 export async function subgraphTraderFees(trader, sinceTs = 0) {
   const d = await gql(`{ trades(first: 1000, orderBy: timestamp, orderDirection: desc,

@@ -55,7 +55,7 @@ function buildCandles(points, trades, rate, ivSec) {
 export default function CandleChart({ points, trades, rate, marks, lines }) {
   const { t } = useLang();
   const ref = useRef(null);
-  const chartRef = useRef(null); // { chart, cs, vs, priceLines, fitted, volByTime, volTotal }
+  const chartRef = useRef(null); // { chart, cs, vs, priceLines, fitted, volByTime, volTotal, dirByTime, times, rate }
   const legendRef = useRef(null);
   const [iv, setIv] = useState(300);
   const [logScale, setLogScale] = useState(false);
@@ -103,20 +103,19 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
       lastValueVisible: false, priceLineVisible: false,
     });
     chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
-    chartRef.current = { chart, cs, vs, priceLines: [], fitted: false, volByTime: new Map(), volTotal: 0, dirByTime: new Map() };
+    chartRef.current = { chart, cs, vs, priceLines: [], fitted: false, volByTime: new Map(), volTotal: 0, dirByTime: new Map(), times: [], rate: 0 };
 
-    // объём в левом верхнем углу: всего, а при наведении — объём свечи
+    // объём в левом верхнем углу: последний бар, при наведении — бар под курсором
     chart.subscribeCrosshairMove((param) => {
-      const c = chartRef.current, el = legendRef.current;
-      if (!c || !el) return;
-      // курсор не на баре — ближайший бар; курсор вне графика — последний бар
+      const c = chartRef.current, el2 = legendRef.current;
+      if (!c || !el2) return;
       let tkey = param && param.time != null ? param.time : null;
       if (tkey == null && param && param.point && param.logical != null && c.times && c.times.length) {
         const idx = Math.min(Math.max(Math.round(param.logical), 0), c.times.length - 1);
         tkey = c.times[idx];
       }
       if (tkey == null && c.times && c.times.length) tkey = c.times[c.times.length - 1];
-      el.innerHTML = volLegendHtml(c, tkey);
+      el2.innerHTML = volLegendHtml(c, tkey);
     });
 
     return () => { chart.remove(); chartRef.current = null; };
@@ -188,28 +187,28 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
   // сетки position:fixed привязывается к блоку, а не к экрану
   const content = (
     <div className={`chart-wrap ${fs ? "fs" : ""}`}>
+      <div className="candle-ivs">
+        {INTERVALS.map(([lbl, sec]) => (
+          <div key={sec} className={`fpill ${iv === sec ? "on" : ""}`} onClick={() => setIv(sec)}>
+            {t(lbl)}
+          </div>
+        ))}
+        {(lines || []).length > 0 && (
+          <label className="lines-toggle" style={{ marginLeft: "auto" }}
+                 title={t("Показывать уровни заявок на графике")}>
+            <input type="checkbox" checked={showLines} onChange={(e) => setShowLines(e.target.checked)} />
+            {t("Заявки")}
+          </label>
+        )}
+        <div className="fpill" style={(lines || []).length > 0 ? {} : { marginLeft: "auto" }}
+             onClick={() => setFs(!fs)}
+             title={fs ? t("Свернуть") : t("На весь экран")}>
+          {fs ? "✕" : "⛶"}
+        </div>
+      </div>
       <div className="chart-area" style={{ position: "relative" }}>
         <div ref={ref} className="chart-resize"
              title={t("Потяните за правый нижний угол, чтобы изменить размер")} />
-        <div className="candle-ivs candle-ivs-overlay">
-          {INTERVALS.map(([lbl, sec]) => (
-            <div key={sec} className={`fpill ${iv === sec ? "on" : ""}`} onClick={() => setIv(sec)}>
-              {t(lbl)}
-            </div>
-          ))}
-          {(lines || []).length > 0 && (
-            <label className="lines-toggle" style={{ marginLeft: "auto" }}
-                   title={t("Показывать уровни заявок на графике")}>
-              <input type="checkbox" checked={showLines} onChange={(e) => setShowLines(e.target.checked)} />
-              {t("Заявки")}
-            </label>
-          )}
-          <div className="fpill" style={(lines || []).length > 0 ? {} : { marginLeft: "auto" }}
-               onClick={() => setFs(!fs)}
-               title={fs ? t("Свернуть") : t("На весь экран")}>
-            {fs ? "✕" : "⛶"}
-          </div>
-        </div>
         <div ref={legendRef} className="chart-legend" />
         <div className={`chart-log-btn ${logScale ? "on" : ""}`}
              onClick={() => setLogScale(!logScale)}

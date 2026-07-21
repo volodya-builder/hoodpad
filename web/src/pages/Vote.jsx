@@ -46,6 +46,7 @@ export default function Vote({ wallet, onConnect }) {
   const [error, setError] = useState("");
   const [expanded, setExpanded] = useState(null);
   const [q, setQ] = useState("");
+  const [vq, setVq] = useState("");           // поиск по списку токенов голосования
   const [ftoken, setFtoken] = useState("all");
 
   const enabled = VOTE_ADDRESS !== "0x0000000000000000000000000000000000000000";
@@ -175,26 +176,38 @@ export default function Vote({ wallet, onConnect }) {
         {t("Каждую неделю комьюнити подсказывает казне, какой токен поддержать выкупом: один кошелёк — один голос за раунд, всё в блокчейне. Итоговое решение о выкупе принимает платформа — голосование совещательное.")}
       </div>
 
-      {state && (
-        <div className="about-card" style={{ marginTop: 0 }}>
-          <div className="about-stat">
-            <div className="k">{t("Голосов в раунде")}</div>
-            <div className="v">{state.total}</div>
-          </div>
-          <div className="about-stat">
-            <div className="k">{t("До конца раунда")}</div>
-            <div className="v">{countdown(EPOCH_LEN - (Math.floor(Date.now() / 1000) % EPOCH_LEN))}</div>
-          </div>
-          {myVote && (
-            <div className="about-stat">
-              <div className="k">{t("Ваш голос")}</div>
-              <div className="v" style={{ fontSize: 18 }}>
-                {state.rows.find((r) => r.token.toLowerCase() === myVote)?.symbol ?? short(myVote)} ✓
-              </div>
+      {state && (() => {
+        const left = EPOCH_LEN - (Math.floor(Date.now() / 1000) % EPOCH_LEN);
+        const passed = ((EPOCH_LEN - left) / EPOCH_LEN) * 100;
+        const leader = state.rows.find((r) => r.votes > 0);
+        return (
+          <div className="vote-bar">
+            <div className="vb-cell">
+              <span className="k">{t("Голосов в раунде")}</span>
+              <b>{state.total}</b>
             </div>
-          )}
-        </div>
-      )}
+            <div className="vb-cell">
+              <span className="k">{t("Лидер раунда")}</span>
+              <b>{leader ? `$${leader.symbol}` : "—"}</b>
+            </div>
+            <div className="vb-cell vb-grow">
+              <span className="k">{t("До конца раунда")}</span>
+              <b className="vb-time">{countdown(left)}</b>
+              <div className="vb-track"><div style={{ width: `${passed}%` }} /></div>
+            </div>
+            <div className="vb-cell vb-right">
+              <span className="k">{t("Ваш голос")}</span>
+              {myVote ? (
+                <b className="vb-mine">
+                  ${state.rows.find((r) => r.token.toLowerCase() === myVote)?.symbol ?? short(myVote)} ✓
+                </b>
+              ) : (
+                <b className="dim" style={{ fontSize: 15 }}>{t("не отдан")}</b>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {error && <div className="error">{error}</div>}
       {!state && !error && <div className="center">{t("Читаю блокчейн…")}</div>}
@@ -206,8 +219,22 @@ export default function Vote({ wallet, onConnect }) {
       {state && state.rows.length > 0 && (
         <div className="vote-layout">
           <div className="bottom-card" style={{ marginTop: 0 }}>
+            <input
+              className="tbl-search"
+              style={{ width: "100%", boxSizing: "border-box", margin: "2px 0 10px" }}
+              value={vq}
+              onChange={(e) => setVq(e.target.value)}
+              placeholder={t("Поиск: тикер, имя или адрес…")}
+              spellCheck={false}
+            />
             <div className="vote-hint">{t("Нажмите на строку, чтобы увидеть, кто голосовал.")}</div>
-            {state.rows.map((r, i) => {
+            {state.rows.filter((r) => {
+              const n = vq.trim().toLowerCase();
+              if (!n) return true;
+              return r.symbol.toLowerCase().includes(n)
+                || (r.name || "").toLowerCase().includes(n)
+                || r.token.toLowerCase().includes(n);
+            }).map((r, i) => {
               const addr = r.token.toLowerCase();
               const sharePct = state.total > 0 ? (r.votes / state.total) * 100 : 0;
               const isMine = myVote === addr;
