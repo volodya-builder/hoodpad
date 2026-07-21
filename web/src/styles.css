@@ -539,6 +539,24 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 .trow.t7 { grid-template-columns: 80px 1.35fr 70px 1fr 1fr 1fr 80px; }
 /* история в профиле: монета первой колонкой */
 .trow.phist { grid-template-columns: 1.5fr 90px 70px 1.1fr 0.9fr 90px; }
+
+/* боковая панель токена: переключатель «Активность | Чат» */
+.side-tabs-wrap { height: 100%; display: flex; flex-direction: column; min-height: 0; }
+.side-tabs { margin-bottom: 8px; flex: none; }
+.side-tabs-wrap > .chat-panel { flex: 1; min-height: 0; }
+.side-act {
+  flex: 1; min-height: 0; overflow-y: auto;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; padding: 4px 14px 10px;
+}
+.sa-row {
+  display: grid; grid-template-columns: 1fr 0.9fr 1.4fr auto;
+  gap: 8px; padding: 8px 0; border-top: 1px solid var(--border);
+  font-size: 12.5px; align-items: center; font-variant-numeric: tabular-nums;
+}
+.sa-row:first-child { border-top: none; }
+.sa-row a { color: var(--text-dim); }
+.sa-row a:hover { color: var(--gold); }
 .hist-coin { display: inline-flex; align-items: center; gap: 7px; min-width: 0; cursor: pointer; }
 .hist-coin img { width: 20px; height: 20px; border-radius: 6px; object-fit: cover; flex: none; }
 .hist-coin b { font-weight: 700; }

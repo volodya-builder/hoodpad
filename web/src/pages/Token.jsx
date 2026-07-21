@@ -213,6 +213,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [tpSort, setTpSort] = useState({ key: "ts", dir: "desc" }); // сортировка в панели трейдера
   const [tradePct, setTradePct] = useState(0); // ползунок суммы
   const [btTab, setBtTab] = useState("mine"); // по умолчанию — «Мои позиции»
+  const [sideTab, setSideTab] = useState("act"); // боковая панель: «Активность» | «Чат»
   const [qpcts, setQpcts] = useState(() => {
     try {
       const v = JSON.parse(localStorage.getItem("hood_qp") || "null");
@@ -1280,7 +1281,42 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         </div>
 
         <div key="chat" className="grid-item"><Handle />
-        <Chat tokenAddress={tokenAddress} wallet={wallet} onConnect={onConnect} />
+        <div className="side-tabs-wrap">
+          <div className="bt-tabs side-tabs">
+            <div className={`bt-tab ${sideTab === "act" ? "on" : ""}`} onClick={() => setSideTab("act")}>
+              {t("Активность")}
+            </div>
+            <div className={`bt-tab ${sideTab === "chat" ? "on" : ""}`} onClick={() => setSideTab("chat")}>
+              {t("Чат")}
+            </div>
+          </div>
+          {sideTab === "chat" ? (
+            <Chat tokenAddress={tokenAddress} wallet={wallet} onConnect={onConnect} embedded />
+          ) : (
+            <div className="side-act">
+              {!history && <div className="dim" style={{ padding: 12 }}>{t("Читаю события…")}</div>}
+              {history && history.trades.length === 0 && (
+                <div className="dim" style={{ padding: 12 }}>{t("Пока нет сделок.")}</div>
+              )}
+              {history && history.trades.slice(0, 60).map((tr, i) => {
+                const buy = tr.side === "buy";
+                const isMine = wallet && tr.addr.toLowerCase() === wallet.account.toLowerCase();
+                return (
+                  <div className="sa-row" key={i} {...rowHover(tr.addr)}>
+                    <span className={buy ? "side-buy" : "side-sell"}>{dollars(tr.eth)}</span>
+                    <span className="dim">{compactN(tr.tokens)}</span>
+                    <span className="mono">
+                      {short(tr.addr)}{isMine && <span className="badge hr-badge" style={{ marginLeft: 5 }}>{t("Вы")}</span>}
+                    </span>
+                    <a className="dim" href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer">
+                      {shortAgo(tr.ts)} ↗
+                    </a>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
         </div>
       </Grid>
       </div>
