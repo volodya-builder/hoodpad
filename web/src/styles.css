@@ -1698,6 +1698,14 @@ html[data-theme="light"] .tos-ico { background: #ffffff; }
 html { overflow-x: clip; }
 html, body { max-width: 100%; }
 
+/* «Лидеры» — раскрывающаяся панель в аналитике */
+.lb-fold-head {
+  display: flex; justify-content: space-between; align-items: center;
+  cursor: pointer; font-weight: 800; font-size: 15px; padding: 4px 2px;
+}
+.lb-fold-head:hover { color: var(--gold); }
+.lb-fold .lb-grid { margin-top: 14px; }
+
 /* ---------------- Арена: суточный турнир токенов ---------------- */
 .arena-banner { border-color: var(--border-gold) !important; }
 .arena-bar {

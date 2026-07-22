@@ -6,6 +6,7 @@ import { TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { loadTokens, allTrades, loadSplit, loadSupport, useSplit } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
+import Leaderboard from "./Leaderboard.jsx";
 
 const PERIODS = [
   ["24h", "24ч", 86400],
@@ -79,6 +80,7 @@ export default function Analytics() {
   const [raw, setRaw] = useState(_anaRaw);
   const [error, setError] = useState("");
   const [period, setPeriod] = useState("all");
+  const [lbOpen, setLbOpen] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -255,6 +257,17 @@ export default function Analytics() {
           })()}
         </div>
       )}
+
+      {/* Лидеры — раскрывающаяся панель внутри аналитики */}
+      <div className="bottom-card lb-fold" style={{ marginTop: 22 }}>
+        <div className="lb-fold-head" onClick={() => setLbOpen(!lbOpen)}>
+          <span>🏆 {t("Лидеры")}</span>
+          <span className="dim" style={{ fontSize: 13 }}>
+            {t("создатели и трейдеры")} {lbOpen ? "▲" : "▼"}
+          </span>
+        </div>
+        {lbOpen && <Leaderboard embedded />}
+      </div>
 
     </>
   );

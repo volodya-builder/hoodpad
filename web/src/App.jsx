@@ -303,7 +303,7 @@ export default function App() {
   } else if (route === "/analytics") {
     page = <Analytics />;
   } else if (route === "/leaderboard") {
-    page = <Leaderboard />;
+    page = <Analytics />; // лидеры теперь живут внутри аналитики
   } else if (route === "/arena") {
     page = <Arena />;
   } else if (route === "/vote") {
@@ -346,7 +346,6 @@ export default function App() {
             <a className={`nav-pill ${route.startsWith("/vote") ? "on" : ""}`} href="#/vote">{t("Голосование")}</a>
             <a className={`nav-pill ${route.startsWith("/treasury") ? "on" : ""}`} href="#/treasury">{t("Казна")}</a>
             <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>
-            <a className={`nav-pill ${route.startsWith("/leaderboard") ? "on" : ""}`} href="#/leaderboard">{t("Лидеры")}</a>
             <a className={`nav-pill ${route.startsWith("/about") ? "on" : ""}`} href="#/about">{t("О нас")}</a>
           </div>
           <nav className="nav">

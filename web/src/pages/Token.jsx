@@ -12,6 +12,7 @@ import { bindRefIfNeeded } from "../lib/referral.js";
 import CandleChart from "../components/CandleChart.jsx";
 import TokenSidebar from "../components/TokenSidebar.jsx";
 import { useFavs, toggleFav } from "../lib/favs.js";
+import { currentPosition } from "../lib/position.js";
 import RGL, { WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -906,8 +907,11 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           )}
           {wallet && !history && <div className="dim" style={{ padding: "14px 0" }}>{t("Читаю события…")}</div>}
           {wallet && history && (() => {
-            const mine = history.trades.filter((tr) => tr.addr.toLowerCase() === wallet.account.toLowerCase());
-            if (mine.length === 0) return <div className="dim" style={{ padding: "14px 0" }}>{t("Сделок пока нет.")}</div>;
+            const mineAll = history.trades.filter((tr) => tr.addr.toLowerCase() === wallet.account.toLowerCase());
+            if (mineAll.length === 0) return <div className="dim" style={{ padding: "14px 0" }}>{t("Сделок пока нет.")}</div>;
+            // ТЕКУЩАЯ позиция: сделки после последнего обнуления баланса
+            // (прошлые циклы купил-продал не смешиваются с текущим — как на GMGN)
+            const mine = currentPosition(mineAll);
             // сводка позиции (как у GMGN)
             const buys = mine.filter((x) => x.side === "buy");
             const sells = mine.filter((x) => x.side === "sell");
@@ -931,17 +935,22 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             const holdStr = holdMs >= 86400000 ? `${Math.floor(holdMs / 86400000)}${t("д")}`
               : holdMs >= 3600000 ? `${Math.floor(holdMs / 3600000)}${t("ч")}`
               : `${Math.max(1, Math.floor(holdMs / 60000))}${t("м")}`;
-            // позиция закрыта: на балансе только «пыль» от округления (<1 токена)
-            if (balTok < 1) {
+            // позиция закрыта: текущих сделок нет или на балансе «пыль»
+            if (mine.length === 0 || balTok < 1) {
+              // итог закрытой позиции считаем по ВСЕЙ истории
+              const aB = mineAll.filter((x) => x.side === "buy").reduce((s, x) => s + x.eth, 0);
+              const aS = mineAll.filter((x) => x.side === "sell").reduce((s, x) => s + x.eth, 0);
+              const aPnl = aS - aB;
+              const aPct = aB > 0 ? (aPnl / aB) * 100 : 0;
               return (
                 <div className="pos-closed">
                   {t("Позиция закрыта")} ·{" "}
                   {t("итог")}:{" "}
-                  <b style={{ color: totPnl >= 0 ? "var(--leaf)" : "var(--red)" }}>
-                    {dollars(totPnl)} ({totPct >= 0 ? "+" : ""}{fmt(totPct, 1)}%)
+                  <b style={{ color: aPnl >= 0 ? "var(--leaf)" : "var(--red)" }}>
+                    {dollars(aPnl)} ({aPct >= 0 ? "+" : ""}{fmt(aPct, 1)}%)
                   </b>{" "}
-                  · {t("куплено")} {dollars(buysEth)} · {t("продано")} {dollars(sellsEth)} ·{" "}
-                  {mine.length} {t("сделок")} —{" "}
+                  · {t("куплено")} {dollars(aB)} · {t("продано")} {dollars(aS)} ·{" "}
+                  {mineAll.length} {t("сделок")} —{" "}
                   <a href="#/" onClick={(e) => { e.preventDefault(); setBtTab("myhist"); }}
                      style={{ color: "var(--gold)" }}>
                     {t("история сделок")} →

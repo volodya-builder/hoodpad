@@ -13,7 +13,7 @@ try {
   if (s) _lbRaw = JSON.parse(s);
 } catch (e) { /* ignore */ }
 
-export default function Leaderboard() {
+export default function Leaderboard({ embedded = false }) {
   const { t } = useLang();
   const rate = useEthUsd();
   const [lb, setLb] = useState(_lbRaw);
@@ -70,10 +70,12 @@ export default function Leaderboard() {
 
   return (
     <>
+      {!embedded && (<>
       <div className="page-title">{t("Лидеры")}</div>
       <div className="page-sub" style={{ maxWidth: 720 }}>
         {t("Кто создаёт самые прибыльные монеты и кто торгует активнее всех — всё по данным блокчейна.")}
       </div>
+      </>)}
 
       {error && <div className="error">{error}</div>}
       {!lb && !error && <div className="center">{t("Читаю блокчейн…")}</div>}

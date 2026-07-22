@@ -4,6 +4,7 @@ import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { tokenAbi, poolAbi } from "../lib/abi.js";
 import { EXPLORER } from "../lib/config.js";
 import { loadTokens, poolTrades, subgraphUserTrades, timeAgo, useClock } from "../lib/data.js";
+import { currentPosition } from "../lib/position.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { useLang } from "../lib/i18n.jsx";
 
@@ -118,10 +119,12 @@ export default function Profile({ wallet, onConnect }) {
               : publicClient.readContract({ address: tk.pool, abi: poolAbi, functionName: "creator" }).catch(() => null),
             publicClient.readContract({ address: tk.pool, abi: poolAbi, functionName: "creatorFeesAccrued" }).catch(() => 0n),
           ]);
-          const invested = mine.filter((x) => x.side === "buy").reduce((s, x) => s + x.eth + x.fee, 0);
-          const realized = mine.filter((x) => x.side === "sell").reduce((s, x) => s + x.eth, 0);
+          // счётчики позиции — только ТЕКУЩИЙ цикл (после последнего обнуления баланса)
+          const cur = currentPosition(mine);
+          const invested = cur.filter((x) => x.side === "buy").reduce((s, x) => s + x.eth + x.fee, 0);
+          const realized = cur.filter((x) => x.side === "sell").reduce((s, x) => s + x.eth, 0);
           return {
-            ...tk, bal, mine, invested, realized,
+            ...tk, bal, mine: cur, mineAll: mine, invested, realized,
             isMine: creatorRpc && creatorRpc.toLowerCase() === me,
             feesAccrued,
           };
@@ -134,18 +137,21 @@ export default function Profile({ wallet, onConnect }) {
       // закрытые (всё продано) в списке не висят
       const positions = enriched.filter((tk) => Number(formatEther(tk.bal)) >= 1);
       const launched = enriched.filter((tk) => tk.isMine);
-      // итоги считаем по ВСЕМ токенам с моими сделками (включая закрытые позиции),
-      // чтобы общий PnL не терял реализованную прибыль
+      // итоги (Общий PnL / Вложено / Реализовано) — по ВСЕЙ истории,
+      // чтобы общий PnL не терял реализованную прибыль закрытых циклов
       let totVal = 0, totInv = 0, totReal = 0;
-      enriched.filter((tk) => tk.mine.length > 0 || tk.bal > 0n).forEach((tk) => {
+      enriched.forEach((tk) => {
+        const all = tk.mineAll || tk.mine;
+        if (all.length === 0 && tk.bal === 0n) return;
         totVal += Number(formatEther(tk.bal)) * Number(formatEther(tk.price));
-        totInv += tk.invested; totReal += tk.realized;
+        totInv += all.filter((x) => x.side === "buy").reduce((s, x) => s + x.eth + x.fee, 0);
+        totReal += all.filter((x) => x.side === "sell").reduce((s, x) => s + x.eth, 0);
       });
       const next = {
         ethBal, positions, launched,
         totVal, totInv, totReal, totPnl: totVal + totReal - totInv,
-        tradesCount: enriched.reduce((s, tk) => s + tk.mine.length, 0),
-        myTrades: enriched.flatMap((tk) => tk.mine.map((tr) => ({ ...tr, sym: tk.symbol, token: tk.token, img: tk.meta?.image || "" })))
+        tradesCount: enriched.reduce((s, tk) => s + (tk.mineAll || tk.mine).length, 0),
+        myTrades: enriched.flatMap((tk) => (tk.mineAll || tk.mine).map((tr) => ({ ...tr, sym: tk.symbol, token: tk.token, img: tk.meta?.image || "" })))
           .sort((a, b) => Number(b.block - a.block)).slice(0, 50),
       };
       _profCache[me] = next;
