@@ -175,6 +175,12 @@ const EN = {
   "объёма торгов в раунде.": "of trading volume this round.",
   "Твой объём:": "Your volume:",
   "Недостаточно объёма торгов для голоса": "Not enough trading volume to vote",
+  "Всего голосов": "Total votes",
+  "голос": "vote",
+  "голосов": "votes",
+  "Раз в неделю казна выкупает токен-победитель голосования с рынка и сжигает купленное — памп цены и дефляция для всех держателей. Один кошелёк — один голос. Голосовать могут те, кто наторговал от $500 на любой монете hood.":
+    "Once a week the treasury market-buys the winning token and burns it — a price pump and deflation for all holders. One wallet, one vote. Anyone who traded $500+ on any hood coin can vote.",
+  "объёма торгов на любой монете hood.": "of trading volume on any hood coin.",
   "Голосовать": "Vote",
   "месячная лига чемпионов": "monthly champions league",
   "финал через": "final in",
