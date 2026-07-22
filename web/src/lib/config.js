@@ -61,6 +61,10 @@ export const CHAT_ADDRESS =
 export const VOTE_ADDRESS =
   import.meta.env.VITE_VOTE_ADDRESS ?? "0xf663b704929b8c0562f6e1ae5c0387ad264d4ef3";
 
+// v2 «голос за шкуру»: пока пусто — страница голосования работает в режиме v1.
+// После деплоя v2 вписать адрес VotePower (или задать VITE_VOTEPOWER_ADDRESS).
+export const VOTEPOWER_ADDRESS = import.meta.env.VITE_VOTEPOWER_ADDRESS ?? "";
+
 // Off-chain chat storage: Firebase Realtime Database URL
 export const CHAT_DB_URL = (import.meta.env.VITE_CHAT_DB_URL ?? "https://hood-chat-4b664-default-rtdb.europe-west1.firebasedatabase.app").replace(/\/$/, "");
 

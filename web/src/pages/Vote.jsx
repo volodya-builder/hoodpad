@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { parseAbi, parseAbiItem } from "viem";
 import { publicClient, fmt, short } from "../lib/web3.js";
-import { VOTE_ADDRESS, EXPLORER } from "../lib/config.js";
+import { VOTE_ADDRESS, VOTEPOWER_ADDRESS, EXPLORER } from "../lib/config.js";
+import VoteV2 from "./VoteV2.jsx";
 import { loadTokens, timeAgo, subgraphVotes, useClock } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 
@@ -39,6 +40,12 @@ try {
 } catch (e) { /* ignore */ }
 
 export default function Vote({ wallet, onConnect }) {
+  // v2 «голос за шкуру» включается сам, когда задан адрес VotePower
+  if (VOTEPOWER_ADDRESS) return <VoteV2 wallet={wallet} onConnect={onConnect} />;
+  return <VoteV1 wallet={wallet} onConnect={onConnect} />;
+}
+
+function VoteV1({ wallet, onConnect }) {
   const { t } = useLang();
   useClock(5000);
   const [state, setState] = useState(_voteState);

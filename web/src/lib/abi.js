@@ -59,3 +59,17 @@ export const tokenAbi = parseAbi([
 export const splitterAbi = parseAbi([
   "function teamBps() view returns (uint16)",
 ]);
+
+// v2: VotePower — «голос за шкуру»
+export const votePowerAbi = parseAbi([
+  "function epoch() view returns (uint256)",
+  "function epochEndsIn() view returns (uint256)",
+  "function powerOf(uint256 epoch, address trader) view returns (uint256)",
+  "function choiceOf(uint256 epoch, address trader) view returns (address)",
+  "function totalFor(uint256 epoch, address token) view returns (uint256)",
+  "function rewardOf(uint256 epoch) view returns (address token, uint256 amount)",
+  "function pendingReward(uint256 epoch, address trader) view returns (uint256)",
+  "function claimed(uint256 epoch, address trader) view returns (bool)",
+  "function vote(address token)",
+  "function claim(uint256 epoch) returns (uint256)",
+]);

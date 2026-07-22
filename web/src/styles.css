@@ -1801,6 +1801,23 @@ html[data-theme="light"] .tr-bar { background: #00000010; }
 .ar-status { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; text-align: right; }
 .ar-status.ok { color: var(--leaf, #7ac74f); }
 .ar-status.bad { color: #e06a4a; }
+/* v2 голосование: строки токенов с силой голоса */
+.vote-row {
+  display: grid; grid-template-columns: 1.1fr 2fr 150px 120px;
+  gap: 14px; align-items: center;
+  padding: 11px 4px; border-top: 1px solid var(--border);
+}
+.vr-id { display: flex; align-items: center; gap: 9px; color: inherit; min-width: 0; }
+.vr-id img { width: 28px; height: 28px; border-radius: 9px; object-fit: cover; }
+.vr-bar { height: 7px; border-radius: 99px; background: #ffffff10; overflow: hidden; }
+.vr-bar > span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--leaf,#7ac74f), var(--gold)); }
+.vr-val { font-size: 13px; font-variant-numeric: tabular-nums; text-align: right; }
+html[data-theme="light"] .vr-bar { background: #00000010; }
+@media (max-width: 700px) {
+  .vote-row { grid-template-columns: 1fr 90px 100px; }
+  .vr-bar { display: none; }
+}
+
 /* Гранд-Арена: месячная лига чемпионов */
 .grand-card {
   margin-top: 26px; padding: 18px 22px;
