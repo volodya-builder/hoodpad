@@ -26,6 +26,15 @@ export default function Treasury() {
   const { t } = useLang();
   const rate = useEthUsd();
   const [state, setState] = useState(_tresState);
+  const [aiReport, setAiReport] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    fetch("./bot/treasurer/reports/latest.json?" + Date.now())
+      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => alive && r && setAiReport(r))
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
   const [error, setError] = useState("");
 
   const dollars = (e) => {
@@ -163,6 +172,24 @@ export default function Treasury() {
               <div className="s">{t("отправлены на dead-адрес навсегда")}</div>
             </div>
           </div>
+
+          {aiReport && (
+            <div className="ai-treasurer">
+              <div className="ait-head">
+                <span className="ait-badge">🤖 {t("ИИ-казначей")}</span>
+                <span className="dim" style={{ fontSize: 12 }}>{t("Раунд")} #{aiReport.epoch} · {timeAgo(aiReport.ts)}</span>
+              </div>
+              <div className="ait-body">
+                {t("Казна автономно выкупила победителя голосования и сожгла купленное:")}{" "}
+                <b>${aiReport.sym || short(aiReport.winner)}</b> — {fmtEth(Number(aiReport.treasuryEth))} ETH,{" "}
+                {t("сила голоса")} {fmtEth(Number(aiReport.votePower))} ETH, {t("объём недели")} {fmtEth(aiReport.weekVolumeEth)} ETH.
+                {aiReport.tx && <> <a href={`${EXPLORER}/tx/${aiReport.tx}`} target="_blank" rel="noreferrer">{t("транзакция")} →</a></>}
+              </div>
+              <div className="dim" style={{ fontSize: 11, marginTop: 6 }}>
+                {t("Работает без участия человека по расписанию. Собирает комиссии только выше порога газа — максимально экономно.")}
+              </div>
+            </div>
+          )}
 
           <div className="verify-note" style={{ marginBottom: 18 }}>
             <b style={{ color: "var(--leaf)" }}>✓ {t("Код верифицирован")}</b> · {t("Не верьте на слово — откройте контракт казны в эксплорере и убедитесь сами:")}{" "}

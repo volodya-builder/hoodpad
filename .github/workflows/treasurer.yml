@@ -1,0 +1,40 @@
+name: hood treasurer
+
+# ИИ-казначей: собирает комиссии и раз в неделю выкупает+сжигает победителя.
+# Запускается автоматически по расписанию (раз в сутки) и вручную.
+on:
+  schedule:
+    - cron: "17 6 * * *"   # каждый день 06:17 UTC (после полуночного ролла раундов)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write          # чтобы коммитить отчёты в reports/
+
+concurrency:
+  group: treasurer
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install deps
+        run: npm i viem@2 --no-audit --no-fund
+      - name: Run treasurer
+        env:
+          TREASURER_PRIVATE_KEY: ${{ secrets.TREASURER_PRIVATE_KEY }}
+          FACTORY:   ${{ vars.V2_FACTORY }}
+          TREASURY:  ${{ vars.V2_TREASURY }}
+          VOTEPOWER: ${{ vars.V2_VOTEPOWER }}
+        run: node bot/treasurer/treasurer.mjs
+      - name: Commit reports
+        run: |
+          git config user.name "hood-treasurer"
+          git config user.email "treasurer@hoodandarrow.com"
+          git add bot/treasurer/reports bot/treasurer/state.json 2>/dev/null || true
+          git diff --cached --quiet || git commit -m "treasurer: report update"
+          git push || true

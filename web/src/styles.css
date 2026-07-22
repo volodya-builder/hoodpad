@@ -1824,6 +1824,16 @@ html[data-theme="light"] .vr-bar { background: #00000010; }
   .vr-bar { display: none; }
 }
 
+/* панель ИИ-казначея */
+.ai-treasurer {
+  margin: 0 0 16px; padding: 15px 18px;
+  background: linear-gradient(150deg, #7ac74f10, transparent 60%), var(--card);
+  border: 1px solid var(--border-gold); border-radius: 16px;
+}
+.ait-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.ait-badge { font-weight: 800; font-size: 14px; }
+.ait-body { font-size: 13.5px; line-height: 1.55; }
+
 /* бегущая строка событий под шапкой */
 .ticker {
   overflow: hidden; white-space: nowrap;

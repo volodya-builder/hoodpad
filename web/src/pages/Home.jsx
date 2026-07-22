@@ -89,7 +89,7 @@ export default function Home({ onSearch }) {
     if (sort === "fav") a = a.filter((x) => favs.has(x.token));
     if (sort === "mcap") a.sort((x, y) => Number(y.price - x.price));
     if (sort === "raised") a.sort((x, y) => Number(y.reserve - x.reserve));
-    if (sort === "cushion") a.sort((x, y) => cushionOf(y.token) - cushionOf(x.token));
+    if (sort === "cushion") { a = a.filter((x) => cushionOf(x.token) > 0); a.sort((x, y) => cushionOf(y.token) - cushionOf(x.token)); }
     if (sort === "old") a.reverse(); // базовый порядок — новые первыми
     return a; // "new": loader already returns newest first
   };
@@ -184,6 +184,8 @@ export default function Home({ onSearch }) {
         <div className="center" style={{ paddingBottom: 60 }}>
           {sort === "fav" ? (
             t("Пока нет избранных — нажмите ☆ на карточке токена.")
+          ) : sort === "cushion" ? (
+            t("Казна пока никого не выкупала — как пройдёт голосование, выкупленные токены появятся здесь.")
           ) : (
             <>
               {t("Токенов пока нет — станьте первым.")}{" "}
