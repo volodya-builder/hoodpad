@@ -45,13 +45,14 @@ try {
   }
 } catch (e) { /* ignore */ }
 
-// Set after deployment (scripts/deploy.js prints it).
+// hood v2 (мейннет, задеплоено 22.07.2026): фабрика 20/20/60, «голос за шкуру».
+// Старая v1-фабрика выведена из конфига — чистый лист.
 export const FACTORY_ADDRESS =
-  import.meta.env.VITE_FACTORY_ADDRESS ?? "0xb09683cdd8e1dae93e37163eb4e6dd925d4104f9";
+  import.meta.env.VITE_FACTORY_ADDRESS ?? "0x68a983f0c73f1a5dc13aa3ae71a19a5787162cdb";
 
-// Buyback treasury (80% of fees; ETH can only leave via buybacks)
+// BuybackTreasuryV2 (60% комиссий; ETH уходит только на выкупы; выкуп→сжигание)
 export const TREASURY_ADDRESS =
-  import.meta.env.VITE_TREASURY_ADDRESS ?? "0xe5544c837f8dfd6b7e082435f7a1d646692239d3";
+  import.meta.env.VITE_TREASURY_ADDRESS ?? "0x232cf3b0026ed39e1448567e8da55206375945e4";
 
 // On-chain chat contract (messages are events; zero = not deployed yet)
 export const CHAT_ADDRESS =
@@ -63,7 +64,8 @@ export const VOTE_ADDRESS =
 
 // v2 «голос за шкуру»: пока пусто — страница голосования работает в режиме v1.
 // После деплоя v2 вписать адрес VotePower (или задать VITE_VOTEPOWER_ADDRESS).
-export const VOTEPOWER_ADDRESS = import.meta.env.VITE_VOTEPOWER_ADDRESS ?? "";
+export const VOTEPOWER_ADDRESS =
+  import.meta.env.VITE_VOTEPOWER_ADDRESS ?? "0x421b28dd32a16591afecb4b5ba31e0bee2c9f25a";
 
 // Off-chain chat storage: Firebase Realtime Database URL
 export const CHAT_DB_URL = (import.meta.env.VITE_CHAT_DB_URL ?? "https://hood-chat-4b664-default-rtdb.europe-west1.firebasedatabase.app").replace(/\/$/, "");
