@@ -18,9 +18,9 @@ contract LaunchpadFactoryV2 is Ownable {
     uint256 public constant VIRTUAL_ETH  = 1.625 ether; // -> graduates at 6.5 ETH
 
     uint16 public feeBps = 100;              // 1% per trade
-    uint16 public creatorFeeShareBps = 4000; // creator 40%; the other 60% goes to
-                                             // the FeeSplitter (team 1/3 => 20% total,
-                                             // treasury 2/3 => 40% total)
+    uint16 public creatorFeeShareBps = 2000; // creator 20%; the other 80% goes to
+                                             // the FeeSplitter (team 25% => 20% total,
+                                             // treasury 75% => 60% total)
 
     address public treasury;   // FeeSplitter (team + BuybackTreasuryV2)
     address public migrator;
