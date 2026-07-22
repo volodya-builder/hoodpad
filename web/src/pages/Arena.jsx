@@ -207,15 +207,14 @@ export default function Arena() {
               <span style={{ textAlign: "right" }}>{t("Статус")}</span>
             </div>
             {(() => {
-              const crownIdx = st.alive.findIndex((p) => !p.defending); // трон — лучшему из конкурса
               return st.alive.map((p, i) => {
               const maxVol = Math.max(...st.alive.map((x) => x.score), 1e-9);
               const w = Math.max(3, (p.score / maxVol) * 100);
-              const danger = st.alive.length > 1 && i === st.alive.length - 1 && !p.defending;
+              const danger = st.alive.length > 1 && i === st.alive.length - 1;
               return (
-                <a key={p.token} className={`arena-row ${i === crownIdx ? "leader" : ""} ${danger ? "danger" : ""} ${p.defending ? "defending" : ""}`}
+                <a key={p.token} className={`arena-row ${i === 0 ? "leader" : ""} ${danger ? "danger" : ""}`}
                    href={`#/token/${p.token}`}>
-                  <span className="ar-rank">{i === crownIdx ? "👑" : p.defending ? "🛡" : i + 1}</span>
+                  <span className="ar-rank">{i === 0 ? "👑" : i + 1}</span>
                   {p.meta.image ? <img src={p.meta.image} alt="" /> : <span className="ts-ph">🖼️</span>}
                   <span className="ar-name">
                     <b>${p.symbol}</b>
@@ -231,10 +230,8 @@ export default function Arena() {
                       </span>
                     </span>
                   </span>
-                  <span className={`ar-status ${danger ? "bad" : "ok"}`}
-                        style={p.defending ? { color: "var(--gold)" } : undefined}
-                        title={p.defending ? t("Вчерашний чемпион: сражается вне конкурса, корона сегодня достанется другому") : ""}>
-                    {p.defending ? t("защита трона") : danger ? t("под угрозой") : t("в бою")}
+                  <span className={`ar-status ${danger ? "bad" : "ok"}`}>
+                    {danger ? t("под угрозой") : t("в бою")}
                   </span>
                 </a>
               );

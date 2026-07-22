@@ -28,8 +28,13 @@ export function arenaState(tokens, trades, d0, now = Date.now(), excluded = null
   const isToday = now < end;
   const cutoff = Math.min(now, end);
 
-  // участники: неградуировавшие на данный момент + созданные до конца дня
-  const parts = tokens.filter((t) => !t.graduated && (t.createdAt || 0) < end);
+  // участники: неградуировавшие + созданные до конца дня.
+  // Вчерашний чемпион СЕГОДНЯ НЕ УЧАСТВУЕТ (день отдыха на троне) —
+  // если, конечно, кроме него есть кому сражаться.
+  let parts = tokens.filter((t) => !t.graduated && (t.createdAt || 0) < end);
+  if (excluded && parts.length > 1) {
+    parts = parts.filter((t) => t.token.toLowerCase() !== excluded);
+  }
   if (parts.length === 0) {
     return { participants: [], alive: [], eliminated: [], checkpoints: [], nextCheckpoint: null, champion: null };
   }
@@ -91,15 +96,11 @@ export function arenaState(tokens, trades, d0, now = Date.now(), excluded = null
       dayVol: volUntil((p.pool || "").toLowerCase(), cutoff),
       dayGrowth: growthUntil(p, cutoff),
       score: scoreUntil(p, cutoff),
-      defending: excluded != null && p.token.toLowerCase() === excluded, // вне конкурса
     }))
     .sort((a, b) => b.score - a.score);
 
   const nextCheckpoint = isToday ? checkpoints.find((cp) => cp > now) ?? end : null;
-  const dayDecided = !isToday || aliveArr.length === 1;
-  // корона — лучшему, кто не защищает трон; если других нет — трон вакантен не бывает
-  const eligible = aliveArr.filter((p) => !p.defending);
-  const champion = dayDecided && aliveArr.length >= 1 ? (eligible[0] ?? aliveArr[0]) : null;
+  const champion = (!isToday || aliveArr.length === 1) && aliveArr.length >= 1 ? aliveArr[0] : null;
 
   return { participants: parts, alive: aliveArr, eliminated, checkpoints, nextCheckpoint, champion, excluded };
 }
