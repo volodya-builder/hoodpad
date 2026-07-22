@@ -73,4 +73,5 @@ export const votePowerAbi = parseAbi([
   "function vote(address token)",
   "function claim(uint256 epoch) returns (uint256)",
   "function minPower() view returns (uint256)",
+  "event Voted(address indexed trader, uint256 indexed epoch, address indexed token, uint256 power)",
 ]);

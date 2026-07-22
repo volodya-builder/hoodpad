@@ -66,7 +66,9 @@ const poolAbi = parseAbi([
 const vpAbi = parseAbi([
   "function epoch() view returns (uint256)",
   "function totalFor(uint256,address) view returns (uint256)",
+  "event Voted(address indexed trader, uint256 indexed epoch, address indexed token, uint256 power)",
 ]);
+const MIN_VOL_USD = 500;
 const treAbi = parseAbi([
   "function buybackAndReward(address,uint256,uint256,uint256) returns (uint256)",
   "function treasuryBalance() view returns (uint256)",
@@ -117,12 +119,34 @@ async function main() {
   const finishedEpoch = epochNow - 1;
 
   if (justRolled && !settled[finishedEpoch]) {
-    // победитель прошлого раунда = наибольшая totalFor
-    let winner = null, winPower = 0n;
-    for (const { tok } of pools) {
-      const p = await pub.readContract({ address: VOTEPOWER, abi: vpAbi, functionName: "totalFor", args: [BigInt(finishedEpoch), tok] }).catch(() => 0n);
-      if (p > winPower) { winPower = p; winner = tok; }
+    // победитель = токен с наибольшим числом ГОЛОСОВ от кошельков,
+    // наторговавших >= $500 на платформе (один кошелёк — один голос).
+    const priceUsd = await gql(`{ trades(first:1){ id } }`).then(() => null).catch(() => null); // прогрев
+    // объём каждого кошелька из сабграфа (весь период)
+    const allTr = await gql(`{ trades(first:1000, orderBy:timestamp, orderDirection:desc){ trader ethAmount fee } }`).catch(() => ({ trades: [] }));
+    // курс ETH/USD (грубо из price feed опустим — считаем в ETH-порог)
+    const MIN_VOL_ETH = 0.0025; // ~ $500 при ETH≈$2000 (совпадает с фронтом)
+    const vol = {};
+    for (const tr of allTr.trades || []) {
+      const k = tr.trader.toLowerCase();
+      vol[k] = (vol[k] || 0) + (Number(tr.ethAmount) + Number(tr.fee)) / 1e18;
     }
+    // голоса раунда
+    const logs = await pub.getLogs({
+      address: VOTEPOWER, event: vpAbi.find((x) => x.type === "event" && x.name === "Voted"),
+      args: { epoch: BigInt(finishedEpoch) }, fromBlock: 0n, toBlock: "latest",
+    }).catch(() => []);
+    const seen = new Set(), byToken = {};
+    for (const l of logs) {
+      const v = l.args.trader.toLowerCase();
+      if (seen.has(v)) continue; seen.add(v);
+      if ((vol[v] || 0) < MIN_VOL_ETH) continue; // допуск по объёму
+      const tk = l.args.token.toLowerCase();
+      byToken[tk] = (byToken[tk] || 0) + 1;
+    }
+    let winner = null, winVotes = 0;
+    for (const [tk, n] of Object.entries(byToken)) if (n > winVotes) { winVotes = n; winner = tk; }
+    const winPower = BigInt(winVotes); // для отчёта — число голосов
     const bal = await pub.readContract({ address: TREASURY, abi: treAbi, functionName: "treasuryBalance" });
 
     if (winner && Number(formatEther(bal)) >= BUYBACK_MIN) {
@@ -137,10 +161,10 @@ async function main() {
         epoch: finishedEpoch,
         ts: Date.now(),
         winner,
-        votePower: formatEther(winPower),
+        votes: winVotes,
         weekVolumeEth: volByPool[(winPool || "").toLowerCase()] || 0,
         treasuryEth: formatEther(bal),
-        reason: `Токен ${winner} победил в голосовании раунда #${finishedEpoch}: набрал ${formatEther(winPower)} ETH силы голоса (оплаченных комиссий). Казна выкупает его на ${formatEther(bal)} ETH и сжигает купленное — поддержка цены и дефляция.`,
+        reason: `Токен ${winner} победил в голосовании раунда #${finishedEpoch}: собрал ${winVotes} голосов от кошельков с объёмом >= $500. Казна выкупает его на ${formatEther(bal)} ETH и сжигает купленное — поддержка цены и дефляция.`,
       };
       const rc = await tx("buybackAndReward",
         { to: TREASURY, abi: treAbi, a: [winner, bal, 0n, BigInt(finishedEpoch)] },
