@@ -797,7 +797,19 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <a className="mono" href={`${EXPLORER}/address/${data.pool}`} target="_blank" rel="noreferrer">
               {short(data.pool)}
             </a>
-            {" · "}{t("Создатель:")} <span className="mono">{short(data.creator)}</span>
+            {" · "}{t("Создатель:")}{" "}
+            <a className="mono" href={`#/trader/${data.creator}`} title={t("Открыть профиль трейдера")}
+               style={{ color: "var(--gold)" }}>{short(data.creator)}</a>
+            {(() => {
+              const mine = tokensList.filter((x) => (x.creator || "").toLowerCase() === (data.creator || "").toLowerCase());
+              if (mine.length < 2) return null;
+              const grads = mine.filter((x) => x.graduated).length;
+              return (
+                <span className="cre-chip">
+                  {" "}· <b>{mine.length}</b> {t("запусков")}{grads > 0 && <> · <b>{grads}</b> 🎯</>}
+                </span>
+              );
+            })()}
             {extra.createdAt ? <> {" · "}{t("Запущен")} {timeAgo(extra.createdAt)}</> : null}
           </p>
 

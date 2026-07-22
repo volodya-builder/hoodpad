@@ -3,8 +3,9 @@ import { formatEther } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { tokenAbi } from "../lib/abi.js";
 import { EXPLORER } from "../lib/config.js";
-import { loadTokens, subgraphUserTrades, poolTrades, timeAgo, useClock } from "../lib/data.js";
+import { loadTokens, subgraphUserTrades, poolTrades, allTrades, timeAgo, useClock } from "../lib/data.js";
 import { currentPosition } from "../lib/position.js";
+import { computeCreatorRep } from "../lib/creatorRep.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { useLang } from "../lib/i18n.jsx";
 
@@ -81,8 +82,12 @@ export default function Trader({ address }) {
         totInv += tk.allInv; totReal += tk.allReal;
         volume += tk.all.reduce((s, x) => s + x.eth + x.fee, 0);
       });
+      // репутация создателя (если есть запуски)
+      let rep = null;
+      try { rep = computeCreatorRep({ creator: addr, tokens, trades: await allTrades() }); }
+      catch (e) { /* не критично */ }
       const next = {
-        ethBal, enriched, volume,
+        ethBal, enriched, volume, rep,
         positions: enriched.filter((tk) => Number(formatEther(tk.bal)) >= 1),
         launched: enriched.filter((tk) => tk.isMine),
         totVal, totInv, totReal, totPnl: totVal + totReal - totInv,
@@ -146,6 +151,30 @@ export default function Trader({ address }) {
             <div className="s">{state.launched.filter((x) => x.graduated).length} {t("градуировало")}</div>
           </div>
         </div>
+
+        {state.rep && (
+          <div className="rep-card">
+            <div className="rep-head">
+              <span className="rep-title">🏹 {t("Репутация создателя")}</span>
+              <span className="rep-score" style={{
+                color: state.rep.rugs > 0 ? "#e06a4a" : state.rep.score >= 70 ? "var(--leaf)" : "var(--gold)",
+              }}>
+                {state.rep.score}<span>/100</span>
+              </span>
+              <span className="rep-verdict" style={{
+                color: state.rep.rugs > 0 ? "#e06a4a" : state.rep.score >= 70 ? "var(--leaf)" : "var(--gold)",
+              }}>{t(state.rep.verdict)}</span>
+            </div>
+            <div className="rep-grid">
+              <div><span>{t("Запусков")}</span><b>{state.rep.launches}</b></div>
+              <div><span>{t("Градуировало")}</span><b>{state.rep.grads}</b></div>
+              <div><span>{t("Живых")}</span><b>{state.rep.alive} / {state.rep.launches}</b></div>
+              <div><span>{t("Держит позиции")}</span><b>{state.rep.held}</b></div>
+              <div><span>{t("Сливов")}</span>
+                <b style={{ color: state.rep.rugs > 0 ? "#e06a4a" : "var(--leaf)" }}>{state.rep.rugs}</b></div>
+            </div>
+          </div>
+        )}
 
         <div className="bottom-card" style={{ marginTop: 18 }}>
           <div className="bt-tabs">

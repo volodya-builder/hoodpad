@@ -1710,6 +1710,23 @@ html, body { max-width: 100%; }
 .lb-fold-head:hover { color: var(--gold); }
 .lb-fold .lb-grid { margin-top: 14px; }
 
+/* ---------------- репутация создателя ---------------- */
+.rep-card {
+  margin-top: 18px; padding: 16px 20px;
+  background: var(--card); border: 1px solid var(--border-gold); border-radius: 16px;
+}
+.rep-head { display: flex; align-items: baseline; gap: 12px; }
+.rep-title { font-weight: 800; font-size: 14px; }
+.rep-score { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.rep-score span { font-size: 12px; font-weight: 600; opacity: .6; }
+.rep-verdict { margin-left: auto; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; }
+.rep-grid { display: flex; gap: 30px; flex-wrap: wrap; margin-top: 12px; }
+.rep-grid > div { display: flex; flex-direction: column; gap: 2px; }
+.rep-grid span { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; color: var(--text-dim); }
+.rep-grid b { font-size: 16px; }
+.cre-chip { font-size: 11px; color: var(--text-dim); }
+.cre-chip b { color: var(--gold); }
+
 /* ---------------- hood AI: судья платформы (Trust Score) ---------------- */
 .trust-box {
   margin-top: 16px; padding: 14px 16px;
