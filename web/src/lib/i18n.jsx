@@ -182,6 +182,11 @@ const EN = {
   "Сюда попадают только чемпионы дня. Каждая победа — ⭐ и очки лиги. Лидер месяца получает Гранд-выкуп из казны в первый день следующего месяца.":
     "Only Champions of the Day qualify. Every win earns a ⭐ and league points. The monthly leader gets the Grand Buyback from the treasury on day one of the next month.",
   "лидирует сегодня": "leading today",
+  "Суточная арена": "Daily arena",
+  "В лиге": "In league",
+  "Финал месяца": "Month final",
+  "в лиге": "in league",
+  "Пока нет чемпионов — лига откроется после первого финала дня.": "No champions yet — the league opens after the first day final.",
   "очков лиги": "league points",
   "д": "d",
   "ч": "h",

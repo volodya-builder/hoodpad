@@ -45,6 +45,7 @@ export default function Arena() {
     return v >= 1000 ? usd(v) : "$" + v.toFixed(2);
   };
   const [cp, setCp] = useState("");
+  const [view, setView] = useState("day"); // «Суточная арена» | «Гранд-Арена»
   const copyCA = (e, addr) => {
     e.preventDefault(); e.stopPropagation();
     try { navigator.clipboard.writeText(addr); } catch (err) { /* ignore */ }
@@ -76,6 +77,66 @@ export default function Arena() {
 
       {st && st.participants.length > 0 && (
         <>
+          <div className="bt-tabs" style={{ marginTop: 18 }}>
+            <div className={`bt-tab ${view === "day" ? "on" : ""}`} onClick={() => setView("day")}>
+              ⚔️ {t("Суточная арена")}
+            </div>
+            <div className={`bt-tab ${view === "grand" ? "on" : ""}`} onClick={() => setView("grand")}>
+              👑 {t("Гранд-Арена")}
+            </div>
+          </div>
+
+          {view === "grand" && (() => {
+            const ga = grandArena(st.tokens, st.trades);
+            const days = Math.floor(ga.endsIn / 86_400_000);
+            const hours = Math.floor((ga.endsIn % 86_400_000) / 3_600_000);
+            const pool = treBal !== null ? treBal * 0.15 : null;
+            const maxPts = Math.max(...ga.table.map((r) => r.points + (r.pendingPoints || 0)), 1e-9);
+            return (
+              <>
+                <div className="arena-bar" style={{ borderColor: "var(--gold)" }}>
+                  <div className="ab-cell"><span>{t("В лиге")}</span><b>{ga.table.length}</b></div>
+                  <div className="ab-cell"><span>{t("Финал месяца")}</span>
+                    <b className="ab-timer">{days}{t("д")} {hours}{t("ч")}</b></div>
+                  {pool !== null && (
+                    <div className="ab-cell"><span>{t("Гранд-выкуп")}</span>
+                      <b style={{ color: "var(--gold)" }}>{D(pool)} <span className="dim" style={{ fontWeight: 500, fontSize: 13 }}>({fmtEth(pool)} ETH)</span></b></div>
+                  )}
+                </div>
+                <div className="dim" style={{ fontSize: 12.5, margin: "0 0 14px" }}>
+                  {t("Сюда попадают только чемпионы дня. Каждая победа — ⭐ и очки лиги. Лидер месяца получает Гранд-выкуп из казны в первый день следующего месяца.")}
+                </div>
+                {ga.table.length === 0 && <div className="center">{t("Пока нет чемпионов — лига откроется после первого финала дня.")}</div>}
+                <div className="arena-list">
+                  {ga.table.map((row, i) => {
+                    const pts = row.points + (row.pendingPoints || 0);
+                    const w = Math.max(3, (pts / maxPts) * 100);
+                    return (
+                      <a key={row.token.token} className={`arena-row ${i === 0 ? "leader" : ""}`}
+                         href={`#/token/${row.token.token}`}>
+                        <span className="ar-rank">{i === 0 ? "👑" : i + 1}</span>
+                        {row.token.meta.image ? <img src={row.token.meta.image} alt="" /> : <span className="ts-ph">🖼️</span>}
+                        <span className="ar-name">
+                          <b>${row.token.symbol}</b>
+                          <CA p={row.token} />
+                        </span>
+                        <span className="ar-mcap">{"⭐".repeat(Math.min(row.wins, 5))}{row.wins > 5 ? `×${row.wins}` : ""}</span>
+                        <span className="ar-volwrap">
+                          <span className="ar-volbar"><span style={{ width: `${w}%` }} /></span>
+                          <span className="ar-vol">{D(pts)}</span>
+                        </span>
+                        <span className={`ar-status ${row.leadingToday ? "ok" : ""}`} style={!row.leadingToday ? { color: "var(--text-dim)" } : undefined}>
+                          {row.leadingToday ? t("лидирует сегодня") : t("в лиге")}
+                        </span>
+                      </a>
+                    );
+                  })}
+                </div>
+              </>
+            );
+          })()}
+
+          {view === "day" && (<>
           <div className="arena-bar">
             <div className="ab-cell">
               <span>{t("В бою")}</span>
@@ -161,46 +222,6 @@ export default function Arena() {
           </div>
 
           {(() => {
-            const ga = grandArena(st.tokens, st.trades);
-            if (ga.table.length === 0) return null;
-            const days = Math.floor(ga.endsIn / 86_400_000);
-            const hours = Math.floor((ga.endsIn % 86_400_000) / 3_600_000);
-            const pool = treBal !== null ? treBal * 0.15 : null;
-            return (
-              <div className="grand-card">
-                <div className="grand-head">
-                  <span className="grand-title">👑 {t("Гранд-Арена")} · {t("месячная лига чемпионов")}</span>
-                  <span className="grand-timer">{t("финал через")} <b>{days}{t("д")} {hours}{t("ч")}</b></span>
-                  {pool !== null && (
-                    <span className="grand-pool">{t("Гранд-выкуп")}: <b>{D(pool)}</b> <span className="dim">({fmtEth(pool)} ETH)</span></span>
-                  )}
-                </div>
-                <div className="dim" style={{ fontSize: 12, margin: "6px 0 12px" }}>
-                  {t("Сюда попадают только чемпионы дня. Каждая победа — ⭐ и очки лиги. Лидер месяца получает Гранд-выкуп из казны в первый день следующего месяца.")}
-                </div>
-                {ga.table.map((row, i) => (
-                  <a key={row.token.token} className={`grand-row ${i === 0 ? "leader" : ""}`}
-                     href={`#/token/${row.token.token}`}>
-                    <span className="ar-rank">{i === 0 ? "👑" : i + 1}</span>
-                    {row.token.meta.image ? <img src={row.token.meta.image} alt="" /> : <span className="ts-ph">🖼️</span>}
-                    <span className="ar-name">
-                      <b>${row.token.symbol}</b>
-                      <span className="dim" style={{ fontSize: 11 }}>
-                        {"⭐".repeat(Math.min(row.wins, 7))}{row.wins > 7 ? ` ×${row.wins}` : ""}
-                        {row.leadingToday && <span className="side-buy"> · {t("лидирует сегодня")}</span>}
-                      </span>
-                    </span>
-                    <span className="grand-pts">
-                      {D(row.points + (row.pendingPoints || 0))}
-                      <span className="dim"> {t("очков лиги")}</span>
-                    </span>
-                  </a>
-                ))}
-              </div>
-            );
-          })()}
-
-          {(() => {
             const hof = hallOfFame(st.tokens, st.trades);
             if (hof.length === 0) return null;
             return (
@@ -218,6 +239,7 @@ export default function Arena() {
               </div>
             );
           })()}
+          </>)}
         </>
       )}
     </>
