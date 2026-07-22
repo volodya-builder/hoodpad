@@ -44,6 +44,19 @@ export default function Arena() {
     const v = e * rate;
     return v >= 1000 ? usd(v) : "$" + v.toFixed(2);
   };
+  const [cp, setCp] = useState("");
+  const copyCA = (e, addr) => {
+    e.preventDefault(); e.stopPropagation();
+    try { navigator.clipboard.writeText(addr); } catch (err) { /* ignore */ }
+    setCp(addr); setTimeout(() => setCp(""), 1200);
+  };
+  const mcapOf = (p) => Number(formatEther(p.price)) * 1e9 * rate;
+  const CA = ({ p }) => (
+    <span className="mono ar-ca" title={t("Скопировать адрес контракта")}
+          onClick={(e) => copyCA(e, p.token)}>
+      {cp === p.token ? "✓ скопировано" : `${p.token.slice(0, 6)}…${p.token.slice(-4)} ⧉`}
+    </span>
+  );
 
   return (
     <>
@@ -91,6 +104,14 @@ export default function Arena() {
           )}
 
           <div className="arena-list">
+            <div className="arena-hdr">
+              <span />
+              <span />
+              <span>{t("Токен")}</span>
+              <span>{t("Капа")}</span>
+              <span>{t("Объём за день")} <i title={t("Метрика выбывания: на каждом чекпоинте вылетает токен с наименьшим объёмом торгов с начала дня")}>ⓘ</i></span>
+              <span style={{ textAlign: "right" }}>{t("Статус")}</span>
+            </div>
             {st.alive.map((p, i) => {
               const maxVol = Math.max(...st.alive.map((x) => x.dayVol), 1e-9);
               const w = Math.max(3, (p.dayVol / maxVol) * 100);
@@ -102,8 +123,9 @@ export default function Arena() {
                   {p.meta.image ? <img src={p.meta.image} alt="" /> : <span className="ts-ph">🖼️</span>}
                   <span className="ar-name">
                     <b>${p.symbol}</b>
-                    <span className="dim">{p.name}</span>
+                    <CA p={p} />
                   </span>
+                  <span className="ar-mcap">{usd(mcapOf(p))}</span>
                   <span className="ar-volwrap">
                     <span className="ar-volbar"><span style={{ width: `${w}%` }} /></span>
                     <span className="ar-vol">{D(p.dayVol)}</span>
@@ -121,8 +143,9 @@ export default function Arena() {
                 {p.meta.image ? <img src={p.meta.image} alt="" /> : <span className="ts-ph">🖼️</span>}
                 <span className="ar-name">
                   <b>${p.symbol}</b>
-                  <span className="dim">{p.name}</span>
+                  <CA p={p} />
                 </span>
+                <span className="ar-mcap dim">{usd(mcapOf(p))}</span>
                 <span className="ar-volwrap dim">
                   {t("выбыл")} {new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </span>

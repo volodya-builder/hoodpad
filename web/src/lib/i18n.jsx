@@ -127,6 +127,12 @@ const EN = {
   "Арена": "Arena",
   "создатели и трейдеры": "creators & traders",
   "Накоплено на выкупы": "Accumulated for buybacks",
+  "Токен": "Token",
+  "Статус": "Status",
+  "Объём за день": "Day volume",
+  "Метрика выбывания: на каждом чекпоинте вылетает токен с наименьшим объёмом торгов с начала дня":
+    "Elimination metric: at each checkpoint the token with the lowest trading volume since day start is knocked out",
+  "Скопировать адрес контракта": "Copy contract address",
   "Каждый день — бой на выживание. Токен с наименьшим объёмом торгов выбывает на каждом чекпоинте. Последний выживший — Чемпион дня: золотая рамка, Зал славы и приоритет выкупа казны. Выбывание — витрина, торговля не останавливается.":
     "Every day is a survival battle. The token with the lowest trading volume is eliminated at each checkpoint. The last one standing becomes Champion of the Day: golden frame, Hall of Fame and treasury buyback priority. Elimination is cosmetic — trading never stops.",
   "Сегодня некому сражаться — запустите токен и откройте арену.": "No fighters today — launch a token and open the arena.",
