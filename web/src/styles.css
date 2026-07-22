@@ -1281,7 +1281,12 @@ html[data-theme="light"] .king-card { background: var(--card); }
 .tr-in { color: var(--leaf); }
 .tr-buy { color: var(--gold); }
 .tr-burn { color: var(--red); }
-@media (max-width: 640px) { .trs-row { grid-template-columns: 110px 1fr 90px; } .trs-row > :nth-child(3) { display: none; } }
+.trs-row { grid-template-columns: 120px 1.1fr 1.7fr 110px 110px; }
+.trs-row.trs-hdr { color: var(--text-dim); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; border-top: none; padding-bottom: 2px; }
+@media (max-width: 760px) {
+  .trs-row { grid-template-columns: 105px 1fr 100px; }
+  .trs-row > :nth-child(3), .trs-row > :nth-child(4) { display: none; }
+}
 
 /* -------- analytics leaderboards -------- */
 .lb-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 0 0 26px; }
