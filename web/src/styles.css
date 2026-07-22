@@ -1794,6 +1794,7 @@ html[data-theme="light"] .tr-bar { background: #00000010; }
 .arena-row.leader { border-color: var(--gold); box-shadow: 0 0 22px -12px var(--gold); }
 .arena-row.danger { border-color: #e06a4a66; }
 .arena-row.dead { opacity: .45; }
+.arena-row.defending { border-color: var(--border-gold); background: linear-gradient(90deg, #d4af370c, transparent 40%), var(--card); }
 .arena-row img { width: 30px; height: 30px; border-radius: 9px; object-fit: cover; }
 .ar-rank { font-size: 15px; text-align: center; font-weight: 700; }
 .ar-name { display: flex; flex-direction: column; min-width: 0; }

@@ -124,6 +124,11 @@ export default function Arena() {
                 <div className="dim" style={{ fontSize: 12.5, margin: "0 0 14px" }}>
                   {t("Сюда попадают только чемпионы дня. Каждая победа — ⭐ и очки лиги. Лидер месяца получает Гранд-выкуп из казны в первый день следующего месяца.")}
                 </div>
+                {ga.legendRow && (
+                  <div className="cushion-banner" style={{ marginBottom: 12 }}>
+                    🏛 {t("Легенда прошлого месяца")}: <b>${ga.legendRow.token.symbol}</b> — {t("вне конкурса в этой лиге, титул защищён навсегда")}
+                  </div>
+                )}
                 {ga.table.length === 0 && <div className="center">{t("Пока нет чемпионов — лига откроется после первого финала дня.")}</div>}
                 <div className="arena-list">
                   {ga.table.map((row, i) => {
@@ -192,14 +197,16 @@ export default function Arena() {
               <span>{t("Очки боя")} <i title={t("Очки боя = объём за день × (1 + прирост капитализации за день). Пустая прокрутка объёма не даёт множителя, дамп цены режет очки. На каждом чекпоинте вылетает токен с наименьшими очками.")}>ⓘ</i></span>
               <span style={{ textAlign: "right" }}>{t("Статус")}</span>
             </div>
-            {st.alive.map((p, i) => {
+            {(() => {
+              const crownIdx = st.alive.findIndex((p) => !p.defending); // трон — лучшему из конкурса
+              return st.alive.map((p, i) => {
               const maxVol = Math.max(...st.alive.map((x) => x.score), 1e-9);
               const w = Math.max(3, (p.score / maxVol) * 100);
-              const danger = st.alive.length > 1 && i === st.alive.length - 1;
+              const danger = st.alive.length > 1 && i === st.alive.length - 1 && !p.defending;
               return (
-                <a key={p.token} className={`arena-row ${i === 0 ? "leader" : ""} ${danger ? "danger" : ""}`}
+                <a key={p.token} className={`arena-row ${i === crownIdx ? "leader" : ""} ${danger ? "danger" : ""} ${p.defending ? "defending" : ""}`}
                    href={`#/token/${p.token}`}>
-                  <span className="ar-rank">{i === 0 ? "👑" : i + 1}</span>
+                  <span className="ar-rank">{i === crownIdx ? "👑" : p.defending ? "🛡" : i + 1}</span>
                   {p.meta.image ? <img src={p.meta.image} alt="" /> : <span className="ts-ph">🖼️</span>}
                   <span className="ar-name">
                     <b>${p.symbol}</b>
@@ -215,12 +222,15 @@ export default function Arena() {
                       </span>
                     </span>
                   </span>
-                  <span className={`ar-status ${danger ? "bad" : "ok"}`}>
-                    {danger ? t("под угрозой") : t("в бою")}
+                  <span className={`ar-status ${danger ? "bad" : "ok"}`}
+                        style={p.defending ? { color: "var(--gold)" } : undefined}
+                        title={p.defending ? t("Вчерашний чемпион: сражается вне конкурса, корона сегодня достанется другому") : ""}>
+                    {p.defending ? t("защита трона") : danger ? t("под угрозой") : t("в бою")}
                   </span>
                 </a>
               );
-            })}
+            });
+            })()}
 
             {st.eliminated.slice().reverse().map(({ token: p, at }) => (
               <a key={p.token} className="arena-row dead" href={`#/token/${p.token}`}>
