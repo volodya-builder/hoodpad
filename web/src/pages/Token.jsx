@@ -262,7 +262,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   }, [history, platTrades, data?.creator, extra?.createdAt]);
   const Badges = ({ addr }) => (
     <>{(walletBadges[addr.toLowerCase()] || []).map(([ic, lbl], i) => (
-      <span key={i} className="wb" title={lbl}>{ic}</span>
+      <span key={i} className="wb" data-tip={lbl}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>{ic}</span>
     ))}</>
   );
   const [qpcts, setQpcts] = useState(() => {

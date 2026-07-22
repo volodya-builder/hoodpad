@@ -1824,8 +1824,39 @@ html[data-theme="light"] .vr-bar { background: #00000010; }
   .vr-bar { display: none; }
 }
 
-/* метки кошельков в активности (создатель/кит/снайпер/накрутка/новый) */
-.wb { font-size: 12px; margin-left: 3px; cursor: help; }
+/* метки кошельков в активности (создатель/кит/снайпер/накрутка/новый):
+   мгновенная фирменная подсказка вместо системного title */
+.wb { font-size: 12px; margin-left: 3px; cursor: help; position: relative; display: inline-block; }
+.wb::after {
+  content: attr(data-tip);
+  position: absolute; bottom: calc(100% + 9px); left: 50%;
+  transform: translateX(-50%) translateY(3px);
+  width: max-content; max-width: 230px;
+  background: linear-gradient(160deg, #1d1e1a, #141512);
+  border: 1px solid var(--border-gold); border-radius: 10px;
+  padding: 7px 11px;
+  font-size: 11.5px; font-weight: 600; line-height: 1.45;
+  color: var(--text); text-align: left; white-space: normal;
+  letter-spacing: .1px;
+  box-shadow: 0 14px 34px -14px #000e, 0 0 0 1px #00000033;
+  opacity: 0; pointer-events: none;
+  transition: opacity .1s ease, transform .1s ease;
+  z-index: 60;
+}
+.wb::before {
+  content: "";
+  position: absolute; bottom: calc(100% + 4px); left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 8px; height: 8px;
+  background: #171814; border-right: 1px solid var(--border-gold); border-bottom: 1px solid var(--border-gold);
+  opacity: 0; pointer-events: none;
+  transition: opacity .1s ease;
+  z-index: 61;
+}
+.wb:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+.wb:hover::before { opacity: 1; }
+html[data-theme="light"] .wb::after { background: #fffdf7; color: #1c1c1a; box-shadow: 0 14px 34px -18px #00000055; }
+html[data-theme="light"] .wb::before { background: #fffdf7; }
 
 /* раскладка арены: Зал славы слева, бой справа */
 .arena-layout { display: grid; grid-template-columns: 250px 1fr; gap: 24px; align-items: start; margin-top: 20px; }
