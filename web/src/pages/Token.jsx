@@ -3,7 +3,8 @@ import { parseEther, formatEther } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi } from "../lib/abi.js";
 import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
-import { poolTrades, invalidateTrades } from "../lib/data.js";
+import { poolTrades, invalidateTrades, loadTokens } from "../lib/data.js";
+import { computeTrust } from "../lib/trust.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import Chat from "./Chat.jsx";
 import { useSplit, loadCreationTimes, timeAgo, useClock, useSupport } from "../lib/data.js";
@@ -215,6 +216,12 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [tradePct, setTradePct] = useState(0); // ползунок суммы
   const [btTab, setBtTab] = useState("holders"); // по умолчанию — «Топ держателей»
   const [sideTab, setSideTab] = useState("act"); // боковая панель: «Активность» | «Чат»
+  const [tokensList, setTokensList] = useState([]); // все токены платформы (для ИИ-судьи)
+  useEffect(() => {
+    let alive = true;
+    loadTokens().then((x) => alive && setTokensList(x)).catch(() => {});
+    return () => { alive = false; };
+  }, []);
   const [qpcts, setQpcts] = useState(() => {
     try {
       const v = JSON.parse(localStorage.getItem("hood_qp") || "null");
@@ -701,6 +708,45 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           {meta.description && (
             <p className="dim" style={{ marginTop: 10 }}>{meta.description}</p>
           )}
+
+          {/* hood AI — судья платформы: Trust Score с объяснением */}
+          {history && history.trades && (() => {
+            const tr = computeTrust({
+              tokenAddr: tokenAddress,
+              trades: history.trades,
+              creator: data.creator,
+              allTokens: tokensList,
+              createdAt: extra?.createdAt,
+            });
+            const col = tr.score >= 75 ? "var(--leaf)" : tr.score >= 50 ? "var(--gold)" : "#e06a4a";
+            return (
+              <div className="trust-box">
+                <div className="trust-head">
+                  <span className="trust-ai">🤖 hood AI</span>
+                  <span className="trust-score" style={{ color: col }}>
+                    {tr.score}<span>/100</span>
+                  </span>
+                  <span className="trust-verdict" style={{ color: col }}>{t(tr.verdict)}</span>
+                </div>
+                {tr.parts.map((p) => (
+                  <div className="trust-row" key={p.k}>
+                    <span className="tr-label">{t(p.label)}</span>
+                    <span className="tr-bar">
+                      <span style={{
+                        width: `${p.score}%`,
+                        background: p.score >= 75 ? "var(--leaf)" : p.score >= 50 ? "var(--gold)" : "#e06a4a",
+                      }} />
+                    </span>
+                    <span className="tr-val">{p.score}</span>
+                    <span className="tr-note dim">{p.note}</span>
+                  </div>
+                ))}
+                <div className="trust-foot dim">
+                  {t("Оценка считается из данных блокчейна и обновляется с каждой сделкой. Не финансовый совет.")}
+                </div>
+              </div>
+            );
+          })()}
 
           {!data.graduated && (
             <div className="progress" style={{ marginTop: 18 }}>

@@ -1710,6 +1710,30 @@ html, body { max-width: 100%; }
 .lb-fold-head:hover { color: var(--gold); }
 .lb-fold .lb-grid { margin-top: 14px; }
 
+/* ---------------- hood AI: судья платформы (Trust Score) ---------------- */
+.trust-box {
+  margin-top: 16px; padding: 14px 16px;
+  background: #ffffff06; border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.trust-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+.trust-ai { font-weight: 800; font-size: 13px; letter-spacing: .3px; }
+.trust-score { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.trust-score span { font-size: 13px; font-weight: 600; opacity: .6; }
+.trust-verdict { margin-left: auto; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; }
+.trust-row {
+  display: grid; grid-template-columns: 110px 1fr 34px; gap: 8px 10px;
+  align-items: center; padding: 5px 0;
+}
+.tr-label { font-size: 12.5px; font-weight: 600; }
+.tr-bar { height: 6px; border-radius: 99px; background: #ffffff10; overflow: hidden; }
+.tr-bar > span { display: block; height: 100%; border-radius: 99px; }
+.tr-val { font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+.tr-note { grid-column: 1 / -1; font-size: 11.5px; margin-top: -3px; }
+.trust-foot { font-size: 10.5px; margin-top: 10px; }
+html[data-theme="light"] .trust-box { background: #00000005; }
+html[data-theme="light"] .tr-bar { background: #00000010; }
+
 /* ---------------- Арена: суточный турнир токенов ---------------- */
 .arena-banner { border-color: var(--border-gold) !important; }
 .arena-bar {

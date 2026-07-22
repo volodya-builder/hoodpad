@@ -133,6 +133,16 @@ const EN = {
   "Метрика выбывания: на каждом чекпоинте вылетает токен с наименьшим объёмом торгов с начала дня":
     "Elimination metric: at each checkpoint the token with the lowest trading volume since day start is knocked out",
   "Скопировать адрес контракта": "Copy contract address",
+  "Здоровый профиль": "Healthy profile",
+  "Средний риск": "Medium risk",
+  "Повышенный риск": "Elevated risk",
+  "Высокий риск": "High risk",
+  "Распределение": "Distribution",
+  "Торговля": "Trading",
+  "Создатель": "Creator",
+  "Выживаемость": "Survival",
+  "Оценка считается из данных блокчейна и обновляется с каждой сделкой. Не финансовый совет.":
+    "Score is computed from on-chain data and updates with every trade. Not financial advice.",
   "Каждый день — бой на выживание. Токен с наименьшим объёмом торгов выбывает на каждом чекпоинте. Последний выживший — Чемпион дня: золотая рамка, Зал славы и приоритет выкупа казны. Выбывание — витрина, торговля не останавливается.":
     "Every day is a survival battle. The token with the lowest trading volume is eliminated at each checkpoint. The last one standing becomes Champion of the Day: golden frame, Hall of Fame and treasury buyback priority. Elimination is cosmetic — trading never stops.",
   "Сегодня некому сражаться — запустите токен и откройте арену.": "No fighters today — launch a token and open the arena.",
