@@ -187,6 +187,7 @@ const EN = {
   "Финал месяца": "Month final",
   "в лиге": "in league",
   "Пока нет чемпионов — лига откроется после первого финала дня.": "No champions yet — the league opens after the first day final.",
+  "Первый чемпион появится после финала дня.": "The first champion arrives after the day final.",
   "очков лиги": "league points",
   "д": "d",
   "ч": "h",

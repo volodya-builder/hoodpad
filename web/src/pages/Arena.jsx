@@ -76,8 +76,26 @@ export default function Arena() {
       )}
 
       {st && st.participants.length > 0 && (
-        <>
-          <div className="bt-tabs" style={{ marginTop: 18 }}>
+        <div className="arena-layout">
+        <aside className="arena-side">
+          <div className="bottom-card" style={{ marginTop: 0 }}>
+            <div className="bt-tabs"><div className="bt-tab on">🏆 {t("Зал славы")}</div></div>
+            {(() => {
+              const hof = hallOfFame(st.tokens, st.trades);
+              if (hof.length === 0) return <div className="dim" style={{ padding: "12px 0", fontSize: 12.5 }}>{t("Первый чемпион появится после финала дня.")}</div>;
+              return hof.map(({ day, champion: c }) => (
+                <a key={day} className="hof-row" href={`#/token/${c.token}`}>
+                  <span className="dim" style={{ fontSize: 11 }}>{new Date(day).toLocaleDateString([], { day: "2-digit", month: "2-digit" })}</span>
+                  {c.meta.image ? <img src={c.meta.image} alt="" /> : <span className="ts-ph">🖼️</span>}
+                  <b>${c.symbol}</b>
+                  <span className="hof-crown">👑</span>
+                </a>
+              ));
+            })()}
+          </div>
+        </aside>
+        <div className="arena-main">
+          <div className="bt-tabs" style={{ marginTop: 0 }}>
             <div className={`bt-tab ${view === "day" ? "on" : ""}`} onClick={() => setView("day")}>
               ⚔️ {t("Суточная арена")}
             </div>
@@ -221,26 +239,9 @@ export default function Arena() {
             ))}
           </div>
 
-          {(() => {
-            const hof = hallOfFame(st.tokens, st.trades);
-            if (hof.length === 0) return null;
-            return (
-              <div className="bottom-card" style={{ marginTop: 26 }}>
-                <div className="bt-tabs"><div className="bt-tab on">🏆 {t("Зал славы")}</div></div>
-                {hof.map(({ day, champion: c }) => (
-                  <a key={day} className="hof-row" href={`#/token/${c.token}`}>
-                    <span className="dim">{new Date(day).toLocaleDateString()}</span>
-                    {c.meta.image ? <img src={c.meta.image} alt="" /> : <span className="ts-ph">🖼️</span>}
-                    <b>${c.symbol}</b>
-                    <span className="dim">{c.name}</span>
-                    <span className="hof-crown">👑</span>
-                  </a>
-                ))}
-              </div>
-            );
-          })()}
           </>)}
-        </>
+        </div>
+        </div>
       )}
     </>
   );

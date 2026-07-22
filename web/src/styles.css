@@ -1818,6 +1818,16 @@ html[data-theme="light"] .vr-bar { background: #00000010; }
   .vr-bar { display: none; }
 }
 
+/* раскладка арены: Зал славы слева, бой справа */
+.arena-layout { display: grid; grid-template-columns: 250px 1fr; gap: 24px; align-items: start; margin-top: 20px; }
+.arena-side { position: sticky; top: 84px; }
+.arena-side .hof-row { gap: 9px; padding: 8px 2px; }
+.arena-side .hof-row img { width: 24px; height: 24px; }
+@media (max-width: 1000px) {
+  .arena-layout { grid-template-columns: 1fr; }
+  .arena-side { position: static; order: 2; }
+}
+
 /* Гранд-Арена: месячная лига чемпионов */
 .grand-card {
   margin-top: 26px; padding: 18px 22px;
