@@ -3,7 +3,7 @@ import { parseEther, formatEther } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi } from "../lib/abi.js";
 import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
-import { poolTrades, invalidateTrades, loadTokens } from "../lib/data.js";
+import { poolTrades, invalidateTrades, loadTokens, allTrades } from "../lib/data.js";
 import { computeTrust } from "../lib/trust.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import Chat from "./Chat.jsx";
@@ -217,11 +217,54 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [btTab, setBtTab] = useState("holders"); // по умолчанию — «Топ держателей»
   const [sideTab, setSideTab] = useState("act"); // боковая панель: «Активность» | «Чат»
   const [tokensList, setTokensList] = useState([]); // все токены платформы (для ИИ-судьи)
+  const [platTrades, setPlatTrades] = useState(null); // сделки платформы (метки кошельков)
   useEffect(() => {
     let alive = true;
     loadTokens().then((x) => alive && setTokensList(x)).catch(() => {});
+    allTrades().then((x) => alive && setPlatTrades(x)).catch(() => {});
     return () => { alive = false; };
   }, []);
+
+  // Метки кошельков (как у GMGN): считаются из поведения он-чейн
+  const walletBadges = React.useMemo(() => {
+    if (!history || !data) return {};
+    const map = {};
+    const byAddr = {};
+    for (const tr of history.trades) (byAddr[tr.addr.toLowerCase()] ??= []).push(tr);
+    const poolVol = history.trades.reduce((s, x) => s + x.eth + x.fee, 0) || 1e-9;
+    const firstPlat = {};
+    if (platTrades) for (const tr of platTrades) {
+      const k = tr.addr.toLowerCase();
+      if (!firstPlat[k] || tr.ts < firstPlat[k]) firstPlat[k] = tr.ts;
+    }
+    const creatorL = (data.creator || "").toLowerCase();
+    for (const [a, list] of Object.entries(byAddr)) {
+      const out = [];
+      if (a === creatorL) out.push(["👨‍💻", t("Кошелёк создателя токена")]);
+      if (a === TREASURY_ADDRESS.toLowerCase()) out.push(["🏦", t("Казна выкупа hood")]);
+      const vol = list.reduce((s, x) => s + x.eth + x.fee, 0);
+      if (vol / poolVol > 0.25 && list.length > 1 && a !== creatorL)
+        out.push(["🐳", t("Кит: больше 25% объёма этого токена")]);
+      const firstBuy = list.filter((x) => x.side === "buy")
+        .reduce((m, x) => Math.min(m, x.ts || Infinity), Infinity);
+      if (extra?.createdAt && firstBuy !== Infinity && a !== creatorL
+          && firstBuy - extra.createdAt < 10 * 60 * 1000)
+        out.push(["🎯", t("Снайпер: вход в первые 10 минут после запуска")]);
+      const bought = list.filter((x) => x.side === "buy").reduce((s, x) => s + x.tokens, 0);
+      const sold = list.filter((x) => x.side === "sell").reduce((s, x) => s + x.tokens, 0);
+      if (list.length >= 6 && bought > 0 && Math.abs(bought - sold) / bought < 0.15)
+        out.push(["🔁", t("Подозрение на накрутку: покупки ≈ продажи")]);
+      if (firstPlat[a] && Date.now() - firstPlat[a] < 24 * 3600 * 1000)
+        out.push(["🌱", t("Свежий кошелёк: первая сделка на платформе меньше суток назад")]);
+      map[a] = out;
+    }
+    return map;
+  }, [history, platTrades, data?.creator, extra?.createdAt]);
+  const Badges = ({ addr }) => (
+    <>{(walletBadges[addr.toLowerCase()] || []).map(([ic, lbl], i) => (
+      <span key={i} className="wb" title={lbl}>{ic}</span>
+    ))}</>
+  );
   const [qpcts, setQpcts] = useState(() => {
     try {
       const v = JSON.parse(localStorage.getItem("hood_qp") || "null");
@@ -943,6 +986,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                       {short(tr.addr)}
                     </a>
                     <span className="cnt-chip" title={t("Сделок этого трейдера по токену")}>{counts[tr.addr]}</span>
+                    <Badges addr={tr.addr} />
                     {isMine && <span className="badge hr-badge">{t("Вы")}</span>}
                   </span>
                   <a className="dim" href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer"
@@ -1151,6 +1195,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                       <a className="mono" href={`#/trader/${h.addr}`} title={t("Открыть профиль трейдера")}>
                         {short(h.addr)}
                       </a>
+                      <Badges addr={h.addr} />
                       {isCre && <span className="badge hr-badge">🏹 {t("Создатель")}</span>}
                       {isTre && <span className="badge hr-badge">🏦 {t("Казна")}</span>}
                       {isMe && <span className="badge hr-badge">{t("Вы")}</span>}
@@ -1374,7 +1419,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                     <span className="dim">{compactN(tr.tokens)}</span>
                     <a className="mono" href={`#/trader/${tr.addr}`} title={t("Открыть профиль трейдера")}
                        style={{ color: "inherit" }}>
-                      {short(tr.addr)}{isMine && <span className="badge hr-badge" style={{ marginLeft: 5 }}>{t("Вы")}</span>}
+                      {short(tr.addr)}<Badges addr={tr.addr} />
+                      {isMine && <span className="badge hr-badge" style={{ marginLeft: 5 }}>{t("Вы")}</span>}
                     </a>
                     <a className="dim" href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer">
                       {shortAgo(tr.ts)} ↗
