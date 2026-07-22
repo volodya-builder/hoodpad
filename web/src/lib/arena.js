@@ -36,30 +36,61 @@ export function arenaState(tokens, trades, d0, now = Date.now()) {
   const step = DAY / N; // N-1 чекпоинтов внутри дня, финал в конце
   const checkpoints = Array.from({ length: Math.max(0, N - 1) }, (_, i) => d0 + step * (i + 1));
 
-  // объём каждого токена с начала дня до момента t
+  // ---- «очки боя» = объём × (1 + прирост капитализации за день) ----
+  // Объём поощряет активность, прирост капы — реальный спрос: дамп режет
+  // очки, а пустая прокрутка объёма не даёт множителя.
+  const VIRT = 1.625, TOTAL = 1e9;
   const dayTrades = trades.filter((tr) => tr.ts >= d0 && tr.ts < end);
+  const byPool = {};
+  for (const tr of dayTrades) (byPool[tr.pool] ??= []).push(tr);
+  for (const k in byPool) byPool[k].sort((a, b) => b.ts - a.ts); // новые первыми
+
   const volUntil = (poolLower, t) =>
-    dayTrades.reduce((s, tr) => (tr.pool === poolLower && tr.ts <= t ? s + tr.eth + tr.fee : s), 0);
+    (byPool[poolLower] || []).reduce((s, tr) => (tr.ts <= t ? s + tr.eth + tr.fee : s), 0);
+
+  // состояние кривой пула в момент t: откатываем сделки новее t от текущего
+  const stateAt = (p, t) => {
+    let res = Number(p.reserve) / 1e18;
+    let sold = Number(p.sold) / 1e18;
+    for (const tr of byPool[(p.pool || "").toLowerCase()] || []) {
+      if (tr.ts <= t) break;
+      if (tr.side === "buy") { res -= tr.eth; sold -= tr.tokens; }
+      else { res += tr.eth + tr.fee; sold += tr.tokens; }
+    }
+    return (VIRT + Math.max(res, 0)) / Math.max(TOTAL - sold, 1); // цена
+  };
+  const growthUntil = (p, t) => {
+    const p0 = stateAt(p, d0);
+    const pt = stateAt(p, t);
+    return p0 > 0 ? Math.max(-0.6, Math.min(1.5, pt / p0 - 1)) : 0;
+  };
+  const scoreUntil = (p, t) =>
+    volUntil((p.pool || "").toLowerCase(), t) * (1 + growthUntil(p, t));
 
   const alive = new Map(parts.map((p) => [p.token.toLowerCase(), p]));
   const eliminated = [];
   for (const cp of checkpoints) {
     if (cp > cutoff) break;
     if (alive.size <= 1) break;
-    let worst = null, worstVol = Infinity;
+    let worst = null, worstScore = Infinity;
     for (const [addr, p] of alive) {
-      const v = volUntil((p.pool || "").toLowerCase(), cp);
+      const v = scoreUntil(p, cp);
       const older = worst && ((p.createdAt || 0) < (worst.createdAt || 0)
         || ((p.createdAt || 0) === (worst.createdAt || 0) && addr > worst.token.toLowerCase()));
-      if (v < worstVol || (v === worstVol && !older)) { worst = p; worstVol = v; }
+      if (v < worstScore || (v === worstScore && !older)) { worst = p; worstScore = v; }
     }
     alive.delete(worst.token.toLowerCase());
-    eliminated.push({ token: worst, at: cp, vol: worstVol });
+    eliminated.push({ token: worst, at: cp, vol: worstScore });
   }
 
   const aliveArr = [...alive.values()]
-    .map((p) => ({ ...p, dayVol: volUntil((p.pool || "").toLowerCase(), cutoff) }))
-    .sort((a, b) => b.dayVol - a.dayVol);
+    .map((p) => ({
+      ...p,
+      dayVol: volUntil((p.pool || "").toLowerCase(), cutoff),
+      dayGrowth: growthUntil(p, cutoff),
+      score: scoreUntil(p, cutoff),
+    }))
+    .sort((a, b) => b.score - a.score);
 
   const nextCheckpoint = isToday ? checkpoints.find((cp) => cp > now) ?? end : null;
   const champion = (!isToday || aliveArr.length === 1) && aliveArr.length >= 1 ? aliveArr[0] : null;

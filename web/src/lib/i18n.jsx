@@ -130,8 +130,10 @@ const EN = {
   "Токен": "Token",
   "Статус": "Status",
   "Объём за день": "Day volume",
-  "Метрика выбывания: на каждом чекпоинте вылетает токен с наименьшим объёмом торгов с начала дня":
-    "Elimination metric: at each checkpoint the token with the lowest trading volume since day start is knocked out",
+  "Очки боя": "Battle score",
+  "капа за день": "mcap today",
+  "Очки боя = объём за день × (1 + прирост капитализации за день). Пустая прокрутка объёма не даёт множителя, дамп цены режет очки. На каждом чекпоинте вылетает токен с наименьшими очками.":
+    "Battle score = day volume × (1 + day mcap growth). Wash-trading gives no multiplier, dumping cuts your score. At each checkpoint the token with the lowest score is knocked out.",
   "Скопировать адрес контракта": "Copy contract address",
   "Здоровый профиль": "Healthy profile",
   "Средний риск": "Medium risk",

@@ -100,6 +100,7 @@ export default function Arena() {
           {st.champion && st.alive.length === 1 && (
             <div className="arena-champ">
               🏆 {t("Чемпион дня")}: <b>${st.champion.symbol}</b> — {t("объём")} {D(st.champion.dayVol)}
+              {" "}({st.champion.dayGrowth >= 0 ? "+" : ""}{(st.champion.dayGrowth * 100).toFixed(1)}% {t("капа за день")})
             </div>
           )}
 
@@ -109,12 +110,12 @@ export default function Arena() {
               <span />
               <span>{t("Токен")}</span>
               <span>{t("Капа")}</span>
-              <span>{t("Объём за день")} <i title={t("Метрика выбывания: на каждом чекпоинте вылетает токен с наименьшим объёмом торгов с начала дня")}>ⓘ</i></span>
+              <span>{t("Очки боя")} <i title={t("Очки боя = объём за день × (1 + прирост капитализации за день). Пустая прокрутка объёма не даёт множителя, дамп цены режет очки. На каждом чекпоинте вылетает токен с наименьшими очками.")}>ⓘ</i></span>
               <span style={{ textAlign: "right" }}>{t("Статус")}</span>
             </div>
             {st.alive.map((p, i) => {
-              const maxVol = Math.max(...st.alive.map((x) => x.dayVol), 1e-9);
-              const w = Math.max(3, (p.dayVol / maxVol) * 100);
+              const maxVol = Math.max(...st.alive.map((x) => x.score), 1e-9);
+              const w = Math.max(3, (p.score / maxVol) * 100);
               const danger = st.alive.length > 1 && i === st.alive.length - 1;
               return (
                 <a key={p.token} className={`arena-row ${i === 0 ? "leader" : ""} ${danger ? "danger" : ""}`}
@@ -128,7 +129,12 @@ export default function Arena() {
                   <span className="ar-mcap">{usd(mcapOf(p))}</span>
                   <span className="ar-volwrap">
                     <span className="ar-volbar"><span style={{ width: `${w}%` }} /></span>
-                    <span className="ar-vol">{D(p.dayVol)}</span>
+                    <span className="ar-vol">
+                      {D(p.dayVol)}{" "}
+                      <span className={p.dayGrowth >= 0 ? "side-buy" : "side-sell"} style={{ fontSize: 11 }}>
+                        {p.dayGrowth >= 0 ? "+" : ""}{(p.dayGrowth * 100).toFixed(1)}%
+                      </span>
+                    </span>
                   </span>
                   <span className={`ar-status ${danger ? "bad" : "ok"}`}>
                     {danger ? t("под угрозой") : t("в бою")}
