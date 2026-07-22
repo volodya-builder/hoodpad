@@ -105,7 +105,7 @@ export default function Leaderboard({ embedded = false }) {
             </div>
             {creators.length === 0 && <div className="center">{t("Пока пусто.")}</div>}
             {creators.map(([addr, c], i) => (
-              <a className="lb-row" key={addr} href={`${EXPLORER}/address/${addr}`} target="_blank" rel="noreferrer">
+              <a className="lb-row" key={addr} href={`#/trader/${addr}`}>
                 <span className={i < 3 ? `rank-num rk${i + 1}` : "dim"}>{i + 1}</span>
                 <span className="lb-who">
                   <span className="mono">{short(addr)}</span>
@@ -132,7 +132,7 @@ export default function Leaderboard({ embedded = false }) {
             </div>
             {traders.length === 0 && <div className="center">{t("Пока пусто.")}</div>}
             {traders.map(([addr, x], i) => (
-              <a className="lb-row" key={addr} href={`${EXPLORER}/address/${addr}`} target="_blank" rel="noreferrer">
+              <a className="lb-row" key={addr} href={`#/trader/${addr}`}>
                 <span className={i < 3 ? `rank-num rk${i + 1}` : "dim"}>{i + 1}</span>
                 <span className="lb-who">
                   <span className="mono">{short(addr)}</span>

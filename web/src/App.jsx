@@ -5,6 +5,7 @@ import TokenPage from "./pages/Token.jsx";
 import Analytics from "./pages/Analytics.jsx";
 import Leaderboard from "./pages/Leaderboard.jsx";
 import Arena from "./pages/Arena.jsx";
+import Trader from "./pages/Trader.jsx";
 import Profile from "./pages/Profile.jsx";
 import Vote from "./pages/Vote.jsx";
 import About from "./pages/About.jsx";
@@ -306,6 +307,8 @@ export default function App() {
     page = <Analytics />; // лидеры теперь живут внутри аналитики
   } else if (route === "/arena") {
     page = <Arena />;
+  } else if (route.startsWith("/trader/")) {
+    page = <Trader address={route.split("/trader/")[1]} />;
   } else if (route === "/vote") {
     page = <Vote wallet={wallet} onConnect={connect} />;
   } else if (route === "/treasury") {

@@ -926,8 +926,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                   <span className="dim">${fmtEth(priceUsd)}</span>
                   <span>{compactN(tr.tokens)}</span>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                    <a className="mono" href={`${EXPLORER}/address/${tr.addr}`} target="_blank" rel="noreferrer"
-                       title={t("Открыть адрес в эксплорере")}>
+                    <a className="mono" href={`#/trader/${tr.addr}`}
+                       title={t("Открыть профиль трейдера")}>
                       {short(tr.addr)}
                     </a>
                     <span className="cnt-chip" title={t("Сделок этого трейдера по токену")}>{counts[tr.addr]}</span>
@@ -1136,7 +1136,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                   <div className="holder-row" key={h.addr}>
                     <span className="hr-rank dim">{hSort === "desc" ? i + 1 : holders.list.length - i}</span>
                     <span className="hr-who">
-                      <a className="mono" href={`${EXPLORER}/address/${h.addr}`} target="_blank" rel="noreferrer">
+                      <a className="mono" href={`#/trader/${h.addr}`} title={t("Открыть профиль трейдера")}>
                         {short(h.addr)}
                       </a>
                       {isCre && <span className="badge hr-badge">🏹 {t("Создатель")}</span>}
@@ -1360,9 +1360,10 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                   <div className="sa-row" key={i} {...rowHover(tr.addr)}>
                     <span className={buy ? "side-buy" : "side-sell"}>{dollars(tr.eth)}</span>
                     <span className="dim">{compactN(tr.tokens)}</span>
-                    <span className="mono">
+                    <a className="mono" href={`#/trader/${tr.addr}`} title={t("Открыть профиль трейдера")}
+                       style={{ color: "inherit" }}>
                       {short(tr.addr)}{isMine && <span className="badge hr-badge" style={{ marginLeft: 5 }}>{t("Вы")}</span>}
-                    </span>
+                    </a>
                     <a className="dim" href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer">
                       {shortAgo(tr.ts)} ↗
                     </a>
