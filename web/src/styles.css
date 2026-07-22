@@ -1824,6 +1824,33 @@ html[data-theme="light"] .vr-bar { background: #00000010; }
   .vr-bar { display: none; }
 }
 
+/* бегущая строка событий под шапкой */
+.ticker {
+  overflow: hidden; white-space: nowrap;
+  background: linear-gradient(180deg, #14151266, transparent), var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 0;
+  position: relative;
+}
+.ticker::before, .ticker::after {
+  content: ""; position: absolute; top: 0; bottom: 0; width: 60px; z-index: 2; pointer-events: none;
+}
+.ticker::before { left: 0; background: linear-gradient(90deg, var(--bg), transparent); }
+.ticker::after { right: 0; background: linear-gradient(-90deg, var(--bg), transparent); }
+.ticker-track {
+  display: inline-flex; align-items: center;
+  animation: tickmove 45s linear infinite;
+  will-change: transform;
+}
+.ticker:hover .ticker-track { animation-play-state: paused; }
+.tick-item {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12.5px; color: var(--text-dim); font-weight: 600;
+}
+.tick-item b { color: var(--text); font-variant-numeric: tabular-nums; }
+.tick-dot { color: var(--gold); font-size: 7px; margin: 0 16px; opacity: .6; }
+@keyframes tickmove { to { transform: translateX(-50%); } }
+
 /* метки кошельков в активности (создатель/кит/снайпер/накрутка/новый):
    мгновенная фирменная подсказка вместо системного title */
 .wb { font-size: 12px; margin-left: 3px; cursor: help; position: relative; display: inline-block; }

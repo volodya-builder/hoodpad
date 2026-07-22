@@ -6,6 +6,7 @@ import Analytics from "./pages/Analytics.jsx";
 import Leaderboard from "./pages/Leaderboard.jsx";
 import Arena from "./pages/Arena.jsx";
 import Trader from "./pages/Trader.jsx";
+import Ticker from "./components/Ticker.jsx";
 import Profile from "./pages/Profile.jsx";
 import Vote from "./pages/Vote.jsx";
 import About from "./pages/About.jsx";
@@ -408,6 +409,7 @@ export default function App() {
           </nav>
         </div>
       </header>
+      <Ticker />
       <main className={`container ${route.startsWith("/token/") ? "container-wide" : ""}`}>
         {factoryMissing && (
           <div className="error" style={{ marginTop: 16 }}>
