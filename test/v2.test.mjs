@@ -40,7 +40,7 @@ before(async () => {
   migrator = await deploy(deployer, "MockMigrator");
   factory = await deploy(deployer, "LaunchpadFactoryV2", [deployer.address, migrator.address]);
   treasury = await deploy(deployer, "BuybackTreasuryV2", [factory.address]);
-  votePower = await deploy(deployer, "VotePower", [factory.address, treasury.address]);
+  votePower = await deploy(deployer, "VotePower", [factory.address, treasury.address, parseEther("0.002")]);
   await write(deployer, treasury, "setVotePower", [votePower.address]);
   // протокольные комиссии в тесте идут напрямую в казну (без сплиттера)
   await write(deployer, factory, "setConfig",
@@ -74,6 +74,11 @@ test("fee => voting power (40/40/20 economics)", async () => {
   assert.equal(protoAcc, parseEther("0.024"));   // 60% от 0.04
 });
 
+test("minPower: below-threshold wallets cannot vote", async () => {
+  // t1 заплатил 0.01 комиссий (0.002 нужно) — проходит; свежий кошелёк — нет
+  await assert.rejects(write(deployer, votePower, "vote", [token.address])); // 0 силы
+});
+
 test("vote commits current and future power", async () => {
   const e = await read(votePower, "epoch");
   await write(t1, votePower, "vote", [token.address]);
@@ -88,6 +93,7 @@ test("vote commits current and future power", async () => {
 });
 
 test("buybackAndReward: 50% voters / 50% burn, claims pro-rata", async () => {
+  await write(deployer, treasury, "setRewardBps", [5000]);
   const e = await read(votePower, "epoch");
   // комиссии из пула в казну
   await write(deployer, pool, "claimProtocolFees");

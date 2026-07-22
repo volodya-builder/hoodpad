@@ -98,7 +98,10 @@ async function main() {
   const treasury = await deploy("BuybackTreasuryV2", [factory]);
 
   console.log("4/7 VotePower (голос за шкуру)…");
-  const votePower = await deploy("VotePower", [factory, treasury]);
+  // Порог голосования: сила = комиссии (1% объёма); 0.0025 ETH ≈ $500 объёма.
+  // Меняется без передеплоя: votePower.setMinPower(...) от деплойера.
+  const MIN_POWER = process.env.MIN_POWER || "2500000000000000"; // 0.0025 ETH в wei
+  const votePower = await deploy("VotePower", [factory, treasury, BigInt(MIN_POWER)]);
 
   console.log("5/7 Казна ← VotePower…");
   await call(treasury, "BuybackTreasuryV2", "setVotePower", [votePower]);

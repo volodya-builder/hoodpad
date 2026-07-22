@@ -32,7 +32,10 @@ contract BuybackTreasuryV2 is Ownable, ReentrancyGuard {
 
     IPoolRegistry public immutable factory;
     address public votePower;               // set once after deploy
-    uint16  public rewardBps = 5000;        // share of bought tokens to voters (50%)
+    /// @notice Share of bought tokens sent to voters. 0 by design: voters'
+    ///         reward IS the buyback+burn pump of the token they voted for.
+    ///         Kept configurable in case the community votes it in later.
+    uint16  public rewardBps = 0;
 
     uint256 public totalReceived;
     uint256 public totalSpent;

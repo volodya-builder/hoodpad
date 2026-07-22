@@ -15,7 +15,6 @@ export default function VoteV2({ wallet, onConnect }) {
   const rate = useEthUsd();
   useClock(5000);
   const [st, setSt] = useState(null);
-  const [rewards, setRewards] = useState([]);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
 
@@ -26,10 +25,11 @@ export default function VoteV2({ wallet, onConnect }) {
   const me = wallet?.account;
 
   const load = useCallback(async () => {
-    const [tokens, epoch, endsIn] = await Promise.all([
+    const [tokens, epoch, endsIn, minPower] = await Promise.all([
       loadTokens(),
       publicClient.readContract({ address: VOTEPOWER_ADDRESS, abi: votePowerAbi, functionName: "epoch" }),
       publicClient.readContract({ address: VOTEPOWER_ADDRESS, abi: votePowerAbi, functionName: "epochEndsIn" }),
+      publicClient.readContract({ address: VOTEPOWER_ADDRESS, abi: votePowerAbi, functionName: "minPower" }).catch(() => 0n),
     ]);
     const live = tokens.filter((x) => !x.graduated);
     const totals = await Promise.all(live.map((tk) =>
@@ -46,28 +46,7 @@ export default function VoteV2({ wallet, onConnect }) {
     }
     const rows = live.map((tk, i) => ({ ...tk, power: totals[i] }))
       .sort((a, b) => (b.power > a.power ? 1 : b.power < a.power ? -1 : 0));
-    setSt({ tokens, rows, epoch, endsIn: Number(endsIn), myPower, myChoice });
-
-    // награды прошлых раундов
-    if (me) {
-      const out = [];
-      for (let i = 1; i <= 8; i++) {
-        const e = epoch - BigInt(i);
-        if (e < 0n) break;
-        const r = await publicClient.readContract({
-          address: VOTEPOWER_ADDRESS, abi: votePowerAbi, functionName: "rewardOf", args: [e],
-        }).catch(() => null);
-        if (!r || r[0] === "0x0000000000000000000000000000000000000000") continue;
-        const pend = await publicClient.readContract({
-          address: VOTEPOWER_ADDRESS, abi: votePowerAbi, functionName: "pendingReward", args: [e, me],
-        }).catch(() => 0n);
-        if (pend > 0n) {
-          const tk = tokens.find((x) => x.token.toLowerCase() === r[0].toLowerCase());
-          out.push({ epoch: e, token: r[0], sym: tk?.symbol || "?", amount: pend });
-        }
-      }
-      setRewards(out);
-    }
+    setSt({ tokens, rows, epoch, endsIn: Number(endsIn), myPower, myChoice, minPower });
   }, [me]);
 
   useEffect(() => {
@@ -90,19 +69,6 @@ export default function VoteV2({ wallet, onConnect }) {
     setBusy("");
   }
 
-  async function doClaim(epochId) {
-    setBusy("claim" + epochId); setError("");
-    try {
-      const hash = await wallet.walletClient.writeContract({
-        address: VOTEPOWER_ADDRESS, abi: votePowerAbi, functionName: "claim",
-        args: [epochId], account: wallet.account, chain: wallet.chain,
-      });
-      await publicClient.waitForTransactionReceipt({ hash });
-      await load();
-    } catch (e) { setError(e.shortMessage || e.message); }
-    setBusy("");
-  }
-
   const cd = (sec) => {
     const d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600), m = Math.floor((sec % 3600) / 60);
     return d > 0 ? `${d}${t("д")} ${h}${t("ч")}` : h > 0 ? `${h}${t("ч")} ${m}${t("м")}` : `${m}${t("м")}`;
@@ -115,7 +81,7 @@ export default function VoteV2({ wallet, onConnect }) {
     <>
       <div className="page-title">{t("Голосование")}</div>
       <div className="page-sub" style={{ maxWidth: 760 }}>
-        {t("Голос за шкуру: твоя сила голоса — это комиссии, уплаченные торговлей в текущем раунде. Раз в неделю казна выкупает победителя, и половина выкупленного делится между голосовавшими за него — пропорционально силе.")}
+        {t("Голос за шкуру: твоя сила голоса — это комиссии, уплаченные торговлей в текущем раунде. Раз в неделю казна выкупает токен-победитель с рынка и сжигает купленное — памп цены и дефляция для всех его держателей. Голосуй, чтобы система поддержала твою монету.")}
       </div>
 
       {error && <div className="error">{error}</div>}
@@ -135,30 +101,21 @@ export default function VoteV2({ wallet, onConnect }) {
           </div>
         </div>
 
-        {wallet && st.myPower === 0n && !votedFor && (
-          <div className="cushion-banner" style={{ marginTop: 12 }}>
-            ⚡ {t("Сила голоса зарабатывается торговлей: 1% комиссии любой сделки в этом раунде становится твоим голосом.")}
-          </div>
-        )}
-
-        {rewards.length > 0 && (
-          <div className="bottom-card" style={{ marginTop: 16 }}>
-            <div className="bt-tabs"><div className="bt-tab on">🎁 {t("Мои награды")}</div></div>
-            {rewards.map((r) => (
-              <div className="pos-row" key={String(r.epoch)} style={{ cursor: "default" }}>
-                <div className="tk-cell"><span>{t("Раунд")}</span><b>#{String(r.epoch)}</b></div>
-                <div className="tk-cell"><span>{t("Токен")}</span><b>${r.sym}</b></div>
-                <div className="tk-cell"><span>{t("Награда")}</span>
-                  <b style={{ color: "var(--leaf)" }}>{fmt(Number(formatEther(r.amount)) / 1e6, 2)}M</b></div>
-                <button className="btn btn-primary" style={{ marginLeft: "auto" }}
-                        disabled={busy === "claim" + r.epoch}
-                        onClick={() => doClaim(r.epoch)}>
-                  {busy === "claim" + r.epoch ? "…" : t("Забрать")}
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+        {wallet && !votedFor && st.myPower < st.minPower && (() => {
+          // сила = 1% объёма => объём = сила × 100
+          const myVolUsd = Number(formatEther(st.myPower)) * 100 * rate;
+          const needVolUsd = Number(formatEther(st.minPower)) * 100 * rate;
+          const pct = needVolUsd > 0 ? Math.min((myVolUsd / needVolUsd) * 100, 100) : 0;
+          return (
+            <div className="cushion-banner" style={{ marginTop: 12, display: "block" }}>
+              ⚡ {t("Право голоса — от")} <b>{usd(needVolUsd)}</b> {t("объёма торгов в раунде.")}{" "}
+              {t("Твой объём:")} <b>{myVolUsd >= 1000 ? usd(myVolUsd) : "$" + myVolUsd.toFixed(2)}</b> ({fmt(pct, 0)}%)
+              <span className="vr-bar" style={{ display: "block", marginTop: 8, maxWidth: 340 }}>
+                <span style={{ width: `${Math.max(pct, 2)}%` }} />
+              </span>
+            </div>
+          );
+        })()}
 
         <div className="bottom-card" style={{ marginTop: 16 }}>
           <div className="bt-tabs"><div className="bt-tab on">🗳 {t("Раунд выкупа")} — {t("голосуй силой")}</div></div>
@@ -175,9 +132,10 @@ export default function VoteV2({ wallet, onConnect }) {
                 </a>
                 <span className="vr-bar"><span style={{ width: `${Math.max(share, p > 0 ? 3 : 0)}%` }} /></span>
                 <span className="vr-val">{D(p)} <span className="dim">({fmt(share, 0)}%)</span></span>
-                <button className="btn" disabled={!!votedFor || busy === tk.token}
+                <button className="btn" disabled={!!votedFor || busy === tk.token || (wallet && st.myPower < st.minPower)}
                         onClick={() => doVote(tk.token)}
-                        title={votedFor ? t("Голос в этом раунде уже отдан") : ""}>
+                        title={votedFor ? t("Голос в этом раунде уже отдан")
+                          : wallet && st.myPower < st.minPower ? t("Недостаточно объёма торгов для голоса") : ""}>
                   {busy === tk.token ? "…" : t("Голосовать")}
                 </button>
               </div>

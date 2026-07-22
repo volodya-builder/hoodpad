@@ -26,6 +26,12 @@ contract VotePower is ReentrancyGuard {
 
     IPoolCheck public immutable factory;   // registered pools may record fees
     address    public immutable treasury;  // may fund epoch rewards
+    address    public immutable guardian;  // may tune minPower (deployer)
+
+    /// @notice Minimum earned power (fee-wei) required to vote.
+    ///         Power = fees paid = 1% of volume, so e.g. 0.0025 ETH
+    ///         means roughly $500 of trading volume per round.
+    uint256 public minPower;
 
     // epoch => trader => fee-wei earned this epoch
     mapping(uint256 => mapping(address => uint256)) public powerOf;
@@ -50,11 +56,24 @@ contract VotePower is ReentrancyGuard {
     error EpochNotFinished();
     error AlreadyFunded();
     error NothingToClaim();
+    error PowerTooLow();
+    error NotGuardian();
 
-    constructor(address factory_, address treasury_) {
+    event MinPowerSet(uint256 minPower);
+
+    constructor(address factory_, address treasury_, uint256 minPower_) {
         require(factory_ != address(0) && treasury_ != address(0), "zero addr");
         factory = IPoolCheck(factory_);
         treasury = treasury_;
+        guardian = msg.sender;
+        minPower = minPower_;
+    }
+
+    /// @notice Guardian can tune the voting threshold (e.g. as ETH/USD moves).
+    function setMinPower(uint256 minPower_) external {
+        if (msg.sender != guardian) revert NotGuardian();
+        minPower = minPower_;
+        emit MinPowerSet(minPower_);
     }
 
     // ------------------------------------------------------------- epochs
@@ -85,12 +104,14 @@ contract VotePower is ReentrancyGuard {
     // ------------------------------------------------------------- voting
 
     /// @notice Commit this epoch's power (current + future) to `token`.
+    ///         Requires at least `minPower` earned this epoch (~$500 volume).
     function vote(address token) external {
         if (token == address(0)) revert ZeroToken();
         uint256 e = epoch();
         if (choiceOf[e][msg.sender] != address(0)) revert AlreadyVoted();
-        choiceOf[e][msg.sender] = token;
         uint256 p = powerOf[e][msg.sender];
+        if (p < minPower) revert PowerTooLow();
+        choiceOf[e][msg.sender] = token;
         totalFor[e][token] += p;
         emit Voted(msg.sender, e, token, p);
     }

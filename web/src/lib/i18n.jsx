@@ -169,6 +169,12 @@ const EN = {
   "голосуй силой": "vote with power",
   "мой голос": "my vote",
   "Голос в этом раунде уже отдан": "You already voted this round",
+  "Голос за шкуру: твоя сила голоса — это комиссии, уплаченные торговлей в текущем раунде. Раз в неделю казна выкупает токен-победитель с рынка и сжигает купленное — памп цены и дефляция для всех его держателей. Голосуй, чтобы система поддержала твою монету.":
+    "Proof-of-skin voting: your voting power is the fees you paid trading this round. Once a week the treasury market-buys the winning token and burns everything it bought — a price pump plus deflation for all its holders. Vote to make the system support your coin.",
+  "Право голоса — от": "Voting requires at least",
+  "объёма торгов в раунде.": "of trading volume this round.",
+  "Твой объём:": "Your volume:",
+  "Недостаточно объёма торгов для голоса": "Not enough trading volume to vote",
   "Голосовать": "Vote",
   "месячная лига чемпионов": "monthly champions league",
   "финал через": "final in",
