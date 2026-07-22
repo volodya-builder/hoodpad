@@ -5,6 +5,8 @@ import { useEthUsd, usd } from "../lib/price.js";
 import { useClock, timeAgo } from "../lib/data.js";
 import { useArena, hallOfFame, dayStart } from "../lib/arena.js";
 import { useLang } from "../lib/i18n.jsx";
+import { publicClient } from "../lib/web3.js";
+import { TREASURY_ADDRESS } from "../lib/config.js";
 
 function Countdown({ to }) {
   useClockTick();
@@ -26,6 +28,17 @@ export default function Arena() {
   const rate = useEthUsd();
   useClock(1000);
   const st = useArena();
+  // накоплено в казне на выкупы
+  const [treBal, setTreBal] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    const pull = () => publicClient.getBalance({ address: TREASURY_ADDRESS })
+      .then((b) => alive && setTreBal(Number(formatEther(b))))
+      .catch(() => {});
+    pull();
+    const id = setInterval(pull, 60_000);
+    return () => { alive = false; clearInterval(id); };
+  }, []);
 
   const D = (e) => {
     const v = e * rate;
@@ -62,6 +75,12 @@ export default function Arena() {
             <div className="ab-cell">
               <span>{t("Приз")}</span>
               <b>👑 {t("Чемпион дня")}</b>
+            </div>
+            <div className="ab-cell">
+              <span>{t("Накоплено на выкупы")}</span>
+              <b style={{ color: "var(--gold)" }}>
+                {treBal === null ? "…" : <>{D(treBal)} <span className="dim" style={{ fontWeight: 500, fontSize: 13 }}>({fmtEth(treBal)} ETH)</span></>}
+              </b>
             </div>
           </div>
 

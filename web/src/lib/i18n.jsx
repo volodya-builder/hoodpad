@@ -126,6 +126,7 @@ const EN = {
   "Лидеры": "Leaders",
   "Арена": "Arena",
   "создатели и трейдеры": "creators & traders",
+  "Накоплено на выкупы": "Accumulated for buybacks",
   "Каждый день — бой на выживание. Токен с наименьшим объёмом торгов выбывает на каждом чекпоинте. Последний выживший — Чемпион дня: золотая рамка, Зал славы и приоритет выкупа казны. Выбывание — витрина, торговля не останавливается.":
     "Every day is a survival battle. The token with the lowest trading volume is eliminated at each checkpoint. The last one standing becomes Champion of the Day: golden frame, Hall of Fame and treasury buyback priority. Elimination is cosmetic — trading never stops.",
   "Сегодня некому сражаться — запустите токен и откройте арену.": "No fighters today — launch a token and open the arena.",
