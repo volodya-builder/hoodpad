@@ -4,6 +4,7 @@ import Create from "./pages/Create.jsx";
 import TokenPage from "./pages/Token.jsx";
 import Analytics from "./pages/Analytics.jsx";
 import Leaderboard from "./pages/Leaderboard.jsx";
+import Arena from "./pages/Arena.jsx";
 import Profile from "./pages/Profile.jsx";
 import Vote from "./pages/Vote.jsx";
 import About from "./pages/About.jsx";
@@ -303,6 +304,8 @@ export default function App() {
     page = <Analytics />;
   } else if (route === "/leaderboard") {
     page = <Leaderboard />;
+  } else if (route === "/arena") {
+    page = <Arena />;
   } else if (route === "/vote") {
     page = <Vote wallet={wallet} onConnect={connect} />;
   } else if (route === "/treasury") {
@@ -338,7 +341,8 @@ export default function App() {
             </span>
           )}
           <div className={`nav-pills ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(false)}>
-            <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/leaderboard") && !route.startsWith("/profile") && !route.startsWith("/vote") && !route.startsWith("/treasury") && !route.startsWith("/about") && !route.startsWith("/earn") ? "on" : ""}`} href="#/">{t("Обзор")}</a>
+            <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/leaderboard") && !route.startsWith("/profile") && !route.startsWith("/vote") && !route.startsWith("/treasury") && !route.startsWith("/about") && !route.startsWith("/earn") && !route.startsWith("/arena") ? "on" : ""}`} href="#/">{t("Обзор")}</a>
+            <a className={`nav-pill ${route.startsWith("/arena") ? "on" : ""}`} href="#/arena">⚔️ {t("Арена")}</a>
             <a className={`nav-pill ${route.startsWith("/vote") ? "on" : ""}`} href="#/vote">{t("Голосование")}</a>
             <a className={`nav-pill ${route.startsWith("/treasury") ? "on" : ""}`} href="#/treasury">{t("Казна")}</a>
             <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>

@@ -5,6 +5,7 @@ import { useEthUsd, usd } from "../lib/price.js";
 import { timeAgo, loadTokens, useClock, useSupport } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 import { useFavs, toggleFav } from "../lib/favs.js";
+import { useArena } from "../lib/arena.js";
 
 
 function TokenCard({ t, fav, onFav, cushion = 0 }) {
@@ -67,6 +68,7 @@ export default function Home({ onSearch }) {
   const [sort, setSort] = useState("new");
   const favs = useFavs();
   const support = useSupport();
+  const arena = useArena();
   const cushionOf = (addr) => support.per[addr.toLowerCase()]?.eth || 0;
 
 
@@ -104,6 +106,25 @@ export default function Home({ onSearch }) {
           {t("+ Создать")}
         </a>
       </div>
+      {arena && arena.participants.length > 0 && (
+        <a className="cushion-banner arena-banner" href="#/arena">
+          ⚔️ {t("Арена")}: {arena.alive.length > 1 ? (
+            <>
+              <b>{arena.alive.length}</b> {t("токенов в бою")} · {t("лидер")}{" "}
+              <b>${arena.alive[0].symbol}</b> ·{" "}
+              {t("выбывание через")}{" "}
+              <b className="mono">
+                {(() => {
+                  const s = Math.max(0, Math.floor(((arena.nextCheckpoint || 0) - Date.now()) / 1000));
+                  return `${Math.floor(s / 3600)}ч ${Math.floor((s % 3600) / 60)}м`;
+                })()}
+              </b>
+            </>
+          ) : (
+            <>👑 {t("Чемпион дня")}: <b>${arena.alive[0]?.symbol}</b></>
+          )} →
+        </a>
+      )}
       <a className="cushion-banner" href="#/treasury">
         🛡 {t("Казна вернула рынку")}: <b>{fmtEth(support.totalEth)} ETH</b>
         {support.totalEth === 0 && <span className="dim"> · {t("копится с каждой сделки — первые выкупы после голосования")}</span>} →
