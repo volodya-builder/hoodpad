@@ -80,7 +80,7 @@ export default function Analytics() {
   const [raw, setRaw] = useState(_anaRaw);
   const [error, setError] = useState("");
   const [period, setPeriod] = useState("all");
-  const [lbOpen, setLbOpen] = useState(false);
+  const [lbOpen, setLbOpen] = useState(true); // лидеры раскрыты по умолчанию, сворачиваются кликом
 
   useEffect(() => {
     let alive = true;
