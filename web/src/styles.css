@@ -1801,6 +1801,30 @@ html[data-theme="light"] .tr-bar { background: #00000010; }
 .ar-status { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; text-align: right; }
 .ar-status.ok { color: var(--leaf, #7ac74f); }
 .ar-status.bad { color: #e06a4a; }
+/* Гранд-Арена: месячная лига чемпионов */
+.grand-card {
+  margin-top: 26px; padding: 18px 22px;
+  background: linear-gradient(160deg, #d4af3712, transparent 55%), var(--card);
+  border: 1px solid var(--gold); border-radius: 18px;
+  box-shadow: 0 0 40px -22px var(--gold);
+}
+.grand-head { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
+.grand-title { font-weight: 800; font-size: 15px; }
+.grand-timer { font-size: 13px; color: var(--text-dim); }
+.grand-timer b { color: var(--gold); }
+.grand-pool { margin-left: auto; font-size: 13px; }
+.grand-pool b { color: var(--gold); font-size: 16px; }
+.grand-row {
+  display: grid; grid-template-columns: 34px 34px 1fr auto;
+  gap: 12px; align-items: center; padding: 10px 4px;
+  border-top: 1px solid var(--border); color: inherit;
+}
+.grand-row.leader b { color: var(--gold); }
+.grand-row img { width: 30px; height: 30px; border-radius: 9px; object-fit: cover; }
+.grand-pts { font-size: 14px; font-variant-numeric: tabular-nums; text-align: right; }
+.grand-pts .dim { font-size: 11px; }
+@media (max-width: 700px) { .grand-pool { margin-left: 0; } }
+
 .hof-row {
   display: flex; align-items: center; gap: 12px;
   padding: 10px 4px; border-top: 1px solid var(--border); color: inherit;

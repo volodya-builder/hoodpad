@@ -98,6 +98,40 @@ export function arenaState(tokens, trades, d0, now = Date.now()) {
   return { participants: parts, alive: aliveArr, eliminated, checkpoints, nextCheckpoint, champion };
 }
 
+/** Гранд-Арена: месячная лига чемпионов дня.
+ *  Каждый выигранный день даёт звезду и очки лиги (= очки боя за тот день).
+ *  В конце месяца лидер по очкам — Гранд-чемпион, казна исполняет Гранд-выкуп. */
+export function grandArena(tokens, trades, now = Date.now()) {
+  const d = new Date(now);
+  const monthStart = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1);
+  const monthEnd = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+  const today = dayStart(now);
+
+  const league = {}; // token -> { token, wins, points, days: [] }
+  for (let d0 = monthStart; d0 < Math.min(now, monthEnd); d0 += DAY) {
+    const then = tokens.filter((t) => (t.createdAt || 0) < d0 + DAY);
+    if (then.length === 0) continue;
+    const st = arenaState(then, trades, d0, d0 === today ? now : d0 + DAY);
+    // прошедшие дни — финальный чемпион; сегодняшний — текущий лидер (превью)
+    const ch = st.champion || (d0 === today ? st.alive[0] : null);
+    if (!ch) continue;
+    const key = ch.token.toLowerCase();
+    const row = league[key] ?? { token: ch, wins: 0, points: 0, days: [], leadingToday: false };
+    if (d0 === today && !st.champion) {
+      row.leadingToday = true; // день не закрыт — очки предварительные
+      row.pendingPoints = ch.score ?? ch.dayVol ?? 0;
+    } else {
+      row.wins += 1;
+      row.points += ch.score ?? ch.dayVol ?? 0;
+      row.days.push(d0);
+    }
+    league[key] = row;
+  }
+  const table = Object.values(league).sort((a, b) =>
+    (b.points + (b.pendingPoints || 0)) - (a.points + (a.pendingPoints || 0)));
+  return { table, monthStart, monthEnd, endsIn: monthEnd - now };
+}
+
 /** Зал славы: чемпионы прошлых дней (насколько хватает истории сделок). */
 export function hallOfFame(tokens, trades, days = 14) {
   const out = [];

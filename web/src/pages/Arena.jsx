@@ -3,7 +3,7 @@ import { formatEther } from "viem";
 import { fmt, fmtEth } from "../lib/web3.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { useClock, timeAgo } from "../lib/data.js";
-import { useArena, hallOfFame, dayStart } from "../lib/arena.js";
+import { useArena, hallOfFame, grandArena, dayStart } from "../lib/arena.js";
 import { useLang } from "../lib/i18n.jsx";
 import { publicClient } from "../lib/web3.js";
 import { TREASURY_ADDRESS } from "../lib/config.js";
@@ -159,6 +159,46 @@ export default function Arena() {
               </a>
             ))}
           </div>
+
+          {(() => {
+            const ga = grandArena(st.tokens, st.trades);
+            if (ga.table.length === 0) return null;
+            const days = Math.floor(ga.endsIn / 86_400_000);
+            const hours = Math.floor((ga.endsIn % 86_400_000) / 3_600_000);
+            const pool = treBal !== null ? treBal * 0.15 : null;
+            return (
+              <div className="grand-card">
+                <div className="grand-head">
+                  <span className="grand-title">👑 {t("Гранд-Арена")} · {t("месячная лига чемпионов")}</span>
+                  <span className="grand-timer">{t("финал через")} <b>{days}{t("д")} {hours}{t("ч")}</b></span>
+                  {pool !== null && (
+                    <span className="grand-pool">{t("Гранд-выкуп")}: <b>{D(pool)}</b> <span className="dim">({fmtEth(pool)} ETH)</span></span>
+                  )}
+                </div>
+                <div className="dim" style={{ fontSize: 12, margin: "6px 0 12px" }}>
+                  {t("Сюда попадают только чемпионы дня. Каждая победа — ⭐ и очки лиги. Лидер месяца получает Гранд-выкуп из казны в первый день следующего месяца.")}
+                </div>
+                {ga.table.map((row, i) => (
+                  <a key={row.token.token} className={`grand-row ${i === 0 ? "leader" : ""}`}
+                     href={`#/token/${row.token.token}`}>
+                    <span className="ar-rank">{i === 0 ? "👑" : i + 1}</span>
+                    {row.token.meta.image ? <img src={row.token.meta.image} alt="" /> : <span className="ts-ph">🖼️</span>}
+                    <span className="ar-name">
+                      <b>${row.token.symbol}</b>
+                      <span className="dim" style={{ fontSize: 11 }}>
+                        {"⭐".repeat(Math.min(row.wins, 7))}{row.wins > 7 ? ` ×${row.wins}` : ""}
+                        {row.leadingToday && <span className="side-buy"> · {t("лидирует сегодня")}</span>}
+                      </span>
+                    </span>
+                    <span className="grand-pts">
+                      {D(row.points + (row.pendingPoints || 0))}
+                      <span className="dim"> {t("очков лиги")}</span>
+                    </span>
+                  </a>
+                ))}
+              </div>
+            );
+          })()}
 
           {(() => {
             const hof = hallOfFame(st.tokens, st.trades);
