@@ -2,13 +2,17 @@ specVersion: 0.0.5
 schema:
   file: ./schema.graphql
 dataSources:
+  # --- hood v2 (мейннет, задеплоено 22.07.2026) ---
+  # События v2 идентичны v1 (TokenCreated / Buy / Sell / Received / Buyback /
+  # Burned), поэтому ABI и мэппинги те же — меняются только адреса и блок.
+  # Голосование v2 (VotePower) фронт читает напрямую по RPC — в сабграфе не нужно.
   - kind: ethereum
     name: LaunchpadFactory
-    network: robinhood-testnet
+    network: robinhood-mainnet
     source:
-      address: "0x22079e9f1c5acd14a1d3f1c41fd9798b33775518"
+      address: "0x68a983f0c73f1a5dc13aa3ae71a19a5787162cdb"
       abi: LaunchpadFactory
-      startBlock: 91286380
+      startBlock: 16758000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -23,11 +27,11 @@ dataSources:
       file: ./src/factory.ts
   - kind: ethereum
     name: BuybackTreasury
-    network: robinhood-testnet
+    network: robinhood-mainnet
     source:
-      address: "0xd8d4f77d200e5ddf5b44ba2d2f7539aa1d8fc811"
+      address: "0x232cf3b0026ed39e1448567e8da55206375945e4"
       abi: BuybackTreasury
-      startBlock: 91286380
+      startBlock: 16758000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -44,29 +48,10 @@ dataSources:
         - event: Burned(indexed address,uint256)
           handler: handleBurned
       file: ./src/treasury.ts
-  - kind: ethereum
-    name: BuybackVote
-    network: robinhood-testnet
-    source:
-      address: "0xa1936b527e198a4e46ed0f9e2410d6ef2c428d14"
-      abi: BuybackVote
-      startBlock: 91286380
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.7
-      language: wasm/assemblyscript
-      entities: [VoteCast]
-      abis:
-        - name: BuybackVote
-          file: ./abis/BuybackVote.json
-      eventHandlers:
-        - event: Vote(indexed address,indexed address,indexed uint256)
-          handler: handleVote
-      file: ./src/vote.ts
 templates:
   - kind: ethereum
     name: BondingCurvePool
-    network: robinhood-testnet
+    network: robinhood-mainnet
     source:
       abi: BondingCurvePool
     mapping:
