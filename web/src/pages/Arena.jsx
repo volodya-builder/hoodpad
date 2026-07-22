@@ -3,7 +3,7 @@ import { formatEther } from "viem";
 import { fmt, fmtEth } from "../lib/web3.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { useClock, timeAgo } from "../lib/data.js";
-import { useArena, grandArena, dayStart } from "../lib/arena.js";
+import { useArena, grandArena, hallOfFame, dayStart } from "../lib/arena.js";
 import { useLang } from "../lib/i18n.jsx";
 import { publicClient } from "../lib/web3.js";
 import { TREASURY_ADDRESS } from "../lib/config.js";
@@ -84,7 +84,34 @@ export default function Arena() {
             <div className={`bt-tab ${view === "grand" ? "on" : ""}`} onClick={() => setView("grand")}>
               👑 {t("Гранд-Арена")}
             </div>
+            <div className={`bt-tab ${view === "hof" ? "on" : ""}`} onClick={() => setView("hof")}>
+              🏆 {t("История побед")}
+            </div>
           </div>
+
+          {view === "hof" && (() => {
+            const hof = hallOfFame(st.tokens, st.trades, 31);
+            if (hof.length === 0) return <div className="center">{t("Первый чемпион появится после финала дня.")}</div>;
+            return (
+              <div className="arena-list">
+                {hof.map(({ day, champion: c }) => (
+                  <a key={day} className="arena-row" href={`#/token/${c.token}`}>
+                    <span className="ar-rank">👑</span>
+                    {c.meta.image ? <img src={c.meta.image} alt="" /> : <span className="ts-ph">🖼️</span>}
+                    <span className="ar-name">
+                      <b>${c.symbol}</b>
+                      <CA p={c} />
+                    </span>
+                    <span className="ar-mcap dim">{new Date(day).toLocaleDateString()}</span>
+                    <span className="ar-volwrap">
+                      <span className="ar-vol">{t("очки боя")}: {D(c.score ?? c.dayVol ?? 0)}</span>
+                    </span>
+                    <span className="ar-status" style={{ color: "var(--gold)" }}>{t("Чемпион дня")}</span>
+                  </a>
+                ))}
+              </div>
+            );
+          })()}
 
           {view === "grand" && (() => {
             const ga = grandArena(st.tokens, st.trades);

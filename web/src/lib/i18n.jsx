@@ -184,6 +184,8 @@ const EN = {
   "лидирует сегодня": "leading today",
   "Суточная арена": "Daily arena",
   "защита трона": "throne defense",
+  "История побед": "Win history",
+  "очки боя": "battle score",
   "Вчерашний чемпион: сражается вне конкурса, корона сегодня достанется другому": "Yesterday's champion: fights out of contention, today's crown goes to someone else",
   "Легенда прошлого месяца": "Last month's legend",
   "вне конкурса в этой лиге, титул защищён навсегда": "out of contention this league, the title is protected forever",
