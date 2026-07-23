@@ -1827,6 +1827,25 @@ html[data-theme="light"] .tr-bar { background: #00000010; }
   50% { box-shadow: 0 0 18px -3px #e06a4a; }
 }
 .hot-timer { color: #e06a4a; font-weight: 800; font-variant-numeric: tabular-nums; animation: hotBlink .8s steps(2) infinite; }
+/* полоса-таймер до выбывания аутсайдера */
+.elim-timer {
+  position: relative; height: 26px; margin: -4px 0 8px;
+  border-radius: 9px; overflow: hidden;
+  background: #e06a4a14; border: 1px solid #e06a4a33;
+}
+.elim-fill {
+  position: absolute; inset: 0 auto 0 0; height: 100%;
+  background: linear-gradient(90deg, #e06a4a55, #e06a4a22);
+  transition: width 1s linear;
+}
+.elim-label {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  gap: 5px; font-size: 11.5px; color: var(--text-dim); z-index: 2;
+}
+.elim-label b { color: #e06a4a; }
+.elim-timer.critical { border-color: #e06a4a; animation: dangerHot .9s ease-in-out infinite; }
+.elim-timer.critical .elim-fill { background: linear-gradient(90deg, #e06a4a88, #e06a4a44); }
+@media (prefers-reduced-motion: reduce) { .elim-fill, .elim-timer.critical { transition: none; animation: none; } }
 @keyframes hotBlink { 50% { opacity: .35; } }
 /* болельщик */
 .arena-row.cheered { border-color: var(--gold); background: linear-gradient(90deg, #d4af3712, transparent 45%), var(--card); }

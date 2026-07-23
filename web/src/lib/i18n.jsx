@@ -197,6 +197,7 @@ const EN = {
   "Болеть за этот токен": "Cheer for this token",
   "Спасти": "Save",
   "выбыл из арены!": "is out of the arena!",
+  "До выбывания": "Until elimination of",
   "Голосовать": "Vote",
   "месячная лига чемпионов": "monthly champions league",
   "финал через": "final in",

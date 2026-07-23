@@ -262,6 +262,12 @@ export default function Arena() {
             {(() => {
               const maxVol = Math.max(...st.alive.map((x) => x.score), 1e-9);
               const secsToElim = Math.max(0, Math.floor(((st.nextCheckpoint ?? 0) - Date.now()) / 1000));
+              // интервал между чекпоинтами (для полосы-таймера под аутсайдером)
+              const elimInterval = st.participants.length ? 86_400_000 / st.participants.length : 0;
+              const elimFrac = elimInterval > 0
+                ? Math.max(0, Math.min(1, ((st.nextCheckpoint ?? 0) - Date.now()) / elimInterval)) : 0;
+              const p2 = (x) => String(x).padStart(2, "0");
+              const elimClock = `${p2(Math.floor(secsToElim / 60))}:${p2(secsToElim % 60)}`;
               // стрики: сколько раз токен был чемпионом за последние дни
               const winCount = {};
               try { for (const h of hallOfFame(st.tokens, st.trades, 14)) { const k = h.champion.token.toLowerCase(); winCount[k] = (winCount[k] || 0) + 1; } } catch (e) { /* ignore */ }
@@ -271,7 +277,7 @@ export default function Arena() {
               const hot = danger && secsToElim < 60;       // красная тревога в последнюю минуту
               const isCheer = cheer && p.token.toLowerCase() === cheer.toLowerCase();
               const streak = winCount[p.token.toLowerCase()] || 0;
-              return (
+              const row = (
                 <a key={p.token} className={`arena-row ${i === 0 ? "leader" : ""} ${danger ? "danger" : ""} ${hot ? "danger-hot" : ""} ${isCheer ? "cheered" : ""}`}
                    href={`#/token/${p.token}`}>
                   <span className="ar-rank">{i === 0 ? "👑" : i + 1}</span>
@@ -302,6 +308,17 @@ export default function Arena() {
                         : t("в бою")}
                   </span>
                 </a>
+              );
+              if (!danger) return row;
+              // полоса-таймер под аутсайдером: утекает к выбыванию, давит психологически
+              return (
+                <React.Fragment key={p.token}>
+                  {row}
+                  <div className={`elim-timer ${elimFrac < 0.25 ? "critical" : ""}`}>
+                    <div className="elim-fill" style={{ width: `${elimFrac * 100}%` }} />
+                    <span className="elim-label">☠ {t("До выбывания")} <b>${p.symbol}</b>: <b className="mono">{elimClock}</b></span>
+                  </div>
+                </React.Fragment>
               );
             });
             })()}
