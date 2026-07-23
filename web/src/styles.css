@@ -682,22 +682,24 @@ html[data-theme="light"] .grad-wrap { background: radial-gradient(700px 260px at
 .nav-pill { padding: 7px 16px; border-radius: 999px; font-size: 13.5px; font-weight: 600; color: var(--text-dim); cursor: pointer; transition: all .15s; white-space: nowrap; flex: none; }
 .nav-pill.on { background: var(--bg-soft); color: var(--text); }
 
-/* «Арена» — привлекаем внимание: мягкая пульсация + огонёк */
-.nav-hot {
-  color: var(--gold);
-  animation: navPulse 2.2s ease-in-out infinite;
-}
-.nav-hot.on { animation: none; } /* на самой странице арены не пульсируем */
+/* «Арена» в меню — просто огонёк, без пульсации */
+.nav-hot { color: var(--gold); }
 .hot-flame { display: inline-block; animation: flameFlick 1.1s ease-in-out infinite; }
-@keyframes navPulse {
-  0%, 100% { text-shadow: 0 0 0 transparent; opacity: .92; }
-  50% { text-shadow: 0 0 12px var(--gold); opacity: 1; }
-}
 @keyframes flameFlick {
   0%, 100% { transform: translateY(0) scale(1); filter: none; }
   50% { transform: translateY(-1px) scale(1.15); filter: drop-shadow(0 0 4px #ff8a00aa); }
 }
-@media (prefers-reduced-motion: reduce) { .nav-hot, .hot-flame { animation: none; } }
+
+/* баннер Арены на главной — привлекаем внимание мягкой пульсацией */
+.arena-banner {
+  border-color: var(--border-gold) !important;
+  animation: arenaPulse 2.4s ease-in-out infinite;
+}
+@keyframes arenaPulse {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; border-color: var(--border-gold); }
+  50% { box-shadow: 0 0 22px -4px var(--gold); border-color: var(--gold); }
+}
+@media (prefers-reduced-motion: reduce) { .arena-banner, .hot-flame { animation: none; } }
 .icon-btn { width: 40px; height: 40px; border-radius: 11px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
 .icon-btn:hover { background: var(--card-hover); }
 .wallet-wrap { position: relative; }
@@ -1775,7 +1777,6 @@ html[data-theme="light"] .trust-box { background: #00000005; }
 html[data-theme="light"] .tr-bar { background: #00000010; }
 
 /* ---------------- Арена: суточный турнир токенов ---------------- */
-.arena-banner { border-color: var(--border-gold) !important; }
 .arena-bar {
   display: flex; gap: 34px; flex-wrap: wrap; align-items: center;
   background: var(--card); border: 1px solid var(--border-gold);
