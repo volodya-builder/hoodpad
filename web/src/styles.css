@@ -1127,14 +1127,15 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
   font-weight: 800; font-size: 17px; font-variant-numeric: tabular-nums;
 }
 .split-bar .seg { display: flex; align-items: center; justify-content: center; min-width: 46px; }
-.split-bar .seg.creator { background: linear-gradient(180deg, var(--gold), color-mix(in srgb, var(--gold) 72%, #000)); color: #101100; }
-.split-bar .seg.team { background: var(--bg-soft); color: var(--text); }
-.split-bar .seg.buyback { background: color-mix(in srgb, var(--gold) 20%, transparent); color: var(--gold); }
+/* 60% казна — самая яркая зелёная, 20% создатель — тусклее, 20% команда — приглушённая */
+.split-bar .seg.buyback { background: linear-gradient(180deg, var(--gold), color-mix(in srgb, var(--gold) 72%, #000)); color: #101100; font-weight: 800; }
+.split-bar .seg.creator { background: color-mix(in srgb, var(--gold) 42%, #1a1c12); color: var(--gold); }
+.split-bar .seg.team { background: var(--bg-soft); color: var(--text-dim); }
 .split-legend { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 12px; font-size: 13px; color: var(--text-dim); }
 .split-legend .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; }
-.split-legend .dot.creator { background: var(--gold); }
+.split-legend .dot.buyback { background: var(--gold); }
+.split-legend .dot.creator { background: color-mix(in srgb, var(--gold) 55%, #1a1c12); }
 .split-legend .dot.team { background: var(--text-dim); }
-.split-legend .dot.buyback { background: color-mix(in srgb, var(--gold) 45%, transparent); }
 .check-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; margin-top: 18px; }
 .check-item {
   display: flex; align-items: center; gap: 12px;

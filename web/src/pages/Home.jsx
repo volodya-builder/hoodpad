@@ -58,6 +58,7 @@ function TokenCard({ t, fav, onFav, cushion = 0 }) {
 
 export default function Home({ onSearch }) {
   const { t } = useLang();
+  const rate = useEthUsd();
   useClock(1000); // «Nс назад» на карточках тикает каждую секунду
   const [gpage, setGpage] = useState(1);
   const GRAD_PER_PAGE = 10;

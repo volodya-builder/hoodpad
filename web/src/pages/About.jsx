@@ -51,13 +51,13 @@ export default function About() {
         {t("Каждая сделка на кривой платит комиссию 1%. Смарт-контракт делит её автоматически:")}
       </div>
       <div className="split-bar">
-        <div className="seg creator" style={{ width: `${split.creator}%` }}>{split.creator}%</div>
         <div className="seg buyback" style={{ width: `${split.buyback}%` }}>{split.buyback}%</div>
+        <div className="seg creator" style={{ width: `${split.creator}%` }}>{split.creator}%</div>
         <div className="seg team" style={{ width: `${split.team}%` }}>{split.team}%</div>
       </div>
       <div className="split-legend">
-        <span><i className="dot creator" />{t("создателю токена")}</span>
         <span><i className="dot buyback" />{t("в казну выкупа")}</span>
+        <span><i className="dot creator" />{t("создателю токена")}</span>
         <span><i className="dot team" />{t("команде")}</span>
       </div>
 
