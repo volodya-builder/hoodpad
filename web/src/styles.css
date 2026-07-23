@@ -1303,6 +1303,9 @@ html[data-theme="light"] .king-card { background: var(--card); }
 .tr-burn { color: var(--red); }
 .trs-row { grid-template-columns: 120px 1.1fr 1.7fr 110px 110px; }
 .trs-row.trs-hdr { color: var(--text-dim); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; border-top: none; padding-bottom: 2px; }
+.trs-row.trs-group:hover { background: #ffffff06; }
+.trs-row.trs-child { background: #ffffff04; }
+.trs-row.trs-child:hover { background: #ffffff08; }
 @media (max-width: 760px) {
   .trs-row { grid-template-columns: 105px 1fr 100px; }
   .trs-row > :nth-child(3), .trs-row > :nth-child(4) { display: none; }

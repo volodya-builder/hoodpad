@@ -27,6 +27,7 @@ export default function Treasury() {
   const rate = useEthUsd();
   const [state, setState] = useState(_tresState);
   const [aiReport, setAiReport] = useState(null);
+  const [openGrp, setOpenGrp] = useState({}); // раскрытые группы пополнений
   useEffect(() => {
     let alive = true;
     fetch("./bot/treasurer/reports/latest.json?" + Date.now())
@@ -227,28 +228,61 @@ export default function Treasury() {
               for (let i = 0; i < state.rows.length; i++) {
                 const r = state.rows[i];
                 if (r.kind === "in") {
-                  const g = { kind: "in-group", eth: r.eth, count: 1, ts: r.ts, tx: r.tx, afterIdx: i };
+                  const g = { kind: "in-group", eth: r.eth, count: 1, ts: r.ts, tx: r.tx, afterIdx: i,
+                              children: [{ eth: r.eth, tx: r.tx, ts: r.ts, who: r.who }] };
                   while (i + 1 < state.rows.length && state.rows[i + 1].kind === "in"
                          && dayKey(state.rows[i + 1].ts) === dayKey(r.ts)) {
                     i++; g.eth += state.rows[i].eth; g.count += 1;
+                    g.children.push({ eth: state.rows[i].eth, tx: state.rows[i].tx, ts: state.rows[i].ts, who: state.rows[i].who });
                   }
                   disp.push(g);
                 } else {
                   disp.push({ ...r, afterIdx: i });
                 }
               }
-              return disp.map((r, i) => {
+              return disp.flatMap((r, i) => {
                 if (r.kind === "in-group") {
-                  return (
-                    <a className="trs-row" key={i} href={`${EXPLORER}/tx/${r.tx}`} target="_blank" rel="noreferrer"
-                       title={t("Открыть транзакцию в эксплорере")}>
-                      <span className="trs-kind tr-in">↓ {t("Пополнение")}{r.count > 1 ? ` ×${r.count}` : ""}</span>
+                  // одиночное пополнение — обычная ссылка; группа — раскрывается
+                  if (r.count === 1) {
+                    return [(
+                      <a className="trs-row" key={i} href={`${EXPLORER}/tx/${r.tx}`} target="_blank" rel="noreferrer"
+                         title={t("Открыть транзакцию в эксплорере")}>
+                        <span className="trs-kind tr-in">↓ {t("Пополнение")}</span>
+                        <span>{fmtEth(r.eth)} ETH <span className="usd-sub">({dollars(r.eth)})</span></span>
+                        <span className="dim">{t("комиссии платформы")}</span>
+                        <span className="dim mono" style={{ textAlign: "right" }}>{fmtEth(after[r.afterIdx])} ETH</span>
+                        <span className="dim" style={{ textAlign: "right" }}>{r.ts ? timeAgo(r.ts) : ""} ↗</span>
+                      </a>
+                    )];
+                  }
+                  const open = !!openGrp[i];
+                  const out = [(
+                    <div className="trs-row trs-group" key={i} onClick={() => setOpenGrp((s) => ({ ...s, [i]: !s[i] }))}
+                         title={t("Показать все транзакции сбора")} style={{ cursor: "pointer" }}>
+                      <span className="trs-kind tr-in">{open ? "▾" : "▸"} {t("Пополнение")} ×{r.count}</span>
                       <span>{fmtEth(r.eth)} ETH <span className="usd-sub">({dollars(r.eth)})</span></span>
-                      <span className="dim">{r.count > 1 ? t("сбор комиссий за день") : t("комиссии платформы")}</span>
+                      <span className="dim">{t("сбор комиссий за день")}</span>
                       <span className="dim mono" style={{ textAlign: "right" }}>{fmtEth(after[r.afterIdx])} ETH</span>
-                      <span className="dim" style={{ textAlign: "right" }}>{r.ts ? timeAgo(r.ts) : ""} ↗</span>
-                    </a>
-                  );
+                      <span className="dim" style={{ textAlign: "right" }}>{r.ts ? timeAgo(r.ts) : ""}</span>
+                    </div>
+                  )];
+                  if (open) {
+                    for (let ci = 0; ci < r.children.length; ci++) {
+                      const c = r.children[ci];
+                      const srcSym = state.poolSym?.[(c.who || "").toLowerCase()];
+                      out.push(
+                        <a className="trs-row trs-child" key={`${i}-${ci}`} href={`${EXPLORER}/tx/${c.tx}`}
+                           target="_blank" rel="noreferrer" title={t("Открыть транзакцию в эксплорере")}>
+                          <span className="dim" style={{ paddingLeft: 18 }}>↳ {t("Пополнение")}</span>
+                          <span>{fmtEth(c.eth)} ETH <span className="usd-sub">({dollars(c.eth)})</span></span>
+                          <span className="dim">{srcSym ? <>{t("комиссии пула")} <b>${srcSym}</b></> : t("комиссии платформы")}</span>
+                          <span />
+                          <span className="dim" style={{ textAlign: "right" }}>{c.ts ? timeAgo(c.ts) : ""} ↗</span>
+                        </a>
+                      );
+                    }
+                  }
+                  return out;
                 }
                 const k = KIND[r.kind];
                 return (
