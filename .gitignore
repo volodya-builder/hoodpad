@@ -5,3 +5,4 @@ dist/
 *.log
 hood-passport.docx
 scripts/sim-wallets.json
+bot/activity/state.json

@@ -1,0 +1,40 @@
+name: hood activity
+
+# Оживление площадки для обкатки: сид топ-токенов Pons (один раз) +
+# реалистичная торговля в рамках дневного бюджета $10. Автозапуск раз в 30 мин.
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: activity
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm i viem@2 --no-audit --no-fund
+      - name: Run activity bot
+        env:
+          ACTIVITY_PRIVATE_KEY: ${{ secrets.ACTIVITY_PRIVATE_KEY }}
+          HOOD_FACTORY: ${{ vars.V2_FACTORY }}
+          BUDGET_USD: "10"
+          SEED_N: "12"
+          WALLETS: "4"
+        run: node bot/activity/activity.mjs
+      - name: Commit state
+        run: |
+          git config user.name "hood-activity"
+          git config user.email "activity@hoodandarrow.com"
+          git add bot/activity/state.json 2>/dev/null || true
+          git diff --cached --quiet || git commit -m "activity: state update"
+          git push || true
