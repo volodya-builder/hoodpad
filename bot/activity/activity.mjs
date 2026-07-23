@@ -88,27 +88,19 @@ async function main() {
   // ---- 1) СИД токенов Pons (один раз) --------------------------------
   const already = Number(await pub.readContract({ address: HOOD_FACTORY, abi: factoryAbi, functionName: "tokenCount" }));
   if (!state.seeded && already < SEED_N) {
-    console.log(`Сид: копирую топ-${SEED_N} токенов Pons…`);
+    console.log(`Сид: копирую последние ${SEED_N} токенов из списка создания Pons…`);
     const cand = [];
     for (const F of PONS_FACTORIES) {
       try {
         const cnt = Number(await ponsPub.readContract({ address: F, abi: factoryAbi, functionName: "tokenCount" }));
-        const addrs = await ponsPub.readContract({ address: F, abi: factoryAbi, functionName: "tokens", args: [0n, BigInt(Math.min(cnt, 200))] });
-        for (const a of addrs) cand.push(a);
+        // берём хвост списка — это самые свежие созданные токены (лента «новые»)
+        const off = Math.max(0, cnt - SEED_N * 2);
+        const addrs = await ponsPub.readContract({ address: F, abi: factoryAbi, functionName: "tokens", args: [BigInt(off), BigInt(cnt - off)] });
+        for (const a of addrs) cand.push(a); // порядок создания
       } catch (e) { console.warn("Pons factory чтение:", F, e.shortMessage || e.message); }
     }
-    // ранжируем по ETH в пуле (прокси капитализации)
-    const ranked = [];
-    for (const tok of cand) {
-      try {
-        const pool = await ponsPub.readContract({ address: F_of(tok), abi: factoryAbi, functionName: "poolOf", args: [tok] }).catch(() => null);
-        let raised = 0n;
-        if (pool) raised = await ponsPub.readContract({ address: pool, abi: poolAbi, functionName: "ethReserve" }).catch(() => 0n);
-        ranked.push({ tok, raised });
-      } catch (e) { /* skip */ }
-    }
-    ranked.sort((a, b) => (b.raised > a.raised ? 1 : -1));
-    const top = ranked.slice(0, SEED_N);
+    // новейшие первыми, берём SEED_N
+    const top = cand.reverse().slice(0, SEED_N).map((tok) => ({ tok }));
     for (const { tok } of top) {
       const m = await readPons(tok);
       if (!m) continue;
