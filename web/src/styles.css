@@ -1983,15 +1983,28 @@ html[data-theme="light"] .vr-bar { background: #00000010; }
 html[data-theme="light"] .wb::after { background: #fffdf7; color: #1c1c1a; box-shadow: 0 14px 34px -18px #00000055; }
 html[data-theme="light"] .wb::before { background: #fffdf7; }
 
-/* раскладка арены: Зал славы слева, бой справа */
-.arena-layout { display: grid; grid-template-columns: 250px 1fr; gap: 24px; align-items: start; margin-top: 20px; }
+/* раскладка арены: лента сигналов слева, бой справа */
+.arena-layout { display: grid; grid-template-columns: 300px 1fr; gap: 24px; align-items: start; margin-top: 20px; }
 .arena-side { position: sticky; top: 84px; }
-.arena-side .hof-row { gap: 9px; padding: 8px 2px; }
-.arena-side .hof-row img { width: 24px; height: 24px; }
-@media (max-width: 1000px) {
+@media (max-width: 1100px) {
   .arena-layout { grid-template-columns: 1fr; }
   .arena-side { position: static; order: 2; }
 }
+/* лента сигналов */
+.sigfeed { display: flex; flex-direction: column; max-height: 640px; overflow-y: auto; margin-top: 4px;
+  scrollbar-width: none; }
+.sigfeed::-webkit-scrollbar { display: none; }
+.sig-row {
+  display: grid; grid-template-columns: 20px 22px 1fr auto; gap: 8px; align-items: center;
+  padding: 8px 2px; border-top: 1px solid var(--border); color: inherit; font-size: 12px;
+}
+.sig-row:first-child { border-top: none; }
+.sig-row:hover { background: #ffffff06; }
+.sig-ic { text-align: center; }
+.sig-row img { width: 22px; height: 22px; border-radius: 7px; object-fit: cover; }
+.sig-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sig-text b { font-weight: 700; }
+.sig-time { font-size: 10.5px; white-space: nowrap; }
 
 /* Гранд-Арена: месячная лига чемпионов */
 .grand-card {

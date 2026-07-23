@@ -89,6 +89,47 @@ export default function Arena() {
     </span>
   );
 
+  // Живая лента сигналов: помогает понять, что происходит внутри монет,
+  // и ловить раннеров на старте.
+  const feed = React.useMemo(() => {
+    if (!st) return [];
+    const byPool = {};
+    for (const tk of st.tokens) byPool[(tk.pool || "").toLowerCase()] = tk;
+    const trades = [...st.trades].sort((a, b) => b.ts - a.ts);
+    // объём кошелька на платформе — для метки «свежий»
+    const firstSeen = {};
+    for (const tr of [...st.trades].sort((a, b) => a.ts - b.ts)) {
+      const k = tr.addr.toLowerCase();
+      if (firstSeen[k] == null) firstSeen[k] = tr.ts;
+    }
+    const vols = trades.map((tr) => tr.eth + tr.fee).filter((v) => v > 0).sort((a, b) => b - a);
+    const whaleCut = vols.length ? vols[Math.floor(vols.length * 0.15)] || vols[0] : Infinity;
+    const events = [];
+    // новые токены (стартовали недавно) — раннеры
+    for (const tk of st.tokens) {
+      const age = Date.now() - (tk.createdAt || 0);
+      if (age < 6 * 3600_000) {
+        const gr = st.alive.find((p) => p.token === tk.token)?.dayGrowth ?? 0;
+        events.push({ ts: tk.createdAt || Date.now(), ic: "🚀", token: tk,
+          text: <>{t("Новый токен")} <b>${tk.symbol}</b>{gr > 0.03 ? <> · <span className="side-buy">+{(gr * 100).toFixed(0)}% {t("раннер")}</span></> : ""}</> });
+      }
+    }
+    // сделки
+    for (const tr of trades.slice(0, 60)) {
+      const tk = byPool[tr.pool];
+      if (!tk) continue;
+      const amt = (tr.eth + tr.fee);
+      const big = amt >= whaleCut;
+      const fresh = firstSeen[tr.addr.toLowerCase()] === tr.ts;
+      let ic = tr.side === "buy" ? "🟢" : "🔴";
+      if (big && tr.side === "buy") ic = "🐳";
+      else if (fresh && tr.side === "buy") ic = "🌱";
+      events.push({ ts: tr.ts, ic, token: tk,
+        text: <><span className="mono">{tr.addr.slice(0, 6)}…</span> {t(tr.side === "buy" ? "купил" : "продал")} <b className={tr.side === "buy" ? "side-buy" : "side-sell"}>{D(amt)}</b> <b>${tk.symbol}</b>{big ? " " + t("кит") : ""}</> });
+    }
+    return events.sort((a, b) => b.ts - a.ts).slice(0, 40);
+  }, [st, rate]);
+
   return (
     <>
       <div className="page-title">⚔️ {t("Арена")}</div>
@@ -106,8 +147,25 @@ export default function Arena() {
       )}
 
       {st && st.participants.length > 0 && (
+        <div className="arena-layout">
+        <aside className="arena-side">
+          <div className="bottom-card" style={{ marginTop: 0 }}>
+            <div className="bt-tabs"><div className="bt-tab on">📡 {t("Лента сигналов")}</div></div>
+            {feed.length === 0 && <div className="dim" style={{ padding: "10px 2px", fontSize: 12.5 }}>{t("Пока тихо — первые сделки появятся здесь.")}</div>}
+            <div className="sigfeed">
+              {feed.map((e, i) => (
+                <a key={i} className="sig-row" href={`#/token/${e.token.token}`}>
+                  <span className="sig-ic">{e.ic}</span>
+                  {e.token.meta?.image ? <img src={e.token.meta.image} alt="" /> : <span className="ts-ph">🖼️</span>}
+                  <span className="sig-text">{e.text}</span>
+                  <span className="sig-time dim">{timeAgo(e.ts)}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        </aside>
         <div className="arena-main">
-          <div className="bt-tabs" style={{ marginTop: 18 }}>
+          <div className="bt-tabs" style={{ marginTop: 0 }}>
             <div className={`bt-tab ${view === "day" ? "on" : ""}`} onClick={() => setView("day")}>
               ⚔️ {t("Суточная арена")}
             </div>
@@ -345,6 +403,7 @@ export default function Arena() {
           </div>
 
           </>)}
+        </div>
         </div>
       )}
 
