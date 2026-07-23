@@ -681,6 +681,23 @@ html[data-theme="light"] .grad-wrap { background: radial-gradient(700px 260px at
 .nav-pills::-webkit-scrollbar { display: none; }
 .nav-pill { padding: 7px 16px; border-radius: 999px; font-size: 13.5px; font-weight: 600; color: var(--text-dim); cursor: pointer; transition: all .15s; white-space: nowrap; flex: none; }
 .nav-pill.on { background: var(--bg-soft); color: var(--text); }
+
+/* «Арена» — привлекаем внимание: мягкая пульсация + огонёк */
+.nav-hot {
+  color: var(--gold);
+  animation: navPulse 2.2s ease-in-out infinite;
+}
+.nav-hot.on { animation: none; } /* на самой странице арены не пульсируем */
+.hot-flame { display: inline-block; animation: flameFlick 1.1s ease-in-out infinite; }
+@keyframes navPulse {
+  0%, 100% { text-shadow: 0 0 0 transparent; opacity: .92; }
+  50% { text-shadow: 0 0 12px var(--gold); opacity: 1; }
+}
+@keyframes flameFlick {
+  0%, 100% { transform: translateY(0) scale(1); filter: none; }
+  50% { transform: translateY(-1px) scale(1.15); filter: drop-shadow(0 0 4px #ff8a00aa); }
+}
+@media (prefers-reduced-motion: reduce) { .nav-hot, .hot-flame { animation: none; } }
 .icon-btn { width: 40px; height: 40px; border-radius: 11px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
 .icon-btn:hover { background: var(--card-hover); }
 .wallet-wrap { position: relative; }

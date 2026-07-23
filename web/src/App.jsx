@@ -346,7 +346,9 @@ export default function App() {
           )}
           <div className={`nav-pills ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(false)}>
             <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/leaderboard") && !route.startsWith("/profile") && !route.startsWith("/vote") && !route.startsWith("/treasury") && !route.startsWith("/about") && !route.startsWith("/earn") && !route.startsWith("/arena") ? "on" : ""}`} href="#/">{t("Обзор")}</a>
-            <a className={`nav-pill ${route.startsWith("/arena") ? "on" : ""}`} href="#/arena">⚔️ {t("Арена")}</a>
+            <a className={`nav-pill nav-hot ${route.startsWith("/arena") ? "on" : ""}`} href="#/arena">
+              ⚔️ {t("Арена")} <span className="hot-flame">🔥</span>
+            </a>
             <a className={`nav-pill ${route.startsWith("/vote") ? "on" : ""}`} href="#/vote">{t("Голосование")}</a>
             <a className={`nav-pill ${route.startsWith("/treasury") ? "on" : ""}`} href="#/treasury">{t("Казна")}</a>
             <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>
@@ -428,7 +430,7 @@ export default function App() {
             </div>
             <div className="fcol">
               <h4>{t("Продукт")}</h4>
-              <a href="#/arena">⚔️ {t("Арена")}</a>
+              <a href="#/arena">⚔️ {t("Арена")} 🔥</a>
               <a href="#/vote">{t("Голосование")}</a>
               <a href="#/treasury">{t("Казна")}</a>
               <a href="#/analytics">{t("Аналитика")}</a>
