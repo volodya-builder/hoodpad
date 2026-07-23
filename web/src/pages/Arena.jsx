@@ -231,11 +231,12 @@ export default function Arena() {
           {st.alive.length > 1 && (() => {
             const secs = Math.max(0, Math.floor(((st.nextCheckpoint ?? 0) - Date.now()) / 1000));
             const leader = st.alive[0], loser = st.alive[st.alive.length - 1];
-            const mins = Math.floor(secs / 60);
+            const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60);
+            const hm = h > 0 ? `${h}${t("ч")} ${m}${t("м")}` : `${m}${t("м")}`;
             let line;
             if (secs < 90) line = <>🔴 {t("Развязка близко!")} <b>${loser.symbol}</b> {t("вылетает через")} <b>{secs}{t("с")}</b> — {t("держателям пора спасать монету!")}</>;
-            else if (leader.dayGrowth > 0.05) line = <>🚀 <b>${leader.symbol}</b> {t("рвётся вперёд")} (+{(leader.dayGrowth * 100).toFixed(1)}%)! <b>${loser.symbol}</b> {t("на грани — осталось")} {mins}{t("м")}.</>;
-            else line = <>⚔️ <b>${leader.symbol}</b> {t("держит корону")}. <b>${loser.symbol}</b> {t("замыкает — следующее выбывание через")} {mins}{t("м")}.</>;
+            else if (leader.dayGrowth > 0.05) line = <>🚀 <b>${leader.symbol}</b> {t("рвётся вперёд")} (+{(leader.dayGrowth * 100).toFixed(1)}%)! <b>${loser.symbol}</b> {t("на грани — осталось")} {hm}.</>;
+            else line = <>⚔️ <b>${leader.symbol}</b> {t("держит корону")}. <b>${loser.symbol}</b> {t("замыкает — следующее выбывание через")} {hm}.</>;
             return <div className="arena-caster">{line}</div>;
           })()}
 
