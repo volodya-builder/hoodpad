@@ -1816,6 +1816,51 @@ html[data-theme="light"] .tr-bar { background: #00000010; }
 .arena-row.leader { border-color: var(--gold); box-shadow: 0 0 22px -12px var(--gold); }
 .arena-row.danger { border-color: #e06a4a66; }
 .arena-row.dead { opacity: .45; }
+/* плавные ползущие полосы боя */
+.ar-volbar > span { transition: width .9s cubic-bezier(.4, 0, .2, 1); }
+/* красная тревога аутсайдера в последнюю минуту */
+.arena-row.danger-hot {
+  border-color: #e06a4a; animation: dangerHot 1s ease-in-out infinite;
+}
+@keyframes dangerHot {
+  0%, 100% { box-shadow: 0 0 0 0 #e06a4a00; }
+  50% { box-shadow: 0 0 18px -3px #e06a4a; }
+}
+.hot-timer { color: #e06a4a; font-weight: 800; font-variant-numeric: tabular-nums; animation: hotBlink .8s steps(2) infinite; }
+@keyframes hotBlink { 50% { opacity: .35; } }
+/* болельщик */
+.arena-row.cheered { border-color: var(--gold); background: linear-gradient(90deg, #d4af3712, transparent 45%), var(--card); }
+.ar-star { cursor: pointer; font-size: 15px; color: var(--text-dim); }
+.ar-star:hover, .ar-star.on { color: var(--gold); }
+.ar-streak { font-size: 10.5px; color: #ff8a00; font-weight: 800; margin-left: 6px; }
+.save-btn {
+  cursor: pointer; font-size: 11px; font-weight: 800; color: #0c0c0a;
+  background: var(--gold); border-radius: 8px; padding: 4px 9px;
+}
+.save-btn:hover { filter: brightness(1.1); }
+/* комментатор боя */
+.arena-caster {
+  margin: 14px 0; padding: 11px 16px; border-radius: 13px;
+  background: linear-gradient(90deg, #d4af370c, transparent 60%), var(--card);
+  border: 1px solid var(--border); font-size: 13.5px;
+}
+.arena-caster b { color: var(--gold); }
+/* тост «выбыл» */
+.arena-toast {
+  position: fixed; left: 50%; bottom: 34px; transform: translateX(-50%);
+  z-index: 90; display: flex; align-items: center; gap: 10px;
+  background: linear-gradient(160deg, #2a1614, #141210);
+  border: 1px solid #e06a4a66; border-radius: 14px; padding: 12px 18px;
+  box-shadow: 0 18px 44px -16px #000d; font-size: 14px;
+  animation: toastIn .35s ease, toastPulse 1.6s ease-in-out .35s;
+}
+.arena-toast img { width: 26px; height: 26px; border-radius: 8px; }
+.arena-toast b { color: #e06a4a; }
+@keyframes toastIn { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+@keyframes toastPulse { 50% { box-shadow: 0 0 30px -6px #e06a4a88; } }
+@media (prefers-reduced-motion: reduce) {
+  .arena-row.danger-hot, .hot-timer, .arena-toast, .ar-volbar > span { animation: none; transition: none; }
+}
 .arena-row.defending { border-color: var(--border-gold); background: linear-gradient(90deg, #d4af370c, transparent 40%), var(--card); }
 .arena-row img { width: 30px; height: 30px; border-radius: 9px; object-fit: cover; }
 .ar-rank { font-size: 15px; text-align: center; font-weight: 700; }

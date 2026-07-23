@@ -23,13 +23,43 @@ function useClockTick() {
   }, []);
 }
 
+// болельщик: за какой токен человек болеет (localStorage)
+function useCheer() {
+  const [c, setC] = useState(() => { try { return localStorage.getItem("hood_cheer") || ""; } catch (e) { return ""; } });
+  const set = (addr) => {
+    const v = c.toLowerCase() === (addr || "").toLowerCase() ? "" : (addr || "");
+    setC(v);
+    try { v ? localStorage.setItem("hood_cheer", v) : localStorage.removeItem("hood_cheer"); } catch (e) { /* ignore */ }
+  };
+  return [c, set];
+}
+
 export default function Arena() {
   const { t } = useLang();
   const rate = useEthUsd();
   useClock(1000);
   const st = useArena();
+  const [cheer, setCheer] = useCheer();
+  const [toast, setToast] = useState(null);      // всплывающее событие «выбыл»
+  const prevElim = React.useRef(null);
   // накоплено в казне на выкупы
   const [treBal, setTreBal] = useState(null);
+
+  // тост при новом выбывании
+  useEffect(() => {
+    if (!st) return;
+    const cur = new Set(st.eliminated.map((e) => e.token.token.toLowerCase()));
+    if (prevElim.current) {
+      for (const e of st.eliminated) {
+        if (!prevElim.current.has(e.token.token.toLowerCase())) {
+          setToast({ sym: e.token.symbol, img: e.token.meta?.image, ts: Date.now() });
+          setTimeout(() => setToast((x) => (x && Date.now() - x.ts >= 5500 ? null : x)), 6000);
+          break;
+        }
+      }
+    }
+    prevElim.current = cur;
+  }, [st?.eliminated?.length]);
   useEffect(() => {
     let alive = true;
     const pull = () => publicClient.getBalance({ address: TREASURY_ADDRESS })
@@ -197,6 +227,29 @@ export default function Arena() {
             </div>
           )}
 
+          {/* комментатор боя — живая строка-репортаж */}
+          {st.alive.length > 1 && (() => {
+            const secs = Math.max(0, Math.floor(((st.nextCheckpoint ?? 0) - Date.now()) / 1000));
+            const leader = st.alive[0], loser = st.alive[st.alive.length - 1];
+            const mins = Math.floor(secs / 60);
+            let line;
+            if (secs < 90) line = <>🔴 {t("Развязка близко!")} <b>${loser.symbol}</b> {t("вылетает через")} <b>{secs}{t("с")}</b> — {t("держателям пора спасать монету!")}</>;
+            else if (leader.dayGrowth > 0.05) line = <>🚀 <b>${leader.symbol}</b> {t("рвётся вперёд")} (+{(leader.dayGrowth * 100).toFixed(1)}%)! <b>${loser.symbol}</b> {t("на грани — осталось")} {mins}{t("м")}.</>;
+            else line = <>⚔️ <b>${leader.symbol}</b> {t("держит корону")}. <b>${loser.symbol}</b> {t("замыкает — следующее выбывание через")} {mins}{t("м")}.</>;
+            return <div className="arena-caster">{line}</div>;
+          })()}
+
+          {/* болеешь за токен */}
+          {cheer && st.alive.some((p) => p.token.toLowerCase() === cheer.toLowerCase()) && (() => {
+            const my = st.alive.find((p) => p.token.toLowerCase() === cheer.toLowerCase());
+            const place = st.alive.indexOf(my) + 1;
+            return (
+              <div className="cushion-banner" style={{ marginBottom: 12 }}>
+                ⭐ {t("Ты болеешь за")} <b>${my.symbol}</b> — {t("сейчас")} {place}/{st.alive.length} {t("в бою")}
+              </div>
+            );
+          })()}
+
           <div className="arena-list">
             <div className="arena-hdr">
               <span />
@@ -207,17 +260,25 @@ export default function Arena() {
               <span style={{ textAlign: "right" }}>{t("Статус")}</span>
             </div>
             {(() => {
-              return st.alive.map((p, i) => {
               const maxVol = Math.max(...st.alive.map((x) => x.score), 1e-9);
+              const secsToElim = Math.max(0, Math.floor(((st.nextCheckpoint ?? 0) - Date.now()) / 1000));
+              // стрики: сколько раз токен был чемпионом за последние дни
+              const winCount = {};
+              try { for (const h of hallOfFame(st.tokens, st.trades, 14)) { const k = h.champion.token.toLowerCase(); winCount[k] = (winCount[k] || 0) + 1; } } catch (e) { /* ignore */ }
+              return st.alive.map((p, i) => {
               const w = Math.max(3, (p.score / maxVol) * 100);
               const danger = st.alive.length > 1 && i === st.alive.length - 1;
+              const hot = danger && secsToElim < 60;       // красная тревога в последнюю минуту
+              const isCheer = cheer && p.token.toLowerCase() === cheer.toLowerCase();
+              const streak = winCount[p.token.toLowerCase()] || 0;
               return (
-                <a key={p.token} className={`arena-row ${i === 0 ? "leader" : ""} ${danger ? "danger" : ""}`}
+                <a key={p.token} className={`arena-row ${i === 0 ? "leader" : ""} ${danger ? "danger" : ""} ${hot ? "danger-hot" : ""} ${isCheer ? "cheered" : ""}`}
                    href={`#/token/${p.token}`}>
                   <span className="ar-rank">{i === 0 ? "👑" : i + 1}</span>
                   {p.meta.image ? <img src={p.meta.image} alt="" /> : <span className="ts-ph">🖼️</span>}
                   <span className="ar-name">
                     <b>${p.symbol}</b>
+                    {streak > 0 && <span className="ar-streak" title={t("Побед за 2 недели")}>🔥{streak}</span>}
                     <CA p={p} />
                   </span>
                   <span className="ar-mcap">{usd(mcapOf(p))}</span>
@@ -230,8 +291,15 @@ export default function Arena() {
                       </span>
                     </span>
                   </span>
-                  <span className={`ar-status ${danger ? "bad" : "ok"}`}>
-                    {danger ? t("под угрозой") : t("в бою")}
+                  <span className={`ar-status ${danger ? "bad" : "ok"}`} style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "flex-end" }}>
+                    <span className={`ar-star ${isCheer ? "on" : ""}`} title={t(isCheer ? "Не болеть" : "Болеть за этот токен")}
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setCheer(p.token); }}>
+                      {isCheer ? "★" : "☆"}
+                    </span>
+                    {hot ? <span className="hot-timer">⚡{secsToElim}{t("с")}</span>
+                      : danger
+                        ? <span className="save-btn" onClick={(e) => { e.preventDefault(); window.location.hash = `#/token/${p.token}`; }}>⚡ {t("Спасти")}</span>
+                        : t("в бою")}
                   </span>
                 </a>
               );
@@ -256,6 +324,13 @@ export default function Arena() {
           </div>
 
           </>)}
+        </div>
+      )}
+
+      {toast && (
+        <div className="arena-toast">
+          {toast.img ? <img src={toast.img} alt="" /> : <span>☠</span>}
+          <span>☠ <b>${toast.sym}</b> {t("выбыл из арены!")}</span>
         </div>
       )}
     </>
