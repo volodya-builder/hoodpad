@@ -220,9 +220,37 @@ export default function Treasury() {
                 if (r.kind === "buy") acc -= r.eth;
                 after[j] = acc;
               }
-              return state.rows.map((r, i) => {
+              // группируем идущие подряд пополнения одного дня в одну строку —
+              // чтобы история не превращалась в свалку мелких Deposit'ов.
+              const dayKey = (ts) => (ts ? new Date(ts).toISOString().slice(0, 10) : "?");
+              const disp = [];
+              for (let i = 0; i < state.rows.length; i++) {
+                const r = state.rows[i];
+                if (r.kind === "in") {
+                  const g = { kind: "in-group", eth: r.eth, count: 1, ts: r.ts, tx: r.tx, afterIdx: i };
+                  while (i + 1 < state.rows.length && state.rows[i + 1].kind === "in"
+                         && dayKey(state.rows[i + 1].ts) === dayKey(r.ts)) {
+                    i++; g.eth += state.rows[i].eth; g.count += 1;
+                  }
+                  disp.push(g);
+                } else {
+                  disp.push({ ...r, afterIdx: i });
+                }
+              }
+              return disp.map((r, i) => {
+                if (r.kind === "in-group") {
+                  return (
+                    <a className="trs-row" key={i} href={`${EXPLORER}/tx/${r.tx}`} target="_blank" rel="noreferrer"
+                       title={t("Открыть транзакцию в эксплорере")}>
+                      <span className="trs-kind tr-in">↓ {t("Пополнение")}{r.count > 1 ? ` ×${r.count}` : ""}</span>
+                      <span>{fmtEth(r.eth)} ETH <span className="usd-sub">({dollars(r.eth)})</span></span>
+                      <span className="dim">{r.count > 1 ? t("сбор комиссий за день") : t("комиссии платформы")}</span>
+                      <span className="dim mono" style={{ textAlign: "right" }}>{fmtEth(after[r.afterIdx])} ETH</span>
+                      <span className="dim" style={{ textAlign: "right" }}>{r.ts ? timeAgo(r.ts) : ""} ↗</span>
+                    </a>
+                  );
+                }
                 const k = KIND[r.kind];
-                const srcSym = r.kind === "in" ? state.poolSym?.[(r.who || "").toLowerCase()] : null;
                 return (
                   <a className="trs-row" key={i} href={`${EXPLORER}/tx/${r.tx}`} target="_blank" rel="noreferrer"
                      title={t("Открыть транзакцию в эксплорере")}>
@@ -233,18 +261,11 @@ export default function Treasury() {
                         : <>{fmtEth(r.eth)} ETH <span className="usd-sub">({dollars(r.eth)})</span></>}
                     </span>
                     <span className="dim">
-                      {r.kind === "in" && (srcSym
-                        ? <>{t("комиссии пула")} <b>${srcSym}</b></>
-                        : <>{t("доля комиссий платформы")} · <span className="mono">{short(r.who)}</span></>)}
                       {r.kind === "buy" && <>{t("куплено")} {fmt(r.tokens, 0)} <b>${r.sym}</b> {t("с рынка")}</>}
                       {r.kind === "burn" && <>{t("на dead-адрес навсегда")} 🔥</>}
                     </span>
-                    <span className="dim mono" style={{ textAlign: "right" }}>
-                      {fmtEth(after[i])} ETH
-                    </span>
-                    <span className="dim" style={{ textAlign: "right" }}>
-                      {r.ts ? timeAgo(r.ts) : `#${r.block}`} ↗
-                    </span>
+                    <span className="dim mono" style={{ textAlign: "right" }}>{fmtEth(after[r.afterIdx])} ETH</span>
+                    <span className="dim" style={{ textAlign: "right" }}>{r.ts ? timeAgo(r.ts) : `#${r.block}`} ↗</span>
                   </a>
                 );
               });
