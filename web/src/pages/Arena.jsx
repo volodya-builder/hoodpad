@@ -268,7 +268,10 @@ export default function Arena() {
               const elimFrac = elimInterval > 0
                 ? Math.max(0, Math.min(1, ((st.nextCheckpoint ?? 0) - Date.now()) / elimInterval)) : 0;
               const p2 = (x) => String(x).padStart(2, "0");
-              const elimClock = `${p2(Math.floor(secsToElim / 60))}:${p2(secsToElim % 60)}`;
+              const eh = Math.floor(secsToElim / 3600);
+              const elimClock = eh > 0
+                ? `${eh}:${p2(Math.floor((secsToElim % 3600) / 60))}:${p2(secsToElim % 60)}`
+                : `${p2(Math.floor(secsToElim / 60))}:${p2(secsToElim % 60)}`;
               // стрики: сколько раз токен был чемпионом за последние дни
               const winCount = {};
               try { for (const h of hallOfFame(st.tokens, st.trades, 14)) { const k = h.champion.token.toLowerCase(); winCount[k] = (winCount[k] || 0) + 1; } } catch (e) { /* ignore */ }

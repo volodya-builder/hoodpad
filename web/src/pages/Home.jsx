@@ -126,7 +126,7 @@ export default function Home({ onSearch }) {
         </a>
       )}
       <a className="cushion-banner" href="#/treasury">
-        🛡 {t("Казна вернула рынку")}: <b>{fmtEth(support.totalEth)} ETH</b>
+        🛡 {t("Казна вернула рынку")}: <b>{support.totalEth * rate >= 1000 ? usd(support.totalEth * rate) : "$" + (support.totalEth * rate).toFixed(2)}</b> <span className="dim">({fmtEth(support.totalEth)} ETH)</span>
         {support.totalEth === 0 && <span className="dim"> · {t("копится с каждой сделки — первые выкупы после голосования")}</span>} →
       </a>
       {error && <div className="error">{error}</div>}
