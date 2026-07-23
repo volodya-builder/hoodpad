@@ -1835,25 +1835,26 @@ html[data-theme="light"] .vr-bar { background: #00000010; }
 .ait-badge { font-weight: 800; font-size: 14px; }
 .ait-body { font-size: 13.5px; line-height: 1.55; }
 
-/* бегущая строка событий под шапкой */
-.ticker {
+/* бегущая строка событий под шапкой (класс evticker — чтобы не конфликтовать
+   с .ticker, которым отрисовываются тикеры монет) */
+.evticker {
   overflow: hidden; white-space: nowrap;
   background: linear-gradient(180deg, #14151266, transparent), var(--bg);
   border-bottom: 1px solid var(--border);
   padding: 8px 0;
   position: relative;
 }
-.ticker::before, .ticker::after {
+.evticker::before, .evticker::after {
   content: ""; position: absolute; top: 0; bottom: 0; width: 60px; z-index: 2; pointer-events: none;
 }
-.ticker::before { left: 0; background: linear-gradient(90deg, var(--bg), transparent); }
-.ticker::after { right: 0; background: linear-gradient(-90deg, var(--bg), transparent); }
-.ticker-track {
+.evticker::before { left: 0; background: linear-gradient(90deg, var(--bg), transparent); }
+.evticker::after { right: 0; background: linear-gradient(-90deg, var(--bg), transparent); }
+.evticker-track {
   display: inline-flex; align-items: center;
   animation: tickmove 45s linear infinite;
   will-change: transform;
 }
-.ticker:hover .ticker-track { animation-play-state: paused; }
+.evticker:hover .evticker-track { animation-play-state: paused; }
 .tick-item {
   display: inline-flex; align-items: center; gap: 6px;
   font-size: 12.5px; color: var(--text-dim); font-weight: 600;

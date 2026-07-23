@@ -68,8 +68,8 @@ export default function Ticker() {
   ));
 
   return (
-    <div className="ticker" aria-hidden>
-      <div className="ticker-track">
+    <div className="evticker" aria-hidden>
+      <div className="evticker-track">
         {row}
         {items.map((it, i) => (
           <span className="tick-item" key={"b" + i}>{it}<span className="tick-dot">◆</span></span>

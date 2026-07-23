@@ -74,7 +74,9 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
       layout: { background: { color: "transparent" }, textColor: dim, fontSize: 11, attributionLogo: false },
       grid: { vertLines: { color: "#80808018" }, horzLines: { color: "#80808018" } },
       timeScale: { timeVisible: true, secondsVisible: false, borderColor: "#80808030", rightOffset: 3, minBarSpacing: 0.5 },
-      rightPriceScale: { borderColor: "#80808030", mode: logScale ? 1 : 0 },
+      rightPriceScale: { borderColor: "#80808030", mode: logScale ? 1 : 0,
+        // воздух сверху/снизу, чтобы свеча не занимала всю высоту
+        scaleMargins: { top: 0.25, bottom: 0.2 } },
       crosshair: { mode: 0 },
       localization: { priceFormatter: (v) => usd(v) },
     });
@@ -166,11 +168,14 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
 
     if (!c.fitted && candles.length > 0) {
       const ts = c.chart.timeScale();
-      ts.fitContent();
-      // стартовый зум всегда умеренно отдалённый: бары компактные, вокруг воздух
+      // фиксированный компактный масштаб + одинаковый воздух слева и справа,
+      // чтобы даже 1-2 свечи стояли ПО ЦЕНТРУ и виднелись «издалека»
       try {
-        if (ts.options().barSpacing > 12) ts.applyOptions({ barSpacing: 10, rightOffset: 10 });
-      } catch (e) { /* ignore */ }
+        ts.applyOptions({ barSpacing: 8 });
+        const n = candles.length;
+        const pad = Math.max(8, Math.round(n * 0.6));
+        ts.setVisibleLogicalRange({ from: -pad, to: n + pad });
+      } catch (e) { try { c.chart.timeScale().fitContent(); } catch (e2) {} }
       c.fitted = true;
     }
   }, [points, trades, rate, marks, lines, iv, logScale, fs, showLines]);
