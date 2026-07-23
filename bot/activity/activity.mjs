@@ -33,9 +33,15 @@ const BUDGET_USD = Number(process.env.BUDGET_USD || 10);  // лимит трат
 const ETH_USD    = Number(process.env.ETH_USD || 2000);   // грубый курс для лимита
 const IMG_BUDGET = 120_000;
 
-let PK = (process.env.ACTIVITY_PRIVATE_KEY || "").replace(/["'\s]/g, "");
+const RAW_PK = process.env.ACTIVITY_PRIVATE_KEY || "";
+let PK = RAW_PK.replace(/["'\s]/g, "");
 if (PK && !PK.startsWith("0x")) PK = "0x" + PK;
-if (!/^0x[0-9a-fA-F]{64}$/.test(PK)) { console.error("Нет ACTIVITY_PRIVATE_KEY"); process.exit(1); }
+if (!/^0x[0-9a-fA-F]{64}$/.test(PK)) {
+  console.error(`Ключ не читается. Длина пришедшего значения: ${RAW_PK.length} символов ` +
+    `(после чистки ${PK.length}). Ожидается 66 (0x + 64 hex). ` +
+    `Если 0 — секрет ACTIVITY_PRIVATE_KEY пустой/не передался.`);
+  process.exit(1);
+}
 
 const chain = defineChain({ id: 4663, name: "Robinhood Chain",
   nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
