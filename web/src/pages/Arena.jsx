@@ -308,8 +308,7 @@ export default function Arena() {
                       {isCheer ? "★" : "☆"}
                     </span>
                     {hot ? <span className="hot-timer">⚡{secsToElim}{t("с")}</span>
-                      : danger
-                        ? <span className="save-btn" onClick={(e) => { e.preventDefault(); window.location.hash = `#/token/${p.token}`; }}>⚡ {t("Спасти")}</span>
+                      : danger ? <span style={{ color: "#e06a4a" }}>{t("под угрозой")}</span>
                         : t("в бою")}
                   </span>
                 </a>
