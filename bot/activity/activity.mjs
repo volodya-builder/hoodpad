@@ -23,11 +23,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // ------------------------------------------------------------ конфиг
 const HOOD_RPC   = process.env.RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
 const HOOD_FACTORY = process.env.HOOD_FACTORY || "0x68a983f0c73f1a5dc13aa3ae71a19a5787162cdb";
-const PONS_RPC   = process.env.PONS_RPC || HOOD_RPC; // Pons живёт в том же мейннете
-const PONS_FACTORIES = (process.env.PONS_FACTORIES ||
-  "0xA5aAb3F0c6EeadF30Ef1D3Eb997108E976351feB,0x0c37a24F5D23A486FA692d1500881d698B1F77a4")
-  .split(",").map((s) => s.trim());
-const SEED_N     = Number(process.env.SEED_N || 12);      // сколько топ-токенов скопировать
+const SEED_N     = Number(process.env.SEED_N || 16);      // сколько тематических токенов создать
 const WALLETS    = Number(process.env.WALLETS || 4);      // тестовых кошельков
 const BUDGET_USD = Number(process.env.BUDGET_USD || 10);  // лимит трат в сутки, $
 const ETH_USD    = Number(process.env.ETH_USD || 2000);   // грубый курс для лимита
@@ -48,8 +44,28 @@ const chain = defineChain({ id: 4663, name: "Robinhood Chain",
   rpcUrls: { default: { http: [HOOD_RPC] } } });
 const funder = privateKeyToAccount(PK);
 const pub  = createPublicClient({ chain, transport: http(HOOD_RPC) });
-const ponsPub = createPublicClient({ chain, transport: http(PONS_RPC) });
 const W = (a) => createWalletClient({ account: a, chain, transport: http(HOOD_RPC) });
+
+// Тематические токены hood (Робин Гуд) — имя, тикер, эмодзи, цвет фона.
+const THEME = [
+  ["Sherwood", "SHER", "🏹", "#1f8a4c"], ["Golden Arrow", "GARW", "➵", "#c9a227"],
+  ["Maid Marian", "MARI", "🌹", "#c0392b"], ["Friar Tuck", "TUCK", "🍺", "#8e5a2a"],
+  ["Little John", "LJON", "🪵", "#5d6d3b"], ["Nottingham", "NOTT", "🏰", "#5b5b6e"],
+  ["Golden Goose", "GOOS", "🪿", "#d4af37"], ["Green Cloak", "CLOK", "🧥", "#2e7d4f"],
+  ["Royal Stag", "STAG", "🦌", "#a9743c"], ["Great Oak", "OAKK", "🌳", "#3f6b35"],
+  ["Silver Shilling", "SHIL", "🪙", "#9fa8b3"], ["King Richard", "RICH", "👑", "#b58a2e"],
+  ["Sly Fox", "FOXX", "🦊", "#d3672b"], ["Night Owl", "OWLL", "🦉", "#4a4661"],
+  ["Bullseye", "BULL", "🎯", "#b03a3a"], ["Full Quiver", "QUIV", "🏹", "#6d4f2a"],
+  ["Merry Band", "MERR", "🎭", "#3b7a68"], ["Alan-a-Dale", "ADAL", "🎻", "#7a5230"],
+  ["Loot Sack", "LOOT", "💰", "#977a1f"], ["Hood Hound", "HND", "🐶", "#6e4b8a"],
+];
+const svgLogo = (emoji, bg) => "data:image/svg+xml;base64," + Buffer.from(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256">` +
+  `<defs><radialGradient id="g" cx="35%" cy="30%"><stop offset="0%" stop-color="#ffffff33"/>` +
+  `<stop offset="100%" stop-color="#00000000"/></radialGradient></defs>` +
+  `<rect width="256" height="256" rx="56" fill="${bg}"/>` +
+  `<rect width="256" height="256" rx="56" fill="url(#g)"/>` +
+  `<text x="128" y="150" font-size="120" text-anchor="middle">${emoji}</text></svg>`, "utf8").toString("base64");
 
 const factoryAbi = parseAbi([
   "function createToken(string name, string symbol, string metadataURI, address creatorWallet) payable returns (address, address)",
@@ -91,39 +107,24 @@ async function main() {
   console.log(`hood activity · ${new Date().toISOString()} · фандер ${funder.address}`);
   console.log(`Бюджет дня: $${BUDGET_USD} (${budgetEth.toFixed(5)} ETH), потрачено ${state.spentEth.toFixed(5)} ETH`);
 
-  // ---- 1) СИД токенов Pons (один раз) --------------------------------
+  // ---- 1) СИД тематических токенов (один раз) ------------------------
   const already = Number(await pub.readContract({ address: HOOD_FACTORY, abi: factoryAbi, functionName: "tokenCount" }));
   if (!state.seeded && already < SEED_N) {
-    console.log(`Сид: копирую последние ${SEED_N} токенов из списка создания Pons…`);
-    const cand = [];
-    for (const F of PONS_FACTORIES) {
-      try {
-        const cnt = Number(await ponsPub.readContract({ address: F, abi: factoryAbi, functionName: "tokenCount" }));
-        // берём хвост списка — это самые свежие созданные токены (лента «новые»)
-        const off = Math.max(0, cnt - SEED_N * 2);
-        const addrs = await ponsPub.readContract({ address: F, abi: factoryAbi, functionName: "tokens", args: [BigInt(off), BigInt(cnt - off)] });
-        for (const a of addrs) cand.push(a); // порядок создания
-      } catch (e) { console.warn("Pons factory чтение:", F, e.shortMessage || e.message); }
-    }
-    // новейшие первыми, берём SEED_N
-    const top = cand.reverse().slice(0, SEED_N).map((tok) => ({ tok }));
-    for (const { tok } of top) {
-      const m = await readPons(tok);
-      if (!m) continue;
+    console.log(`Сид: создаю ${SEED_N} тематических токенов hood…`);
+    for (const [name, symbol, emoji, bg] of THEME.slice(0, SEED_N)) {
       try {
         const uri = "data:application/json;base64," + Buffer.from(JSON.stringify({
-          image: (m.meta.image || "").slice(0, IMG_BUDGET),
-          description: m.meta.description || "",
-          x: m.meta.x || "", telegram: m.meta.telegram || "", website: m.meta.website || "",
+          image: svgLogo(emoji, bg),
+          description: `${name} — a citizen of the hood. The greedy hoard, hood gives back.`,
         }), "utf8").toString("base64");
         const h = await W(funder).writeContract({
           address: HOOD_FACTORY, abi: factoryAbi, functionName: "createToken",
-          args: [m.name, m.symbol, uri, funder.address],
+          args: [name, symbol, uri, funder.address],
         });
         await pub.waitForTransactionReceipt({ hash: h });
-        console.log(`  + ${m.symbol.padEnd(6)} ${m.name}`);
-        await sleep(1200);
-      } catch (e) { console.warn(`  ! ${m.symbol}: ${(e.shortMessage || e.message).slice(0, 60)}`); }
+        console.log(`  + ${symbol.padEnd(6)} ${name}`);
+        await sleep(1000);
+      } catch (e) { console.warn(`  ! ${symbol}: ${(e.shortMessage || e.message).slice(0, 60)}`); }
     }
     state.seeded = true; save();
   }
@@ -193,26 +194,6 @@ async function main() {
   state.spentEth += burned + trades * 0.00002; // + небольшой запас на газ трейдеров
   save();
   console.log(`Сделок: ${trades}. Потрачено за день суммарно ~${state.spentEth.toFixed(5)} ETH ($${(state.spentEth * ETH_USD).toFixed(2)}).`);
-
-  function F_of(tok) { return PONS_FACTORIES[0]; } // poolOf есть на обеих; берём первую
-}
-
-// какая фабрика Pons владеет токеном (для poolOf) — пробуем обе
-async function readPons(addr) {
-  try {
-    const [name, symbol] = await Promise.all([
-      ponsPub.readContract({ address: addr, abi: metaAbi, functionName: "name" }),
-      ponsPub.readContract({ address: addr, abi: metaAbi, functionName: "symbol" }),
-    ]);
-    const meta = {};
-    try { meta.image = await ponsPub.readContract({ address: addr, abi: metaAbi, functionName: "logo" }); } catch (e) {}
-    try { meta.description = await ponsPub.readContract({ address: addr, abi: metaAbi, functionName: "description" }); } catch (e) {}
-    try {
-      const [tw, tg, , web] = await ponsPub.readContract({ address: addr, abi: metaAbi, functionName: "socials" });
-      meta.x = tw; meta.telegram = tg; meta.website = web;
-    } catch (e) {}
-    return { name, symbol, meta };
-  } catch (e) { return null; }
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
