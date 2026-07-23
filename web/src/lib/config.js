@@ -34,21 +34,22 @@ const NETWORK = import.meta.env.VITE_NETWORK ?? "mainnet";
 export const CHAIN =
   NETWORK === "mainnet" ? robinhoodMainnet : NETWORK === "local" ? localChain : robinhoodTestnet;
 
-// При смене сети чистим весь кэш данных (иначе на мейннете мелькают
-// старые тестнет-токены из localStorage, пока не подтянутся свежие).
-try {
-  if (localStorage.getItem("hood_net") !== NETWORK) {
-    for (const k of Object.keys(localStorage)) {
-      if (k.startsWith("hood_cache_") || k.startsWith("hood_created_")) localStorage.removeItem(k);
-    }
-    localStorage.setItem("hood_net", NETWORK);
-  }
-} catch (e) { /* ignore */ }
-
 // hood v2 (мейннет, задеплоено 22.07.2026): фабрика 20/20/60, «голос за шкуру».
 // Старая v1-фабрика выведена из конфига — чистый лист.
 export const FACTORY_ADDRESS =
   import.meta.env.VITE_FACTORY_ADDRESS ?? "0x68a983f0c73f1a5dc13aa3ae71a19a5787162cdb";
+
+// При смене сети ИЛИ адреса фабрики чистим весь кэш данных — иначе после
+// переезда на v2 в localStorage остаются старые токены с прошлой фабрики.
+try {
+  const tag = NETWORK + ":" + FACTORY_ADDRESS.toLowerCase();
+  if (localStorage.getItem("hood_net") !== tag) {
+    for (const k of Object.keys(localStorage)) {
+      if (k.startsWith("hood_cache_") || k.startsWith("hood_created_")) localStorage.removeItem(k);
+    }
+    localStorage.setItem("hood_net", tag);
+  }
+} catch (e) { /* ignore */ }
 
 // BuybackTreasuryV2 (60% комиссий; ETH уходит только на выкупы; выкуп→сжигание)
 export const TREASURY_ADDRESS =
