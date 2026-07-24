@@ -15,7 +15,8 @@ const { createPublicClient, createWalletClient, http, parseAbi, formatEther } = 
 const { privateKeyToAccount } = require("viem/accounts");
 
 const RPC_URL = process.env.RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
-const FACTORY = process.env.FACTORY || "0xb09683cdd8e1dae93e37163eb4e6dd925d4104f9";
+// по умолчанию — текущая v2-фабрика (ABI v1/v2 совместим для выхода)
+const FACTORY = process.env.FACTORY || "0x68a983f0c73f1a5dc13aa3ae71a19a5787162cdb";
 
 const factoryAbi = parseAbi([
   "function tokenCount() view returns (uint256)",
@@ -48,12 +49,17 @@ async function main() {
   const main_ = privateKeyToAccount(PK);
   const W = (a) => createWalletClient({ account: a, chain, transport });
 
-  // кошельки: главный + тестовые
+  // кошельки: главный + тестовые (sim-wallets.json) + трейдеры бота активности (state.json)
   const wallets = [main_];
   try {
     const keys = JSON.parse(fs.readFileSync(path.join(__dirname, "sim-wallets.json"), "utf8"));
     for (const k of keys) wallets.push(privateKeyToAccount(k));
-  } catch (e) { console.log("(sim-wallets.json не найден — только главный кошелёк)"); }
+  } catch (e) { console.log("(sim-wallets.json не найден — пропускаю)"); }
+  try {
+    const st = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "bot", "activity", "state.json"), "utf8"));
+    for (const k of st.keys || []) wallets.push(privateKeyToAccount(k));
+    console.log(`(бот активности: +${(st.keys || []).length} кошельков из state.json)`);
+  } catch (e) { console.log("(bot/activity/state.json не найден — пропускаю)"); }
 
   const startBal = await pub.getBalance({ address: main_.address });
   console.log(`Главный: ${main_.address} · ${formatEther(startBal)} ETH · кошельков всего: ${wallets.length}`);
