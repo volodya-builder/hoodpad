@@ -12,24 +12,28 @@
 
 - RPC: `https://rpc.mainnet.chain.robinhood.com`; выделенный Alchemy: `https://robinhood-mainnet.g.alchemy.com/v2/Vs1nO3DOTOw64ThcZAuNf` (фронтенд-ключ, публичный)
 - Explorer: `https://robinhoodchain.blockscout.com`
-- **LaunchpadFactory:** `0xb09683cdd8e1dae93e37163eb4e6dd925d4104f9`
-- **BuybackTreasury:** `0xe5544c837f8dfd6b7e082435f7a1d646692239d3`
-- **Chat (on-chain, legacy):** `0xbaf4de9b8f35c384058d31e2730a3146c0d1af3c`
-- **BuybackVote:** `0xf663b704929b8c0562f6e1ae5c0387ad264d4ef3`
-- Все контракты верифицированы в Blockscout. Тестнет (chainId 46630) остаётся для экспериментов.
+- **ДЕЙСТВУЮЩИЕ контракты (v2, передеплой 24.07.2026, чистый кошелёк-владелец `0xD3d14c10020ad9C582404669a2Fa11AfF2386255`, блок 18192945):**
+  - LaunchpadFactoryV2: `0x08a887196fc31b89305ae03aa991917f6b1d23ec`
+  - BuybackTreasuryV2: `0xb45661df6625decdc697dd2fa0556c2637ea063a`
+  - VotePower: `0x352b66605283d3b492a20a61f1f9aa541816def8`
+  - FeeSplitter: `0x1f25f889018aafc95711717e40763e2c91ac5b4a` · Migrator: `0x9fc7030b6ec063057a33bc8f0723a59729a65c93`
+  - team = кошелёк-владелец. Верификация в Blockscout — сделать (make-verify-input.js).
+- Заброшенные деплои (не используются): v1 `0xb09683…`, v2-тест 22.07 `0x68a983…` (владелец — скомпрометированный Account 3). Chat legacy: `0xbaf4de9b8f35c384058d31e2730a3146c0d1af3c`.
+- Тестнет (chainId 46630) остаётся для экспериментов.
 
 ## Экономика
 
 - Supply токена: 1B; на кривой продаётся 800M; 200M + собранный ETH уходят в **заблокированную** ликвидность Uniswap V3 при градации.
 - **Градация: ровно 6.5 ETH** на кривой (VIRTUAL_ETH = 1.625).
-- Комиссия трейда 1%, делится: **50% создателю токена / 20% команде / 30% казна выкупа** (creatorFeeShareBps=5000; в FeeSplitter teamBps=4000 от оставшегося).
+- Комиссия трейда 1%, делится: **50% создателю токена / 20% команде / 30% казна выкупа** (creatorFeeShareBps=5000; в FeeSplitter teamBps=4000 от оставшегося). Это финальное решение владельца от 24.07.2026 (промежуточный вариант 20/20/60 отменён).
 - Казна тратится только на выкуп токенов; голосование комьюнити — совещательное.
 
 ## Инфраструктура
 
 - Фронтенд: React + Vite, статика на **GitHub Pages**, репозиторий `volodya-builder/hoodpad`, ветка `main`, домен hoodandarrow.com (CNAME).
 - **Автодеплой:** `.github/workflows/deploy.yml` — любой пуш в `main` с изменениями в `web/**` собирает и публикует сайт в `gh-pages`. Руками деплоить не нужно.
-- Индексер: Goldsky subgraph `https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/1.0.0/gn` + RPC-фолбэк (см. `web/src/lib/data.js`, бейдж источника — в админке).
+- Индексер: Goldsky subgraph `https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/3.0.0/gn` (3.0.0 = передеплой 24.07) + RPC-фолбэк (см. `web/src/lib/data.js`, бейдж источника — в админке).
+- **Бот активности** (`bot/activity/` + activity.yml, cron выключен на время перезапуска): трейдерские кошельки выводятся ДЕТЕРМИНИРОВАННО из ACTIVITY_PRIVATE_KEY (`keccak256(PK+":hood-trader:"+i)`) — state.json не нужен, деньги всегда возвращаемы через `scripts/exit-all.js`. Урок 24.07: прошлая версия генерировала случайные ключи в CI и потеряла ~$70 (пуш state.json тихо падал из-за `|| true`).
 - Чат/онлайн/баны: Firebase RTDB `https://hood-chat-4b664-default-rtdb.europe-west1.firebasedatabase.app` (REST).
 - **Бот-миррор** Pons-токенов: `.github/workflows/mirror.yml` + `bot/` — GitHub Actions cron, следит за двумя фабриками Pons. **НИКОГДА не редактируй mirror.yml.**
 

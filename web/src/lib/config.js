@@ -34,10 +34,10 @@ const NETWORK = import.meta.env.VITE_NETWORK ?? "mainnet";
 export const CHAIN =
   NETWORK === "mainnet" ? robinhoodMainnet : NETWORK === "local" ? localChain : robinhoodTestnet;
 
-// hood v2 (мейннет, задеплоено 22.07.2026): фабрика 20/20/60, «голос за шкуру».
-// Старая v1-фабрика выведена из конфига — чистый лист.
+// hood v2 (мейннет, передеплой 24.07.2026 на новом кошельке): 50/20/30,
+// «голос за шкуру». Прошлые фабрики выведены из конфига — чистый лист.
 export const FACTORY_ADDRESS =
-  import.meta.env.VITE_FACTORY_ADDRESS ?? "0x68a983f0c73f1a5dc13aa3ae71a19a5787162cdb";
+  import.meta.env.VITE_FACTORY_ADDRESS ?? "0x08a887196fc31b89305ae03aa991917f6b1d23ec";
 
 // При смене сети ИЛИ адреса фабрики чистим весь кэш данных — иначе после
 // переезда на v2 в localStorage остаются старые токены с прошлой фабрики.
@@ -53,7 +53,7 @@ try {
 
 // BuybackTreasuryV2 (60% комиссий; ETH уходит только на выкупы; выкуп→сжигание)
 export const TREASURY_ADDRESS =
-  import.meta.env.VITE_TREASURY_ADDRESS ?? "0x232cf3b0026ed39e1448567e8da55206375945e4";
+  import.meta.env.VITE_TREASURY_ADDRESS ?? "0xb45661df6625decdc697dd2fa0556c2637ea063a";
 
 // On-chain chat contract (messages are events; zero = not deployed yet)
 export const CHAT_ADDRESS =
@@ -66,7 +66,7 @@ export const VOTE_ADDRESS =
 // v2 «голос за шкуру»: пока пусто — страница голосования работает в режиме v1.
 // После деплоя v2 вписать адрес VotePower (или задать VITE_VOTEPOWER_ADDRESS).
 export const VOTEPOWER_ADDRESS =
-  import.meta.env.VITE_VOTEPOWER_ADDRESS ?? "0x421b28dd32a16591afecb4b5ba31e0bee2c9f25a";
+  import.meta.env.VITE_VOTEPOWER_ADDRESS ?? "0x352b66605283d3b492a20a61f1f9aa541816def8";
 
 // Off-chain chat storage: Firebase Realtime Database URL
 export const CHAT_DB_URL = (import.meta.env.VITE_CHAT_DB_URL ?? "https://hood-chat-4b664-default-rtdb.europe-west1.firebasedatabase.app").replace(/\/$/, "");

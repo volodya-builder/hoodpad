@@ -35,7 +35,7 @@ const FACTORY  = process.env.FACTORY  || "";      // LaunchpadFactoryV2
 const TREASURY = process.env.TREASURY || "";      // BuybackTreasuryV2
 const VOTEPOWER = process.env.VOTEPOWER || "";    // VotePower
 const SUBGRAPH = process.env.SUBGRAPH ||
-  "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/1.0.0/gn";
+  "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/3.0.0/gn";
 // пороги (в ETH), чтобы газ не съедал смысл
 const SWEEP_MIN = Number(process.env.SWEEP_MIN || 0.002); // собирать, если у пула >= столько
 const BUYBACK_MIN = Number(process.env.BUYBACK_MIN || 0.003); // выкуп, если в казне >= столько

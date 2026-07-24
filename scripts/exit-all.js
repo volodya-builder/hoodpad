@@ -16,7 +16,7 @@ const { privateKeyToAccount } = require("viem/accounts");
 
 const RPC_URL = process.env.RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
 // по умолчанию — текущая v2-фабрика (ABI v1/v2 совместим для выхода)
-const FACTORY = process.env.FACTORY || "0x68a983f0c73f1a5dc13aa3ae71a19a5787162cdb";
+const FACTORY = process.env.FACTORY || "0x08a887196fc31b89305ae03aa991917f6b1d23ec";
 
 const factoryAbi = parseAbi([
   "function tokenCount() view returns (uint256)",

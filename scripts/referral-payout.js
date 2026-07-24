@@ -9,7 +9,7 @@
 // начислено = fee * REF_RATE с момента привязки, к выплате = начислено - выплачено (/referralPayouts).
 
 const DB = "https://hood-chat-4b664-default-rtdb.europe-west1.firebasedatabase.app";
-const SUBGRAPH = "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/1.0.0/gn";
+const SUBGRAPH = "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/3.0.0/gn";
 const RPC = "https://rpc.mainnet.chain.robinhood.com";
 const REF_RATE = 0.05;       // 5% каждой комиссии приведённого трейдера
 const MIN_PAYOUT = 0.005;    // ETH — меньше не платим, копится дальше
