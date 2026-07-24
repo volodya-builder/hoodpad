@@ -3,9 +3,7 @@
  * БОЕВОЙ деплой hood v2 в мейннет Robinhood Chain (chainId 4663).
  *
  * v2 = «голос за шкуру»:
- *   — комиссия 1%: 20% создателю / 20% команде / 60% в казну
- *     (политика казны: 30% выкупы по голосованию, 15% приз арены,
- *      15% фонд топ-создателей — исполняет ИИ-казначей + владелец)
+ *   — комиссия 1%: 50% создателю / 20% команде / 30% в казну
  *   — сила голоса = уплаченные комиссии текущего 7-дневного раунда
  *   — выкуп победителя: 50% токенов голосовавшим за него, 50% сжигается
  *   — казна ведёт он-чейн портфель (задел под индекс $HOODX)
@@ -24,11 +22,11 @@ const MAINNET = {
   weth:            "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73",
 };
 
-// Модель комиссий v2: 20/20/60
+// Модель комиссий: 50/20/30
 const FEE_BPS = 100;             // 1% с каждой сделки
-const CREATOR_SHARE_BPS = 2000;  // 20% — создателю
-// из оставшихся 80%: 25% команде (=20% всего), 75% в казну (=60% всего)
-const TEAM_BPS_OF_REMAINDER = 2500;
+const CREATOR_SHARE_BPS = 5000;  // 50% — создателю
+// из оставшихся 50%: 40% команде (=20% всего), 60% в казну (=30% всего)
+const TEAM_BPS_OF_REMAINDER = 4000;
 
 async function main() {
   const { createPublicClient, createWalletClient, http } = require("viem");
@@ -106,10 +104,10 @@ async function main() {
   console.log("5/7 Казна ← VotePower…");
   await call(treasury, "BuybackTreasuryV2", "setVotePower", [votePower]);
 
-  console.log("6/7 FeeSplitter (40/40/20)…");
+  console.log("6/7 FeeSplitter (50/20/30)…");
   const splitter = await deploy("FeeSplitter", [TEAM_WALLET, treasury, TEAM_BPS_OF_REMAINDER]);
 
-  console.log("7/7 Настройка фабрики (treasury=FeeSplitter, votePower, 1% fee, 40% создателю)…");
+  console.log("7/7 Настройка фабрики (treasury=FeeSplitter, votePower, 1% fee, 50% создателю)…");
   await call(factory, "LaunchpadFactoryV2", "setConfig",
     [splitter, migrator, votePower, FEE_BPS, CREATOR_SHARE_BPS]);
 

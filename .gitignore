@@ -6,3 +6,5 @@ dist/
 hood-passport.docx
 scripts/sim-wallets.json
 bot/activity/state.json
+deploy-config.json
+mainnet-v2-addresses.txt
