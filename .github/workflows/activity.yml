@@ -30,10 +30,4 @@ jobs:
           SEED_N: "12"
           WALLETS: "4"
         run: node bot/activity/activity.mjs
-      - name: Commit state
-        run: |
-          git config user.name "hood-activity"
-          git config user.email "activity@hoodandarrow.com"
-          git add bot/activity/state.json 2>/dev/null || true
-          git diff --cached --quiet || git commit -m "activity: state update"
-          git push || true
+      # state.json больше не нужен: кошельки детерминированно выводятся из ключа

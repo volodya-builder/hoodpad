@@ -16,7 +16,8 @@ import { fileURLToPath } from "url";
 import {
   createPublicClient, createWalletClient, http, parseAbi, parseEther, formatEther, defineChain,
 } from "viem";
-import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
+import { privateKeyToAccount } from "viem/accounts";
+import { keccak256, stringToHex } from "viem";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -132,10 +133,10 @@ async function main() {
   // ---- 2) ТОРГОВЛЯ в рамках бюджета ----------------------------------
   if (state.spentEth >= budgetEth) { console.log("Дневной бюджет исчерпан — торговля пропущена."); return; }
 
-  // кошельки
-  while (state.keys.length < WALLETS) state.keys.push(generatePrivateKey());
-  save();
-  const traders = state.keys.slice(0, WALLETS).map(privateKeyToAccount);
+  // кошельки: ДЕТЕРМИНИРОВАННО из главного ключа — никаких случайных ключей,
+  // state.json не нужен, деньги всегда возвращаемы через exit-all.js
+  const traders = Array.from({ length: WALLETS }, (_, i) =>
+    privateKeyToAccount(keccak256(stringToHex(`${PK}:hood-trader:${i}`))));
   // подкидываем газ+оборотку тем, у кого пусто
   for (const tr of traders) {
     const bal = await pub.getBalance({ address: tr.address });

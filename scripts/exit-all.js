@@ -59,7 +59,12 @@ async function main() {
     const st = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "bot", "activity", "state.json"), "utf8"));
     for (const k of st.keys || []) wallets.push(privateKeyToAccount(k));
     console.log(`(бот активности: +${(st.keys || []).length} кошельков из state.json)`);
-  } catch (e) { console.log("(bot/activity/state.json не найден — пропускаю)"); }
+  } catch (e) { /* state.json больше не используется */ }
+  // детерминированные трейдеры бота активности (выводятся из главного ключа)
+  const { keccak256, stringToHex } = require("viem");
+  for (let i = 0; i < 8; i++) {
+    wallets.push(privateKeyToAccount(keccak256(stringToHex(`${PK}:hood-trader:${i}`))));
+  }
 
   const startBal = await pub.getBalance({ address: main_.address });
   console.log(`Главный: ${main_.address} · ${formatEther(startBal)} ETH · кошельков всего: ${wallets.length}`);
