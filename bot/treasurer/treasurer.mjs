@@ -33,13 +33,15 @@ import { buildChain, grandArena, podium, dayStart, DAY } from "../../web/src/lib
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ---- распределение казны (решение владельца, 25.07.2026) ----
-// Арена: каждый день 10% баланса казны → подиум 50/30/20 (1-2-3 места).
-// Голосование: раз в неделю 30% баланса → победитель голосования.
+// АКЦЕНТ НА ЕЖЕДНЕВНОЙ АРЕНЕ: битва каждый день — главный магнит платформы.
+// Арена: каждый день 25% баланса казны → подиум 50/30/20 (1-2-3 места).
+// Голосование: раз в неделю 20% баланса → победитель голосования.
 // Гранд-Арена: раз в месяц 20% баланса → Гранд-чемпион.
-// Всё — выкуп и сжигание. Проценты от ТЕКУЩЕГО баланса: казна не пустеет.
-const ARENA_DAILY_PCT = 0.10;
+// Всё — выкуп и сжигание. Проценты от ТЕКУЩЕГО баланса: казна не пустеет,
+// а дневной приз автоматически растёт вместе с оборотом торгов.
+const ARENA_DAILY_PCT = 0.25;
 const ARENA_SPLIT = [0.5, 0.3, 0.2];
-const VOTE_WEEKLY_PCT = 0.30;
+const VOTE_WEEKLY_PCT = 0.20;
 const GRAND_MONTHLY_PCT = 0.20;
 const DUST_ETH = 0.0003; // не тратим газ на пыль
 
@@ -183,7 +185,7 @@ async function main() {
           const dir = path.join(__dirname, "reports");
           fs.mkdirSync(dir, { recursive: true });
           const rep = { day: yesterday, ts: Date.now(), potEth: pot, payouts,
-            reason: `Подиум арены за ${new Date(yesterday).toISOString().slice(0, 10)}: казна потратила 10% баланса (${pot.toFixed(6)} ETH), 50/30/20 между местами. Выкупленное сожжено.` };
+            reason: `Подиум арены за ${new Date(yesterday).toISOString().slice(0, 10)}: казна потратила 25% баланса (${pot.toFixed(6)} ETH), 50/30/20 между местами. Выкупленное сожжено.` };
           fs.writeFileSync(path.join(dir, `arena-${new Date(yesterday).toISOString().slice(0, 10)}.json`), JSON.stringify(rep, null, 2));
           fs.writeFileSync(path.join(dir, "latest-arena.json"), JSON.stringify(rep, null, 2));
         }
