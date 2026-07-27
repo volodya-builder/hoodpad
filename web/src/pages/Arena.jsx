@@ -220,7 +220,7 @@ export default function Arena() {
                   <div className="ab-cell"><span>{t("Финал месяца")}</span>
                     <b className="ab-timer">{days}{t("д")} {hours}{t("ч")}</b></div>
                   {pool !== null && (
-                    <div className="ab-cell"><span>{t("Гранд-выкуп")}</span>
+                    <div className="ab-cell"><span>{t("Гранд-выкуп")}<span className="share-chip gold">30% {t("казны")}</span></span>
                       <b style={{ color: "var(--gold)" }}>{D(pool)} <span className="dim" style={{ fontWeight: 500, fontSize: 13 }}>({fmtEth(pool)} ETH)</span></b></div>
                   )}
                 </div>
