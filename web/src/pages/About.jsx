@@ -119,7 +119,7 @@ export default function About() {
       <div className="cta-row">
         <a className="btn btn-primary" href="#/create">{t("Запустить токен")}</a>
         <a className="btn" href="#/vote">{t("Смотреть голосование")}</a>
-        <a className="btn" href="#/analytics">{t("Аналитика казны")}</a>
+        <a className="btn" href="#/treasury">{t("Открыть казну")}</a>
       </div>
     </div>
   );

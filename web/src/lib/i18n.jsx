@@ -200,6 +200,7 @@ const EN = {
   "До выбывания": "Until elimination of",
   "Лента сигналов": "Signal feed",
   "Правила": "Rules",
+  "Открыть казну": "Open treasury",
   "Сумма": "Amount",
   "По убыванию — нажмите для возрастания": "Descending — click for ascending",
   "По возрастанию — нажмите для убывания": "Ascending — click for descending",
