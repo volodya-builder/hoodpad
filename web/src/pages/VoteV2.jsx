@@ -32,11 +32,31 @@ export default function VoteV2({ wallet, onConnect }) {
       allTrades(),
     ]);
 
-    // объём каждого кошелька на всей платформе (для допуска)
-    const volByWallet = {};
+    // ЧЕСТНЫЙ объём кошелька для допуска (анти-вош):
+    //  • внутри суток считается |покупки − продажи| по каждому токену
+    //    (прогнать $500 туда-сюда за вечер не работает);
+    //  • нужен объём минимум в 2 разных дня.
+    const DAY = 86_400_000;
+    const acc = {}; // wallet -> day -> pool -> {buy, sell}
     for (const tr of trades) {
-      const k = tr.addr.toLowerCase();
-      volByWallet[k] = (volByWallet[k] || 0) + (tr.eth + tr.fee) * rate;
+      const w = tr.addr.toLowerCase();
+      const d = Math.floor(tr.ts / DAY);
+      const p = tr.pool;
+      const cell = ((acc[w] ??= {})[d] ??= {})[p] ??= { buy: 0, sell: 0 };
+      if (tr.side === "buy") cell.buy += tr.eth + tr.fee; else cell.sell += tr.eth + tr.fee;
+      ((acc[w][d])[p]) = cell;
+    }
+    const volByWallet = {}, daysByWallet = {};
+    for (const [w, days] of Object.entries(acc)) {
+      let vol = 0, nDays = 0;
+      for (const pools of Object.values(days)) {
+        let dayVol = 0;
+        for (const c of Object.values(pools)) dayVol += Math.abs(c.buy - c.sell);
+        if (dayVol > 0) nDays++;
+        vol += dayVol;
+      }
+      volByWallet[w] = vol * rate;
+      daysByWallet[w] = nDays;
     }
 
     // голоса текущего раунда: события Voted (диапазон одной эпохи)
@@ -51,7 +71,7 @@ export default function VoteV2({ wallet, onConnect }) {
         const voter = l.args.trader.toLowerCase();
         if (seen.has(voter)) continue; // один голос на кошелёк
         seen.add(voter);
-        if ((volByWallet[voter] || 0) < MIN_VOL_USD) continue; // допуск по объёму
+        if ((volByWallet[voter] || 0) < MIN_VOL_USD || (daysByWallet[voter] || 0) < 2) continue; // допуск: честный объём + 2 дня
         const tk = l.args.token.toLowerCase();
         votesByToken[tk] = (votesByToken[tk] || 0) + 1;
         if (me && voter === me.toLowerCase()) myChoice = tk;
@@ -62,7 +82,8 @@ export default function VoteV2({ wallet, onConnect }) {
     const rows = live.map((tk) => ({ ...tk, votes: votesByToken[tk.token.toLowerCase()] || 0 }))
       .sort((a, b) => b.votes - a.votes);
     const myVol = me ? (volByWallet[me.toLowerCase()] || 0) : 0;
-    setSt({ tokens, rows, epoch, endsIn: Number(endsIn), myVol, myChoice });
+    const myDays = me ? (daysByWallet[me.toLowerCase()] || 0) : 0;
+    setSt({ tokens, rows, epoch, endsIn: Number(endsIn), myVol, myDays, myChoice });
   }, [me, rate]);
 
   useEffect(() => {
@@ -90,7 +111,7 @@ export default function VoteV2({ wallet, onConnect }) {
     return d > 0 ? `${d}${t("д")} ${h}${t("ч")}` : h > 0 ? `${h}${t("ч")} ${m}${t("м")}` : `${m}${t("м")}`;
   };
   const totalVotes = st ? st.rows.reduce((s, r) => s + r.votes, 0) : 0;
-  const eligible = st && st.myVol >= MIN_VOL_USD;
+  const eligible = st && st.myVol >= MIN_VOL_USD && st.myDays >= 2;
   const votedFor = st?.myChoice ? st.tokens.find((x) => x.token.toLowerCase() === st.myChoice) : null;
 
   return (
@@ -116,8 +137,9 @@ export default function VoteV2({ wallet, onConnect }) {
 
         {wallet && !eligible && !votedFor && (
           <div className="cushion-banner" style={{ marginTop: 12, display: "block" }}>
-            ⚡ {t("Право голоса — от")} <b>${MIN_VOL_USD}</b> {t("объёма торгов на любой монете hood.")}{" "}
+            ⚡ {t("Право голоса — от")} <b>${MIN_VOL_USD}</b> {t("честного объёма (покупки минус продажи за день) и торговля минимум в 2 разных дня.")}{" "}
             {t("Твой объём:")} <b>{st.myVol >= 1000 ? usd(st.myVol) : "$" + st.myVol.toFixed(2)}</b> ({fmt(Math.min((st.myVol / MIN_VOL_USD) * 100, 100), 0)}%)
+            {st.myDays < 2 && <> · {t("дней с торговлей:")} <b>{st.myDays}/2</b></>}
             <span className="vr-bar" style={{ display: "block", marginTop: 8, maxWidth: 340 }}>
               <span style={{ width: `${Math.max(Math.min((st.myVol / MIN_VOL_USD) * 100, 100), 2)}%` }} />
             </span>

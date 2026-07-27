@@ -5,6 +5,7 @@ import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi } from "../lib
 import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
 import { poolTrades, invalidateTrades, loadTokens, allTrades } from "../lib/data.js";
 import { computeTrust } from "../lib/trust.js";
+import { honestVolume } from "../lib/fairvol.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import Chat from "./Chat.jsx";
 import { useSplit, loadCreationTimes, timeAgo, useClock, useSupport } from "../lib/data.js";
@@ -309,6 +310,39 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       .slice(0, 10)
       .map(([a, v]) => ({ addr: a, bal: v, pct: (v / TOTAL) * 100 }));
     return { list, unsold, unsoldPct: (unsold / TOTAL) * 100 };
+  }, [history, data]);
+
+  // Паспорт токена: три цифры, по которым видно накрутку и риск дампа.
+  const passport = useMemo(() => {
+    if (!history || !data) return null;
+    const trades = history.trades;
+    if (!trades.length) return null;
+    const cre = (data.creator || "").toLowerCase();
+    const TOTAL = 1e9;
+    const m = {};
+    let creBuy = 0, creSell24 = 0;
+    const now = history.now ?? Date.now();
+    for (const tr of trades) {
+      const a = tr.addr.toLowerCase();
+      m[a] = (m[a] ?? 0) + (tr.side === "buy" ? tr.tokens : -tr.tokens);
+      if (a === cre) {
+        if (tr.side === "buy") creBuy += tr.tokens;
+        else if ((tr.ts ?? 0) >= now - 86400e3) creSell24 += tr.tokens;
+      }
+    }
+    const creBal = Math.max(m[cre] ?? 0, 0);
+    const top5 = Object.values(m).filter((v) => v > 1e-6).sort((a, b) => b - a)
+      .slice(0, 5).reduce((s, v) => s + v, 0);
+    const day = trades.filter((tr) => (tr.ts ?? 0) >= now - 86400e3);
+    const { honest, gross } = honestVolume(day, data.creator);
+    // создатель за сутки продал больше 20% того, что держал
+    const dumping = creSell24 > 0 && creSell24 / Math.max(creBal + creSell24, 1) > 0.2;
+    return {
+      crePct: (creBal / TOTAL) * 100,
+      top5Pct: (top5 / TOTAL) * 100,
+      honestPct: gross > 0 ? Math.min((honest / gross) * 100, 100) : null,
+      dumping,
+    };
   }, [history, data]);
 
   // Статистика для полосы над графиком
@@ -751,6 +785,30 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           </div>
           {meta.description && (
             <p className="dim" style={{ marginTop: 10 }}>{meta.description}</p>
+          )}
+
+          {/* Паспорт токена: накрутка и риски видны сразу */}
+          {passport && (
+            <>
+              {passport.dumping && (
+                <div className="cushion-banner" style={{ marginTop: 12, display: "block", borderColor: "#e06a4a", color: "#e06a4a" }}>
+                  ⚠ {t("Создатель продаёт: за сутки слил заметную часть своей позиции.")}
+                </div>
+              )}
+              <div className="hero-chips" style={{ marginTop: 12 }}>
+                <span className="chip" title={t("Сколько токенов сейчас держит кошелёк создателя")}>
+                  🏹 {t("Создатель держит")} <b>{fmt(passport.crePct, 1)}%</b>
+                </span>
+                <span className="chip" title={t("Доля пяти крупнейших кошельков от всего сапплая")}>
+                  🐳 {t("Топ-5 держат")} <b>{fmt(passport.top5Pct, 1)}%</b>
+                </span>
+                {passport.honestPct != null && (
+                  <span className="chip" title={t("Честный объём за 24ч: покупки минус продажи по каждому кошельку, сделки создателя не в счёт. Чем ниже — тем больше объёма прокручено туда-сюда.")}>
+                    ✅ {t("Честный объём")} <b>{fmt(passport.honestPct, 0)}%</b>
+                  </span>
+                )}
+              </div>
+            </>
           )}
 
           {/* hood AI — судья платформы: Trust Score с объяснением */}

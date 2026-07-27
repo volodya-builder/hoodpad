@@ -11,6 +11,7 @@
 //   • последний живой в 24:00 — Чемпион дня (Зал славы).
 import { useEffect, useState } from "react";
 import { allTrades, loadTokens } from "./data.js";
+import { honestVolume } from "./fairvol.js";
 
 const DAY = 86_400_000;
 
@@ -55,6 +56,13 @@ export function arenaState(tokens, trades, d0, now = Date.now(), excluded = null
   const volUntil = (poolLower, t) =>
     (byPool[poolLower] || []).reduce((s, tr) => (tr.ts <= t ? s + tr.eth + tr.fee : s), 0);
 
+  // ЧЕСТНЫЙ объём (анти-вош): |покупки−продажи| по кошелькам, сделки
+  // создателя не в счёт, кэп 25% на кошелёк. Накрутка не даёт очков.
+  const creatorOf = {};
+  for (const p of parts) creatorOf[(p.pool || "").toLowerCase()] = p.creator;
+  const honestUntil = (poolLower, t) =>
+    honestVolume((byPool[poolLower] || []).filter((tr) => tr.ts <= t), creatorOf[poolLower]).honest;
+
   // состояние кривой пула в момент t: откатываем сделки новее t от текущего
   const stateAt = (p, t) => {
     let res = Number(p.reserve) / 1e18;
@@ -72,7 +80,7 @@ export function arenaState(tokens, trades, d0, now = Date.now(), excluded = null
     return p0 > 0 ? Math.max(-0.6, Math.min(1.5, pt / p0 - 1)) : 0;
   };
   const scoreUntil = (p, t) =>
-    volUntil((p.pool || "").toLowerCase(), t) * (1 + growthUntil(p, t));
+    honestUntil((p.pool || "").toLowerCase(), t) * (1 + growthUntil(p, t));
 
   const alive = new Map(parts.map((p) => [p.token.toLowerCase(), p]));
   const eliminated = [];
