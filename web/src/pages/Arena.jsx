@@ -242,8 +242,9 @@ export default function Arena() {
                   <div className="ab-cell"><span>{t("Финал месяца")}</span>
                     <b className="ab-timer">{days}{t("д")} {hours}{t("ч")}</b></div>
                   {pool !== null && (
-                    <div className="ab-cell"><span>{t("Гранд-выкуп")}<span className="share-chip gold">30% {t("казны")}</span></span>
-                      <b style={{ color: "var(--gold)" }}>{D(pool)} <span className="dim" style={{ fontWeight: 500, fontSize: 13 }}>({fmtEth(pool)} ETH)</span></b></div>
+                    <div className="ab-cell"><span>{t("Гранд-выкуп")}<span className="share-chip gold" title={t("30% баланса казны на конец месяца. Казна пополняется с каждой сделки все 30 дней — к финалу приз заметно больше сегодняшней оценки.")}>30% {t("казны")}</span></span>
+                      <b style={{ color: "var(--gold)" }}>{D(pool)} <span className="dim" style={{ fontWeight: 500, fontSize: 13 }}>({fmtEth(pool)} ETH)</span></b>
+                      <span className="dim" style={{ fontSize: 11.5, marginTop: 3 }}>📈 {t("копится с каждой сделкой все 30 дней месяца")}</span></div>
                   )}
                 </div>
                 <div className="dim" style={{ fontSize: 12.5, margin: "0 0 14px" }}>

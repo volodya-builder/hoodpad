@@ -227,6 +227,8 @@ const EN = {
   "Голосуют кошельки с честным объёмом от $500 и торговлей в 2+ дня. Один кошелёк — один голос.": "Wallets with $500+ fair volume and 2+ trading days vote. One wallet — one vote.",
   "каждый месяц": "every month",
   "Гранд-чемпион": "Grand Champion",
+  "30% баланса казны на конец месяца. Казна пополняется с каждой сделки все 30 дней — к финалу приз заметно больше сегодняшней оценки.": "30% of the treasury balance at month's end. The treasury refills with every trade for all 30 days — by the finale the prize is noticeably bigger than today's estimate.",
+  "копится с каждой сделкой все 30 дней месяца": "accrues with every trade for all 30 days of the month",
   "Каждая победа дня — ⭐ и очки лиги. Лидер месяца получает Гранд-выкуп.": "Each daily win — a ⭐ and league points. The month's leader gets the Grand Buyback.",
   "Приз — не перевод денег, а выкуп токена с рынка + сжигание: предложение падает, цена крепнет, выигрывают все держатели. 1-е место — выживший чемпион, 2-е и 3-е — по итоговым очкам. Нулевые очки не награждаются. Исполняет ИИ-казначей утром следующего дня, все транзакции — в эксплорере.": "The prize isn't a money transfer — it's a market buyback + burn: supply drops, price strengthens, every holder wins. 1st place is the surviving champion, 2nd and 3rd — by final score. Zero scores get nothing. Executed by the AI treasurer the next morning; every transaction is in the explorer.",
   "Всё считается из он-чейн сделок": "Everything is computed from on-chain trades",
