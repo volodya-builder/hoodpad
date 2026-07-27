@@ -77,32 +77,53 @@ test("честная цена: миграция проходит, ликвидн
   assert.equal(left, 0n, "токены должны уйти в позицию");
 });
 
-test("АТАКА: пул создан заранее по искажённой цене — миграция отменяется", async () => {
+test("АТАКА: пустой пул создан заранее по кривой цене — цена выравнивается, миграция проходит", async () => {
   const { migrator, gradPool } = await freshSetup();
   const tokenIs0 = BigInt(token.address) < BigInt(weth.address);
   const [t0, t1] = tokenIs0 ? [token.address, weth.address] : [weth.address, token.address];
-  // атакующий заранее создаёт пул с ценой в 1000 раз выше расчётной
+  // атакующий бесплатно инициализирует пул с ценой в 1000 раз выше расчётной
   const skewed = expectedSqrt(tokenIs0) * 1000n;
+  const poolAddr = await pub.readContract({ address: pm.address, abi: pm.abi, functionName: "pools",
+    args: [await pub.readContract({ address: pm.address, abi: pm.abi, functionName: "key", args: [t0, t1, 3000] })] })
+    .catch(() => null);
   await write(attacker, pm, "preCreate", [t0, t1, 3000, skewed]);
 
-  const err = await write(deployer, gradPool, "callMigrate",
-    [migrator.address, token.address, TOKENS], ETH).then(() => null).catch((e) => e);
-  assert.ok(err, "миграция по чужой цене должна отменяться");
-  // средства не потеряны: токены остались у мигратора, ETH — у вызывающего пула
-  const left = await read(token, "balanceOf", [migrator.address]);
-  assert.equal(left, TOKENS, "токены не должны уйти по цене атакующего");
+  // ключевое: миграция НЕ должна блокироваться навсегда — иначе гриф-DoS
+  const rc = await write(deployer, gradPool, "callMigrate",
+    [migrator.address, token.address, TOKENS], ETH);
+  assert.equal(rc.status, "success", "мигратор обязан вернуть цену и залить ликвидность");
 });
 
-test("АТАКА снизу: заниженная цена пула тоже отклоняется", async () => {
+test("АТАКА снизу: заниженная цена пустого пула тоже выравнивается", async () => {
   const { migrator, gradPool } = await freshSetup();
   const tokenIs0 = BigInt(token.address) < BigInt(weth.address);
   const [t0, t1] = tokenIs0 ? [token.address, weth.address] : [weth.address, token.address];
-  const skewed = expectedSqrt(tokenIs0) / 50n; // цена занижена в 2500 раз
+  const skewed = expectedSqrt(tokenIs0) / 50n;
   await write(attacker, pm, "preCreate", [t0, t1, 3000, skewed]);
+
+  const rc = await write(deployer, gradPool, "callMigrate",
+    [migrator.address, token.address, TOKENS], ETH);
+  assert.equal(rc.status, "success", "заниженная цена должна выравниваться");
+});
+
+test("ГЛУБОКАЯ подмена: цену не вернуть за бюджет — миграция откладывается, средства целы", async () => {
+  const { migrator, gradPool } = await freshSetup();
+  const tokenIs0 = BigInt(token.address) < BigInt(weth.address);
+  const [t0, t1] = tokenIs0 ? [token.address, weth.address] : [weth.address, token.address];
+  const skewed = expectedSqrt(tokenIs0) * 1000n;
+  await write(attacker, pm, "preCreate", [t0, t1, 3000, skewed]);
+  // атакующий залил реальную ликвидность — цена не сдвигается за 2% бюджета
+  const key = await read(pm, "key", [t0, t1, 3000]);
+  const poolAddress = await read(pm, "pools", [key]);
+  const poolC = { address: poolAddress, abi: ART("MockV3Pool").abi };
+  await write(attacker, poolC, "setLiquidity", [10n ** 18n]);
 
   const err = await write(deployer, gradPool, "callMigrate",
     [migrator.address, token.address, TOKENS], ETH).then(() => null).catch((e) => e);
-  assert.ok(err, "заниженная цена должна отклоняться");
+  assert.ok(err, "при глубокой подмене миграция откладывается");
+  // главное — средства не ушли по чужой цене
+  const left = await read(token, "balanceOf", [migrator.address]);
+  assert.equal(left, TOKENS, "токены остаются у мигратора до повторной попытки");
 });
 
 test("пул, созданный заранее по ПРАВИЛЬНОЙ цене, не мешает миграции", async () => {

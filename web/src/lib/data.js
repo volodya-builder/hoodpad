@@ -4,13 +4,28 @@ import { publicClient } from "./web3.js";
 import { factoryAbi, poolAbi, tokenAbi } from "./abi.js";
 import { FACTORY_ADDRESS } from "./config.js";
 
+// Метаданные приходят из блокчейна и полностью подконтрольны создателю токена.
+// Любой мусор здесь не должен ронять интерфейс: JSON.parse("null") исключения
+// НЕ бросает, поэтому проверяем результат явно и нормализуем поля.
+const STR = (v, max) => (typeof v === "string" ? v.slice(0, max) : undefined);
+const IMG_OK = /^(data:image\/(png|jpe?g|webp|gif|svg\+xml);|https:\/\/)/i;
+
 export function parseMeta(uri) {
+  let m = null;
   try {
     if (uri?.startsWith("data:application/json;base64,")) {
-      return JSON.parse(decodeURIComponent(escape(atob(uri.split(",")[1]))));
+      m = JSON.parse(decodeURIComponent(escape(atob(uri.split(",")[1]))));
     }
   } catch (e) { /* ignore malformed metadata */ }
-  return {};
+  if (!m || typeof m !== "object" || Array.isArray(m)) return {};
+  const img = STR(m.image, 400_000);
+  return {
+    image: img && IMG_OK.test(img) ? img : undefined,
+    description: STR(m.description, 1000),
+    x: STR(m.x, 120),
+    telegram: STR(m.telegram, 120),
+    website: STR(m.website, 200),
+  };
 }
 
 const PAGE = 96n;

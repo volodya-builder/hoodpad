@@ -2,7 +2,10 @@
 // ВСЯ логика правил живёт в arena-core.js (общая с ИИ-казначеем).
 import { useEffect, useState } from "react";
 import { allTrades, loadTokens } from "./data.js";
-import { arenaState, buildChain } from "./arena-core.js";
+import { arenaState, buildChain, setSystemAddresses } from "./arena-core.js";
+import { TREASURY_ADDRESS, FACTORY_ADDRESS } from "./config.js";
+
+setSystemAddresses([TREASURY_ADDRESS, FACTORY_ADDRESS]);
 
 export {
   DAY, dayStart, arenaState, podium, buildChain, grandArena, hallOfFame,

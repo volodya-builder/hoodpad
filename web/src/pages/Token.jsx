@@ -3,7 +3,7 @@ import { parseEther, formatEther } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi } from "../lib/abi.js";
 import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
-import { poolTrades, invalidateTrades, loadTokens, allTrades } from "../lib/data.js";
+import { poolTrades, invalidateTrades, loadTokens, allTrades, parseMeta } from "../lib/data.js";
 import { computeTrust } from "../lib/trust.js";
 import { honestVolume } from "../lib/fairvol.js";
 import { useEthUsd, usd } from "../lib/price.js";
@@ -461,11 +461,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       ]);
     }
     setData({ pool, name, symbol, uri, price, sold, cap, reserve, graduated, migrated, creator, balance, walletEth });
-    try {
-      if (uri.startsWith("data:application/json;base64,")) {
-        setMeta(JSON.parse(decodeURIComponent(escape(atob(uri.split(",")[1])))));
-      }
-    } catch { /* ignore malformed metadata */ }
+    setMeta(parseMeta(uri)); // нормализует мусор: null/массив/числа не роняют страницу
   }, [tokenAddress, wallet]);
 
   useEffect(() => {

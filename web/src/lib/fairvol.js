@@ -22,15 +22,19 @@ const WALLET_CAP = 0.25; // максимум доли одного кошель�
  * @param creator адрес создателя токена (его сделки не в счёт), может быть null
  * @returns {{honest:number, gross:number, byWallet:Map<string,{buy:number,sell:number,net:number}>}}
  */
-export function honestVolume(trades, creator) {
+export function honestVolume(trades, creator, exclude = []) {
   const cre = (creator || "").toLowerCase();
+  // Казна и фабрика не должны накручивать «честный объём»: иначе выкуп
+  // победителя засчитывался бы ему как объём следующего дня — петля,
+  // в которой один токен побеждает вечно за счёт денег казны.
+  const skip = new Set([cre, ...exclude.map((a) => (a || "").toLowerCase())].filter(Boolean));
   const byWallet = new Map();
   let gross = 0;
   for (const tr of trades) {
     const v = tr.eth + (tr.fee || 0);
     gross += v;
     const k = tr.addr.toLowerCase();
-    if (k === cre) continue;
+    if (skip.has(k)) continue;
     const row = byWallet.get(k) || { buy: 0, sell: 0, net: 0 };
     if (tr.side === "buy") row.buy += v; else row.sell += v;
     byWallet.set(k, row);

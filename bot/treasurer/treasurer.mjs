@@ -28,7 +28,9 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 // ЕДИНОЕ ядро арены — тот же код, что считает бой на сайте.
 // Подиум на экране и выкупы в блокчейне не могут разойтись.
-import { buildChain, grandArena, podium, dayStart, DAY, ARENA_DAYS } from "../../web/src/lib/arena-core.js";
+import {
+  buildChain, grandArena, podium, dayStart, DAY, ARENA_DAYS, setSystemAddresses,
+} from "../../web/src/lib/arena-core.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -61,6 +63,9 @@ let PK = (process.env.TREASURER_PRIVATE_KEY || "").replace(/["'\s]/g, "");
 if (PK && !PK.startsWith("0x")) PK = "0x" + PK;
 if (!/^0x[0-9a-fA-F]{64}$/.test(PK)) { console.error("Нет TREASURER_PRIVATE_KEY"); process.exit(1); }
 if (!FACTORY || !TREASURY || !VOTEPOWER) { console.error("Задай FACTORY / TREASURY / VOTEPOWER (адреса v2)"); process.exit(1); }
+
+// казна и фабрика не создают «честный объём» — иначе выкуп кормит очки призёра
+setSystemAddresses([TREASURY, FACTORY]);
 
 const chainId = 4663;
 const chain = defineChain({ id: chainId, name: "Robinhood Chain",
@@ -203,7 +208,10 @@ async function main() {
       } else {
         const { chain } = buildChain(tokens, trades, ARENA_DAYS, yesterday + DAY - 1);
         const st = chain.get(yesterday);
-        const pod = podium(st);
+        // Градуировавшие токены выкупить нельзя: кривая закрыта, buy() ревертит.
+        // Пропускаем их, иначе весь подиум падает и день не выплачивается.
+        const gradSet = new Set(tokens.filter((x) => x.graduated).map((x) => x.token.toLowerCase()));
+        const pod = podium(st).filter((p) => !gradSet.has(p.token.toLowerCase()));
         const bal = await pub.getBalance({ address: TREASURY });
         const pot = Number(formatEther(bal)) * ARENA_DAILY_PCT;
         if (!pod.length) {

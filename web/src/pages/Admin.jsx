@@ -204,7 +204,9 @@ export default function Admin({ wallet, onConnect }) {
       </div>
     );
   }
-  if (owner && wallet.account.toLowerCase() !== owner.toLowerCase()) {
+  // fail-closed: пока владелец не подтверждён (RPC не ответил, адрес не
+  // прочитан) — доступа нет. Раньше при owner === null пускало любого.
+  if (!owner || wallet.account.toLowerCase() !== owner.toLowerCase()) {
     return (
       <div className="center" style={{ paddingTop: 80 }}>
         {t("Доступ только для владельца платформы.")}

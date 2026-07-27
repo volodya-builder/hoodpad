@@ -17,6 +17,14 @@ export const DAY = 86_400_000;
 // разойдётся с выплатой в блокчейне. Менять только здесь.
 export const ARENA_DAYS = 62;
 
+/// Системные адреса, чьи покупки не считаются «честным объёмом» токена:
+/// казна (её же выкуп призёра иначе кормил бы его очки на следующий день)
+/// и фабрика (первая покупка создателя идёт от её имени).
+export let SYSTEM_ADDRESSES = [];
+export function setSystemAddresses(list) {
+  SYSTEM_ADDRESSES = (list || []).filter(Boolean).map((a) => a.toLowerCase());
+}
+
 export function dayStart(ts = Date.now()) {
   return Math.floor(ts / DAY) * DAY;
 }
@@ -78,7 +86,8 @@ export function arenaState(tokens, trades, d0, now = Date.now(), excluded = null
   const creatorOf = {};
   for (const p of parts) creatorOf[(p.pool || "").toLowerCase()] = p.creator;
   const honestUntil = (poolLower, t) =>
-    honestVolume((byPool[poolLower] || []).filter((tr) => tr.ts <= t), creatorOf[poolLower]).honest;
+    honestVolume((byPool[poolLower] || []).filter((tr) => tr.ts <= t),
+      creatorOf[poolLower], SYSTEM_ADDRESSES).honest;
 
   // состояние кривой пула в момент t: откатываем сделки новее t
   // от состояния на конец этого дня (не от «сегодня»).

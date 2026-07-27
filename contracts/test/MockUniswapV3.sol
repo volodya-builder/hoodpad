@@ -7,8 +7,11 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 ///      (имитация атаки «пул создан до градации по искажённой цене»).
 contract MockV3Pool {
     uint160 public price;
+    uint128 public liquidity; // 0 = пустой пул (цену можно двигать даром)
 
     constructor(uint160 price_) { price = price_; }
+
+    function setLiquidity(uint128 l) external { liquidity = l; }
 
     function slot0()
         external
@@ -17,6 +20,30 @@ contract MockV3Pool {
     {
         return (price, 0, 0, 0, 0, 0, true);
     }
+
+    /// @dev Как в Uniswap V3: при нулевой ликвидности цена доезжает до лимита
+    ///      бесплатно; при наличии ликвидности — сдвиг пропорционален входу.
+    function swap(
+        address,
+        bool zeroForOne,
+        int256 amountSpecified,
+        uint160 sqrtPriceLimitX96,
+        bytes calldata data
+    ) external returns (int256 amount0, int256 amount1) {
+        if (liquidity == 0) {
+            price = sqrtPriceLimitX96; // даром доезжаем до цели
+            return (0, 0);
+        }
+        // «глубокий» кривой пул: за отведённый бюджет цену сдвинуть не удаётся
+        uint256 paid = uint256(amountSpecified);
+        amount0 = zeroForOne ? int256(paid) : int256(0);
+        amount1 = zeroForOne ? int256(0) : int256(paid);
+        IUniswapV3SwapCallback(msg.sender).uniswapV3SwapCallback(amount0, amount1, data);
+    }
+}
+
+interface IUniswapV3SwapCallback {
+    function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata data) external;
 }
 
 /// @dev Мок NonfungiblePositionManager: повторяет ключевое поведение —

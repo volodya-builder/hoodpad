@@ -33,6 +33,20 @@ interface IUniswapV3PoolState {
             uint8 feeProtocol,
             bool unlocked
         );
+
+    function liquidity() external view returns (uint128);
+
+    /// @dev Свап нужен, чтобы ВЕРНУТЬ цену к расчётной, если пул был
+    ///      инициализирован кем-то заранее. Просто ревертить нельзя: пул
+    ///      Uniswap V3 инициализируется кем угодно бесплатно, и любой
+    ///      желающий навсегда заблокировал бы градацию.
+    function swap(
+        address recipient,
+        bool zeroForOne,
+        int256 amountSpecified,
+        uint160 sqrtPriceLimitX96,
+        bytes calldata data
+    ) external returns (int256 amount0, int256 amount1);
 }
 
 interface INonfungiblePositionManager {
@@ -85,6 +99,11 @@ contract UniswapV3Migrator is ILiquidityMigrator {
     /// @notice Минимальная доля желаемых сумм, которую обязана принять позиция.
     uint256 public constant MIN_DEPOSIT_BPS = 9_000; // 90%
 
+    /// @notice Сколько средств не жалко потратить на возврат цены к расчётной
+    ///         (в bps). Пустой пул выравнивается бесплатно; если кто-то залил
+    ///         в кривой пул реальную ликвидность — платим не больше 2%.
+    uint256 public constant ALIGN_BUDGET_BPS = 200; // 2%
+
     error PoolPriceManipulated(uint160 expectedSqrtPriceX96, uint160 actualSqrtPriceX96);
 
     event LiquidityLocked(
@@ -126,39 +145,48 @@ contract UniswapV3Migrator is ILiquidityMigrator {
             sqrtPriceX96
         );
 
-        _requireFairPrice(v3Pool, sqrtPriceX96);
+        // Если пул уже был инициализирован по чужой цене — возвращаем её к
+        // расчётной свапом, и только потом заливаем ликвидность.
+        _alignPrice(v3Pool, token0, token1, sqrtPriceX96);
 
-        IERC20(token).forceApprove(address(positionManager), tokenAmount);
-        IERC20(address(weth)).forceApprove(address(positionManager), ethAmount);
+        uint256 positionId = _mintLocked(token0, token1);
 
-        (uint256 positionId, , uint256 used0, uint256 used1) = positionManager.mint(
+        // Остаток («пыль») после создания позиции возвращаем создателю токена,
+        // чтобы он не запирался в контракте навсегда.
+        _refundDust(
+            token,
+            IERC20(token).balanceOf(address(this)),
+            IERC20(address(weth)).balanceOf(address(this))
+        );
+
+        emit LiquidityLocked(token, v3Pool, positionId, tokenAmount, ethAmount);
+    }
+
+    /// @dev Заливает ВСЕ имеющиеся средства в full-range позицию, NFT которой
+    ///      навсегда остаётся здесь. Суммы берём по факту: часть могла уйти
+    ///      на выравнивание цены.
+    function _mintLocked(address token0, address token1) internal returns (uint256 positionId) {
+        uint256 a0 = IERC20(token0).balanceOf(address(this));
+        uint256 a1 = IERC20(token1).balanceOf(address(this));
+        IERC20(token0).forceApprove(address(positionManager), a0);
+        IERC20(token1).forceApprove(address(positionManager), a1);
+
+        (positionId, , , ) = positionManager.mint(
             INonfungiblePositionManager.MintParams({
                 token0: token0,
                 token1: token1,
                 fee: POOL_FEE,
                 tickLower: TICK_LOWER,
                 tickUpper: TICK_UPPER,
-                amount0Desired: amount0,
-                amount1Desired: amount1,
-                // реальные минимумы вместо нулей: позиция обязана принять
-                // как минимум 90% каждой стороны, иначе транзакция отменяется
-                amount0Min: (amount0 * MIN_DEPOSIT_BPS) / 10_000,
-                amount1Min: (amount1 * MIN_DEPOSIT_BPS) / 10_000,
+                amount0Desired: a0,
+                amount1Desired: a1,
+                // реальные минимумы вместо нулей
+                amount0Min: (a0 * MIN_DEPOSIT_BPS) / 10_000,
+                amount1Min: (a1 * MIN_DEPOSIT_BPS) / 10_000,
                 recipient: address(this), // NFT locked here forever
                 deadline: block.timestamp
             })
         );
-
-        // Остаток («пыль») после создания позиции возвращаем создателю токена,
-        // чтобы он не запирался в контракте навсегда.
-        bool tokenIs0 = token < address(weth);
-        _refundDust(
-            token,
-            tokenAmount - (tokenIs0 ? used0 : used1),  // остаток токена
-            ethAmount - (tokenIs0 ? used1 : used0)     // остаток WETH
-        );
-
-        emit LiquidityLocked(token, v3Pool, positionId, tokenAmount, ethAmount);
     }
 
     /// @dev ЗАЩИТА ОТ ПОДМЕНЫ ЦЕНЫ. createAndInitializePoolIfNecessary
@@ -169,13 +197,52 @@ contract UniswapV3Migrator is ILiquidityMigrator {
     ///      При расхождении транзакция отменяется: средства остаются в
     ///      бондинг-пуле, миграцию можно повторить позже — атакующему
     ///      пришлось бы вечно держать капитал в кривом пуле без выгоды.
-    function _requireFairPrice(address v3Pool, uint160 expectedSqrtPriceX96) internal view {
+    function _alignPrice(address v3Pool, address token0, address token1, uint160 target) internal {
+        if (_within(v3Pool, target)) return;
+
+        // Пул кто-то инициализировал заранее. Двигаем цену обратно к расчётной.
+        // В пустом пуле (ликвидность 0) свап переносит цену к лимиту даром;
+        // если атакующий залил ликвидность — тратим не больше ALIGN_BUDGET_BPS,
+        // а его позиция по кривой цене достаётся арбитражникам.
+        bool zeroForOne;
+        {
+            (uint160 cur, , , , , , ) = IUniswapV3PoolState(v3Pool).slot0();
+            zeroForOne = cur > target; // продаём token0 — цена вниз
+        }
+        uint256 budget =
+            (IERC20(zeroForOne ? token0 : token1).balanceOf(address(this)) * ALIGN_BUDGET_BPS) / 10_000;
+        if (budget == 0) budget = 1;
+
+        IUniswapV3PoolState(v3Pool).swap(
+            address(this),
+            zeroForOne,
+            int256(budget),          // положительное = точный вход
+            target,                  // дальше расчётной цены не двигаем
+            abi.encode(token0, token1, v3Pool)
+        );
+
+        // Не получилось вернуть цену (слишком глубокая чужая ликвидность) —
+        // отменяем: средства остаются в бондинг-пуле, миграцию можно повторить.
+        if (!_within(v3Pool, target)) {
+            (uint160 after_, , , , , , ) = IUniswapV3PoolState(v3Pool).slot0();
+            revert PoolPriceManipulated(target, after_);
+        }
+    }
+
+    /// @dev Цена пула в пределах допуска от расчётной?
+    function _within(address v3Pool, uint160 expectedSqrtPriceX96) internal view returns (bool) {
         (uint160 actual, , , , , , ) = IUniswapV3PoolState(v3Pool).slot0();
         uint256 expected = uint256(expectedSqrtPriceX96);
         uint256 diff = uint256(actual) > expected ? uint256(actual) - expected : expected - uint256(actual);
-        if (diff * 10_000 > expected * MAX_SQRT_DEVIATION_BPS) {
-            revert PoolPriceManipulated(expectedSqrtPriceX96, actual);
-        }
+        return diff * 10_000 <= expected * MAX_SQRT_DEVIATION_BPS;
+    }
+
+    /// @dev Оплата свапа выравнивания. Вызывает только сам пул Uniswap.
+    function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata data) external {
+        (address t0, address t1, address expectedPool) = abi.decode(data, (address, address, address));
+        require(msg.sender == expectedPool, "bad pool");
+        if (amount0Delta > 0) IERC20(t0).safeTransfer(msg.sender, uint256(amount0Delta));
+        if (amount1Delta > 0) IERC20(t1).safeTransfer(msg.sender, uint256(amount1Delta));
     }
 
     /// @dev Best-effort возврат остатков создателю пула. Если получатель не
