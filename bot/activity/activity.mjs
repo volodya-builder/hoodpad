@@ -106,7 +106,23 @@ const budgetEth = BUDGET_USD / ETH_USD;
 
 async function main() {
   console.log(`hood activity · ${new Date().toISOString()} · фандер ${funder.address}`);
-  console.log(`Бюджет дня: $${BUDGET_USD} (${budgetEth.toFixed(5)} ETH), потрачено ${state.spentEth.toFixed(5)} ETH`);
+
+  // ЛИМИТ РАСХОДА ПО ОН-ЧЕЙН СОСТОЯНИЮ. state.json в CI не сохраняется между
+  // запусками (48 запусков в сутки → «дневной» бюджет тратился бы каждый раз).
+  // Считаем суммарные средства бота: фандер + все трейдеры. Если они опустились
+  // ниже нижней планки — бот останавливается совсем.
+  const traderAddrs = Array.from({ length: WALLETS }, (_, i) =>
+    privateKeyToAccount(keccak256(stringToHex(`${PK}:hood-trader:${i}`))).address);
+  let totalWei = await pub.getBalance({ address: funder.address });
+  for (const a of traderAddrs) totalWei += await pub.getBalance({ address: a });
+  const totalEth = Number(formatEther(totalWei));
+  const FLOOR_ETH = Number(process.env.FLOOR_ETH || 0.004); // ниже — не торгуем
+  console.log(`Средства бота (фандер+трейдеры): ${totalEth.toFixed(5)} ETH · нижняя планка ${FLOOR_ETH} ETH`);
+  if (totalEth <= FLOOR_ETH) {
+    console.log("Средства бота на нижней планке — торговля остановлена (пополни кошелёк бота).");
+    return;
+  }
+  console.log(`Бюджет запуска: $${BUDGET_USD} (${budgetEth.toFixed(5)} ETH), потрачено в этом запуске ${state.spentEth.toFixed(5)} ETH`);
 
   // ---- 1) СИД тематических токенов (один раз) ------------------------
   const already = Number(await pub.readContract({ address: HOOD_FACTORY, abi: factoryAbi, functionName: "tokenCount" }));

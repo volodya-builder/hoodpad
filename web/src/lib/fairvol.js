@@ -40,6 +40,10 @@ export function honestVolume(trades, creator) {
     row.net = Math.abs(row.buy - row.sell);
     uncapped += row.net;
   }
+  // Вклад одного кошелька ограничен четвертью ОБЩЕГО потока за период:
+  // накрутка с одного адреса засчитывается максимум на 25% — остальное
+  // сгорает. Строгий вариант «доля в итоге ≤ 25%» математически требует
+  // 4+ участников и обнулял бы молодые честные токены, поэтому не он.
   const cap = uncapped * WALLET_CAP;
   let honest = 0;
   for (const row of byWallet.values()) honest += Math.min(row.net, cap || row.net);

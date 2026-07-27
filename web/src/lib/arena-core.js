@@ -11,6 +11,12 @@ import { honestVolume } from "./fairvol.js";
 
 export const DAY = 86_400_000;
 
+// ЕДИНАЯ глубина цепочки дней для сайта и ИИ-казначея.
+// Критично: «защита трона» связывает дни между собой, поэтому при разной
+// глубине окна чемпион одного и того же дня может отличаться — экран
+// разойдётся с выплатой в блокчейне. Менять только здесь.
+export const ARENA_DAYS = 62;
+
 export function dayStart(ts = Date.now()) {
   return Math.floor(ts / DAY) * DAY;
 }
@@ -47,6 +53,23 @@ export function arenaState(tokens, trades, d0, now = Date.now(), excluded = null
   for (const tr of dayTrades) (byPool[tr.pool] ??= []).push(tr);
   for (const k in byPool) byPool[k].sort((a, b) => b.ts - a.ts); // новые первыми
 
+  // Резерв пула на КОНЕЦ дня: откатываем от текущего состояния все сделки,
+  // случившиеся ПОСЛЕ этого дня. Без этого очки прошлых дней считались бы
+  // от сегодняшней цены — история арены и очки лиги были бы неверными.
+  const future = {};
+  for (const tr of trades) if (tr.ts >= end) (future[tr.pool] ??= []).push(tr);
+  const atEnd = {};
+  for (const p of parts) {
+    const k = (p.pool || "").toLowerCase();
+    let res = Number(p.reserve) / 1e18;
+    let sold = Number(p.sold) / 1e18;
+    for (const tr of future[k] || []) {
+      if (tr.side === "buy") { res -= tr.eth; sold -= tr.tokens; }
+      else { res += tr.eth + tr.fee; sold += tr.tokens; }
+    }
+    atEnd[k] = { res, sold };
+  }
+
   const volUntil = (poolLower, t) =>
     (byPool[poolLower] || []).reduce((s, tr) => (tr.ts <= t ? s + tr.eth + tr.fee : s), 0);
 
@@ -57,10 +80,12 @@ export function arenaState(tokens, trades, d0, now = Date.now(), excluded = null
   const honestUntil = (poolLower, t) =>
     honestVolume((byPool[poolLower] || []).filter((tr) => tr.ts <= t), creatorOf[poolLower]).honest;
 
-  // состояние кривой пула в момент t: откатываем сделки новее t от текущего
+  // состояние кривой пула в момент t: откатываем сделки новее t
+  // от состояния на конец этого дня (не от «сегодня»).
   const stateAt = (p, t) => {
-    let res = Number(p.reserve) / 1e18;
-    let sold = Number(p.sold) / 1e18;
+    const k0 = (p.pool || "").toLowerCase();
+    let res = atEnd[k0]?.res ?? Number(p.reserve) / 1e18;
+    let sold = atEnd[k0]?.sold ?? Number(p.sold) / 1e18;
     for (const tr of byPool[(p.pool || "").toLowerCase()] || []) {
       if (tr.ts <= t) break;
       if (tr.side === "buy") { res -= tr.eth; sold -= tr.tokens; }
@@ -130,7 +155,7 @@ export function podium(st) {
 /** Цепочка дней с «защитой трона»: чемпион дня N автоматически
  *  вне конкурса в день N+1. Считается вперёд от прошлого к сегодня —
  *  результат детерминирован для всех. */
-export function buildChain(tokens, trades, daysBack = 62, now = Date.now()) {
+export function buildChain(tokens, trades, daysBack = ARENA_DAYS, now = Date.now()) {
   const today = dayStart(now);
   const chain = new Map(); // d0 -> state
   let excluded = null;
@@ -154,7 +179,7 @@ export function grandArena(tokens, trades, now = Date.now()) {
   const monthEnd = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
   const prevMonthStart = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 1);
   const today = dayStart(now);
-  const { chain } = buildChain(tokens, trades, 62, now);
+  const { chain } = buildChain(tokens, trades, ARENA_DAYS, now);
 
   const collect = (from, to) => {
     const league = {};
@@ -195,7 +220,8 @@ export function grandArena(tokens, trades, now = Date.now()) {
 /** Зал славы: чемпионы прошлых дней (насколько хватает истории сделок). */
 export function hallOfFame(tokens, trades, days = 14, now = Date.now()) {
   const out = [];
-  const { chain, today } = buildChain(tokens, trades, days, now);
+  // цепочка всегда полной глубины (детерминизм), показываем последние `days`
+  const { chain, today } = buildChain(tokens, trades, ARENA_DAYS, now);
   for (let i = 1; i <= days; i++) {
     const d0 = today - i * DAY;
     const st = chain.get(d0);

@@ -60,11 +60,25 @@ async function main() {
     for (const k of st.keys || []) wallets.push(privateKeyToAccount(k));
     console.log(`(бот активности: +${(st.keys || []).length} кошельков из state.json)`);
   } catch (e) { /* state.json больше не используется */ }
-  // детерминированные трейдеры бота активности (выводятся из главного ключа)
+  // Детерминированные трейдеры бота активности. ВАЖНО: выводятся из ключа,
+  // которым бот их фандил (ACTIVITY_PRIVATE_KEY). Если запустить скрипт другим
+  // ключом — адреса будут другие, и деньги останутся висеть (урок 24.07).
   const { keccak256, stringToHex } = require("viem");
-  for (let i = 0; i < 8; i++) {
-    wallets.push(privateKeyToAccount(keccak256(stringToHex(`${PK}:hood-trader:${i}`))));
+  let BOT_PK = (process.env.ACTIVITY_PRIVATE_KEY || "").replace(/["'\s]/g, "");
+  if (BOT_PK && !BOT_PK.startsWith("0x")) BOT_PK = "0x" + BOT_PK;
+  if (!/^0x[0-9a-fA-F]{64}$/.test(BOT_PK)) {
+    BOT_PK = PK;
+    console.log("(ACTIVITY_PRIVATE_KEY не задан — деривирую трейдеров из PRIVATE_KEY;");
+    console.log(" если бот работал с ДРУГИМ ключом, задай его: $env:ACTIVITY_PRIVATE_KEY=\"0x...\")");
+  } else if (BOT_PK.toLowerCase() !== PK.toLowerCase()) {
+    console.log(`(трейдеры бота деривируются из ACTIVITY_PRIVATE_KEY: ${privateKeyToAccount(BOT_PK).address})`);
   }
+  const DERIVE_N = Number(process.env.WALLETS || 16); // с запасом: боты могли крутить больше
+  for (let i = 0; i < DERIVE_N; i++) {
+    wallets.push(privateKeyToAccount(keccak256(stringToHex(`${BOT_PK}:hood-trader:${i}`))));
+  }
+  // фандер бота — тоже сгоняем на главный, если это отдельный кошелёк
+  if (BOT_PK.toLowerCase() !== PK.toLowerCase()) wallets.push(privateKeyToAccount(BOT_PK));
 
   const startBal = await pub.getBalance({ address: main_.address });
   console.log(`Главный: ${main_.address} · ${formatEther(startBal)} ETH · кошельков всего: ${wallets.length}`);
