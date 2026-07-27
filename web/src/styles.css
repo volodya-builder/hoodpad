@@ -2017,6 +2017,98 @@ html[data-theme="light"] .wb::before { background: #fffdf7; }
   .podium3 { grid-template-columns: 1fr; gap: 8px; }
 }
 
+/* -------- правила арены: инфографика -------- */
+.rules-wrap { margin-top: 18px; display: flex; flex-direction: column; gap: 14px; }
+.rl-sec {
+  border: 1px solid var(--border); border-radius: 16px; padding: 20px 22px;
+  background: #ffffff04;
+}
+.rl-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+.rl-foot { font-size: 12.5px; line-height: 1.6; margin-top: 14px; max-width: 900px; }
+
+/* таймлайн дня */
+.rl-tl { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding-top: 6px; }
+.rl-tl-line {
+  position: absolute; left: 6%; right: 6%; top: 24px; height: 2px;
+  background: linear-gradient(90deg, var(--leaf), #e06a4a 55%, var(--gold));
+  opacity: 0.5;
+}
+.rl-tl-pt { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; position: relative; }
+.rl-tl-dot {
+  width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 17px; background: #1a1d18; border: 2px solid var(--border); z-index: 1;
+}
+.rl-tl-dot.start { border-color: var(--leaf); }
+.rl-tl-dot.gold { border-color: var(--gold); box-shadow: 0 0 14px #c9a22740; }
+.rl-tl-pt b { font-size: 12.5px; margin-top: 3px; }
+.rl-tl-pt .dim { font-size: 11.5px; }
+
+/* формула очков */
+.rl-formula { display: flex; align-items: stretch; gap: 12px; flex-wrap: wrap; }
+.rl-box {
+  flex: 1; min-width: 150px; display: flex; flex-direction: column; gap: 3px; justify-content: center;
+  border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; background: #00000033;
+}
+.rl-box b { font-size: 14.5px; }
+.rl-box .dim { font-size: 11.5px; }
+.rl-box.green { border-color: #2e7d4f88; background: linear-gradient(160deg, #2e7d4f14, #00000033); }
+.rl-box.gold  { border-color: #c9a22788; background: linear-gradient(160deg, #c9a22714, #00000033); }
+.rl-box.gold b { color: var(--gold); }
+.rl-op { align-self: center; font-size: 22px; font-weight: 700; color: var(--dim); }
+
+/* можно/нельзя */
+.rl-chips { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.rl-chip {
+  font-size: 12.5px; line-height: 1.45; padding: 10px 13px; border-radius: 10px;
+  border: 1px solid var(--border); background: #ffffff03;
+}
+.rl-chip.ok  { border-color: #2e7d4f55; }
+.rl-chip.bad { border-color: #e06a4a33; }
+
+/* потоки казны */
+.rl-flow { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 12px; margin-top: 14px; }
+.rl-fcard {
+  position: relative; border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px;
+  background: #00000033; display: flex; flex-direction: column; gap: 4px;
+}
+.rl-fcard.gold { border-color: #c9a22766; background: linear-gradient(165deg, #c9a22710, #00000033); }
+.rl-fpct { font-size: 30px; font-weight: 800; letter-spacing: 0.5px; }
+.rl-fcard.gold .rl-fpct { color: var(--gold); }
+.rl-frate { font-size: 12px; color: var(--dim); font-weight: 600; }
+.rl-fname { font-size: 14px; font-weight: 700; margin-top: 2px; }
+.rl-fdesc { font-size: 11.5px; line-height: 1.55; margin-top: 4px; }
+
+/* мини-подиум внутри карточки арены */
+.rl-mini-podium { display: flex; align-items: flex-end; gap: 10px; margin-top: 10px; height: 96px; }
+.rl-mp { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px; }
+.rl-mp i { font-style: normal; font-size: 15px; }
+.rl-mp em {
+  display: block; width: 100%; border-radius: 6px 6px 2px 2px;
+  background: linear-gradient(180deg, #c9a227aa, #c9a22733);
+}
+.rl-mp.s2 em { background: linear-gradient(180deg, #9fa8b3aa, #9fa8b333); }
+.rl-mp.s3 em { background: linear-gradient(180deg, #b0713caa, #b0713c33); }
+.rl-mp span { font-size: 11.5px; font-weight: 700; }
+.rl-mp.s1 span { color: var(--gold); }
+
+/* полоса честности */
+.rl-fair {
+  display: flex; gap: 10px; flex-wrap: wrap;
+}
+.rl-fair span {
+  flex: 1; min-width: 220px; text-align: center; font-size: 12.5px; font-weight: 600;
+  border: 1px dashed var(--border); border-radius: 12px; padding: 12px 14px; color: var(--dim);
+  background: #ffffff03;
+}
+@media (max-width: 860px) {
+  .rl-tl { grid-template-columns: repeat(2, 1fr); row-gap: 18px; }
+  .rl-tl-line { display: none; }
+  .rl-chips { grid-template-columns: 1fr; }
+  .rl-flow { grid-template-columns: 1fr; }
+  .rl-formula { flex-direction: column; }
+  .rl-op { align-self: flex-start; padding-left: 8px; }
+}
+
 /* раскладка арены: лента сигналов слева, бой справа */
 .arena-layout { display: grid; grid-template-columns: 300px 1fr; gap: 24px; align-items: start; margin-top: 20px; }
 .arena-side { position: sticky; top: 84px; }
