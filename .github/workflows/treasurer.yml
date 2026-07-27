@@ -36,5 +36,7 @@ jobs:
           git config user.name "hood-treasurer"
           git config user.email "treasurer@hoodandarrow.com"
           git add bot/treasurer/reports bot/treasurer/state.json 2>/dev/null || true
-          git diff --cached --quiet || git commit -m "treasurer: report update"
-          git push || true
+          git diff --cached --quiet && exit 0
+          git commit -m "treasurer: report update"
+          git pull --rebase origin main
+          git push  # падать ГРОМКО: урок бота активности — || true прячет потерю данных

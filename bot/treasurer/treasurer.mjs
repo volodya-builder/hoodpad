@@ -26,8 +26,22 @@ import {
   createPublicClient, createWalletClient, http, parseAbi, formatEther, defineChain,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+// ЕДИНОЕ ядро арены — тот же код, что считает бой на сайте.
+// Подиум на экране и выкупы в блокчейне не могут разойтись.
+import { buildChain, grandArena, podium, dayStart, DAY } from "../../web/src/lib/arena-core.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// ---- распределение казны (решение владельца, 25.07.2026) ----
+// Арена: каждый день 10% баланса казны → подиум 50/30/20 (1-2-3 места).
+// Голосование: раз в неделю 30% баланса → победитель голосования.
+// Гранд-Арена: раз в месяц 20% баланса → Гранд-чемпион.
+// Всё — выкуп и сжигание. Проценты от ТЕКУЩЕГО баланса: казна не пустеет.
+const ARENA_DAILY_PCT = 0.10;
+const ARENA_SPLIT = [0.5, 0.3, 0.2];
+const VOTE_WEEKLY_PCT = 0.30;
+const GRAND_MONTHLY_PCT = 0.20;
+const DUST_ETH = 0.0003; // не тратим газ на пыль
 
 // ------------------------------------------------------------ конфиг
 const RPC_URL  = process.env.RPC_URL  || "https://rpc.mainnet.chain.robinhood.com";
@@ -108,11 +122,106 @@ async function main() {
   }
   console.log(`Собрано в казну: ${swept.toFixed(6)} ETH`);
 
-  // ---- 2) SETTLE: если только что закончился недельный раунд — выкуп победителя
+  // ---- данные для арены: токены + сделки из сабграфа (формат = фронтенд)
+  const loadArenaData = async () => {
+    const td = await gql(`{ tokens(first: 500) {
+      id symbol creator pool createdAt graduated ethReserve tokensSold } }`).catch(() => null);
+    const tokens = (td?.tokens || []).map((x) => ({
+      token: x.id, symbol: x.symbol, creator: x.creator, pool: (x.pool || "").toLowerCase(),
+      createdAt: Number(x.createdAt) * 1000, graduated: !!x.graduated,
+      reserve: x.ethReserve, sold: x.tokensSold, meta: {},
+    }));
+    const trades = [];
+    let beforeTs = null;
+    for (let page = 0; page < 3; page++) {
+      const cond = beforeTs ? `, where: { timestamp_lt: "${beforeTs}" }` : "";
+      const d = await gql(`{ trades(first: 1000, orderBy: timestamp, orderDirection: desc${cond}) {
+        pool trader isBuy ethAmount tokenAmount fee timestamp } }`).catch(() => null);
+      const rows = d?.trades || [];
+      for (const l of rows) {
+        trades.push({
+          pool: l.pool.toLowerCase(), side: l.isBuy ? "buy" : "sell", addr: l.trader,
+          eth: Number(l.ethAmount) / 1e18, tokens: Number(l.tokenAmount) / 1e18,
+          fee: Number(l.fee) / 1e18, ts: Number(l.timestamp) * 1000,
+        });
+      }
+      if (rows.length < 1000) break;
+      beforeTs = rows[rows.length - 1].timestamp;
+    }
+    return { tokens, trades };
+  };
+
+  const utc = new Date();
+  const firstRunOfDay = utc.getUTCHours() < 6; // крон каждые 6ч → это запуск 00:13
+
+  // ---- 2) АРЕНА: утром выплачиваем подиум вчерашнего дня (10% казны, 50/30/20)
+  if (firstRunOfDay) {
+    try {
+      const { tokens, trades } = await loadArenaData();
+      const yesterday = dayStart(Date.now()) - DAY;
+      const { chain } = buildChain(tokens, trades, 35, yesterday + DAY - 1);
+      const st = chain.get(yesterday);
+      const pod = podium(st);
+      const bal = await pub.getBalance({ address: TREASURY });
+      const pot = Number(formatEther(bal)) * ARENA_DAILY_PCT;
+      if (!pod.length) console.log("Арена: вчера не было подиума — выплат нет.");
+      else if (pot < DUST_ETH) console.log(`Арена: фонд дня ${pot.toFixed(6)} ETH — пыль, копим дальше.`);
+      else {
+        const medals = ["🥇", "🥈", "🥉"];
+        const payouts = [];
+        for (let i = 0; i < pod.length; i++) {
+          const amtEth = pot * ARENA_SPLIT[i];
+          if (amtEth < DUST_ETH) continue;
+          const amt = BigInt(Math.floor(amtEth * 1e18));
+          const rc = await tx("buybackAndReward",
+            { to: TREASURY, abi: treAbi, a: [pod[i].token, amt, 0n, 0n] },
+            `${medals[i]} АРЕНА ${pod[i].symbol}: выкуп+сжигание ${amtEth.toFixed(6)} ETH`);
+          payouts.push({ place: i + 1, token: pod[i].token, symbol: pod[i].symbol,
+            ethAmount: amtEth, score: pod[i].score ?? 0, tx: rc.transactionHash });
+        }
+        if (payouts.length) {
+          const dir = path.join(__dirname, "reports");
+          fs.mkdirSync(dir, { recursive: true });
+          const rep = { day: yesterday, ts: Date.now(), potEth: pot, payouts,
+            reason: `Подиум арены за ${new Date(yesterday).toISOString().slice(0, 10)}: казна потратила 10% баланса (${pot.toFixed(6)} ETH), 50/30/20 между местами. Выкупленное сожжено.` };
+          fs.writeFileSync(path.join(dir, `arena-${new Date(yesterday).toISOString().slice(0, 10)}.json`), JSON.stringify(rep, null, 2));
+          fs.writeFileSync(path.join(dir, "latest-arena.json"), JSON.stringify(rep, null, 2));
+        }
+      }
+    } catch (e) { console.error("Арена-подиум: ошибка", e.shortMessage || e.message); }
+  }
+
+  // ---- 3) ГРАНД-АРЕНА: первое утро месяца — гранд-выкуп чемпиона (20% казны)
+  if (firstRunOfDay && utc.getUTCDate() === 1) {
+    try {
+      const { tokens, trades } = await loadArenaData();
+      const prevMonthEnd = Date.UTC(utc.getUTCFullYear(), utc.getUTCMonth(), 1) - 1;
+      const g = grandArena(tokens, trades, prevMonthEnd);
+      const winner = g.table[0];
+      const bal = await pub.getBalance({ address: TREASURY });
+      const potEth = Number(formatEther(bal)) * GRAND_MONTHLY_PCT;
+      if (winner && potEth >= DUST_ETH) {
+        const amt = BigInt(Math.floor(potEth * 1e18));
+        const rc = await tx("buybackAndReward",
+          { to: TREASURY, abi: treAbi, a: [winner.token.token, amt, 0n, 0n] },
+          `👑 ГРАНД-ВЫКУП ${winner.token.symbol}: ${potEth.toFixed(6)} ETH`);
+        const dir = path.join(__dirname, "reports");
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, "latest-grand.json"), JSON.stringify({
+          month: new Date(prevMonthEnd).toISOString().slice(0, 7), ts: Date.now(),
+          winner: winner.token.token, symbol: winner.token.symbol,
+          wins: winner.wins, points: winner.points, ethAmount: potEth, tx: rc.transactionHash,
+          reason: `Гранд-чемпион месяца — ${winner.token.symbol} (${winner.wins} побед). Гранд-выкуп 20% казны (${potEth.toFixed(6)} ETH), всё сожжено.`,
+        }, null, 2));
+      } else console.log("Гранд-Арена: нет чемпиона или фонд-пыль — пропуск.");
+    } catch (e) { console.error("Гранд-выкуп: ошибка", e.shortMessage || e.message); }
+  }
+
+  // ---- 4) SETTLE: если только что закончился недельный раунд — выкуп победителя
   const EPOCH = 7 * 86400;
   const epochNow = Math.floor(now / EPOCH);
   const secsIntoEpoch = now % EPOCH;
-  const justRolled = secsIntoEpoch < 26 * 3600; // окно ~сутки после старта нового раунда
+  const justRolled = secsIntoEpoch < 6.5 * 3600; // только ПЕРВЫЙ запуск после смены раунда (крон каждые 6ч) — двойных выплат нет даже без state.json
   const settledFile = path.join(__dirname, "state.json");
   let settled = {};
   try { settled = JSON.parse(fs.readFileSync(settledFile, "utf8")); } catch (e) { /* нет */ }
@@ -149,7 +258,10 @@ async function main() {
     const winPower = BigInt(winVotes); // для отчёта — число голосов
     const bal = await pub.readContract({ address: TREASURY, abi: treAbi, functionName: "treasuryBalance" });
 
-    if (winner && Number(formatEther(bal)) >= BUYBACK_MIN) {
+    // выкуп голосования = 30% ТЕКУЩЕГО баланса казны (см. распределение выше)
+    const voteAmtEth = Number(formatEther(bal)) * VOTE_WEEKLY_PCT;
+    const voteAmt = BigInt(Math.floor(voteAmtEth * 1e18));
+    if (winner && voteAmtEth >= Math.max(BUYBACK_MIN * VOTE_WEEKLY_PCT, DUST_ETH)) {
       // обоснование для отчёта: голоса + объём недели из сабграфа
       const since = (epochNow - 1) * EPOCH;
       const d = await gql(`{ trades(first:1000, where:{timestamp_gt:"${since}"}){ pool ethAmount } }`).catch(() => ({ trades: [] }));
@@ -164,11 +276,11 @@ async function main() {
         votes: winVotes,
         weekVolumeEth: volByPool[(winPool || "").toLowerCase()] || 0,
         treasuryEth: formatEther(bal),
-        reason: `Токен ${winner} победил в голосовании раунда #${finishedEpoch}: собрал ${winVotes} голосов от кошельков с объёмом >= $500. Казна выкупает его на ${formatEther(bal)} ETH и сжигает купленное — поддержка цены и дефляция.`,
+        reason: `Токен ${winner} победил в голосовании раунда #${finishedEpoch}: собрал ${winVotes} голосов от кошельков с объёмом >= $500. Казна выкупает его на ${voteAmtEth.toFixed(6)} ETH (30% баланса) и сжигает купленное — поддержка цены и дефляция.`,
       };
       const rc = await tx("buybackAndReward",
-        { to: TREASURY, abi: treAbi, a: [winner, bal, 0n, BigInt(finishedEpoch)] },
-        `BUYBACK+BURN ${winner.slice(0, 8)} на ${formatEther(bal)} ETH`);
+        { to: TREASURY, abi: treAbi, a: [winner, voteAmt, 0n, BigInt(finishedEpoch)] },
+        `BUYBACK+BURN ${winner.slice(0, 8)} на ${voteAmtEth.toFixed(6)} ETH`);
       report.tx = rc.transactionHash;
       report.status = rc.status;
 
