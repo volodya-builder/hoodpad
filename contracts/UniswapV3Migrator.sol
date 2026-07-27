@@ -17,6 +17,24 @@ interface IPoolCreator {
     function creator() external view returns (address);
 }
 
+/// @dev Читаем фактическую цену пула: если пул кто-то создал заранее с
+///      искажённой ценой, createAndInitializePoolIfNecessary молча оставит
+///      её — и наша ликвидность легла бы по цене атакующего.
+interface IUniswapV3PoolState {
+    function slot0()
+        external
+        view
+        returns (
+            uint160 sqrtPriceX96,
+            int24 tick,
+            uint16 observationIndex,
+            uint16 observationCardinality,
+            uint16 observationCardinalityNext,
+            uint8 feeProtocol,
+            bool unlocked
+        );
+}
+
 interface INonfungiblePositionManager {
     struct MintParams {
         address token0;
@@ -59,6 +77,16 @@ contract UniswapV3Migrator is ILiquidityMigrator {
     int24 public constant TICK_LOWER = -887220;  // full range for spacing 60
     int24 public constant TICK_UPPER = 887220;
 
+    /// @notice Допуск на отклонение фактической цены пула от расчётной, в bps
+    ///         от sqrtPrice (100 = 1% по sqrt ≈ 2% по цене). Если пул был
+    ///         инициализирован заранее по другой цене — миграция ревертится.
+    uint256 public constant MAX_SQRT_DEVIATION_BPS = 100;
+
+    /// @notice Минимальная доля желаемых сумм, которую обязана принять позиция.
+    uint256 public constant MIN_DEPOSIT_BPS = 9_000; // 90%
+
+    error PoolPriceManipulated(uint160 expectedSqrtPriceX96, uint160 actualSqrtPriceX96);
+
     event LiquidityLocked(
         address indexed token,
         address indexed v3Pool,
@@ -98,6 +126,8 @@ contract UniswapV3Migrator is ILiquidityMigrator {
             sqrtPriceX96
         );
 
+        _requireFairPrice(v3Pool, sqrtPriceX96);
+
         IERC20(token).forceApprove(address(positionManager), tokenAmount);
         IERC20(address(weth)).forceApprove(address(positionManager), ethAmount);
 
@@ -110,8 +140,10 @@ contract UniswapV3Migrator is ILiquidityMigrator {
                 tickUpper: TICK_UPPER,
                 amount0Desired: amount0,
                 amount1Desired: amount1,
-                amount0Min: 0,
-                amount1Min: 0,
+                // реальные минимумы вместо нулей: позиция обязана принять
+                // как минимум 90% каждой стороны, иначе транзакция отменяется
+                amount0Min: (amount0 * MIN_DEPOSIT_BPS) / 10_000,
+                amount1Min: (amount1 * MIN_DEPOSIT_BPS) / 10_000,
                 recipient: address(this), // NFT locked here forever
                 deadline: block.timestamp
             })
@@ -127,6 +159,23 @@ contract UniswapV3Migrator is ILiquidityMigrator {
         );
 
         emit LiquidityLocked(token, v3Pool, positionId, tokenAmount, ethAmount);
+    }
+
+    /// @dev ЗАЩИТА ОТ ПОДМЕНЫ ЦЕНЫ. createAndInitializePoolIfNecessary
+    ///      инициализирует пул ТОЛЬКО если он ещё не инициализирован.
+    ///      Атакующий может создать его заранее по искажённой цене — тогда
+    ///      вся градуированная ликвидность легла бы по его цене и была бы
+    ///      немедленно выкуплена арбитражем. Сверяем факт с расчётом.
+    ///      При расхождении транзакция отменяется: средства остаются в
+    ///      бондинг-пуле, миграцию можно повторить позже — атакующему
+    ///      пришлось бы вечно держать капитал в кривом пуле без выгоды.
+    function _requireFairPrice(address v3Pool, uint160 expectedSqrtPriceX96) internal view {
+        (uint160 actual, , , , , , ) = IUniswapV3PoolState(v3Pool).slot0();
+        uint256 expected = uint256(expectedSqrtPriceX96);
+        uint256 diff = uint256(actual) > expected ? uint256(actual) - expected : expected - uint256(actual);
+        if (diff * 10_000 > expected * MAX_SQRT_DEVIATION_BPS) {
+            revert PoolPriceManipulated(expectedSqrtPriceX96, actual);
+        }
     }
 
     /// @dev Best-effort возврат остатков создателю пула. Если получатель не
