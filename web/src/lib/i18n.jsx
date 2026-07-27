@@ -237,6 +237,7 @@ const EN = {
   "2 место": "2nd place",
   "3 место": "3rd place",
   "чемпион дня": "champion of the day",
+  "приза": "of prize",
   "по очкам боя": "by battle score",
   "казны": "of treasury",
   "Раз в неделю казна тратит 20% баланса на выкуп и сжигание токена-победителя голосования": "Once a week the treasury spends 20% of its balance to buy back and burn the vote-winning token",

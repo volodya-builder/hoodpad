@@ -305,17 +305,17 @@ export default function Arena() {
           {/* Подиум дня: что даёт каждое место — наглядно и с процентами казны */}
           <div className="podium3">
             {[
-              ["gold", "🥇", t("1 место"), 35, t("чемпион дня")],
-              ["silver", "🥈", t("2 место"), 10, t("по очкам боя")],
-              ["bronze", "🥉", t("3 место"), 5, t("по очкам боя")],
+              ["gold", "🥇", t("1 место"), 70, t("чемпион дня")],
+              ["silver", "🥈", t("2 место"), 20, t("по очкам боя")],
+              ["bronze", "🥉", t("3 место"), 10, t("по очкам боя")],
             ].map(([cls, medal, place, pct, who]) => {
-              const v = treBal === null ? null : treBal * (pct / 100);
+              const v = treBal === null ? null : treBal * 0.5 * (pct / 100);
               return (
                 <div className={`pod-card ${cls}`} key={cls}>
                   <span className="pod-medal">{medal}</span>
                   <span className="pod-place">{place} <span className="dim">· {who}</span></span>
                   <b className="pod-sum">{v === null ? "…" : v > 0 && v < 0.01 ? "<$0.01" : D(v)}</b>
-                  <span className="pod-pct">{pct}% {t("казны")}</span>
+                  <span className="pod-pct">{pct}% {t("приза")}</span>
                 </div>
               );
             })}
