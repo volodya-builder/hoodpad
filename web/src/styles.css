@@ -2170,6 +2170,24 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
   .ar-status, .ar-mcap { display: none; }
   .arena-hdr span:nth-child(4), .arena-hdr span:nth-child(6) { display: none; }
   .arena-bar { gap: 18px; padding: 13px 16px; }
+
+  /* подиум дня и бейджи долей казны */
+  .pod-card { padding: 12px 14px; }
+  .pod-sum { font-size: 17px; }
+  .pod-pct { top: 10px; right: 10px; font-size: 10.5px; }
+  .pod-head { font-size: 12.5px; }
+  .share-chip { margin-left: 6px; padding: 3px 7px; font-size: 10px; }
+
+  /* инфографика правил */
+  .rl-sec { padding: 15px 14px; }
+  .rl-title { font-size: 14.5px; margin-bottom: 12px; }
+  .rl-fpct { font-size: 24px; }
+  .rl-mini-podium { height: 78px; }
+  .rl-box { min-width: 0; }
+  .rl-tl-dot { width: 34px; height: 34px; font-size: 15px; }
+
+  /* фильтры сортировки в профиле: своя строка во всю ширину */
+  .bt-tabs .pill-group { margin-left: 0 !important; width: 100%; flex-wrap: wrap; }
 }
 
 /* индикатор источника данных в админке */
