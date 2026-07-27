@@ -170,7 +170,7 @@ export default function Arena() {
                   t("Накрутка не запрещена — она просто не работает: не даёт ни очков арены, ни права голоса."),
                 ]],
               ].map(([title, items], i) => (
-                <div className="bottom-card" style={{ marginTop: i === 0 ? 4 : 14 }} key={i}>
+                <div className="bottom-card" style={{ marginTop: i === 0 ? 18 : 14 }} key={i}>
                   <h3 style={{ margin: "2px 0 10px" }}>{title}</h3>
                   {items.map((line, j) => (
                     <div className="check-item" key={j} style={{ padding: "5px 0" }}>
@@ -187,7 +187,7 @@ export default function Arena() {
             const hof = hallOfFame(st.tokens, st.trades, 31);
             if (hof.length === 0) return <div className="center">{t("Первый чемпион появится после финала дня.")}</div>;
             return (
-              <div className="arena-list">
+              <div className="arena-list" style={{ marginTop: 18 }}>
                 {hof.map(({ day, champion: c }) => (
                   <a key={day} className="arena-row" href={`#/token/${c.token}`}>
                     <span className="ar-rank">👑</span>
@@ -211,11 +211,11 @@ export default function Arena() {
             const ga = grandArena(st.tokens, st.trades);
             const days = Math.floor(ga.endsIn / 86_400_000);
             const hours = Math.floor((ga.endsIn % 86_400_000) / 3_600_000);
-            const pool = treBal !== null ? treBal * 0.15 : null;
+            const pool = treBal !== null ? treBal * 0.30 : null;
             const maxPts = Math.max(...ga.table.map((r) => r.points + (r.pendingPoints || 0)), 1e-9);
             return (
               <>
-                <div className="arena-bar" style={{ borderColor: "var(--gold)" }}>
+                <div className="arena-bar" style={{ borderColor: "var(--gold)", marginTop: 18 }}>
                   <div className="ab-cell"><span>{t("В лиге")}</span><b>{ga.table.length}</b></div>
                   <div className="ab-cell"><span>{t("Финал месяца")}</span>
                     <b className="ab-timer">{days}{t("д")} {hours}{t("ч")}</b></div>
@@ -263,7 +263,7 @@ export default function Arena() {
           })()}
 
           {view === "day" && (<>
-          <div className="arena-bar">
+          <div className="arena-bar" style={{ marginTop: 18 }}>
             <div className="ab-cell">
               <span>{t("В бою")}</span>
               <b>{st.alive.length} / {st.participants.length}</b>
