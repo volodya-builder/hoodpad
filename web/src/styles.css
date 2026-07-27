@@ -1983,6 +1983,33 @@ html[data-theme="light"] .vr-bar { background: #00000010; }
 html[data-theme="light"] .wb::after { background: #fffdf7; color: #1c1c1a; box-shadow: 0 14px 34px -18px #00000055; }
 html[data-theme="light"] .wb::before { background: #fffdf7; }
 
+/* подиум дня: три призовых места с процентами казны */
+.podium3 {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 12px;
+}
+.pod-card {
+  position: relative; display: flex; flex-direction: column; gap: 3px;
+  padding: 14px 16px; border-radius: 14px; border: 1px solid var(--border);
+  background: #ffffff05;
+}
+.pod-card.gold   { border-color: #c9a22766; background: linear-gradient(160deg, #c9a22712, #ffffff03); }
+.pod-card.silver { border-color: #9fa8b344; background: linear-gradient(160deg, #9fa8b30d, #ffffff03); }
+.pod-card.bronze { border-color: #b0713c44; background: linear-gradient(160deg, #b0713c0d, #ffffff03); }
+.pod-medal { font-size: 22px; line-height: 1; }
+.pod-place { font-size: 12.5px; margin-top: 2px; }
+.pod-sum { font-size: 20px; letter-spacing: 0.2px; }
+.pod-card.gold .pod-sum { color: var(--gold); }
+.pod-pct {
+  position: absolute; top: 12px; right: 14px; font-size: 11.5px; font-weight: 700;
+  padding: 3px 9px; border-radius: 999px; border: 1px solid var(--border); color: var(--dim);
+  background: #00000033;
+}
+.pod-card.gold .pod-pct { color: var(--gold); border-color: #c9a22755; }
+.pod-note { grid-column: 1 / -1; font-size: 12px; line-height: 1.5; padding: 0 2px; }
+@media (max-width: 700px) {
+  .podium3 { grid-template-columns: 1fr; gap: 8px; }
+}
+
 /* раскладка арены: лента сигналов слева, бой справа */
 .arena-layout { display: grid; grid-template-columns: 300px 1fr; gap: 24px; align-items: start; margin-top: 20px; }
 .arena-side { position: sticky; top: 84px; }

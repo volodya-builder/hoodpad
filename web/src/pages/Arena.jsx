@@ -273,19 +273,32 @@ export default function Arena() {
               <b className="ab-timer"><Countdown to={st.nextCheckpoint ?? dayStart() + 86_400_000} /></b>
             </div>
             <div className="ab-cell">
-              <span>{t("Призы дня")} <i title={t("Каждый день казна тратит 50% баланса на подиум: 70% — 1 месту, 20% — 2 месту, 10% — 3 месту. Выкуп токена с рынка и сжигание. Исполняется автоматически утром следующего дня.")}>ⓘ</i></span>
-              <b>
-                {treBal === null ? "…" : (() => {
-                  const pot = treBal * 0.50;
-                  return <>🥇{D(pot * 0.7)} 🥈{D(pot * 0.2)} 🥉{D(pot * 0.1)}</>;
-                })()}
-              </b>
-            </div>
-            <div className="ab-cell">
               <span>{t("Накоплено на выкупы")}</span>
               <b style={{ color: "var(--gold)" }}>
                 {treBal === null ? "…" : <>{D(treBal)} <span className="dim" style={{ fontWeight: 500, fontSize: 13 }}>({fmtEth(treBal)} ETH)</span></>}
               </b>
+            </div>
+          </div>
+
+          {/* Подиум дня: что даёт каждое место — наглядно и с процентами казны */}
+          <div className="podium3">
+            {[
+              ["gold", "🥇", t("1 место"), 35, t("чемпион дня")],
+              ["silver", "🥈", t("2 место"), 10, t("по очкам боя")],
+              ["bronze", "🥉", t("3 место"), 5, t("по очкам боя")],
+            ].map(([cls, medal, place, pct, who]) => {
+              const v = treBal === null ? null : treBal * (pct / 100);
+              return (
+                <div className={`pod-card ${cls}`} key={cls}>
+                  <span className="pod-medal">{medal}</span>
+                  <span className="pod-place">{place} <span className="dim">· {who}</span></span>
+                  <b className="pod-sum">{v === null ? "…" : v > 0 && v < 0.01 ? "<$0.01" : D(v)}</b>
+                  <span className="pod-pct">{pct}% {t("казны")}</span>
+                </div>
+              );
+            })}
+            <div className="pod-note dim">
+              💡 {t("Каждое утро казна тратит половину баланса на вчерашний подиум: выкупает токены-призёры с рынка и сжигает их. Приз растёт с каждым днём торгов.")}
             </div>
           </div>
 
