@@ -305,6 +305,11 @@ export default function Arena() {
 
           {/* Подиум дня: что даёт каждое место — наглядно и с процентами казны */}
           <div className="podium3">
+            <div className="pod-head">
+              🏆 {t("Призовой фонд дня")}
+              <span className="share-chip gold" title={t("Каждое утро казна тратит 50% своего баланса на вчерашний подиум")}>50% {t("казны")}</span>
+              <span className="dim" style={{ fontWeight: 500 }}> · {t("делится между тремя местами")}</span>
+            </div>
             {[
               ["gold", "🥇", t("1 место"), 70, t("чемпион дня")],
               ["silver", "🥈", t("2 место"), 20, t("по очкам боя")],
