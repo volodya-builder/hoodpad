@@ -19,6 +19,11 @@ export default function Trader({ address }) {
   const [state, setState] = useState(null);
   const [error, setError] = useState("");
   const [tab, setTab] = useState("pos");
+  // сортировки: позиции — по чему и куда; история — по чему и куда
+  const [posSort, setPosSort] = useState("pnl");   // pnl | inv | val
+  const [posDir, setPosDir] = useState("desc");
+  const [histSort, setHistSort] = useState("time"); // time | eth
+  const [histDir, setHistDir] = useState("desc");
   const [cp, setCp] = useState("");
 
   const dollars = (e) => {
@@ -177,17 +182,48 @@ export default function Trader({ address }) {
         )}
 
         <div className="bottom-card" style={{ marginTop: 18 }}>
-          <div className="bt-tabs">
+          <div className="bt-tabs" style={{ flexWrap: "wrap", rowGap: 8 }}>
             <div className={`bt-tab ${tab === "pos" ? "on" : ""}`} onClick={() => setTab("pos")}>{t("Позиции")}</div>
             <div className={`bt-tab ${tab === "hist" ? "on" : ""}`} onClick={() => setTab("hist")}>{t("История сделок")}</div>
             {state.launched.length > 0 && (
               <div className={`bt-tab ${tab === "mint" ? "on" : ""}`} onClick={() => setTab("mint")}>{t("Запуски")}</div>
             )}
+            {/* фильтры сортировки текущей вкладки */}
+            {tab === "pos" && state.positions.length > 1 && (
+              <div className="pill-group" style={{ marginLeft: "auto" }}>
+                {[["pnl", t("Прибыль")], ["inv", t("Куплено")], ["val", t("Баланс")]].map(([k, lbl]) => (
+                  <div key={k} className={`fpill ${posSort === k ? "on" : ""}`} onClick={() => setPosSort(k)}>{lbl}</div>
+                ))}
+                <div className="fpill" title={t(posDir === "desc" ? "По убыванию — нажмите для возрастания" : "По возрастанию — нажмите для убывания")}
+                     onClick={() => setPosDir(posDir === "desc" ? "asc" : "desc")}>
+                  {posDir === "desc" ? "↓" : "↑"}
+                </div>
+              </div>
+            )}
+            {tab === "hist" && state.history.length > 1 && (
+              <div className="pill-group" style={{ marginLeft: "auto" }}>
+                {[["time", t("Время")], ["eth", t("Сумма")]].map(([k, lbl]) => (
+                  <div key={k} className={`fpill ${histSort === k ? "on" : ""}`} onClick={() => setHistSort(k)}>{lbl}</div>
+                ))}
+                <div className="fpill" title={t(histDir === "desc" ? "По убыванию — нажмите для возрастания" : "По возрастанию — нажмите для убывания")}
+                     onClick={() => setHistDir(histDir === "desc" ? "asc" : "desc")}>
+                  {histDir === "desc" ? "↓" : "↑"}
+                </div>
+              </div>
+            )}
           </div>
 
           {tab === "pos" && (<>
             {state.positions.length === 0 && <div className="center">{t("Открытых позиций нет.")}</div>}
-            {state.positions.map((p) => {
+            {[...state.positions].sort((a, b) => {
+              const key = (p) => {
+                const val = Number(formatEther(p.bal)) * Number(formatEther(p.price));
+                if (posSort === "inv") return p.invested;
+                if (posSort === "val") return val;
+                return val + p.realized - p.invested; // pnl
+              };
+              return posDir === "desc" ? key(b) - key(a) : key(a) - key(b);
+            }).map((p) => {
               const balTok = Number(formatEther(p.bal));
               const val = balTok * Number(formatEther(p.price));
               const totPnl = val + p.realized - p.invested;
@@ -222,7 +258,10 @@ export default function Trader({ address }) {
                 <span>ETH</span><span>{t("Токены")}</span><span>{t("Блок")}</span>
               </div>
             )}
-            {state.history.map((tr, i) => (
+            {[...state.history].sort((a, b) => {
+              const key = (x) => (histSort === "eth" ? x.eth : (x.ts || 0));
+              return histDir === "desc" ? key(b) - key(a) : key(a) - key(b);
+            }).map((tr, i) => (
               <div className="trow phist" key={i}>
                 <span className="hist-coin" onClick={() => copyCA(tr.token)} title={t("Скопировать адрес контракта")}>
                   {tr.img ? <img src={tr.img} alt="" /> : <span className="ts-ph">🖼️</span>}
