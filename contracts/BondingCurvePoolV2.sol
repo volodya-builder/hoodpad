@@ -37,6 +37,12 @@ contract BondingCurvePoolV2 is ReentrancyGuard {
     uint256 public protocolFeesAccrued;
     uint256 public creatorFeesAccrued;
 
+    /// @notice Потолок суммарных покупок создателя на этой кривой.
+    ///         ~2% от 6.5 ETH: создатель может зайти в свой токен, но не
+    ///         скупить низ кривой мешком под слив в выкупы казны.
+    uint256 public constant CREATOR_BUY_CAP = 0.13 ether;
+    uint256 public creatorSpent;
+
     // ------------------------------------------------------------- events
     event Buy(address indexed buyer, uint256 ethIn, uint256 tokensOut, uint256 fee);
     event Sell(address indexed seller, uint256 tokensIn, uint256 ethOut, uint256 fee);
@@ -45,6 +51,7 @@ contract BondingCurvePoolV2 is ReentrancyGuard {
     event FeesClaimed(address indexed to, uint256 amount, bool isCreator);
 
     error TradingClosed();
+    error CreatorCapExceeded();
     error SlippageExceeded();
     error ZeroAmount();
     error NotGraduated();
@@ -106,6 +113,16 @@ contract BondingCurvePoolV2 is ReentrancyGuard {
     {
         if (graduated) revert TradingClosed();
         if (msg.value == 0) revert ZeroAmount();
+
+        // КАП СОЗДАТЕЛЯ. Живёт здесь, а не в фабрике: лимит только на первой
+        // покупке обходился в одной транзакции (создать токен без ETH, затем
+        // сразу купить напрямую у пула). Ограничиваем суммарные покупки
+        // создателя за всё время жизни кривой — иначе он скупает низ кривой
+        // и сливает мешок в выкупы казны.
+        if (recipient == creator || msg.sender == creator) {
+            creatorSpent += msg.value;
+            if (creatorSpent > CREATOR_BUY_CAP) revert CreatorCapExceeded();
+        }
 
         uint256 fee = (msg.value * feeBps) / 10_000;
         uint256 ethIn = msg.value - fee;
@@ -203,6 +220,7 @@ contract BondingCurvePoolV2 is ReentrancyGuard {
 
     function claimCreatorFees(address to) external nonReentrant {
         if (msg.sender != creator) revert NotAuthorized();
+        require(to != address(0), "zero recipient"); // иначе комиссии сгорают
         uint256 amount = creatorFeesAccrued;
         creatorFeesAccrued = 0;
         _sendEth(to, amount);

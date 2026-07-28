@@ -64,6 +64,7 @@ async function freshSetup() {
   const gradPool = await deploy(deployer, "MockGraduatedPool", [deployer.address]);
   // Как в BondingCurvePoolV2: токены уходят мигратору ДО вызова migrate()
   await write(deployer, token, "transfer", [migrator.address, TOKENS]);
+  await write(deployer, gradPool, "setToken", [token.address]); // реестр пулов
   return { migrator, gradPool };
 }
 
@@ -106,7 +107,7 @@ test("АТАКА снизу: заниженная цена пустого пул
   assert.equal(rc.status, "success", "заниженная цена должна выравниваться");
 });
 
-test("ГЛУБОКАЯ подмена: цену не вернуть за бюджет — миграция откладывается, средства целы", async () => {
+test("ГЛУБОКАЯ подмена (чужой капитал): миграция откладывается, деньги целы", async () => {
   const { migrator, gradPool } = await freshSetup();
   const tokenIs0 = BigInt(token.address) < BigInt(weth.address);
   const [t0, t1] = tokenIs0 ? [token.address, weth.address] : [weth.address, token.address];
@@ -118,12 +119,26 @@ test("ГЛУБОКАЯ подмена: цену не вернуть за бюд�
   const poolC = { address: poolAddress, abi: ART("MockV3Pool").abi };
   await write(attacker, poolC, "setLiquidity", [10n ** 18n]);
 
+  // Здесь мигратор ОБЯЗАН отказаться: залить ликвидность по чужой цене
+  // означало бы подарить её арбитражу. Заблокировать так можно только
+  // реальным капиталом, который съедают арбитражники — гриф платный.
   const err = await write(deployer, gradPool, "callMigrate",
     [migrator.address, token.address, TOKENS], ETH).then(() => null).catch((e) => e);
-  assert.ok(err, "при глубокой подмене миграция откладывается");
-  // главное — средства не ушли по чужой цене
+  assert.ok(err, "по чужой цене ликвидность не заливаем");
   const left = await read(token, "balanceOf", [migrator.address]);
-  assert.equal(left, TOKENS, "токены остаются у мигратора до повторной попытки");
+  assert.equal(left, TOKENS, "токены целы, миграцию можно повторить");
+});
+
+test("донат на мигратор не ломает миграцию (была бы вечная блокировка)", async () => {
+  const { migrator, gradPool } = await freshSetup();
+  // атакующий заранее шлёт токены на мигратор — раньше это ломало mint
+  // из-за жёстких amountMin и блокировало ВСЕ градации платформы
+  const extra = await deploy(deployer, "LaunchToken", ["X", "X", "", deployer.address, TOKENS]);
+  await write(deployer, extra, "transfer", [migrator.address, TOKENS / 2n]);
+
+  const rc = await write(deployer, gradPool, "callMigrate",
+    [migrator.address, token.address, TOKENS], ETH);
+  assert.equal(rc.status, "success", "посторонний перевод не должен срывать миграцию");
 });
 
 test("пул, созданный заранее по ПРАВИЛЬНОЙ цене, не мешает миграции", async () => {

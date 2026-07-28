@@ -77,7 +77,11 @@ async function main() {
   async function call(address, name, functionName, args) {
     const art = ART(name);
     const hash = await wallet.writeContract({ address, abi: art.abi, functionName, args });
-    await pub.waitForTransactionReceipt({ hash });
+    const rcpt = await pub.waitForTransactionReceipt({ hash });
+    // БЕЗ этой проверки скрипт печатал «ГОТОВО» даже если настройка
+    // зареверчена — и платформа уезжала в мейннет полунастроенной.
+    if (rcpt.status !== "success") throw new Error(`${functionName} REVERTED: ${hash}`);
+    return rcpt;
   }
 
   console.log("=== БОЕВОЙ ДЕПЛОЙ hood v2 → мейннет Robinhood Chain ===");
@@ -101,15 +105,34 @@ async function main() {
   const MIN_POWER = process.env.MIN_POWER || "2500000000000000"; // 0.0025 ETH в wei
   const votePower = await deploy("VotePower", [factory, treasury, BigInt(MIN_POWER)]);
 
-  console.log("5/7 Казна ← VotePower…");
+  console.log("5/7 Казна ← VotePower, мигратор ← казна…");
   await call(treasury, "BuybackTreasuryV2", "setVotePower", [votePower]);
+  // излишки миграции уходят в казну выкупа, а не создателю
+  await call(migrator, "UniswapV3Migrator", "setDustSink", [treasury]);
 
   console.log("6/7 FeeSplitter (50/20/30)…");
   const splitter = await deploy("FeeSplitter", [TEAM_WALLET, treasury, TEAM_BPS_OF_REMAINDER]);
 
   console.log("7/7 Настройка фабрики (treasury=FeeSplitter, votePower, 1% fee, 50% создателю)…");
-  await call(factory, "LaunchpadFactoryV2", "setConfig",
+  // initConfig — разовая настройка без таймлока, пока в фабрике нет токенов.
+  // Дальнейшие изменения только через proposeConfig + applyConfig (48ч).
+  await call(factory, "LaunchpadFactoryV2", "initConfig",
     [splitter, migrator, votePower, FEE_BPS, CREATOR_SHARE_BPS]);
+
+  // Контрольная сверка: читаем конфиг с фабрики и убеждаемся, что всё встало.
+  console.log("\nПроверка конфигурации на цепи…");
+  const fArt = ART("LaunchpadFactoryV2");
+  const rd = (fn) => pub.readContract({ address: factory, abi: fArt.abi, functionName: fn });
+  const [tOn, mOn, vOn, feeOn, shareOn] = await Promise.all([
+    rd("treasury"), rd("migrator"), rd("votePower"), rd("feeBps"), rd("creatorFeeShareBps"),
+  ]);
+  const same = (a, b) => a.toLowerCase() === b.toLowerCase();
+  if (!same(tOn, splitter) || !same(mOn, migrator) || !same(vOn, votePower)
+      || Number(feeOn) !== FEE_BPS || Number(shareOn) !== CREATOR_SHARE_BPS) {
+    console.error("❌ Конфигурация на цепи не совпадает с ожидаемой:", { tOn, mOn, vOn, feeOn, shareOn });
+    process.exit(1);
+  }
+  console.log("✓ treasury/migrator/votePower и доли комиссий на месте");
 
   console.log("\n=== ГОТОВО. Адреса для web/.env.production ===");
   const out = [

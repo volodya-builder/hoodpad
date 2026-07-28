@@ -3,6 +3,7 @@ pragma solidity ^0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ILiquidityMigrator} from "./interfaces/ILiquidityMigrator.sol";
 
@@ -12,34 +13,24 @@ interface IWETH9 {
     function approve(address, uint256) external returns (bool);
 }
 
-/// @dev Пул, вызывающий migrate(), знает своего создателя — ему и вернём пыль.
-interface IPoolCreator {
+interface IPoolInfo {
     function creator() external view returns (address);
+    function factory() external view returns (address);
+    function token() external view returns (address);
 }
 
-/// @dev Читаем фактическую цену пула: если пул кто-то создал заранее с
-///      искажённой ценой, createAndInitializePoolIfNecessary молча оставит
-///      её — и наша ликвидность легла бы по цене атакующего.
+interface IFactoryRegistry {
+    function poolOf(address token) external view returns (address);
+}
+
 interface IUniswapV3PoolState {
     function slot0()
         external
         view
-        returns (
-            uint160 sqrtPriceX96,
-            int24 tick,
-            uint16 observationIndex,
-            uint16 observationCardinality,
-            uint16 observationCardinalityNext,
-            uint8 feeProtocol,
-            bool unlocked
-        );
+        returns (uint160 sqrtPriceX96, int24, uint16, uint16, uint16, uint8, bool);
 
     function liquidity() external view returns (uint128);
 
-    /// @dev Свап нужен, чтобы ВЕРНУТЬ цену к расчётной, если пул был
-    ///      инициализирован кем-то заранее. Просто ревертить нельзя: пул
-    ///      Uniswap V3 инициализируется кем угодно бесплатно, и любой
-    ///      желающий навсегда заблокировал бы градацию.
     function swap(
         address recipient,
         bool zeroForOne,
@@ -78,11 +69,26 @@ interface INonfungiblePositionManager {
 }
 
 /// @title UniswapV3Migrator
-/// @notice Receives a graduated token's DEX reserve (tokens + ETH), creates
-///         a full-range Uniswap V3 position and keeps the LP NFT locked in
-///         this contract forever — there is no function to withdraw it.
-///         That makes graduated liquidity permanent by construction.
-contract UniswapV3Migrator is ILiquidityMigrator {
+/// @notice Принимает резерв градуировавшего токена (200M токенов + 6.5 ETH),
+///         создаёт full-range позицию Uniswap V3 и НАВСЕГДА запирает её NFT
+///         в этом контракте — функции вывода не существует.
+///
+/// @dev БЕЗОПАСНОСТЬ ЦЕНЫ. Пул Uniswap V3 может инициализировать кто угодно и
+///      бесплатно, поэтому на момент градации цена в пуле может быть чужой.
+///      Правила, которым следует этот контракт:
+///        1. Никогда не покупаем токены за ETH при выравнивании. Токены у нас
+///           уже есть; тратя ETH, мы бы выкупали мешок у того, кто подстроил
+///           цену. Разрешён только один безопасный тип свапа — продажа токенов,
+///           когда цена завышена.
+///        2. Бюджет выравнивания жёстко ограничен ALIGN_BUDGET_BPS.
+///        3. Ликвидность заливается только по цене в пределах допуска; иначе
+///           транзакция отменяется, средства остаются в бондинг-пуле и
+///           миграцию можно повторить (в пустом пуле цену возвращает любой
+///           свап на пыль, атакующему приходится держать реальный капитал,
+///           который съедают арбитражники).
+///        4. Излишки уходят в казну выкупа, а не создателю — чтобы манипуляция
+///           ценой не была способом что-то себе выручить.
+contract UniswapV3Migrator is ILiquidityMigrator, Ownable {
     using SafeERC20 for IERC20;
 
     INonfungiblePositionManager public immutable positionManager;
@@ -91,20 +97,20 @@ contract UniswapV3Migrator is ILiquidityMigrator {
     int24 public constant TICK_LOWER = -887220;  // full range for spacing 60
     int24 public constant TICK_UPPER = 887220;
 
-    /// @notice Допуск на отклонение фактической цены пула от расчётной, в bps
-    ///         от sqrtPrice (100 = 1% по sqrt ≈ 2% по цене). Если пул был
-    ///         инициализирован заранее по другой цене — миграция ревертится.
-    uint256 public constant MAX_SQRT_DEVIATION_BPS = 100;
+    /// @notice Допуск отклонения цены пула от расчётной (bps от sqrtPrice).
+    uint256 public constant MAX_SQRT_DEVIATION_BPS = 100; // 1%
+    /// @notice Позиция обязана принять не меньше этой доли средств.
+    uint256 public constant MIN_DEPOSIT_BPS = 9_000;      // 90%
+    /// @notice Максимум токенов на выравнивание цены (доля от переданных).
+    uint256 public constant ALIGN_BUDGET_BPS = 100;       // 1%
 
-    /// @notice Минимальная доля желаемых сумм, которую обязана принять позиция.
-    uint256 public constant MIN_DEPOSIT_BPS = 9_000; // 90%
+    /// @notice Куда уходят излишки. Ставится один раз после деплоя казны.
+    address public dustSink;
 
-    /// @notice Сколько средств не жалко потратить на возврат цены к расчётной
-    ///         (в bps). Пустой пул выравнивается бесплатно; если кто-то залил
-    ///         в кривой пул реальную ликвидность — платим не больше 2%.
-    uint256 public constant ALIGN_BUDGET_BPS = 200; // 2%
+    address private _swapPool; // пул, у которого мы прямо сейчас двигаем цену
 
     error PoolPriceManipulated(uint160 expectedSqrtPriceX96, uint160 actualSqrtPriceX96);
+    error UnknownPool();
 
     event LiquidityLocked(
         address indexed token,
@@ -113,21 +119,33 @@ contract UniswapV3Migrator is ILiquidityMigrator {
         uint256 tokenAmount,
         uint256 ethAmount
     );
+    event PriceAligned(address indexed v3Pool, uint160 fromSqrtPriceX96, uint160 toSqrtPriceX96);
+    event DustSwept(address indexed token, uint256 tokenAmount, uint256 ethAmount);
 
-    constructor(address positionManager_, address weth_) {
+    constructor(address positionManager_, address weth_) Ownable(msg.sender) {
         require(positionManager_ != address(0) && weth_ != address(0), "zero addr");
         positionManager = INonfungiblePositionManager(positionManager_);
         weth = IWETH9(weth_);
     }
 
+    /// @notice Однократно задать получателя излишков (BuybackTreasuryV2).
+    function setDustSink(address sink) external onlyOwner {
+        require(dustSink == address(0), "already set");
+        require(sink != address(0), "zero addr");
+        dustSink = sink;
+    }
+
     function migrate(address token, uint256 tokenAmount) external payable override {
         uint256 ethAmount = msg.value;
         require(tokenAmount > 0 && ethAmount > 0, "empty migration");
+        // Звать может только настоящий пул этого токена: иначе кто угодно
+        // подсунул бы фальшивую «фабрику» и увёл остатки контракта.
+        if (IFactoryRegistry(IPoolInfo(msg.sender).factory()).poolOf(token) != msg.sender) {
+            revert UnknownPool();
+        }
 
-        // Wrap ETH.
         weth.deposit{value: ethAmount}();
 
-        // Sort the pair.
         (address token0, address token1) = token < address(weth)
             ? (token, address(weth))
             : (address(weth), token);
@@ -135,41 +153,94 @@ contract UniswapV3Migrator is ILiquidityMigrator {
             ? (tokenAmount, ethAmount)
             : (ethAmount, tokenAmount);
 
-        // Initial price: sqrtPriceX96 = sqrt(amount1/amount0) * 2^96.
+        // Расчётная цена: sqrtPriceX96 = sqrt(amount1/amount0) * 2^96
         uint160 sqrtPriceX96 = uint160(Math.sqrt(Math.mulDiv(amount1, 1 << 192, amount0)));
 
         address v3Pool = positionManager.createAndInitializePoolIfNecessary(
-            token0,
-            token1,
-            POOL_FEE,
-            sqrtPriceX96
+            token0, token1, POOL_FEE, sqrtPriceX96
         );
 
-        // Если пул уже был инициализирован по чужой цене — возвращаем её к
-        // расчётной свапом, и только потом заливаем ликвидность.
-        _alignPrice(v3Pool, token0, token1, sqrtPriceX96);
+        _alignPrice(v3Pool, token, tokenAmount, sqrtPriceX96, token < address(weth));
 
-        uint256 positionId = _mintLocked(token0, token1);
-
-        // Остаток («пыль») после создания позиции возвращаем создателю токена,
-        // чтобы он не запирался в контракте навсегда.
-        _refundDust(
-            token,
-            IERC20(token).balanceOf(address(this)),
-            IERC20(address(weth)).balanceOf(address(this))
-        );
+        uint256 positionId = _mintLocked(token0, token1, amount0, amount1, sqrtPriceX96, v3Pool);
+        _sweepDust(token);
 
         emit LiquidityLocked(token, v3Pool, positionId, tokenAmount, ethAmount);
     }
 
-    /// @dev Заливает ВСЕ имеющиеся средства в full-range позицию, NFT которой
-    ///      навсегда остаётся здесь. Суммы берём по факту: часть могла уйти
-    ///      на выравнивание цены.
-    function _mintLocked(address token0, address token1) internal returns (uint256 positionId) {
-        uint256 a0 = IERC20(token0).balanceOf(address(this));
-        uint256 a1 = IERC20(token1).balanceOf(address(this));
-        IERC20(token0).forceApprove(address(positionManager), a0);
-        IERC20(token1).forceApprove(address(positionManager), a1);
+    // ------------------------------------------------------------- internal
+
+    /// @dev Возврат цены к расчётной. Продаём ТОЛЬКО токены и только когда
+    ///      цена завышена: так мы получаем ETH по цене выше справедливой.
+    ///      Обратное направление (тратить ETH) запрещено — именно там пряталась
+    ///      возможность выкупить мешок у манипулятора за все 6.5 ETH.
+    function _alignPrice(
+        address v3Pool,
+        address token,
+        uint256 tokenAmount,
+        uint160 target,
+        bool tokenIsZero
+    ) internal {
+        (uint160 cur, , , , , , ) = IUniswapV3PoolState(v3Pool).slot0();
+        if (_within(cur, target)) return;
+
+        // В ПУСТОМ пуле (ликвидность 0) цена двигается в любую сторону даром:
+        // платить некому. Это самый частый случай — атакующий инициализировал
+        // пул бесплатно. Возвращаем цену пылинкой в нужном направлении.
+        bool emptyPool = IUniswapV3PoolState(v3Pool).liquidity() == 0;
+
+        // При наличии чужой ликвидности разрешён ТОЛЬКО безопасный свап:
+        // продажа наших токенов при завышенной цене. Покупать токены за ETH
+        // нельзя — так мы выкупали бы мешок у того, кто подстроил цену.
+        bool sellDirection = tokenIsZero ? cur > target : cur < target;
+        if (!emptyPool && !sellDirection) return; // ниже сработает проверка цены
+
+        bool zeroForOne = emptyPool ? cur > target : tokenIsZero;
+        uint256 budget = emptyPool ? 1 : (tokenAmount * ALIGN_BUDGET_BPS) / 10_000;
+        if (budget == 0) return;
+
+        _swapPool = v3Pool;
+        try IUniswapV3PoolState(v3Pool).swap(
+            address(this),
+            zeroForOne,
+            int256(budget),
+            target,
+            abi.encode(token)
+        ) {} catch { /* не вышло — ниже сработает проверка цены */ }
+        _swapPool = address(0);
+
+        (uint160 after_, , , , , , ) = IUniswapV3PoolState(v3Pool).slot0();
+        emit PriceAligned(v3Pool, cur, after_);
+    }
+
+    function _within(uint160 actual, uint160 expected_) internal pure returns (bool) {
+        uint256 expected = uint256(expected_);
+        uint256 diff = uint256(actual) > expected ? uint256(actual) - expected : expected - uint256(actual);
+        return diff * 10_000 <= expected * MAX_SQRT_DEVIATION_BPS;
+    }
+
+    /// @dev Заливка ликвидности. Суммы — от ПЕРЕДАННЫХ значений, а не от
+    ///      баланса: иначе посторонний перевод на контракт ломал бы минимумы
+    ///      и блокировал градацию. Минимумы реальные — по чужой цене не льём.
+    function _mintLocked(
+        address token0,
+        address token1,
+        uint256 amount0,
+        uint256 amount1,
+        uint160 target,
+        address v3Pool
+    ) internal returns (uint256 positionId) {
+        (uint160 cur, , , , , , ) = IUniswapV3PoolState(v3Pool).slot0();
+        if (!_within(cur, target)) revert PoolPriceManipulated(target, cur);
+
+        // на выравнивание могла уйти часть токенов — берём фактический минимум
+        uint256 have0 = IERC20(token0).balanceOf(address(this));
+        uint256 have1 = IERC20(token1).balanceOf(address(this));
+        if (amount0 > have0) amount0 = have0;
+        if (amount1 > have1) amount1 = have1;
+
+        IERC20(token0).forceApprove(address(positionManager), amount0);
+        IERC20(token1).forceApprove(address(positionManager), amount1);
 
         (positionId, , , ) = positionManager.mint(
             INonfungiblePositionManager.MintParams({
@@ -178,92 +249,47 @@ contract UniswapV3Migrator is ILiquidityMigrator {
                 fee: POOL_FEE,
                 tickLower: TICK_LOWER,
                 tickUpper: TICK_UPPER,
-                amount0Desired: a0,
-                amount1Desired: a1,
-                // реальные минимумы вместо нулей
-                amount0Min: (a0 * MIN_DEPOSIT_BPS) / 10_000,
-                amount1Min: (a1 * MIN_DEPOSIT_BPS) / 10_000,
-                recipient: address(this), // NFT locked here forever
+                amount0Desired: amount0,
+                amount1Desired: amount1,
+                amount0Min: (amount0 * MIN_DEPOSIT_BPS) / 10_000,
+                amount1Min: (amount1 * MIN_DEPOSIT_BPS) / 10_000,
+                recipient: address(this), // NFT заперт здесь навсегда
                 deadline: block.timestamp
             })
         );
+
+        IERC20(token0).forceApprove(address(positionManager), 0);
+        IERC20(token1).forceApprove(address(positionManager), 0);
     }
 
-    /// @dev ЗАЩИТА ОТ ПОДМЕНЫ ЦЕНЫ. createAndInitializePoolIfNecessary
-    ///      инициализирует пул ТОЛЬКО если он ещё не инициализирован.
-    ///      Атакующий может создать его заранее по искажённой цене — тогда
-    ///      вся градуированная ликвидность легла бы по его цене и была бы
-    ///      немедленно выкуплена арбитражем. Сверяем факт с расчётом.
-    ///      При расхождении транзакция отменяется: средства остаются в
-    ///      бондинг-пуле, миграцию можно повторить позже — атакующему
-    ///      пришлось бы вечно держать капитал в кривом пуле без выгоды.
-    function _alignPrice(address v3Pool, address token0, address token1, uint160 target) internal {
-        if (_within(v3Pool, target)) return;
-
-        // Пул кто-то инициализировал заранее. Двигаем цену обратно к расчётной.
-        // В пустом пуле (ликвидность 0) свап переносит цену к лимиту даром;
-        // если атакующий залил ликвидность — тратим не больше ALIGN_BUDGET_BPS,
-        // а его позиция по кривой цене достаётся арбитражникам.
-        bool zeroForOne;
-        {
-            (uint160 cur, , , , , , ) = IUniswapV3PoolState(v3Pool).slot0();
-            zeroForOne = cur > target; // продаём token0 — цена вниз
+    /// @dev Излишки — в казну выкупа (не создателю и не манипулятору).
+    function _sweepDust(address token) internal {
+        address to = dustSink;
+        if (to == address(0)) return; // не задан — остаётся здесь, заперто
+        uint256 tokLeft = IERC20(token).balanceOf(address(this));
+        uint256 wethLeft = IERC20(address(weth)).balanceOf(address(this));
+        if (tokLeft > 0) IERC20(token).safeTransfer(to, tokLeft);
+        if (wethLeft > 0) {
+            weth.withdraw(wethLeft);
+            (bool ok, ) = to.call{value: wethLeft}("");
+            ok; // намеренно игнорируем: сбой не должен срывать миграцию
         }
-        uint256 budget =
-            (IERC20(zeroForOne ? token0 : token1).balanceOf(address(this)) * ALIGN_BUDGET_BPS) / 10_000;
-        if (budget == 0) budget = 1;
-
-        IUniswapV3PoolState(v3Pool).swap(
-            address(this),
-            zeroForOne,
-            int256(budget),          // положительное = точный вход
-            target,                  // дальше расчётной цены не двигаем
-            abi.encode(token0, token1, v3Pool)
-        );
-
-        // Не получилось вернуть цену (слишком глубокая чужая ликвидность) —
-        // отменяем: средства остаются в бондинг-пуле, миграцию можно повторить.
-        if (!_within(v3Pool, target)) {
-            (uint160 after_, , , , , , ) = IUniswapV3PoolState(v3Pool).slot0();
-            revert PoolPriceManipulated(target, after_);
-        }
+        emit DustSwept(token, tokLeft, wethLeft);
     }
 
-    /// @dev Цена пула в пределах допуска от расчётной?
-    function _within(address v3Pool, uint160 expectedSqrtPriceX96) internal view returns (bool) {
-        (uint160 actual, , , , , , ) = IUniswapV3PoolState(v3Pool).slot0();
-        uint256 expected = uint256(expectedSqrtPriceX96);
-        uint256 diff = uint256(actual) > expected ? uint256(actual) - expected : expected - uint256(actual);
-        return diff * 10_000 <= expected * MAX_SQRT_DEVIATION_BPS;
-    }
-
-    /// @dev Оплата свапа выравнивания. Вызывает только сам пул Uniswap.
+    /// @dev Оплата нашего же свапа. Пул берём из памяти контракта, а не из
+    ///      calldata — иначе колбэк был бы открытым входом для вывода токенов.
     function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata data) external {
-        (address t0, address t1, address expectedPool) = abi.decode(data, (address, address, address));
-        require(msg.sender == expectedPool, "bad pool");
-        if (amount0Delta > 0) IERC20(t0).safeTransfer(msg.sender, uint256(amount0Delta));
-        if (amount1Delta > 0) IERC20(t1).safeTransfer(msg.sender, uint256(amount1Delta));
+        require(msg.sender == _swapPool && _swapPool != address(0), "bad pool");
+        address token = abi.decode(data, (address));
+        // платим только токеном — ETH при выравнивании не тратится никогда
+        if (amount0Delta > 0 && token < address(weth)) IERC20(token).safeTransfer(msg.sender, uint256(amount0Delta));
+        else if (amount1Delta > 0 && token > address(weth)) IERC20(token).safeTransfer(msg.sender, uint256(amount1Delta));
+        else revert("eth spend blocked");
     }
 
-    /// @dev Best-effort возврат остатков создателю пула. Если получатель не
-    ///      принимает средства — миграция всё равно проходит (нет грифинга).
-    function _refundDust(address token, uint256 leftoverToken, uint256 leftoverWeth) internal {
-        address creator = address(0);
-        try IPoolCreator(msg.sender).creator() returns (address c) { creator = c; }
-        catch { return; }
-        if (creator == address(0)) return;
-        if (leftoverToken > 0) IERC20(token).safeTransfer(creator, leftoverToken);
-        if (leftoverWeth > 0) {
-            weth.withdraw(leftoverWeth);
-            (bool ok, ) = creator.call{value: leftoverWeth}("");
-            ok; // проигнорировано намеренно
-        }
-    }
-
-    /// @dev Принимаем ETH при разворачивании WETH.
     receive() external payable {}
 
-    /// @dev Accept NFT transfers from the position manager.
     function onERC721Received(address, address, uint256, bytes calldata)
         external
         pure
