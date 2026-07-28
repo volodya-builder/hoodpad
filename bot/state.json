@@ -316,5 +316,6 @@
     "0x77f5576be773f864ffdae999f01dd5ef767abe47": 1,
     "0x1ecd7dcccdf5e2882bfc7fff66f07d25e6361254": 1,
     "0xc490df2c774372d023ea2ce8bfc6f4450c7d61e6": 1
-  }
+  },
+  "feeCursor": 0
 }
