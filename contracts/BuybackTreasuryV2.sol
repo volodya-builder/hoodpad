@@ -59,6 +59,7 @@ contract BuybackTreasuryV2 is Ownable, ReentrancyGuard {
     error UnknownToken();
     error InsufficientTreasury();
     error AlreadySet();
+    error TokenDelisted();
 
     constructor(address factory_) Ownable(msg.sender) {
         factory = IPoolRegistry(factory_);
@@ -162,6 +163,9 @@ contract BuybackTreasuryV2 is Ownable, ReentrancyGuard {
         returns (uint256 tokensOut)
     {
         if (ethAmount > address(this).balance) revert InsufficientTreasury();
+        // Делистнутый токен выкупать нельзя — раньше флаг ни на что не влиял
+        // и был лишь косметикой в интерфейсе.
+        if (delisted[token]) revert TokenDelisted();
         address pool = factory.poolOf(token);
         if (pool == address(0)) revert UnknownToken();
 

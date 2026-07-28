@@ -43,7 +43,7 @@ before(async () => {
   votePower = await deploy(deployer, "VotePower", [factory.address, treasury.address, parseEther("0.002")]);
   await write(deployer, treasury, "setVotePower", [votePower.address]);
   // протокольные комиссии в тесте идут напрямую в казну (без сплиттера)
-  await write(deployer, factory, "setConfig",
+  await write(deployer, factory, "initConfig",
     [treasury.address, migrator.address, votePower.address, 100, 4000]);
 
   const rc = await write(creator, factory, "createToken", ["pow", "POW", "uri", creator.address]);
@@ -59,7 +59,7 @@ before(async () => {
   assert.ok(token && pool, "token deployed");
 });
 
-test("fee => voting power (40/40/20 economics)", async () => {
+test("fee => voting power (сплит из initConfig)", async () => {
   const e = await read(votePower, "epoch");
   await write(t1, pool, "buy", [0n, t1.address], parseEther("1"));   // fee 0.01
   await write(t2, pool, "buy", [0n, t2.address], parseEther("3"));   // fee 0.03

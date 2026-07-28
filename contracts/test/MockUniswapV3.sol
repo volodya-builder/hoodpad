@@ -153,7 +153,10 @@ contract MockWETH {
 /// @dev Пул-заглушка, от имени которого вызывается migrate (у него есть creator()).
 contract MockGraduatedPool {
     address public creator;
-    constructor(address creator_) { creator = creator_; }
+    address public factory;
+    address public tokenAddr;
+    constructor(address creator_) { creator = creator_; factory = address(new MockFactoryRegistry(address(this))); }
+    function setToken(address t) external { MockFactoryRegistry(factory).setPool(t, address(this)); }
 
     function callMigrate(address migrator, address token, uint256 amount) external payable {
         (bool ok, bytes memory ret) = migrator.call{value: msg.value}(
@@ -165,4 +168,12 @@ contract MockGraduatedPool {
     }
 
     receive() external payable {}
+}
+
+/// @dev Реестр пулов: мигратор через него проверяет, что звонит настоящий пул.
+contract MockFactoryRegistry {
+    mapping(address => address) public poolOf;
+    address public immutable owner;
+    constructor(address owner_) { owner = owner_; }
+    function setPool(address token, address pool) external { poolOf[token] = pool; }
 }
