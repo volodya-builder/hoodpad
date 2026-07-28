@@ -10,7 +10,6 @@ import { useEthUsd, usd } from "../lib/price.js";
 import Chat from "./Chat.jsx";
 import { useSplit, loadCreationTimes, timeAgo, useClock, useSupport } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
-import { bindRefIfNeeded } from "../lib/referral.js";
 import CandleChart from "../components/CandleChart.jsx";
 import TokenSidebar from "../components/TokenSidebar.jsx";
 import { useFavs, toggleFav } from "../lib/favs.js";
@@ -588,7 +587,6 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       }
       await publicClient.waitForTransactionReceipt({ hash });
       setAmount("");
-      if (wallet) bindRefIfNeeded(wallet.account); // рефералка: закрепить трейдера (fire-and-forget)
       await load();
       // график и список сделок — сразу и с повторами, пока индексатор догоняет
       const bump = () => { if (data?.pool) invalidateTrades(data.pool); loadExtras().catch(() => {}); };
