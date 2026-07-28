@@ -10,8 +10,6 @@ import Ticker from "./components/Ticker.jsx";
 import Profile from "./pages/Profile.jsx";
 import Vote from "./pages/Vote.jsx";
 import About from "./pages/About.jsx";
-import Earn from "./pages/Earn.jsx";
-import { captureRef } from "./lib/referral.js";
 import Treasury from "./pages/Treasury.jsx";
 import Admin from "./pages/Admin.jsx";
 import { Privacy, Terms } from "./pages/Legal.jsx";
@@ -289,14 +287,6 @@ export default function App() {
   const factoryMissing =
     FACTORY_ADDRESS === "0x0000000000000000000000000000000000000000";
 
-  // Реф-ссылка #/r/0x…: запоминаем реферера и уходим на главную.
-  useEffect(() => {
-    if (route.startsWith("/r/")) {
-      captureRef(route.split("/r/")[1]);
-      window.location.replace("#/");
-    }
-  }, [route]);
-
   let page;
   if (route.startsWith("/token/")) {
     page = <TokenPage tokenAddress={route.split("/token/")[1]} wallet={wallet} onConnect={connect} />;
@@ -318,8 +308,6 @@ export default function App() {
     page = <Admin wallet={wallet} onConnect={connect} />;
   } else if (route === "/about") {
     page = <About />;
-  } else if (route === "/earn") {
-    page = <Earn wallet={wallet} onConnect={connect} />;
   } else if (route === "/privacy") {
     page = <Privacy />;
   } else if (route === "/terms") {
@@ -345,7 +333,7 @@ export default function App() {
             </span>
           )}
           <div className={`nav-pills ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(false)}>
-            <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/leaderboard") && !route.startsWith("/profile") && !route.startsWith("/vote") && !route.startsWith("/treasury") && !route.startsWith("/about") && !route.startsWith("/earn") && !route.startsWith("/arena") ? "on" : ""}`} href="#/">{t("Обзор")}</a>
+            <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/leaderboard") && !route.startsWith("/profile") && !route.startsWith("/vote") && !route.startsWith("/treasury") && !route.startsWith("/about") && !route.startsWith("/arena") ? "on" : ""}`} href="#/">{t("Обзор")}</a>
             <a className={`nav-pill nav-hot ${route.startsWith("/arena") ? "on" : ""}`} href="#/arena">
               ⚔️ {t("Арена")} <span className="hot-flame">🔥</span>
             </a>
@@ -389,8 +377,6 @@ export default function App() {
                 <div className={`wallet-menu ${walletMenu ? "open" : ""}`}>
                   <a className="wallet-item" href="#/profile" onClick={() => setWalletMenu(false)}
                      style={{ display: "block" }}>{t("Профиль")}</a>
-                  <a className="wallet-item" href="#/earn" onClick={() => setWalletMenu(false)}
-                     style={{ display: "block" }}>{t("Реферал")}</a>
                   {isOwner && (
                     <a className="wallet-item" href="#/admin" onClick={() => setWalletMenu(false)}
                        style={{ display: "block" }}>⚙ {t("Админ-панель")}</a>

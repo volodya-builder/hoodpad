@@ -2,7 +2,6 @@
   "rules": {
     ".read": false,
     ".write": false,
-
     "chats": {
       ".read": true,
       "$room": {
@@ -12,12 +11,10 @@
         }
       }
     },
-
     "bans": {
       ".read": true,
       ".write": false
     },
-
     "presence": {
       ".read": true,
       "$pid": {
@@ -25,32 +22,17 @@
         ".validate": "newData.hasChild('ts') && newData.child('ts').val() <= now + 300000"
       }
     },
-
     "visitors": {
       ".read": false,
       "$pid": {
         ".write": true
       }
     },
-
     "activity": {
       ".read": true,
       "$slot": {
         ".write": true
       }
-    },
-
-    "referrals": {
-      ".read": true,
-      "$trader": {
-        ".write": "!data.exists()",
-        ".validate": "newData.hasChildren(['ref','ts']) && newData.child('ref').isString() && newData.child('ref').val().matches(/^0x[0-9a-fA-F]{40}$/) && newData.child('ref').val() !== $trader && newData.child('ts').isNumber()"
-      }
-    },
-
-    "referralPayouts": {
-      ".read": true,
-      ".write": false
     }
   }
 }

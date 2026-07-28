@@ -495,7 +495,6 @@ const EN = {
   "Казна": "Treasury",
   "Вы": "You",
   "Ссылка скопирована!": "Link copied!",
-  "Скопировать ссылку": "Copy link",
   "Поделиться": "Share",
   "Избранное": "Favorites",
   "В избранное": "Add to favorites",
@@ -664,8 +663,6 @@ const EN = {
   "копится с каждой сделки — первые выкупы после голосования":
     "grows with every trade — first buybacks after the vote",
   // — рефералка —
-  "Заработать": "Earn",
-  "Реферал": "Referral",
   "Поиск: тикер, имя или адрес…": "Search: ticker, name or address…",
   "Приглашайте трейдеров — получайте {pct}% каждой их комиссии. Навсегда.":
     "Invite traders — earn {pct}% of every fee they pay. Forever.",
@@ -676,7 +673,6 @@ const EN = {
   "Начислено": "Accrued",
   "Выплачено": "Paid out",
   "К выплате": "Pending",
-  "Ваши рефералы": "Your referrals",
   "Пока никого — поделитесь ссылкой.": "No one yet — share your link.",
   "сделок": "trades",
   "Поделитесь ссылкой": "Share your link",
