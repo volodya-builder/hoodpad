@@ -674,7 +674,7 @@ footer { border-top: 1px solid var(--border); padding: 40px 0 28px; margin-top: 
 .pg.on { background: var(--text); color: var(--bg); }
 .pg.nav { border-color: var(--border); background: var(--card); }
 html[data-theme="light"] .tcard { background: #ffffff; }
-html[data-theme="light"] .grad-wrap { background: radial-gradient(700px 260px at 25% -40px, #6e7a1c14, transparent 70%), var(--card); box-shadow: none; }
+html[data-theme="light"] .grad-wrap { background: radial-gradient(700px 260px at 25% -40px, #4653c914, transparent 70%), var(--card); box-shadow: none; }
 
 /* ---------------- nav pills / header controls */
 .nav-pills { display: flex; background: #111210; border: 1px solid var(--border); border-radius: 999px; padding: 3px; gap: 3px; margin: 0 auto; min-width: 0; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
@@ -1358,7 +1358,7 @@ html[data-theme="light"] .trs-row:hover,
 html[data-theme="light"] .lb-row:hover { background: rgba(0, 0, 0, .035); }
 html[data-theme="light"] .wp-item:hover { background: rgba(0, 0, 0, .05); }
 html[data-theme="light"] .vote-voters { background: rgba(0, 0, 0, .025); }
-html[data-theme="light"] .adm-sel { background: color-mix(in srgb, #6e7a1c 10%, transparent) !important; }
+html[data-theme="light"] .adm-sel { background: color-mix(in srgb, #4653c9 10%, transparent) !important; }
 html[data-theme="light"] .fav-btn { background: rgba(255, 255, 255, .75); color: #17181a; border-color: rgba(0, 0, 0, .2); }
 html[data-theme="light"] .fav-btn.on { color: #b8860b; border-color: #b8860b; }
 html[data-theme="light"] .feed-chip { background: #ffffff; }
