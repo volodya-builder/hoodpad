@@ -21,6 +21,17 @@ export const robinhoodTestnet = defineChain({
   },
 });
 
+// BNB Smart Chain (порт hood на BSC; фабрика деплоится scripts/deploy-v2-bsc.js)
+export const bnbChain = defineChain({
+  id: 56,
+  name: "BNB Smart Chain",
+  nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
+  rpcUrls: { default: { http: ["https://bsc-dataseed.binance.org"] } },
+  blockExplorers: {
+    default: { name: "BscScan", url: "https://bscscan.com" },
+  },
+});
+
 // Local hardhat node for development
 export const localChain = defineChain({
   id: 31337,
@@ -32,7 +43,12 @@ export const localChain = defineChain({
 // Active network: switch to robinhoodMainnet for production.
 const NETWORK = import.meta.env.VITE_NETWORK ?? "mainnet";
 export const CHAIN =
-  NETWORK === "mainnet" ? robinhoodMainnet : NETWORK === "local" ? localChain : robinhoodTestnet;
+  NETWORK === "mainnet" ? robinhoodMainnet
+  : NETWORK === "bsc" ? bnbChain
+  : NETWORK === "local" ? localChain
+  : robinhoodTestnet;
+// Символ нативной монеты для UI (на BSC цены в BNB, не в ETH)
+export const NATIVE_SYMBOL = CHAIN.nativeCurrency.symbol;
 
 // hood v2 (мейннет, передеплой 24.07.2026 на новом кошельке): 50/20/30,
 // «голос за шкуру». Прошлые фабрики выведены из конфига — чистый лист.

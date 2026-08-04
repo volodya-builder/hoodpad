@@ -52,6 +52,11 @@ async function main() {
   const account = privateKeyToAccount(PRIVATE_KEY);
   const transport = http(RPC_URL);
   const chainId = await createPublicClient({ transport }).getChainId();
+  // Защита от деплоя не в ту сеть (используется обёртками вроде deploy-v2-bsc.js)
+  if (process.env.EXPECTED_CHAIN_ID && String(chainId) !== process.env.EXPECTED_CHAIN_ID) {
+    console.error(`Не та сеть: RPC вернул chainId ${chainId}, ожидался ${process.env.EXPECTED_CHAIN_ID}.`);
+    process.exit(1);
+  }
   const chain = {
     id: chainId, name: `chain-${chainId}`,
     nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
