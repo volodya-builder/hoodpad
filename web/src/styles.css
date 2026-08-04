@@ -2198,3 +2198,31 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 /* индикатор источника данных в админке */
 .ds-badge { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--gold);
   background: var(--gold-dim); border: 1px solid var(--border); padding: 4px 11px; border-radius: 999px; letter-spacing: .2px; }
+
+/* ---------------- Revenue β (токены с дивидендами из x402-выручки) */
+.rev-page { max-width: 860px; margin: 0 auto; padding: 40px 0 60px; }
+.rev-hero { text-align: center; margin-bottom: 40px; }
+.rev-hero h1 { font-size: 42px; margin: 16px 0 12px; }
+.rev-beta { color: var(--gold); border: 1px solid var(--border-gold); background: var(--gold-dim); }
+.rev-nav-beta { font-size: 10px; color: var(--gold); vertical-align: super; margin-left: 1px; }
+.rev-sub { color: var(--text-dim); font-size: 15px; line-height: 1.65; max-width: 640px; margin: 0 auto; }
+.rev-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 34px 0; }
+.rev-step { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+.rev-step b { display: block; margin-bottom: 8px; font-size: 15px; }
+.rev-step span { color: var(--text-dim); font-size: 13px; line-height: 1.55; }
+.rev-calc { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin: 26px 0; }
+.rev-calc h2, .rev-form-wrap h2 { margin: 0 0 14px; font-size: 20px; }
+.rev-sliders { display: grid; gap: 14px; }
+.rev-sliders label span { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-dim); margin-bottom: 6px; }
+.rev-sliders label b { color: var(--text); }
+.rev-sliders input[type="range"] { width: 100%; accent-color: var(--gold); }
+.rev-out { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 20px; }
+.rev-out div { background: var(--bg-soft); border-radius: 12px; padding: 14px; text-align: center; }
+.rev-out b { display: block; font-size: 22px; color: var(--gold); }
+.rev-out span { font-size: 12px; color: var(--text-dim); }
+.rev-form-wrap { text-align: center; margin: 40px 0 20px; }
+.rev-form { display: grid; gap: 10px; max-width: 440px; margin: 18px auto 0; }
+.rev-done { margin: 18px auto; color: var(--gold); font-weight: 700; }
+.rev-err { color: var(--red); font-size: 12.5px; }
+.rev-legal { color: var(--text-dim); font-size: 12px; line-height: 1.6; text-align: center; max-width: 640px; margin: 30px auto 0; }
+@media (max-width: 720px) { .rev-steps, .rev-out { grid-template-columns: 1fr; } .rev-hero h1 { font-size: 30px; } }

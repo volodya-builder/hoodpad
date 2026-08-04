@@ -33,6 +33,13 @@
       "$slot": {
         ".write": true
       }
+    },
+    "revenue_waitlist": {
+      ".read": false,
+      "$id": {
+        ".write": "!data.exists()",
+        ".validate": "newData.hasChildren(['svc','contact','ts']) && newData.child('svc').isString() && newData.child('svc').val().length <= 80 && newData.child('contact').isString() && newData.child('contact').val().length <= 120 && newData.child('ts').val() <= now"
+      }
     }
   }
 }

@@ -13,6 +13,7 @@ import About from "./pages/About.jsx";
 import Treasury from "./pages/Treasury.jsx";
 import Admin from "./pages/Admin.jsx";
 import { Privacy, Terms } from "./pages/Legal.jsx";
+import Revenue from "./pages/Revenue.jsx";
 import { connectWallet, reconnectWallet, hasWallet, short, fmt, fmtEth, publicClient } from "./lib/web3.js";
 import { CHAIN, FACTORY_ADDRESS, TREASURY_ADDRESS, CHAT_DB_URL } from "./lib/config.js";
 import { treasuryAbi } from "./lib/abi.js";
@@ -306,6 +307,8 @@ export default function App() {
     page = <Treasury />;
   } else if (route === "/admin") {
     page = <Admin wallet={wallet} onConnect={connect} />;
+  } else if (route === "/revenue") {
+    page = <Revenue />;
   } else if (route === "/about") {
     page = <About />;
   } else if (route === "/privacy") {
@@ -339,6 +342,7 @@ export default function App() {
             </a>
             <a className={`nav-pill ${route.startsWith("/vote") ? "on" : ""}`} href="#/vote">{t("Голосование")}</a>
             <a className={`nav-pill ${route.startsWith("/treasury") ? "on" : ""}`} href="#/treasury">{t("Казна")}</a>
+            <a className={`nav-pill ${route.startsWith("/revenue") ? "on" : ""}`} href="#/revenue">{t("Revenue")} <span className="rev-nav-beta">β</span></a>
             <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>
             <a className={`nav-pill ${route.startsWith("/about") ? "on" : ""}`} href="#/about">{t("О нас")}</a>
           </div>
