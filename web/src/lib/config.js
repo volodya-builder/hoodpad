@@ -100,13 +100,14 @@ const ALCHEMY_RPC = {
 };
 function rpcList() {
   const def = CHAIN.rpcUrls?.default?.http ?? [];
-  const urls = [...def];                       // публичный — ОСНОВНОЙ
-  // 05.08.2026: Alchemy-эндпоинт Robinhood умер (connection refused при
-  // зелёном статусе Alchemy) — публичный RPC впереди, Alchemy в резерв.
-  // Когда починится в дашборде — можно вернуть unshift, но и так работает:
-  // rank в web3.js сам поднимет более быстрый эндпоинт.
+  const urls = [...def];                       // публичный — резерв
+  // История 05.08.2026: Alchemy отключил эндпоинт за неоплаченный инвойс
+  // ($2.02, карта не прошла) — сайт завис, т.к. старый транспорт долго
+  // ждал мёртвый RPC. Инвойс оплачен, эндпоинт жив. Теперь Alchemy снова
+  // основной, но web3.js делает быстрый отвал (8с, 1 повтор) + rank —
+  // при повторении истории сайт мгновенно уходит на публичный RPC.
   const dedicated = ALCHEMY_RPC[NETWORK];
-  if (dedicated) urls.push(dedicated);         // Alchemy — резерв
+  if (dedicated) urls.unshift(dedicated);      // Alchemy — основной
   const envUrl = import.meta.env.VITE_RPC_URL;
   if (envUrl) urls.unshift(envUrl);
   try {
