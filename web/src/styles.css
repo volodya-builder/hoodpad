@@ -69,12 +69,12 @@ header {
 .btn:hover { background: var(--card-hover); border-color: #3a3b31; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 .btn-primary {
-  background: linear-gradient(135deg, #d9ff44 0%, #c0ef1f 100%);
-  border-color: transparent; color: #0d0f00;
+  background: linear-gradient(135deg, #8a95ff 0%, #6b78f5 100%);
+  border-color: transparent; color: #0b0d2a;
   box-shadow: 0 1px 0 #ffffff40 inset, 0 10px 30px -8px #7c88ff66;
 }
 .btn-primary:hover {
-  background: linear-gradient(135deg, #e4ff66 0%, #cdf931 100%);
+  background: linear-gradient(135deg, #9aa4ff 0%, #7c88ff 100%);
   box-shadow: 0 1px 0 #ffffff50 inset, 0 12px 36px -8px #7c88ff88;
 }
 .btn-primary:hover:not(:disabled) {
@@ -765,8 +765,8 @@ html[data-theme="light"] .grad-wrap { background: radial-gradient(700px 260px at
 /* ---------------- light theme («день в Шервуде») */
 html[data-theme="light"] {
   --bg: #f2f2ee; --bg-soft: #e8e8e2; --card: #fbfbf9; --card-hover: #f0f0ea;
-  --border: #d9d9d0; --border-gold: #a4b04a; --text: #1e201c; --text-dim: #70746a;
-  --gold: #6e7a1c; --gold-bright: #5a641a; --gold-dim: #6e7a1c1f;
+  --border: #d9d9d0; --border-gold: #8e97e0; --text: #1e201c; --text-dim: #70746a;
+  --gold: #4653c9; --gold-bright: #3a44a8; --gold-dim: #4653c91f;
   --leaf: #2e7d47; --leaf-dim: #2e7d471a; --red: #c04545;
 }
 html[data-theme="light"] body {
@@ -786,8 +786,8 @@ html[data-theme="light"] .search-fake, html[data-theme="light"] .nav-pills, html
 html[data-theme="light"] .slip-btn, html[data-theme="light"] .tab { background: #ffffff; }
 html[data-theme="light"] .btn { background: #ffffff; }
 html[data-theme="light"] .btn:hover { background: var(--card-hover); }
-html[data-theme="light"] .btn-primary { background: linear-gradient(135deg, #d3f52e 0%, #b8dd17 100%); color: #131400; }
-html[data-theme="light"] .demo-banner { background: #6e7a1c15; color: #5a641a; border-bottom-color: #a4b04a; }
+html[data-theme="light"] .btn-primary { background: linear-gradient(135deg, #6b78f5 0%, #5563e8 100%); color: #ffffff; }
+html[data-theme="light"] .demo-banner { background: #5563e815; color: #3a44a8; border-bottom-color: #8e97e0; }
 html[data-theme="light"] .toast { background: var(--card); color: var(--text); }
 html[data-theme="light"] footer, html[data-theme="light"] .chart-stats { border-color: var(--border); }
 html[data-theme="light"] .pbar { background: #dedcd0; }
