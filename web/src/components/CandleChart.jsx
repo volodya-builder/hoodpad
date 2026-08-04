@@ -47,7 +47,7 @@ function buildCandles(points, trades, rate, ivSec) {
   }
   const volumes = candles.map((c) => ({
     time: c.time, value: volMap.get(c.time) || 0,
-    color: c.close >= c.open ? "#c8f42b55" : "#e06a4a55",
+    color: c.close >= c.open ? "#4caf6d55" : "#e06a4a55",
   }));
   return { candles, volumes };
 }
@@ -81,8 +81,8 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
       localization: { priceFormatter: (v) => usd(v) },
     });
     const cs = chart.addCandlestickSeries({
-      upColor: "#c8f42b", downColor: "#e06a4a",
-      wickUpColor: "#c8f42b", wickDownColor: "#e06a4a",
+      upColor: "#4caf6d", downColor: "#e06a4a",
+      wickUpColor: "#4caf6d", wickDownColor: "#e06a4a",
       borderVisible: false,
       priceFormat: { type: "custom", formatter: (v) => usd(v), minMove: 0.000001 },
       // автомасштаб учитывает уровни заявок, чтобы пунктирные линии были видны
@@ -150,7 +150,7 @@ export default function CandleChart({ points, trades, rate, marks, lines }) {
         const burn = m.kind === "burned";
         return {
           time: tb, position: burn ? "aboveBar" : "belowBar",
-          color: burn ? "#e06a4a" : "#c8f42b",
+          color: burn ? "#e06a4a" : "#4caf6d",
           shape: burn ? "arrowDown" : "arrowUp",
           text: burn ? "BRN" : "BUY",
         };
