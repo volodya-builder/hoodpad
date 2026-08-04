@@ -104,8 +104,8 @@ function MiniChart({ points, rate, marks }) {
            onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
         <defs>
           <linearGradient id="tokAreaG" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#c8f42b" stopOpacity=".28" />
-            <stop offset="1" stopColor="#c8f42b" stopOpacity="0" />
+            <stop offset="0" stopColor="#7c88ff" stopOpacity=".28" />
+            <stop offset="1" stopColor="#7c88ff" stopOpacity="0" />
           </linearGradient>
           <filter id="chGlow" x="-30%" y="-30%" width="160%" height="160%">
             <feGaussianBlur stdDeviation="5" />
@@ -117,13 +117,13 @@ function MiniChart({ points, rate, marks }) {
                 stroke="currentColor" strokeOpacity="0.08" strokeDasharray="4 5" />
         ))}
         <path d={area} fill="url(#tokAreaG)" />
-        <path d={line} fill="none" stroke="#c8f42b" strokeWidth="3" strokeOpacity=".55"
+        <path d={line} fill="none" stroke="#7c88ff" strokeWidth="3" strokeOpacity=".55"
               filter="url(#chGlow)" strokeLinejoin="round" strokeLinecap="round" />
         <path d={line} fill="none" stroke="#dfff54" strokeWidth="2.2"
               strokeLinejoin="round" strokeLinecap="round"
               strokeDasharray={empty ? "5 6" : "none"} />
         {!empty && (
-          <circle cx={xs[xs.length - 1]} cy={Y(last.mcap)} r="4.5" fill="#e2ff5c" stroke="#0b0b0b" strokeWidth="2" />
+          <circle cx={xs[xs.length - 1]} cy={Y(last.mcap)} r="4.5" fill="#a5aeff" stroke="#0b0b0b" strokeWidth="2" />
         )}
         {(marks ?? []).map((mk, k) => {
           if (!pts.some((pp) => pp.ts)) return null;
@@ -138,10 +138,10 @@ function MiniChart({ points, rate, marks }) {
           return (
             <g key={`mk${k}`}>
               <line x1={bx} x2={bx} y1={by} y2={by - 22}
-                    stroke={isBurn ? "#c2502e" : "#c8f42b"} strokeWidth="1.5" strokeOpacity=".8" />
-              <circle cx={bx} cy={by} r="3.5" fill={isBurn ? "#c2502e" : "#c8f42b"} stroke="#0b0b0b" strokeWidth="1.5" />
+                    stroke={isBurn ? "#c2502e" : "#7c88ff"} strokeWidth="1.5" strokeOpacity=".8" />
+              <circle cx={bx} cy={by} r="3.5" fill={isBurn ? "#c2502e" : "#7c88ff"} stroke="#0b0b0b" strokeWidth="1.5" />
               <rect x={bx - bw / 2} y={by - 40} width={bw} height="18" rx="6"
-                    fill={isBurn ? "#c2502e" : "#c8f42b"} />
+                    fill={isBurn ? "#c2502e" : "#7c88ff"} />
               <text x={bx} y={by - 27} textAnchor="middle" fontSize="10" fontWeight="800"
                     fill={isBurn ? "#ffffff" : "#101100"}>
                 {isBurn ? "BRN" : "BUY"}
@@ -154,7 +154,7 @@ function MiniChart({ points, rate, marks }) {
             <line x1={xs[hover]} x2={xs[hover]} y1={PADT} y2={H - PADB}
                   stroke="currentColor" strokeOpacity="0.25" />
             <circle cx={xs[hover]} cy={ys[hover]} r="4.5"
-                    fill="#e2ff5c" stroke="#0b0b0b" strokeWidth="2" />
+                    fill="#a5aeff" stroke="#0b0b0b" strokeWidth="2" />
           </g>
         )}
         <text x={W - 6} y={PADT + 4} className="chart-axis" textAnchor="end">{usdV(mx)}</text>

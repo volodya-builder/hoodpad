@@ -9,19 +9,22 @@ import {
 import { CHAIN, RPC_URLS } from "./config.js";
 
 // Устойчивый транспорт: несколько RPC с автопереключением при сбое.
-// Каждый эндпоинт повторяет запрос до 4 раз с нарастающей паузой, ждёт до 20с,
-// и склеивает параллельные вызовы в пакеты (batch). Если один RPC лёг —
-// viem сам уходит на следующий, а через минуту снова пробует основной.
+// Урок 05.08.2026: Alchemy-эндпоинт отдавал 503, а старые настройки
+// (retryCount 4 × timeout 20с × fallback retry 2) заставляли страницы
+// «читать блокчейн» минутами, прежде чем уйти на живой публичный RPC.
+// Теперь: быстрый отвал от больного эндпоинта (1 повтор, 8с) и
+// авторанжирование — viem сам ставит первым тот RPC, что реально отвечает,
+// и периодически перепроверяет остальные.
 const rpcTransport = fallback(
   RPC_URLS.map((url) =>
     http(url, {
       batch: { wait: 16, batchSize: 20 },
-      timeout: 20_000,
-      retryCount: 4,
-      retryDelay: 400,
+      timeout: 8_000,
+      retryCount: 1,
+      retryDelay: 300,
     })
   ),
-  { rank: false, retryCount: 2 }
+  { rank: { interval: 30_000, sampleCount: 5 }, retryCount: 1 }
 );
 
 export const publicClient = createPublicClient({
