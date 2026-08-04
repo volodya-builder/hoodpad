@@ -15,11 +15,22 @@ const votedEvent = parseAbiItem(
   "event Voted(address indexed trader, uint256 indexed epoch, address indexed token, uint256 power)"
 );
 
+// Память вкладки между заходами (+ localStorage): страница открывается мгновенно
+// с прошлыми данными, свежие подтягиваются фоном — как у Казны.
+let _voteV2State = null;
+const VOTEV2_LS = "hood_cache_votev2_v1";
+const _bigR = (k, v) => (typeof v === "bigint" ? { __b: v.toString() } : v);
+const _bigV = (k, v) => (v && typeof v === "object" && "__b" in v ? BigInt(v.__b) : v);
+try {
+  const raw = localStorage.getItem(VOTEV2_LS);
+  if (raw) _voteV2State = JSON.parse(raw, _bigV);
+} catch (e) { /* ignore */ }
+
 export default function VoteV2({ wallet, onConnect }) {
   const { t } = useLang();
   const rate = useEthUsd();
   useClock(5000);
-  const [st, setSt] = useState(null);
+  const [st, setSt] = useState(_voteV2State);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const me = wallet?.account;
@@ -83,7 +94,10 @@ export default function VoteV2({ wallet, onConnect }) {
       .sort((a, b) => b.votes - a.votes);
     const myVol = me ? (volByWallet[me.toLowerCase()] || 0) : 0;
     const myDays = me ? (daysByWallet[me.toLowerCase()] || 0) : 0;
-    setSt({ tokens, rows, epoch, endsIn: Number(endsIn), myVol, myDays, myChoice });
+    const next = { tokens, rows, epoch, endsIn: Number(endsIn), myVol, myDays, myChoice };
+    setSt(next);
+    _voteV2State = next;
+    try { localStorage.setItem(VOTEV2_LS, JSON.stringify(next, _bigR)); } catch (e) { /* ignore */ }
   }, [me, rate]);
 
   useEffect(() => {
