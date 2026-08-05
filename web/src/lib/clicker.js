@@ -37,6 +37,31 @@ function demoWallet() {
   return `0x${r(4)}…${r(4)}`;
 }
 
+export const DEMO_PLAYERS = 11; // сколько «соперников» показываем в раунде
+
+/** Соперники текущего раунда. Детерминированы по номеру раунда: весь раунд
+ *  это одни и те же кошельки, а их очки плавно растут к концу раунда —
+ *  как если бы они играли параллельно. После деплоя заменяется на реальный
+ *  список из бэкенда/контракта. */
+export function roundPlayers(round = roundId(), ts = Date.now()) {
+  let x = ((round % 9973) * 7919 + 13) % 233280;
+  const rnd = () => ((x = (x * 9301 + 49297) % 233280) / 233280);
+  const hex = "0123456789abcdef";
+  const w = (n) => Array.from({ length: n }, () => hex[Math.floor(rnd() * 16)]).join("");
+  // насколько раунд прошёл: в начале у всех мало очков, к концу — максимум
+  const prog = Math.min(1, Math.max(0, 1 - msLeft(ts) / ROUND_MS));
+  return Array.from({ length: DEMO_PLAYERS }, () => {
+    const addr = `0x${w(4)}…${w(4)}`;
+    const peak = 3000 + Math.floor(rnd() * 27000);
+    return { addr, points: Math.max(1, Math.round(peak * (0.12 + 0.88 * prog))) };
+  });
+}
+
+/** Сумма очков соперников раунда. */
+export function poolTotal(pool) {
+  return pool.reduce((a, p) => a + p.points, 0);
+}
+
 // Улучшения: цена растёт на 55% за уровень
 export const UPGRADES = [
   { id: "claw", ru: "Когти", en: "Claws", desc: "+1 к силе клика", base: 25, effect: 1, kind: "click", icon: "🐾" },
@@ -237,35 +262,37 @@ export function raffleChance(s, totalPoints) {
   return Math.min(99.9, Math.min(1, mine / totalPoints) * 100);
 }
 
-/** Итог одного раунда: тянем билет и записываем победителя.
- *  round — номер раунда, за который считаем. */
-function drawOne(s, totalPoints, myAddr, round, mine) {
-  const p = totalPoints > 0 ? Math.min(1, mine / totalPoints) : 0;
-  const iWon = mine > 0 && Math.random() < p;
+/** Итог одного раунда: тянем один билет из общей корзины.
+ *  pool — соперники раунда, mine — мои очки за раунд. */
+function drawOne(pool, mine, myAddr, round) {
+  const entries = [...pool, { addr: myAddr || "you", points: Math.max(0, mine), me: true }];
+  const total = entries.reduce((a, e) => a + e.points, 0);
+  let r = Math.random() * total;
+  let win = entries[0];
+  for (const e of entries) { if ((r -= e.points) <= 0) { win = e; break; } }
   return {
     round,
     ts: Math.min((round + 1) * ROUND_MS, Date.now()),
-    addr: iWon ? (myAddr || "you") : demoWallet(),
-    // у чужого победителя показываем правдоподобный вклад очков
-    points: Math.round(iWon ? mine : totalPoints * (0.02 + Math.random() * 0.08)),
-    chance: Math.round(p * 1000) / 10,
-    me: iWon,
+    addr: win.me ? (myAddr || "you") : (win.addr || demoWallet()),
+    points: Math.round(win.points),
+    chance: total > 0 ? Math.round((mine / total) * 1000) / 10 : 0,
+    me: !!win.me,
   };
 }
 
 /** Закрыть все раунды, которые прошли с прошлого визита.
  *  force=true — «разыграть сейчас» (кнопка теста), не дожидаясь таймера.
  *  Возвращает { state, drawn: [записи победителей] }. */
-export function settle(s, totalPoints, myAddr, force = false) {
+export function settle(s, pool, myAddr, force = false) {
   const cur = roundId();
   const last = s.round ?? cur;
   if (!force && cur === last) return { state: s, drawn: [] };
 
   const drawn = [];
   // мой раунд считается по накопленным очкам, пропущенные — без меня
-  drawn.push(drawOne(s, totalPoints, myAddr, last, s.roundPoints || 0));
+  drawn.push(drawOne(pool, s.roundPoints || 0, myAddr, last));
   const skipped = Math.min(5, Math.max(0, cur - last - 1));
-  for (let i = 1; i <= skipped; i++) drawn.push(drawOne(s, totalPoints, myAddr, last + i, 0));
+  for (let i = 1; i <= skipped; i++) drawn.push(drawOne(roundPlayers(last + i), 0, myAddr, last + i));
 
   const won = drawn.filter((d) => d.me).length;
   const mineDraw = drawn[0];

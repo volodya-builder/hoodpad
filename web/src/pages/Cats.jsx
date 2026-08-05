@@ -14,8 +14,8 @@ const RARITIES = [
   { key: "Common", ru: "Обычный", chance: 60, mult: 1, color: "#8b93a7" },
   { key: "Rare", ru: "Редкий", chance: 24, mult: 2, color: "#4aa3e0" },
   { key: "Epic", ru: "Эпический", chance: 10, mult: 3, color: "#a06bff" },
-  { key: "Mythic", ru: "Мифический", chance: 5, mult: 5, color: "#e0559a", img: "./cats/mythic.jpg" },
-  { key: "Legendary", ru: "Легендарный", chance: 1, mult: 8, color: "#f5b544", img: "./cats/legendary.jpg" },
+  { key: "Mythic", ru: "Мифический", chance: 5, mult: 5, color: "#e0559a", img: "./cats/mythic-cut.png" },
+  { key: "Legendary", ru: "Легендарный", chance: 1, mult: 8, color: "#f5b544", img: "./cats/legendary-cut.png" },
 ];
 
 // Арт уровня: фирменная картинка (мем-кот) для старших редкостей,
@@ -110,7 +110,22 @@ function volumeHistory(days = 30) {
 }
 const VOL_HISTORY = volumeHistory(30);
 
-function PriceChart({ t, tier }) {
+function PriceChart({ t, tier, live }) {
+  // live = включён тестовый режим: рисуем только настоящие сделки, а их нет —
+  // выдумывать историю нельзя, честнее показать пустоту
+  if (live) {
+    return (
+      <div className="pc-wrap">
+        <div className="pc-head">
+          <span style={{ color: RARITIES[tier].color }}>{t(RARITIES[tier].ru)}</span>
+          <b>— ETH</b>
+        </div>
+        <div className="pc-empty">
+          {t("Сделок пока не было — график и объём появятся после первых продаж.")}
+        </div>
+      </div>
+    );
+  }
   const data = PRICE_HISTORY[tier];
   const vol = VOL_HISTORY[tier];
   const r = RARITIES[tier];
@@ -195,8 +210,17 @@ function orderBook(tier, myLots) {
   return { asks: asks.slice(0, 7).reverse(), bids: bids.slice(0, 7) };
 }
 
-function OrderBook({ t, tier, myLots }) {
-  const { asks, bids } = useMemo(() => orderBook(tier, myLots), [tier, myLots]);
+function OrderBook({ t, tier, myLots, live }) {
+  // в тестовом режиме в стакане только настоящие лоты; заявок на покупку
+  // без контракта офферов нет вовсе
+  const { asks, bids } = useMemo(() => (
+    live
+      ? { asks: (myLots || []).filter((l) => l.tier === tier)
+            .map((l) => ({ price: l.price, qty: 1, mine: true }))
+            .sort((a, b) => a.price - b.price).reverse(),
+          bids: [] }
+      : orderBook(tier, myLots)
+  ), [tier, myLots, live]);
   const maxQty = Math.max(...asks.map((a) => a.qty), ...bids.map((b) => b.qty), 1);
   const bestAsk = asks[asks.length - 1]?.price ?? 0;
   const bestBid = bids[0]?.price ?? 0;
@@ -208,6 +232,12 @@ function OrderBook({ t, tier, myLots }) {
         <span>{t("Стакан заявок")}</span>
         <span className="dim">{t("цена")} · {t("кол-во")}</span>
       </div>
+
+      {live && asks.length === 0 && (
+        <div className="pc-empty" style={{ minHeight: 120 }}>
+          {t("Заявок нет. Выстави кота на продажу — лот появится здесь.")}
+        </div>
+      )}
 
       <div className="ob-side">
         {asks.map((a, i) => (
@@ -309,8 +339,8 @@ function Market({ t, sb, setSb }) {
           ))}
         </div>
         <div className="pc-row">
-          <PriceChart t={t} tier={chartTier} />
-          <OrderBook t={t} tier={chartTier} myLots={myLots} />
+          <PriceChart t={t} tier={chartTier} live={sb.enabled} />
+          <OrderBook t={t} tier={chartTier} myLots={myLots} live={sb.enabled} />
         </div>
       </div>
 
@@ -757,6 +787,7 @@ const HOLDERS = demoHolders();
 
 // Коллекция конкретного холдера (демо, детерминированно по адресу)
 function holderCats(h) {
+  if (h.list) return [...h.list].sort((a, b) => b.tier - a.tier); // настоящая коллекция
   let x = 0;
   for (const ch of h.addr) x = (x * 31 + ch.charCodeAt(0)) % 233280;
   const rnd = () => ((x = (x * 9301 + 49297) % 233280) / 233280);
@@ -834,22 +865,39 @@ function HolderModal({ t, holder, onClose }) {
   );
 }
 
-function Holders({ t }) {
+function Holders({ t, sb }) {
   const [sort, setSort] = useState("weight");
   const [openHolder, setOpenHolder] = useState(null);
+
+  // в тестовом режиме рейтинг строится ТОЛЬКО из настоящих владельцев
+  // (пока это один кошелёк — мой); выдуманных холдеров не показываем
+  const source = useMemo(() => {
+    if (!sb?.enabled) return HOLDERS;
+    if (!sb.cats.length) return [];
+    const st = SB.stats(sb);
+    return [{
+      addr: t("я"),
+      cats: st.count,
+      legend: st.byTier[4],
+      weight: st.weight,
+      earned: Math.round(st.divs * 10) / 10,
+      list: sb.cats.map((c) => ({ id: c.id, tier: c.tier, sym: c.sym, divs: c.divs })),
+    }];
+  }, [sb, t]);
+
   const rows = useMemo(() => {
     const by = { weight: (a, b) => b.weight - a.weight, cats: (a, b) => b.cats - a.cats, earned: (a, b) => b.earned - a.earned }[sort];
-    return [...HOLDERS].sort(by);
-  }, [sort]);
-  const totalCats = HOLDERS.reduce((s, h) => s + h.cats, 0);
+    return [...source].sort(by);
+  }, [sort, source]);
+  const totalCats = source.reduce((s, h) => s + h.cats, 0);
 
   return (
     <>
       {openHolder && <HolderModal t={t} holder={openHolder} onClose={() => setOpenHolder(null)} />}
       <div className="rev-stats" style={{ justifyContent: "flex-start", marginTop: 4 }}>
-        <div><b>{HOLDERS.length}</b><span>{t("холдеров")}</span></div>
+        <div><b>{source.length}</b><span>{t("холдеров")}</span></div>
         <div><b>{totalCats}</b><span>{t("котов у холдеров")}</span></div>
-        <div><b>{HOLDERS.reduce((s, h) => s + h.legend, 0)}</b><span>{t("легендарных на руках")}</span></div>
+        <div><b>{source.reduce((s, h) => s + h.legend, 0)}</b><span>{t("легендарных на руках")}</span></div>
       </div>
 
       <div className="quote-tabs" style={{ margin: "16px 0 12px" }}>
@@ -875,8 +923,17 @@ function Holders({ t }) {
             <span className="rev-gold">${h.earned}</span>
           </div>
         ))}
+        {rows.length === 0 && (
+          <div className="center dim" style={{ padding: 30 }}>
+            {t("Холдеров пока нет — рейтинг наполнится, когда коты появятся на руках.")}
+          </div>
+        )}
       </div>
-      <div className="hint" style={{ marginTop: 10 }}>{t("Демо-рейтинг. После деплоя строится по он-чейн владельцам NFT.")}</div>
+      <div className="hint" style={{ marginTop: 10 }}>
+        {sb?.enabled
+          ? t("Тестовый режим: в рейтинге только настоящие владельцы котов.")
+          : t("Демо-рейтинг. После деплоя строится по он-чейн владельцам NFT.")}
+      </div>
     </>
   );
 }
@@ -955,7 +1012,8 @@ function SandboxPanel({ t, sb, setSb }) {
 // ---------------------------------------------------------------- кликер
 // Тапаешь легендарного кота — сыплются акции. Очки дают буст к дивидендам
 // и билеты в розыгрыш: каждые 30 минут один NFT-кот уходит игроку.
-const TOTAL_POINTS_DEMO = 120_000; // суммарные очки всех игроков за раунд (демо)
+// соперники и их очки берутся из clicker.js (roundPlayers) — детерминированно
+// по номеру раунда, чтобы у всех игроков был один и тот же список
 
 function Clicker({ t, sb, setSb }) {
   const [g, setG] = useState(() => CL.load());
@@ -985,7 +1043,7 @@ function Clicker({ t, sb, setSb }) {
       setNow(Date.now());
       setG((s) => {
         const ticked = CL.tick(s);
-        const { state, drawn } = CL.settle(ticked, TOTAL_POINTS_DEMO, null);
+        const { state, drawn } = CL.settle(ticked, CL.roundPlayers(ticked.round), null);
         if (drawn.length) {
           const mine = drawn.find((d) => d.me);
           if (mine) {
@@ -1011,10 +1069,24 @@ function Clicker({ t, sb, setSb }) {
     return () => clearTimeout(id);
   }, [golden]);
 
+  // соперники текущего раунда: пересчитываем раз в 5 секунд, чтобы список
+  // не дёргался каждый тик, но очки у людей на глазах росли
+  const pool = useMemo(
+    () => CL.roundPlayers(g.round, now),
+    [g.round, Math.floor(now / 5000)] // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const totalPoints = CL.poolTotal(pool) + (g.roundPoints || 0);
+  // таблица раунда: соперники + я, по убыванию очков
+  const board = useMemo(() => (
+    [...pool, { addr: t("ты"), points: g.roundPoints || 0, me: true }]
+      .map((p) => ({ ...p, pct: totalPoints > 0 ? (p.points / totalPoints) * 100 : 0 }))
+      .sort((a, b) => b.points - a.points)
+  ), [pool, g.roundPoints, totalPoints, t]);
+
   const perClick = CL.perClick(g);
   const perSec = CL.perSecond(g);
   const boost = CL.dividendBoost(g);
-  const chance = CL.raffleChance(g, TOTAL_POINTS_DEMO);
+  const chance = CL.raffleChance(g, totalPoints);
   const combo = CL.comboMult(g);
   const crit = CL.critChance(g);
   const lvl = CL.levelProgress(g.totalEarned || 0);
@@ -1052,7 +1124,7 @@ function Clicker({ t, sb, setSb }) {
   // кнопка для теста: закрыть раунд немедленно, не дожидаясь таймера
   function doRaffle() {
     if ((g.roundPoints || 0) <= 0) return say(t("Сначала накликай очков — билеты дают очки текущего раунда."));
-    const { state, drawn } = CL.settle(g, TOTAL_POINTS_DEMO, null, true);
+    const { state, drawn } = CL.settle(g, pool, null, true);
     setG(state);
     const mine = drawn.find((d) => d.me);
     if (mine) {
@@ -1130,12 +1202,12 @@ function Clicker({ t, sb, setSb }) {
           {/* кот — фоновая картинка, а не <img>: браузеры вешают на картинки
               свою панель «поиск по изображению», которая мешает тапать */}
           <div className={`ck-img ${bump ? "bump" : ""}`} role="img" aria-label="cat"
-               style={{ backgroundImage: "url(./cats/legendary.jpg)" }} />
+               style={{ backgroundImage: "url(./cats/legendary-cut.png)" }} />
           <div className="ck-tap-hint">{t("Тапай кота")}</div>
 
           {golden && (
             <button className="ck-golden" style={{ left: `${golden.x}%`, top: `${golden.y}%` }} onClick={tapGolden}>
-              <i style={{ backgroundImage: "url(./cats/mythic.jpg)" }} />
+              <i style={{ backgroundImage: "url(./cats/mythic-cut.png)" }} />
               <span>{t("Лови!")}</span>
             </button>
           )}
@@ -1169,7 +1241,7 @@ function Clicker({ t, sb, setSb }) {
             </div>
             <div className="clk-raffle-kv">
               <span>{t("мои очки раунда")}: <b>{Math.floor(g.roundPoints || 0).toLocaleString("ru-RU")}</b></span>
-              <span>{t("всего у игроков")}: <b>{TOTAL_POINTS_DEMO.toLocaleString("ru-RU")}</b></span>
+              <span>{t("всего у игроков")}: <b>{Math.round(totalPoints).toLocaleString("ru-RU")}</b></span>
               <span>{t("котов в сутки")}: <b>{CL.ROUNDS_PER_DAY}</b></span>
             </div>
             <button className="btn btn-block" onClick={doRaffle}>{t("Разыграть сейчас (тест)")}</button>
@@ -1182,6 +1254,25 @@ function Clicker({ t, sb, setSb }) {
             )}
           </div>
 
+          {/* кто сейчас в раунде и с каким шансом */}
+          <div className="ck-card">
+            <div className="ck-card-h">
+              <span>{t("Игроки раунда")}</span>
+              <span className="ck-round-tag">{board.length}</span>
+            </div>
+            <div className="ck-board">
+              {board.map((p, i) => (
+                <div className={`ck-bd ${p.me ? "me" : ""}`} key={`${p.addr}-${i}`}>
+                  <span className="ck-bd-n">{i + 1}</span>
+                  <span className="ck-bd-a">{p.addr}</span>
+                  <span className="ck-bd-p">{Math.round(p.points).toLocaleString("ru-RU")}</span>
+                  <span className="ck-bd-c">{p.pct.toFixed(1)}%</span>
+                  <span className="ck-bd-bar" style={{ width: `${Math.min(100, p.pct)}%` }} />
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* победители последних раундов */}
           <div className="ck-card">
             <div className="ck-card-h">{t("Победители раундов")}</div>
@@ -1191,7 +1282,7 @@ function Clicker({ t, sb, setSb }) {
               <div className="ck-winners">
                 {(g.winners || []).slice(0, 8).map((wn, i) => (
                   <div className={`ck-win ${wn.me ? "me" : ""}`} key={`${wn.round}-${wn.ts}-${i}`}>
-                    <img src="./cats/legendary.jpg" alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                    <img src="./cats/legendary-cut.png" alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                     <span className="ck-win-addr">{wn.me ? t("ты") : wn.addr}</span>
                     <span className="ck-win-pts">{wn.points.toLocaleString("ru-RU")} {t("оч.")}</span>
                     <span className="ck-win-ts">{fmtTime(wn.ts)}</span>
@@ -1272,7 +1363,7 @@ export default function Cats({ wallet }) {
       {tab === "boxes" && <Boxes t={t} sb={sb} setSb={setSb} />}
       {tab === "market" && <Market t={t} sb={sb} setSb={setSb} />}
       {tab === "my" && <MyCats t={t} sb={sb} setSb={setSb} />}
-      {tab === "holders" && <Holders t={t} />}
+      {tab === "holders" && <Holders t={t} sb={sb} />}
 
       {tab === "about" && (<>
       <h2 className="rev-h2">{t("Уровни редкости")}</h2>
