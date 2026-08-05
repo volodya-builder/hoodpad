@@ -97,10 +97,28 @@ function priceHistory(days = 30) {
 }
 const PRICE_HISTORY = priceHistory(30);
 
+// Объём торгов по дням: сколько котов этой редкости продано (демо; после
+// деплоя — count событий Bought за сутки). Редкие торгуются реже.
+function volumeHistory(days = 30) {
+  let x = 4177;
+  const rnd = () => ((x = (x * 9301 + 49297) % 233280) / 233280);
+  const peak = [34, 22, 12, 6, 2];
+  return peak.map((p) =>
+    Array.from({ length: days }, () => Math.max(p <= 2 ? 0 : 1, Math.round(p * (0.25 + rnd() * 0.95))))
+  );
+}
+const VOL_HISTORY = volumeHistory(30);
+
 function PriceChart({ t, tier }) {
   const data = PRICE_HISTORY[tier];
+  const vol = VOL_HISTORY[tier];
   const r = RARITIES[tier];
   const W = 640, H = 150, P = 8;
+  // нижняя панель объёма делит с графиком ось X: те же W и P
+  const VH = 52, VP = 4;
+  const vMax = Math.max(...vol, 1);
+  const vSum = vol.reduce((a, b) => a + b, 0);
+  const bw = ((W - P * 2) / vol.length) * 0.62;
   const mx = Math.max(...data), mn = Math.min(...data);
   const X = (i) => P + (i / (data.length - 1)) * (W - P * 2);
   const Y = (v) => H - P - ((v - mn) / Math.max(mx - mn, 1e-9)) * (H - P * 2);
@@ -128,6 +146,25 @@ function PriceChart({ t, tier }) {
         <path d={line} fill="none" stroke={r.color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
         <circle cx={X(data.length - 1)} cy={Y(last)} r="3.5" fill={r.color} />
       </svg>
+
+      {/* объём торгов: столбики по дням, цвет — по движению цены за день */}
+      <div className="pc-vol-h">
+        <span>{t("объём")}</span>
+        <span className="dim">{vSum} {t("продаж за 30 дней")}</span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${VH}`} className="pc-vol" preserveAspectRatio="none">
+        {vol.map((v, i) => {
+          const up = i === 0 ? true : data[i] >= data[i - 1];
+          const h = Math.max(1.5, (v / vMax) * (VH - VP * 2));
+          return (
+            <rect key={i} x={X(i) - bw / 2} y={VH - VP - h} width={bw} height={h} rx="1"
+                  fill={up ? "#3fbf7f" : "#ff5b6a"} fillOpacity={i === vol.length - 1 ? ".95" : ".55"}>
+              <title>{v} {t("продаж")}</title>
+            </rect>
+          );
+        })}
+      </svg>
+
       <div className="pc-foot"><span>{t("мин")} {mn} ETH</span><span>{t("макс")} {mx} ETH</span></div>
     </div>
   );
