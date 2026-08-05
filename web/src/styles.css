@@ -2801,6 +2801,11 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
     linear-gradient(to bottom, #0b0e1477, transparent 26%, transparent 74%, #0b0e14b0);
 }
 .ck-arena { background: var(--card); }
+/* накладка-ловушка: перехватывает наведение, чтобы браузер не видел под
+   курсором картинку и не показывал панель «поиск по изображению» */
+.ck-catch { position: absolute; inset: 0; z-index: 3; cursor: pointer; background: transparent; }
+.ck-bg, .ck-img { pointer-events: none; }
+.ck-golden { z-index: 5 !important; }
 .ck-arena > .ck-img, .ck-arena > .ck-tap-hint, .ck-arena > .ck-combo,
 .ck-arena > .ck-boost-tag, .ck-arena > .ck-golden, .ck-arena > .ck-fly { position: relative; z-index: 2; }
 .ck-arena > .ck-golden, .ck-arena > .ck-fly { position: absolute; }

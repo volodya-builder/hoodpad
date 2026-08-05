@@ -1212,6 +1212,11 @@ function Clicker({ t, sb, setSb }) {
             </button>
           )}
 
+          {/* прозрачная накладка поверх картинок: под курсором всегда обычный
+              div, поэтому браузер не предлагает «поиск по изображению».
+              Клики сквозь неё всплывают на арену и считаются тапами. */}
+          <div className="ck-catch" />
+
           {flyers.map((f) => (
             <span key={f.id} className={`ck-fly ${f.cls}`} style={{ left: f.x, top: f.y, "--dx": `${f.dx}px` }}>
               <img src={stockLogo(f.sym)} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} />
