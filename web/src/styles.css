@@ -2642,7 +2642,9 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
   transition: box-shadow .3s;
 }
 .ck-arena.boosted { box-shadow: 0 0 0 2px var(--gold) inset, 0 0 60px -20px var(--gold); }
-.ck-img { width: 300px; height: 300px; border-radius: 26px; border: 3px solid var(--border-gold); background: #fff; object-fit: cover; transition: transform .08s ease; }
+.ck-img { width: 300px; height: 300px; border-radius: 26px; border: 3px solid var(--border-gold);
+  background: #fff center / cover no-repeat; transition: transform .08s ease;
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .ck-img.bump { transform: scale(.93); }
 .ck-arena:active .ck-img { filter: brightness(1.08); }
 .ck-tap-hint { margin-top: 14px; font-size: 13px; color: var(--text-dim); }
@@ -2654,7 +2656,8 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .ck-fly.combo { color: #a5aeff; font-size: 18px; }
 .ck-fly.crit { color: #ff5252; font-size: 22px; text-shadow: 0 0 16px #ff525288; }
 .ck-golden { position: absolute; background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; animation: ckgold .6s infinite alternate; z-index: 4; padding: 0; }
-.ck-golden img { width: 82px; height: 82px; border-radius: 16px; border: 3px solid var(--gold); box-shadow: 0 0 30px -4px var(--gold); background: #fff; object-fit: cover; }
+.ck-golden i { display: block; width: 82px; height: 82px; border-radius: 16px; border: 3px solid var(--gold);
+  box-shadow: 0 0 30px -4px var(--gold); background: #fff center / cover no-repeat; }
 .ck-golden span { font-size: 11px; font-weight: 800; color: var(--gold); }
 @keyframes ckgold { to { transform: scale(1.09) rotate(3deg); } }
 .ck-side { display: flex; flex-direction: column; gap: 12px; }
@@ -2717,9 +2720,11 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 @media (max-width: 860px) { .pc-row { grid-template-columns: 1fr; } }
 
 /* Фон арены кликера: шервудский трейдинг-лес + параллакс */
+/* картинка подставляется инлайн в Cats.jsx: путь относительный к странице,
+   а не к этому файлу — иначе Vite ищет её в src/ и фон не грузится */
 .ck-bg {
-  position: absolute; inset: -20px; background-image: url("./cats/arena-bg.webp");
-  background-size: cover; background-position: center;
+  position: absolute; inset: -20px;
+  background-size: cover; background-position: center; background-repeat: no-repeat;
   transition: transform .18s ease-out; will-change: transform; z-index: 0;
 }
 .ck-bg-veil {

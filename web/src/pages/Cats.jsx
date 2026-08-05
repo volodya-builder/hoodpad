@@ -1076,17 +1076,22 @@ function Clicker({ t, sb, setSb }) {
         {/* арена с котом */}
         <div className={`ck-arena ${goldenOn ? "boosted" : ""}`} onClick={onTap}
              onMouseMove={onMove} onMouseLeave={() => setPar({ x: 0, y: 0 })}>
-          <div className="ck-bg" style={{ transform: `scale(1.08) translate(${par.x}px, ${par.y}px)` }} />
+          <div className="ck-bg" style={{
+            backgroundImage: "url(./cats/arena-bg.webp)",
+            transform: `scale(1.08) translate(${par.x}px, ${par.y}px)`,
+          }} />
           <div className="ck-bg-veil" />
           {combo > 1 && <div className="ck-combo">COMBO ×{combo}</div>}
           {goldenOn && <div className="ck-boost-tag">×2 {t("буст активен")}</div>}
-          <img src="./cats/legendary.jpg" alt="" className={`ck-img ${bump ? "bump" : ""}`}
-               onError={(e) => { e.currentTarget.style.display = "none"; }} />
+          {/* кот — фоновая картинка, а не <img>: браузеры вешают на картинки
+              свою панель «поиск по изображению», которая мешает тапать */}
+          <div className={`ck-img ${bump ? "bump" : ""}`} role="img" aria-label="cat"
+               style={{ backgroundImage: "url(./cats/legendary.jpg)" }} />
           <div className="ck-tap-hint">{t("Тапай кота")}</div>
 
           {golden && (
             <button className="ck-golden" style={{ left: `${golden.x}%`, top: `${golden.y}%` }} onClick={tapGolden}>
-              <img src="./cats/mythic.jpg" alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+              <i style={{ backgroundImage: "url(./cats/mythic.jpg)" }} />
               <span>{t("Лови!")}</span>
             </button>
           )}
