@@ -2315,8 +2315,11 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .net-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); display: inline-block; }
 .net-dot.bnb { background: #f5b544; }
 .net-dot.base { background: #2a78d6; }
-.net-menu { position: absolute; top: calc(100% + 8px); right: 0; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 6px; min-width: 200px; z-index: 60; }
-.net-item { display: flex; align-items: center; gap: 8px; padding: 9px 11px; border-radius: 8px; font-size: 13px; white-space: nowrap; }
+.net-menu { position: absolute; top: calc(100% + 8px); right: 0; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 8px; min-width: 210px; z-index: 60; box-shadow: 0 14px 40px -14px #000c; }
+.net-item { display: flex; align-items: center; gap: 11px; padding: 11px 12px; border-radius: 10px; font-size: 14.5px; font-weight: 700; white-space: nowrap; }
+.net-item:hover { background: var(--card-hover); }
+.net-badge { width: 26px; height: 26px; border-radius: 50%; overflow: hidden; flex: none; background: #23273f; display: flex; align-items: center; justify-content: center; }
+.net-badge .net-ico { width: 26px; height: 26px; }
 .net-item.on { background: var(--gold-dim); font-weight: 700; }
 .net-item.soon { opacity: .55; cursor: default; }
 .net-check { margin-left: auto; color: var(--gold); }

@@ -365,18 +365,22 @@ export default function App() {
               </button>
               {netMenu && (
                 <div className="net-menu" onClick={(e) => e.stopPropagation()}>
-                  <div className="net-item on">
-                    <img className="net-ico" src="https://icons.llamao.fi/icons/chains/rsz_robinhood.jpg" alt=""
-                         onError={(e) => { e.currentTarget.style.display = "none"; }} /> Robinhood Chain <span className="net-check">✓</span>
-                  </div>
-                  <div className="net-item soon" title={t("Откроется после деплоя контрактов в BSC")}>
-                    <img className="net-ico" src="https://icons.llamao.fi/icons/chains/rsz_binance.jpg" alt=""
-                         onError={(e) => { e.currentTarget.style.display = "none"; }} /> BNB Chain <span className="net-soon">{t("скоро")}</span>
-                  </div>
-                  <div className="net-item soon" title="Base — вместе с Revenue β">
-                    <img className="net-ico" src="https://icons.llamao.fi/icons/chains/rsz_base.jpg" alt=""
-                         onError={(e) => { e.currentTarget.style.display = "none"; }} /> Base <span className="net-soon">{t("скоро")}</span>
-                  </div>
+                  {[
+                    { key: "robinhood", name: "Robinhood", ico: "rsz_robinhood", live: true },
+                    { key: "bsc", name: "BSC", ico: "rsz_binance", hint: t("Откроется после деплоя контрактов в BSC") },
+                    { key: "base", name: "Base", ico: "rsz_base", hint: "Base — вместе с Revenue β" },
+                    { key: "eth", name: "ETH", ico: "rsz_ethereum" },
+                    { key: "sol", name: "SOL", ico: "rsz_solana" },
+                  ].map((n) => (
+                    <div key={n.key} className={`net-item ${n.live ? "on" : "soon"}`} title={n.hint || ""}>
+                      <span className="net-badge">
+                        <img className="net-ico" src={`https://icons.llamao.fi/icons/chains/${n.ico}.jpg`} alt=""
+                             onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                      </span>
+                      {n.name}
+                      {n.live ? <span className="net-check">✓</span> : <span className="net-soon">{t("скоро")}</span>}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
