@@ -1092,6 +1092,12 @@ const EN = {
   "я": "me",
   "На бирже пусто — выстави кота из вкладки «Мои коты».": "The market is empty — list a cat from the My cats tab.",
   "Тестовый режим: на бирже только твои реальные лоты. Контракт биржи готов (эскроу, 2% казне, дивиденды переезжают с котом).": "Test mode: only your real listings are shown. The market contract is ready (escrow, 2% to treasury, dividends travel with the cat).",
+  "за 30 дней": "over 30 days",
+  "мин": "min",
+  "макс": "max",
+  "свободно": "free",
+  "Все коты уже выставлены на бирже.": "All your cats are already listed.",
+  "Выставить": "List",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

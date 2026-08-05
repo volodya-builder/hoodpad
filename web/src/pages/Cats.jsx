@@ -79,11 +79,78 @@ function timeAgoShort(ts) {
   return `${Math.floor(h / 24)}д`;
 }
 
+// История средней цены по редкостям (демо, детерминированно; после деплоя —
+// из событий Bought контракта биржи)
+function priceHistory(days = 30) {
+  let x = 991;
+  const rnd = () => ((x = (x * 9301 + 49297) % 233280) / 233280);
+  const base = [0.012, 0.035, 0.09, 0.28, 1.2];
+  const series = base.map((b) => {
+    let v = b * (0.75 + rnd() * 0.2);
+    return Array.from({ length: days }, () => {
+      v = Math.max(b * 0.35, v * (0.96 + rnd() * 0.1));
+      return Math.round(v * 10000) / 10000;
+    });
+  });
+  return series;
+}
+const PRICE_HISTORY = priceHistory(30);
+
+function PriceChart({ t, tier }) {
+  const data = PRICE_HISTORY[tier];
+  const r = RARITIES[tier];
+  const W = 640, H = 150, P = 8;
+  const mx = Math.max(...data), mn = Math.min(...data);
+  const X = (i) => P + (i / (data.length - 1)) * (W - P * 2);
+  const Y = (v) => H - P - ((v - mn) / Math.max(mx - mn, 1e-9)) * (H - P * 2);
+  const line = data.map((v, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ");
+  const area = `${line} L${X(data.length - 1).toFixed(1)},${H} L${X(0).toFixed(1)},${H} Z`;
+  const last = data[data.length - 1], first = data[0];
+  const chg = ((last - first) / first) * 100;
+
+  return (
+    <div className="pc-wrap">
+      <div className="pc-head">
+        <span style={{ color: r.color }}>{t(r.ru)}</span>
+        <b>{last} ETH</b>
+        <span className={chg >= 0 ? "pc-up" : "pc-down"}>{chg >= 0 ? "▲" : "▼"} {Math.abs(chg).toFixed(1)}%</span>
+        <span className="dim">{t("за 30 дней")}</span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="pc-svg" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id={`pcg${tier}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor={r.color} stopOpacity=".28" />
+            <stop offset="1" stopColor={r.color} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path d={area} fill={`url(#pcg${tier})`} />
+        <path d={line} fill="none" stroke={r.color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+        <circle cx={X(data.length - 1)} cy={Y(last)} r="3.5" fill={r.color} />
+      </svg>
+      <div className="pc-foot"><span>{t("мин")} {mn} ETH</span><span>{t("макс")} {mx} ETH</span></div>
+    </div>
+  );
+}
+
 function Market({ t, sb, setSb }) {
   const [tier, setTier] = useState(-1); // -1 = все
   const [q, setQ] = useState("");
   const [sort, setSort] = useState("price_asc");
   const [toast, setToast] = useState("");
+  const [chartTier, setChartTier] = useState(0);
+  const say = (m) => { setToast(m); setTimeout(() => setToast(""), 2400); };
+
+  // мои коты, которые ещё НЕ выставлены — их можно выставить прямо отсюда
+  const myIdle = sb.enabled ? sb.cats.filter((c) => !c.listed) : [];
+
+  function quickList(c) {
+    const suggest = [0.012, 0.035, 0.09, 0.28, 1.2][c.tier];
+    const raw = window.prompt(t("Цена в ETH:"), String(suggest));
+    const price = parseFloat(String(raw).replace(",", "."));
+    if (!price || price <= 0) return;
+    setSb(SB.listCat(sb, c.id, price));
+    say(t("Кот #{id} выставлен на биржу").replace("{id}", c.id));
+  }
 
   // мои лоты из песочницы идут первыми и помечены
   const myLots = useMemo(() => (sb.enabled ? sb.cats.filter((c) => c.listed).map((c) => ({
@@ -121,6 +188,53 @@ function Market({ t, sb, setSb }) {
         <div><b>{floor(4) ?? "—"} ETH</b><span>{t("флор Легендарных")}</span></div>
         <div><b>2%</b><span>{t("комиссия биржи — в казну")}</span></div>
       </div>
+
+      {/* График истории цен по редкостям */}
+      <div className="pc-block">
+        <div className="pc-tabs quote-tabs" style={{ margin: 0, flexWrap: "wrap" }}>
+          {RARITIES.map((r, i) => (
+            <button type="button" key={r.key} className={`quote-tab qt-sm ${chartTier === i ? "on" : ""}`}
+                    style={chartTier === i ? { borderColor: r.color, color: r.color } : {}}
+                    onClick={() => setChartTier(i)}>{t(r.ru)}</button>
+          ))}
+        </div>
+        <PriceChart t={t} tier={chartTier} />
+      </div>
+
+      {/* Мои коты прямо на бирже — быстро выставить */}
+      {sb.enabled && (
+        <div className="mm-block">
+          <div className="mm-head">
+            <b>{t("Мои коты")} <span className="dim">({myIdle.length} {t("свободно")})</span></b>
+          </div>
+          {myIdle.length === 0 ? (
+            <div className="dim" style={{ fontSize: 13 }}>
+              {sb.cats.length === 0
+                ? t("Пока пусто — открой кейс во вкладке «Кейсы».")
+                : t("Все коты уже выставлены на бирже.")}
+            </div>
+          ) : (
+            <div className="mm-list">
+              {myIdle.map((c) => {
+                const r = RARITIES[c.tier];
+                return (
+                  <div className="mm-row" key={c.id}>
+                    <TierArt tier={c.tier} size={38} />
+                    <span className="mm-id">#{c.id}</span>
+                    <span className="mm-tier" style={{ color: r.color }}>{t(r.ru)} ×{r.mult}</span>
+                    <span className="mm-sym">
+                      <img src={stockLogo(c.sym)} alt="" className="q-logo" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                      {c.sym}
+                    </span>
+                    <span className="mm-divs">${c.divs}</span>
+                    <button className="btn btn-primary sm-btn" onClick={() => quickList(c)}>{t("Выставить")}</button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="cm-filters">
         <div className="quote-tabs" style={{ margin: 0, flexWrap: "wrap" }}>
