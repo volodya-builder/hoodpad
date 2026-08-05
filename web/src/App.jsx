@@ -353,7 +353,6 @@ export default function App() {
             <a className={`nav-pill ${route.startsWith("/cats") ? "on" : ""}`} href="#/cats">🐱 {t("Коты")} <span className="rev-nav-beta">β</span></a>
             <a className={`nav-pill ${route.startsWith("/vote") ? "on" : ""}`} href="#/vote">{t("Голосование")}</a>
             <a className={`nav-pill ${route.startsWith("/treasury") ? "on" : ""}`} href="#/treasury">{t("Казна")}</a>
-            <a className={`nav-pill ${route.startsWith("/revenue") ? "on" : ""}`} href="#/revenue">{t("Revenue")} <span className="rev-nav-beta">β</span></a>
             <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>
             <a className={`nav-pill ${route.startsWith("/about") ? "on" : ""}`} href="#/about">{t("О нас")}</a>
           </div>
@@ -460,7 +459,6 @@ export default function App() {
               <a href="#/arena">⚔️ {t("Арена")} 🔥</a>
               <a href="#/vote">{t("Голосование")}</a>
               <a href="#/treasury">{t("Казна")}</a>
-              <a href="#/revenue">{t("Revenue")} β</a>
               <a href="#/analytics">{t("Аналитика")}</a>
             </div>
             <div className="fcol">
