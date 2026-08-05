@@ -107,3 +107,14 @@ export const RWA_TOKENS = [
 
 // Популярные тикеры — показываются в форме до поиска
 export const RWA_POPULAR = ["NVDA", "AAPL", "TSLA", "MSFT", "AMZN", "GOOGL", "META", "COIN", "MSTR", "PLTR", "SPY", "QQQ"];
+
+// Логотипы компаний (parqet CDN, покрывает и ETF); фолбэк — скрыть картинку
+export const stockLogo = (sym) => `https://assets.parqet.com/logos/symbol/${sym}?format=png&size=64`;
+
+// Значки сетей (DefiLlama icons)
+export const CHAIN_LOGOS = {
+  robinhood: "https://icons.llamao.fi/icons/chains/rsz_robinhood.jpg",
+  bnb: "https://icons.llamao.fi/icons/chains/rsz_binance.jpg",
+  base: "https://icons.llamao.fi/icons/chains/rsz_base.jpg",
+  ethereum: "https://icons.llamao.fi/icons/chains/rsz_ethereum.jpg",
+};

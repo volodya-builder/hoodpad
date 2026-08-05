@@ -261,7 +261,7 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 .preview-stats .row { display: flex; justify-content: space-between; font-size: 13px; padding: 11px 0; border-bottom: 1px solid #2a2a28; gap: 10px; }
 .preview-stats .k { color: var(--text-dim); }
 .preview-stats .v { font-weight: 800; text-align: right; }
-.preview-stats .v.green { color: var(--leaf); }
+.preview-stats .v.green { color: var(--gold); }
 .preview-stats .v.goldc { color: var(--gold); }
 
 /* token page */
@@ -2369,3 +2369,10 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .quote-chip { background: var(--card); border: 1px solid var(--border); border-radius: 10px; color: var(--text); padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; }
 .quote-chip:hover { border-color: var(--border-gold); }
 .quote-chip.on { border-color: var(--gold); background: var(--gold-dim); }
+
+/* Логотипы акций и сетей */
+.q-logo { width: 18px; height: 18px; border-radius: 50%; vertical-align: -4px; margin-right: 7px; background: #fff; object-fit: contain; }
+.quote-chip { display: inline-flex; align-items: center; }
+.quote-chip .q-logo { margin-right: 6px; }
+.net-ico { width: 16px; height: 16px; border-radius: 50%; object-fit: cover; }
+.pv-qlogo { width: 16px; height: 16px; border-radius: 50%; vertical-align: -3px; margin-right: 5px; background: #fff; object-fit: contain; }

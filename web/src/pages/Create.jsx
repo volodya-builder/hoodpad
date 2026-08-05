@@ -5,7 +5,13 @@ import { factoryAbi } from "../lib/abi.js";
 import { FACTORY_ADDRESS } from "../lib/config.js";
 import { useSplit, injectNewToken } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
-import { RWA_TOKENS, RWA_POPULAR } from "../lib/rwa.js";
+import { RWA_TOKENS, RWA_POPULAR, stockLogo, CHAIN_LOGOS } from "../lib/rwa.js";
+
+// Логотип с фолбэком: если CDN не знает тикер — просто прячем картинку
+const Logo = ({ src, cls }) => (
+  <img className={cls} src={src} alt="" loading="lazy"
+       onError={(e) => { e.currentTarget.style.display = "none"; }} />
+);
 
 // Max developer buy: 5% of supply bought at launch.
 // gross ETH = (VIRT * s / (TOTAL - s)) / (1 - fee), s = 50M, VIRT = 1.625
@@ -234,7 +240,9 @@ export default function Create({ wallet, onConnect }) {
         </div>
         {quoteTab === "crypto" ? (
           <div className="quote-grid">
-            <button type="button" className={`quote-chip ${quote === "ETH" ? "on" : ""}`} onClick={() => setQuote("ETH")}>ETH</button>
+            <button type="button" className={`quote-chip ${quote === "ETH" ? "on" : ""}`} onClick={() => setQuote("ETH")}>
+              <Logo cls="q-logo" src={CHAIN_LOGOS.ethereum} />ETH
+            </button>
           </div>
         ) : (
           <>
@@ -246,7 +254,9 @@ export default function Create({ wallet, onConnect }) {
                 : RWA_TOKENS.filter((x) => RWA_POPULAR.includes(x.sym))
               ).map((x) => (
                 <button type="button" key={x.sym} className={`quote-chip ${quote === x.sym ? "on" : ""}`}
-                        onClick={() => setQuote(x.sym)} title={x.addr}>{x.sym}</button>
+                        onClick={() => setQuote(x.sym)} title={x.addr}>
+                  <Logo cls="q-logo" src={stockLogo(x.sym)} />{x.sym}
+                </button>
               ))}
             </div>
             <div className="hint">
@@ -460,7 +470,9 @@ export default function Create({ wallet, onConnect }) {
         <div className="preview-stats">
           <div className="row"><span className="k">{t("Комиссия запуска")}</span><span className="v green">0 ETH</span></div>
           <div className="row"><span className="k">{t("Вам с каждого трейда")}</span><span className="v green">{t("{pct}% комиссии").replace("{pct}", split.creator)}</span></div>
-          <div className="row"><span className="k">{t("Валюта курвы")}</span><span className="v">{quote === "ETH" ? "ETH" : `📈 ${quote}`}</span></div>
+          <div className="row"><span className="k">{t("Валюта курвы")}</span><span className="v">
+            {quote === "ETH" ? "ETH" : <><Logo cls="pv-qlogo" src={stockLogo(quote)} />{quote}</>}
+          </span></div>
           <div className="row"><span className="k">{t("Градация")}</span><span className="v">6.5 ETH</span></div>
           <div className="row"><span className="k">{t("Ликвидность")}</span><span className="v">{t("Заперта навсегда")}</span></div>
           {buyValue > 0 && (

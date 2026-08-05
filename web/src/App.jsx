@@ -360,16 +360,22 @@ export default function App() {
             <button className="icon-btn nav-search" onClick={() => setSearchOpen(true)} title="Поиск (Ctrl+K)">⌕</button>
             <div className="net-wrap">
               <button className="icon-btn net-btn" onClick={(e) => { e.stopPropagation(); setNetMenu(!netMenu); }} title={t("Сеть")}>
-                <span className="net-dot" /> Robinhood <span className="chev">▾</span>
+                <img className="net-ico" src="https://icons.llamao.fi/icons/chains/rsz_robinhood.jpg" alt=""
+                     onError={(e) => { e.currentTarget.style.display = "none"; }} /> Robinhood <span className="chev">▾</span>
               </button>
               {netMenu && (
                 <div className="net-menu" onClick={(e) => e.stopPropagation()}>
-                  <div className="net-item on"><span className="net-dot" /> Robinhood Chain <span className="net-check">✓</span></div>
+                  <div className="net-item on">
+                    <img className="net-ico" src="https://icons.llamao.fi/icons/chains/rsz_robinhood.jpg" alt=""
+                         onError={(e) => { e.currentTarget.style.display = "none"; }} /> Robinhood Chain <span className="net-check">✓</span>
+                  </div>
                   <div className="net-item soon" title={t("Откроется после деплоя контрактов в BSC")}>
-                    <span className="net-dot bnb" /> BNB Chain <span className="net-soon">{t("скоро")}</span>
+                    <img className="net-ico" src="https://icons.llamao.fi/icons/chains/rsz_binance.jpg" alt=""
+                         onError={(e) => { e.currentTarget.style.display = "none"; }} /> BNB Chain <span className="net-soon">{t("скоро")}</span>
                   </div>
                   <div className="net-item soon" title="Base — вместе с Revenue β">
-                    <span className="net-dot base" /> Base <span className="net-soon">{t("скоро")}</span>
+                    <img className="net-ico" src="https://icons.llamao.fi/icons/chains/rsz_base.jpg" alt=""
+                         onError={(e) => { e.currentTarget.style.display = "none"; }} /> Base <span className="net-soon">{t("скоро")}</span>
                   </div>
                 </div>
               )}
