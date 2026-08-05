@@ -66,6 +66,9 @@ header {
   padding: 11px 20px; border-radius: 12px; font-size: 14px; font-weight: 600;
   cursor: pointer; transition: all .18s ease; font-family: var(--font-ui);
 }
+/* Кнопка-ссылка: у строчного элемента вертикальные отступы не увеличивают
+   высоту строки, из-за чего соседний текст наезжал на кнопку. */
+a.btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 .btn:hover { background: var(--card-hover); border-color: #3a3b31; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 .btn-primary {

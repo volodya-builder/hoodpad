@@ -1780,7 +1780,9 @@ export default function Cats({ wallet }) {
       <div className="rev-form-wrap" id="cats-wl">
         <h2>{t("Хочешь бесплатного кота на старте?")}</h2>
         <p className="rev-sub">{t("Ранние пользователи получат котов бесплатно. Подпишись на @hoodandarrow и следи за анонсом аирдропа.")}</p>
-        <a className="btn btn-primary" style={{ marginTop: 14 }} href="https://x.com/hoodandarrow" target="_blank" rel="noreferrer">{t("Следить в X")}</a>
+        <div style={{ marginTop: 16 }}>
+          <a className="btn btn-primary" href="https://x.com/hoodandarrow" target="_blank" rel="noreferrer">{t("Следить в X")}</a>
+        </div>
       </div>
       </>)}
 
