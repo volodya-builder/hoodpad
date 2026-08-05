@@ -908,6 +908,13 @@ const EN = {
   "Аллокация налога должна давать ровно 100%.": "Tax allocation must total exactly 100%.",
   "Tax-токены (v3) на подходе: контракты в разработке. Черновик с твоими параметрами сохранён — запуск откроется в один клик.": "Tax tokens (v3) are coming: contracts in development. Your draft is saved — launch will open in one click.",
   "Сохранить черновик tax-токена": "Save tax token draft",
+  "готово": "ready",
+  "аллокация": "allocated",
+  "Кошелёк создателя": "Creator wallet",
+  "Сжигание": "Burn",
+  "Дивиденды": "Dividends",
+  "Ликвидность": "Liquidity",
+  "Не распределено": "Unallocated",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

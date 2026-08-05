@@ -2341,3 +2341,21 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .tax-bar { display: flex; height: 10px; border-radius: 6px; overflow: hidden; margin-top: 10px; }
 .tb-mkt { background: var(--gold); } .tb-burn { background: #e06a4a; }
 .tb-div { background: #4caf6d; } .tb-lp { background: #4aa3e0; } .tb-un { background: #ffffff14; }
+
+/* Пончик аллокации налога (как у flap, с процентом в центре) */
+.tax-alloc-wrap { display: grid; grid-template-columns: 190px 1fr; gap: 18px; align-items: start; margin-top: 8px; }
+.tax-donut-col { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.tax-donut { width: 160px; height: 160px; border-radius: 50%; position: relative; transition: background .2s; }
+.tax-donut-hole {
+  position: absolute; inset: 26px; border-radius: 50%; background: var(--card);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.tax-donut-hole b { font-size: 26px; letter-spacing: -.5px; }
+.tax-donut-hole b.ok { color: var(--text); } .tax-donut-hole b.bad { color: var(--red); }
+.tax-donut-hole span { font-size: 10.5px; color: var(--text-dim); margin-top: 2px; }
+.tax-legend { display: flex; flex-direction: column; gap: 5px; font-size: 11.5px; color: var(--text-dim); width: 100%; }
+.tax-legend b { color: var(--text); margin-left: auto; }
+.tax-legend span { display: flex; align-items: center; gap: 7px; }
+.tax-legend i { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+.tax-legend .bad { color: var(--red); }
+@media (max-width: 700px) { .tax-alloc-wrap { grid-template-columns: 1fr; } .tax-donut-col { flex-direction: row; } .tax-donut { flex: none; } }

@@ -296,22 +296,40 @@ export default function Create({ wallet, onConnect }) {
             </div>
 
             <div className="tax-head2">{t("Куда идёт налог")} <b className={taxTotal === 100 ? "ok" : "bad"}>{taxTotal}%</b></div>
-            <div className="tax-alloc">
-              <label>{t("Кошелёк создателя (дев, маркетинг)")}: <b>{tax.mkt}%</b>
-                <input type="range" min="0" max="100" step="5" value={tax.mkt} onChange={setTaxK("mkt")} /></label>
-              <label>{t("Сжигание (дефляция)")}: <b>{tax.burn}%</b>
-                <input type="range" min="0" max="100" step="5" value={tax.burn} onChange={setTaxK("burn")} /></label>
-              <label>{t("Дивиденды холдерам")}: <b>{tax.div}%</b>
-                <input type="range" min="0" max="100" step="5" value={tax.div} onChange={setTaxK("div")} /></label>
-              <label>{t("В ликвидность")}: <b>{tax.lp}%</b>
-                <input type="range" min="0" max="100" step="5" value={tax.lp} onChange={setTaxK("lp")} /></label>
-            </div>
-            <div className="tax-bar">
-              <div style={{ flex: Math.max(tax.mkt, 0.01) }} className="tb-mkt" />
-              <div style={{ flex: Math.max(tax.burn, 0.01) }} className="tb-burn" />
-              <div style={{ flex: Math.max(tax.div, 0.01) }} className="tb-div" />
-              <div style={{ flex: Math.max(tax.lp, 0.01) }} className="tb-lp" />
-              {taxTotal < 100 && <div style={{ flex: 100 - taxTotal }} className="tb-un" />}
+            <div className="tax-alloc-wrap">
+              <div className="tax-donut-col">
+                <div className="tax-donut" style={{ background: (() => {
+                  const base = Math.max(taxTotal, 100);
+                  const p = (v) => (v / base) * 100;
+                  let a = 0;
+                  const seg = (v, c) => { const s = `${c} ${a}% ${a + p(v)}%`; a += p(v); return s; };
+                  const parts = [seg(tax.mkt, "var(--gold)"), seg(tax.burn, "#8b5cf6"), seg(tax.div, "#e06a4a"), seg(tax.lp, "#2bd4c8")];
+                  if (taxTotal < 100) parts.push(`#ffffff12 ${a}% 100%`);
+                  return `conic-gradient(${parts.join(", ")})`;
+                })() }}>
+                  <div className="tax-donut-hole">
+                    <b className={taxTotal === 100 ? "ok" : "bad"}>{taxTotal}%</b>
+                    <span>{taxTotal === 100 ? t("готово") : t("аллокация")}</span>
+                  </div>
+                </div>
+                <div className="tax-legend">
+                  <span><i style={{ background: "var(--gold)" }} />{t("Кошелёк создателя")} <b>{tax.mkt}%</b></span>
+                  <span><i style={{ background: "#8b5cf6" }} />{t("Сжигание")} <b>{tax.burn}%</b></span>
+                  <span><i style={{ background: "#e06a4a" }} />{t("Дивиденды")} <b>{tax.div}%</b></span>
+                  <span><i style={{ background: "#2bd4c8" }} />{t("Ликвидность")} <b>{tax.lp}%</b></span>
+                  {taxTotal < 100 && <span><i style={{ background: "#ffffff26" }} />{t("Не распределено")} <b className="bad">{100 - taxTotal}%</b></span>}
+                </div>
+              </div>
+              <div className="tax-alloc">
+                <label>{t("Кошелёк создателя (дев, маркетинг)")}: <b>{tax.mkt}%</b>
+                  <input type="range" min="0" max="100" step="5" value={tax.mkt} onChange={setTaxK("mkt")} /></label>
+                <label>{t("Сжигание (дефляция)")}: <b>{tax.burn}%</b>
+                  <input type="range" min="0" max="100" step="5" value={tax.burn} onChange={setTaxK("burn")} /></label>
+                <label>{t("Дивиденды холдерам")}: <b>{tax.div}%</b>
+                  <input type="range" min="0" max="100" step="5" value={tax.div} onChange={setTaxK("div")} /></label>
+                <label>{t("В ликвидность")}: <b>{tax.lp}%</b>
+                  <input type="range" min="0" max="100" step="5" value={tax.lp} onChange={setTaxK("lp")} /></label>
+              </div>
             </div>
             {taxTotal !== 100 && <div className="hint bad">{t("Сумма аллокации должна быть ровно 100% (сейчас {n}%).").replace("{n}", String(taxTotal))}</div>}
 
