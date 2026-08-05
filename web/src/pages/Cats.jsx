@@ -761,6 +761,35 @@ function Boxes({ t, sb, setSb }) {
         </div>
       )}
 
+      {(phase === "rolling" || phase === "result") && (
+        <div className="roll-wrap" ref={wrapRef}>
+          <div className="roll-marker" />
+          <div className="roll-strip"
+               style={{ transform: `translateX(${offset}px)`,
+                        transition: anim ? "transform 4.2s cubic-bezier(.12,.72,.11,1)" : "none" }}>
+            {strip.map((tr, i) => (
+              <div className="roll-item" key={i} style={{ borderColor: RARITIES[tr].color + "88" }}>
+                <TierArt tier={tr} size={64} />
+                <span style={{ color: RARITIES[tr].color }}>{t(RARITIES[tr].ru)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {phase === "result" && result && (
+        <div className="roll-result" style={{ borderColor: RARITIES[result.tier].color }}>
+          <TierArt tier={result.tier} size={96} />
+          <div>
+            <b style={{ color: RARITIES[result.tier].color }}>{t(RARITIES[result.tier].ru)} {t("кот")}{result.id ? ` #${result.id}` : ""}!</b>
+            <div className="rr-sub">
+              <img src={stockLogo(result.sym)} alt="" className="q-logo" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+              {result.sym} · {t("вес выплат")} ×{RARITIES[result.tier].mult}
+            </div>
+          </div>
+          <button className="btn sm-btn" onClick={openBox}>{t("Ещё раз")}</button>
+        </div>
+      )}
       <div className="box-grid">
         {/* левая колонка: сам кейс и действия */}
         <div className="box-card">
@@ -880,35 +909,6 @@ function Boxes({ t, sb, setSb }) {
         </div>
       )}
 
-      {(phase === "rolling" || phase === "result") && (
-        <div className="roll-wrap" ref={wrapRef}>
-          <div className="roll-marker" />
-          <div className="roll-strip"
-               style={{ transform: `translateX(${offset}px)`,
-                        transition: anim ? "transform 4.2s cubic-bezier(.12,.72,.11,1)" : "none" }}>
-            {strip.map((tr, i) => (
-              <div className="roll-item" key={i} style={{ borderColor: RARITIES[tr].color + "88" }}>
-                <TierArt tier={tr} size={64} />
-                <span style={{ color: RARITIES[tr].color }}>{t(RARITIES[tr].ru)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {phase === "result" && result && (
-        <div className="roll-result" style={{ borderColor: RARITIES[result.tier].color }}>
-          <TierArt tier={result.tier} size={96} />
-          <div>
-            <b style={{ color: RARITIES[result.tier].color }}>{t(RARITIES[result.tier].ru)} {t("кот")}{result.id ? ` #${result.id}` : ""}!</b>
-            <div className="rr-sub">
-              <img src={stockLogo(result.sym)} alt="" className="q-logo" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-              {result.sym} · {t("вес выплат")} ×{RARITIES[result.tier].mult}
-            </div>
-          </div>
-          <button className="btn sm-btn" onClick={openBox}>{t("Ещё раз")}</button>
-        </div>
-      )}
     </>
   );
 }
@@ -1633,9 +1633,13 @@ function Clicker({ t, sb, setSb, wallet, admin }) {
 
   // соперники текущего раунда: пересчитываем раз в 5 секунд, чтобы список
   // не дёргался каждый тик, но очки у людей на глазах росли
+  // Сила соперников считается от МОЕЙ скорости прокачки (улучшения), а не от
+  // текущего счёта: раньше очки ботов росли с каждым моим кликом, и обогнать
+  // их было невозможно. Теперь они копят во времени — кликаешь чаще, обходишь.
+  const myRate = CL.playerRate(g);
   const pool = useMemo(
-    () => CL.roundPlayers(g.round, now, g.roundPoints || 0),
-    [g.round, Math.floor(now / 5000), Math.floor((g.roundPoints || 0) / 50000)] // eslint-disable-line react-hooks/exhaustive-deps
+    () => CL.roundPlayers(g.round, now, myRate),
+    [g.round, Math.floor(now / 3000), myRate] // eslint-disable-line react-hooks/exhaustive-deps
   );
   const totalPoints = CL.poolTotal(pool) + (g.roundPoints || 0);
   // корзина билетов раунда: билеты по корню от очков + кэп 25% на кошелёк
@@ -1643,6 +1647,13 @@ function Clicker({ t, sb, setSb, wallet, admin }) {
     () => CL.ticketTable(pool, g.roundPoints || 0, myAddr),
     [pool, g.roundPoints, myAddr]
   );
+
+  // позиция в раунде и отрыв от лидера — по очкам, а не по билетам:
+  // так понятнее, сколько надо доработать руками
+  const sorted = useMemo(() => [...board].sort((a, b) => b.points - a.points), [board]);
+  const myRank = sorted.findIndex((p) => p.me) + 1;
+  const gapToLead = myRank > 1 && sorted.length ? sorted[0].points - (g.roundPoints || 0) : 0;
+  const capped = board.find((p) => p.me)?.pct >= CL.TICKET_CAP_PCT - 0.05;
 
   const perClick = CL.perClick(g);
   const perSec = CL.perSecond(g);
@@ -1781,11 +1792,23 @@ function Clicker({ t, sb, setSb, wallet, admin }) {
               <div className="clk-chance-bar"><span style={{ width: `${Math.min(100, chance)}%` }} /></div>
               <b>{chance.toFixed(1)}%</b>
             </div>
+            <div className="clk-rank">
+              <div className="clk-rank-pos">
+                <b>{myRank > 0 ? `#${myRank}` : "—"}</b>
+                <span>{t("место в раунде")}</span>
+              </div>
+              <div className="clk-rank-gap">
+                {myRank === 1
+                  ? <span className="rev-gold">{t("ты лидируешь")}</span>
+                  : gapToLead > 0
+                    ? <span>{t("до первого места")}: <b>{Math.ceil(gapToLead).toLocaleString("ru-RU")}</b> {t("оч.")}</span>
+                    : <span>{t("накликай очков, чтобы попасть в таблицу")}</span>}
+              </div>
+            </div>
             <div className="clk-raffle-kv">
               <span>{t("мои очки раунда")}: <b>{Math.floor(g.roundPoints || 0).toLocaleString("ru-RU")}</b></span>
               <span>{t("мои билеты")}: <b>{CL.ticketsOf(g.roundPoints || 0).toLocaleString("ru-RU")}</b> <i className="dim">({t("корень от очков")})</i></span>
-              <span>{t("всего у игроков")}: <b>{Math.round(totalPoints).toLocaleString("ru-RU")}</b></span>
-              <span>{t("потолок доли")}: <b>{CL.TICKET_CAP_PCT}%</b> {t("на кошелёк")}</span>
+              {capped && <span className="rev-gold">{t("ты упёрся в потолок доли")} {CL.TICKET_CAP_PCT}%</span>}
             </div>
             {admin && (
               <button className="btn btn-block" onClick={doRaffle}>{t("Разыграть сейчас (тест)")}</button>
@@ -1868,12 +1891,6 @@ function Clicker({ t, sb, setSb, wallet, admin }) {
 export default function Cats({ wallet }) {
   const { t, lang } = useLang();
   const admin = isTeam(wallet?.account);
-  // таймер в шапке тикает независимо от вкладки кликера
-  const [heroNow, setHeroNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setHeroNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
   const [tab, setTab] = useState("clicker"); // clicker | market | boxes | my | holders | guide | about
   // переход на вкладку с прокруткой к её началу
   const goTab = (id) => {
@@ -1903,7 +1920,7 @@ export default function Cats({ wallet }) {
       {/* Компактная шапка: суть в одну строку, живой статус вместо
           юридического абзаца (полный текст — в инструкции и в подвале),
           одно главное действие. Так игра попадает на первый экран. */}
-      <div className={`cats-hero ${tab === "clicker" ? "slim" : ""}`}>
+      <div className="cats-hero">
         <div className="cats-hero-l">
           <h1>{t("Коты-брокеры")} <span className="cats-hero-beta">β</span></h1>
           <p className="cats-hero-sub">
@@ -1918,25 +1935,6 @@ export default function Cats({ wallet }) {
           </p>
         </div>
 
-        {/* живые цифры показываем там, где своего таймера нет: на кликере
-            он уже есть в панели розыгрыша, дублировать одно и то же число
-            на одном экране — лишний шум */}
-        {tab !== "clicker" && <div className="cats-hero-r">
-          <div className="cats-hero-stat big">
-            <b>{CL.fmtLeft(CL.msLeft(heroNow))}</b>
-            <span>{t("до следующего кота")}</span>
-          </div>
-          <div className="cats-hero-stat">
-            <b>{CL.ROUNDS_PER_DAY}</b><span>{t("котов в сутки")}</span>
-          </div>
-          <div className="cats-hero-stat">
-            <b>{(sb.enabled ? sb.boxesLeft : SB.BOX_TOTAL).toLocaleString("ru-RU")}</b>
-            <span>{t("кейсов осталось")}</span>
-          </div>
-          <div className="cats-hero-stat">
-            <b className="rev-gold">{t("бесплатно")}</b><span>{t("участие в розыгрыше")}</span>
-          </div>
-        </div>}
       </div>
 
       <div id="cats-tabs" className="quote-tabs" style={{ justifyContent: "center", margin: "10px 0 6px", flexWrap: "wrap" }}>

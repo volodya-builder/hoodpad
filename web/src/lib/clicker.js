@@ -42,20 +42,28 @@ export const DEMO_PLAYERS = 11; // сколько «соперников» по�
  *  это одни и те же кошельки, а их очки плавно растут к концу раунда —
  *  как если бы они играли параллельно. После деплоя заменяется на реальный
  *  список из бэкенда/контракта. */
-export function roundPlayers(round = roundId(), ts = Date.now(), ref = 0) {
+export const BOT_CPS = 4; // с какой скоростью «тапает» средний соперник
+
+/** Скорость игрока в очках в секунду при спокойной игре — точка отсчёта для
+ *  силы соперников. Меняется только при покупке улучшений, поэтому от самих
+ *  кликов не зависит: обогнать соперников можно, просто кликая быстрее. */
+export function playerRate(s) {
+  return perSecond(s) + perClick(s) * BOT_CPS;
+}
+
+export function roundPlayers(round = roundId(), ts = Date.now(), refRate = 0) {
   let x = ((round % 9973) * 7919 + 13) % 233280;
   const rnd = () => ((x = (x * 9301 + 49297) % 233280) / 233280);
   const hex = "0123456789abcdef";
   const w = (n) => Array.from({ length: n }, () => hex[Math.floor(rnd() * 16)]).join("");
-  // насколько раунд прошёл: в начале у всех мало очков, к концу — максимум
-  const prog = Math.min(1, Math.max(0, 1 - msLeft(ts) / ROUND_MS));
-  // соперники масштабируются от результата игрока: иначе у прокачанного
-  // аккаунта таблица превращается в «я и одиннадцать нулей»
-  const scale = Math.max(20000, ref || 0);
+  // сколько секунд раунда уже прошло: соперники копят очки во времени,
+  // как живые игроки, а не подстраиваются под мой счёт
+  const elapsed = Math.max(0, (ROUND_MS - msLeft(ts)) / 1000);
+  const base = Math.max(20, refRate || 0); // очков в секунду у среднего соперника
   return Array.from({ length: DEMO_PLAYERS }, () => {
     const addr = `0x${w(4)}…${w(4)}`;
-    const peak = scale * (0.15 + rnd() * 1.25);
-    return { addr, points: Math.max(1, Math.round(peak * (0.12 + 0.88 * prog))) };
+    const skill = 0.45 + rnd() * 1.55; // от слабых новичков до сильных игроков
+    return { addr, points: Math.max(1, Math.round(base * skill * elapsed)) };
   });
 }
 

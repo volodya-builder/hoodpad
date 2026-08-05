@@ -2925,8 +2925,7 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .ck-bd[role="button"]:hover, .ck-win[role="button"]:hover { background: #7c88ff1f; }
 
 /* ——— шапка страницы котов: компактно, с живым статусом ——— */
-.cats-hero { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px;
-  align-items: center; margin: 18px 0 18px; }
+.cats-hero { margin: 18px 0 14px; }
 .cats-hero-l h1 { font-size: 38px; line-height: 1.1; margin: 0 0 10px; letter-spacing: -.02em; }
 .cats-hero-beta { font-size: 15px; font-weight: 700; color: #a5aeff; vertical-align: super; margin-left: 4px; }
 .cats-hero-sub { font-size: 16px; line-height: 1.6; color: var(--text-dim); margin: 0 0 16px; max-width: 560px; }
@@ -3035,3 +3034,12 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .ck-mini-tab.on { color: var(--text); border-color: #7c88ff88; background: #7c88ff18; }
 .ck-mini-tab i { font-style: normal; font-size: 10px; opacity: .7; }
 .cats-hero.slim { grid-template-columns: 1fr; margin-bottom: 10px; }
+
+/* место в раунде — главный соревновательный показатель */
+.clk-rank { display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin-bottom: 10px;
+  background: #7c88ff14; border: 1px solid #7c88ff44; border-radius: 12px; }
+.clk-rank-pos { text-align: center; min-width: 58px; }
+.clk-rank-pos b { display: block; font-size: 22px; color: #a5aeff; }
+.clk-rank-pos span { font-size: 10px; color: var(--text-dim); }
+.clk-rank-gap { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+.clk-rank-gap b { color: var(--text); }
