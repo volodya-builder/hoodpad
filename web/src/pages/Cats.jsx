@@ -900,8 +900,8 @@ function SandboxPanel({ t, sb, setSb }) {
 
 // ---------------------------------------------------------------- кликер
 // Тапаешь легендарного кота — сыплются акции. Очки дают буст к дивидендам
-// и билеты в ежедневный розыгрыш 50 NFT-котов.
-const TOTAL_POINTS_DEMO = 4_200_000; // суммарные очки всех игроков за день (демо)
+// и билеты в розыгрыш: каждые 30 минут один NFT-кот уходит игроку.
+const TOTAL_POINTS_DEMO = 120_000; // суммарные очки всех игроков за раунд (демо)
 
 function Clicker({ t, sb, setSb }) {
   const [g, setG] = useState(() => CL.load());
@@ -920,8 +920,33 @@ function Clicker({ t, sb, setSb }) {
     });
   }
 
+  const [now, setNow] = useState(() => Date.now());
+  // свежая песочница для колбэка внутри интервала
+  const sbRef = React.useRef(sb);
+  useEffect(() => { sbRef.current = sb; }, [sb]);
+
+  // раз в секунду: автодобыча, таймер раунда и автозакрытие раунда розыгрыша
   useEffect(() => {
-    const id = setInterval(() => setG((s) => CL.tick(s)), 1000);
+    const id = setInterval(() => {
+      setNow(Date.now());
+      setG((s) => {
+        const ticked = CL.tick(s);
+        const { state, drawn } = CL.settle(ticked, TOTAL_POINTS_DEMO, null);
+        if (drawn.length) {
+          const mine = drawn.find((d) => d.me);
+          if (mine) {
+            setTimeout(() => {
+              if (sbRef.current.enabled) {
+                const { state: s2 } = SB.openBox({ ...sbRef.current, myBoxes: sbRef.current.myBoxes + 1 }, RWA_POPULAR);
+                setSb(s2);
+              }
+              say(t("🎉 Раунд закрыт — кот твой! Шанс был {c}%").replace("{c}", mine.chance));
+            }, 0);
+          }
+        }
+        return state;
+      });
+    }, 1000);
     return () => clearInterval(id);
   }, []);
 
@@ -970,20 +995,24 @@ function Clicker({ t, sb, setSb }) {
     say(t("🐱‍👤 Золотой кот пойман! +{n} очков и ×2 на 20 секунд").replace("{n}", jackpot.toLocaleString("ru-RU")));
   }
 
+  // кнопка для теста: закрыть раунд немедленно, не дожидаясь таймера
   function doRaffle() {
-    if (g.earnedToday <= 0) return say(t("Сначала накликай очков — билеты дают только очки за сегодня."));
-    const { state, won, chance: ch } = CL.runRaffle(g, TOTAL_POINTS_DEMO);
+    if ((g.roundPoints || 0) <= 0) return say(t("Сначала накликай очков — билеты дают очки текущего раунда."));
+    const { state, drawn } = CL.settle(g, TOTAL_POINTS_DEMO, null, true);
     setG(state);
-    if (won) {
+    const mine = drawn.find((d) => d.me);
+    if (mine) {
       if (sb.enabled) {
         const { state: s2 } = SB.openBox({ ...sb, myBoxes: sb.myBoxes + 1 }, RWA_POPULAR);
         setSb(s2);
       }
-      say(t("🎉 Ты выиграл NFT-кота! (шанс был {c}%)").replace("{c}", ch.toFixed(1)));
+      say(t("🎉 Ты выиграл NFT-кота! (шанс был {c}%)").replace("{c}", mine.chance));
     } else {
-      say(t("Не повезло сегодня — шанс был {c}%. Копи очки и пробуй завтра.").replace("{c}", ch.toFixed(1)));
+      say(t("Кот ушёл другому игроку — шанс был {c}%. Следующий раунд через 30 минут.").replace("{c}", drawn[0].chance));
     }
   }
+
+  const fmtTime = (ts) => new Date(ts).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
 
   return (
     <>
@@ -1036,21 +1065,52 @@ function Clicker({ t, sb, setSb }) {
         {/* правая колонка: розыгрыш + итоги */}
         <div className="ck-side">
           <div className="ck-card">
-            <div className="ck-card-h">{CL.CARDS_PER_DAY} NFT-{t("котов в день")}</div>
+            <div className="ck-card-h">
+              <span>{t("Розыгрыш кота")}</span>
+              <span className="ck-round-tag">{t("раунд")} #{(g.round ?? CL.roundId()) % 10000}</span>
+            </div>
+
+            {/* таймер до конца раунда */}
+            <div className="ck-timer">
+              <b>{CL.fmtLeft(CL.msLeft(now))}</b>
+              <span>{t("до розыгрыша")}</span>
+            </div>
+            <div className="ck-timer-bar"><span style={{ width: `${CL.roundProgress(now)}%` }} /></div>
+
             <div className="clk-chance">
               <div className="clk-chance-bar"><span style={{ width: `${Math.min(100, chance)}%` }} /></div>
               <b>{chance.toFixed(1)}%</b>
             </div>
             <div className="clk-raffle-kv">
-              <span>{t("мои очки")}: <b>{Math.floor(g.earnedToday).toLocaleString("ru-RU")}</b></span>
+              <span>{t("мои очки раунда")}: <b>{Math.floor(g.roundPoints || 0).toLocaleString("ru-RU")}</b></span>
               <span>{t("всего у игроков")}: <b>{TOTAL_POINTS_DEMO.toLocaleString("ru-RU")}</b></span>
+              <span>{t("котов в сутки")}: <b>{CL.ROUNDS_PER_DAY}</b></span>
             </div>
-            <button className="btn btn-primary btn-block" onClick={doRaffle}>{t("Разыграть сейчас")}</button>
+            <button className="btn btn-block" onClick={doRaffle}>{t("Разыграть сейчас (тест)")}</button>
             {g.lastRaffle && (
               <div className="hint" style={{ marginTop: 6 }}>
                 {g.lastRaffle.won
                   ? t("Последний розыгрыш: победа! Шанс был {c}%").replace("{c}", g.lastRaffle.chance)
                   : t("Последний розыгрыш: мимо. Шанс был {c}%").replace("{c}", g.lastRaffle.chance)}
+              </div>
+            )}
+          </div>
+
+          {/* победители последних раундов */}
+          <div className="ck-card">
+            <div className="ck-card-h">{t("Победители раундов")}</div>
+            {(g.winners || []).length === 0 ? (
+              <div className="hint">{t("Пока никто не выигрывал — первый раунд ещё идёт.")}</div>
+            ) : (
+              <div className="ck-winners">
+                {(g.winners || []).slice(0, 8).map((wn, i) => (
+                  <div className={`ck-win ${wn.me ? "me" : ""}`} key={`${wn.round}-${wn.ts}-${i}`}>
+                    <img src="./cats/legendary.jpg" alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                    <span className="ck-win-addr">{wn.me ? t("ты") : wn.addr}</span>
+                    <span className="ck-win-pts">{wn.points.toLocaleString("ru-RU")} {t("оч.")}</span>
+                    <span className="ck-win-ts">{fmtTime(wn.ts)}</span>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -1091,7 +1151,7 @@ function Clicker({ t, sb, setSb }) {
       </div>
 
       <div className="hint" style={{ marginTop: 12 }}>
-        {t("Комбо ×5 за быстрые тапы, криты ×10, золотой кот с джекпотом и ×2. Очки за сутки дают буст к дивидендам котов (до +25%) и билеты в розыгрыш 50 NFT в день.")}
+        {t("Комбо ×5 за быстрые тапы, криты ×10, золотой кот с джекпотом и ×2. Каждые 30 минут один NFT-кот разыгрывается среди игроков — билетов тем больше, чем больше очков ты набрал за раунд. Очки за сутки дают буст к дивидендам котов (до +25%).")}
       </div>
     </>
   );

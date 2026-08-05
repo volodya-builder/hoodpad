@@ -1,15 +1,41 @@
 /** Кликер «Кот-брокер»: тапаешь легендарного кота — сыплются акции.
  *  Очки (тикеты) копятся, тратятся на улучшения и дают:
  *    • буст к дивидендам котов (игроки зарабатывают больше),
- *    • шансы в ежедневном розыгрыше NFT-котов (50 карточек в день).
+ *    • билеты в розыгрыш NFT-кота — каждые 30 минут разыгрывается один кот.
  *  Состояние в localStorage; при деплое переезжает в бэкенд/контракт,
- *  а очки за день фиксируются он-чейн для честного розыгрыша. */
+ *  а очки раунда фиксируются он-чейн для честного розыгрыша. */
 
 const KEY = "hood_clicker_v1";
 
-export const CARDS_PER_DAY = 50;      // NFT-котов разыгрывается ежедневно
+export const ROUND_MIN = 30;                       // длительность раунда розыгрыша
+export const ROUND_MS = ROUND_MIN * 60 * 1000;
+export const CARDS_PER_ROUND = 1;                  // один NFT-кот за раунд
+export const ROUNDS_PER_DAY = Math.round((24 * 60) / ROUND_MIN); // 48 котов в сутки
 export const BOOST_PER_10K = 1;       // +1% к дивидендам за каждые 10k очков дня
 export const BOOST_CAP = 25;          // максимум +25%
+
+/** Раунды нарезаны по абсолютному времени — у всех игроков они совпадают. */
+export function roundId(ts = Date.now()) { return Math.floor(ts / ROUND_MS); }
+export function roundEndsAt(ts = Date.now()) { return (roundId(ts) + 1) * ROUND_MS; }
+export function msLeft(ts = Date.now()) { return Math.max(0, roundEndsAt(ts) - ts); }
+
+/** «12:34» — сколько осталось до конца раунда. */
+export function fmtLeft(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+}
+
+/** Доля прошедшего времени раунда, 0..100 (для полоски таймера). */
+export function roundProgress(ts = Date.now()) {
+  return Math.min(100, ((ROUND_MS - msLeft(ts)) / ROUND_MS) * 100);
+}
+
+/** Демо-кошелёк победителя (в песочнице других игроков нет). */
+function demoWallet() {
+  const hex = "0123456789abcdef";
+  const r = (n) => Array.from({ length: n }, () => hex[Math.floor(Math.random() * 16)]).join("");
+  return `0x${r(4)}…${r(4)}`;
+}
 
 // Улучшения: цена растёт на 55% за уровень
 export const UPGRADES = [
@@ -43,14 +69,17 @@ export function levelProgress(totalEarned) {
 
 const EMPTY = {
   points: 0,        // текущий баланс очков (тратится на улучшения)
-  earnedToday: 0,   // очки за сегодня — по ним считаются шансы и буст
+  earnedToday: 0,   // очки за сегодня — по ним считается буст к дивидендам
+  roundPoints: 0,   // очки текущего 30-минутного раунда — билеты в розыгрыш
+  round: roundId(), // номер раунда, за который уже начислены очки
+  winners: [],      // последние победители: { round, ts, addr, points, chance, me }
   totalEarned: 0,   // за всё время — по нему уровень
   totalClicks: 0,
   levels: {},       // id улучшения => уровень
   day: today(),
   lastTick: Date.now(),
   wonCards: 0,      // выигранных карточек всего
-  lastRaffle: null, // { day, won, chance }
+  lastRaffle: null, // { round, won, chance }
   combo: 0,         // тапов подряд
   lastClickAt: 0,
   goldenUntil: 0,   // до какого времени активен ×2 после золотого кота
@@ -138,6 +167,7 @@ export function click(s) {
     ...s,
     points: s.points + gain,
     earnedToday: s.earnedToday + gain,
+    roundPoints: (s.roundPoints || 0) + gain,
     totalEarned: (s.totalEarned || 0) + gain,
     totalClicks: s.totalClicks + 1,
     combo,
@@ -154,6 +184,7 @@ export function catchGolden(s) {
     ...s,
     points: s.points + jackpot,
     earnedToday: s.earnedToday + jackpot,
+    roundPoints: (s.roundPoints || 0) + jackpot,
     totalEarned: (s.totalEarned || 0) + jackpot,
     goldenUntil: Date.now() + 20_000,
     goldenCaught: (s.goldenCaught || 0) + 1,
@@ -171,6 +202,7 @@ export function tick(s) {
     ...s,
     points: s.points + gain,
     earnedToday: s.earnedToday + gain,
+    roundPoints: (s.roundPoints || 0) + gain,
     totalEarned: (s.totalEarned || 0) + gain,
     lastTick: now,
     // комбо остывает, если давно не тапали
@@ -197,24 +229,53 @@ export function dividendBoost(s) {
   return Math.min(BOOST_CAP, Math.floor(s.earnedToday / 10000) * BOOST_PER_10K);
 }
 
-/** Шанс выиграть хотя бы одну карточку в дневном розыгрыше.
- *  Игроки тянут билеты пропорционально очкам за день; 50 карточек в день.
- *  chance ≈ 1 - (1 - p)^CARDS, где p = мои очки / очки всех. */
+/** Шанс выиграть кота в текущем раунде.
+ *  Билеты пропорциональны очкам раунда, кот один: chance = мои очки / очки всех. */
 export function raffleChance(s, totalPoints) {
-  const mine = s.earnedToday;
+  const mine = s.roundPoints || 0;
   if (mine <= 0 || totalPoints <= 0) return 0;
-  const p = Math.min(1, mine / totalPoints);
-  return Math.min(99.9, (1 - Math.pow(1 - p, CARDS_PER_DAY)) * 100);
+  return Math.min(99.9, Math.min(1, mine / totalPoints) * 100);
 }
 
-/** Демо-розыгрыш (для песочницы): бросаем кубик по шансу. */
-export function runRaffle(s, totalPoints) {
-  const chance = raffleChance(s, totalPoints);
-  const won = Math.random() * 100 < chance ? 1 : 0;
+/** Итог одного раунда: тянем билет и записываем победителя.
+ *  round — номер раунда, за который считаем. */
+function drawOne(s, totalPoints, myAddr, round, mine) {
+  const p = totalPoints > 0 ? Math.min(1, mine / totalPoints) : 0;
+  const iWon = mine > 0 && Math.random() < p;
+  return {
+    round,
+    ts: Math.min((round + 1) * ROUND_MS, Date.now()),
+    addr: iWon ? (myAddr || "you") : demoWallet(),
+    // у чужого победителя показываем правдоподобный вклад очков
+    points: Math.round(iWon ? mine : totalPoints * (0.02 + Math.random() * 0.08)),
+    chance: Math.round(p * 1000) / 10,
+    me: iWon,
+  };
+}
+
+/** Закрыть все раунды, которые прошли с прошлого визита.
+ *  force=true — «разыграть сейчас» (кнопка теста), не дожидаясь таймера.
+ *  Возвращает { state, drawn: [записи победителей] }. */
+export function settle(s, totalPoints, myAddr, force = false) {
+  const cur = roundId();
+  const last = s.round ?? cur;
+  if (!force && cur === last) return { state: s, drawn: [] };
+
+  const drawn = [];
+  // мой раунд считается по накопленным очкам, пропущенные — без меня
+  drawn.push(drawOne(s, totalPoints, myAddr, last, s.roundPoints || 0));
+  const skipped = Math.min(5, Math.max(0, cur - last - 1));
+  for (let i = 1; i <= skipped; i++) drawn.push(drawOne(s, totalPoints, myAddr, last + i, 0));
+
+  const won = drawn.filter((d) => d.me).length;
+  const mineDraw = drawn[0];
   const next = save({
     ...s,
-    wonCards: s.wonCards + won,
-    lastRaffle: { day: s.day, won, chance: Math.round(chance * 10) / 10 },
+    round: cur,
+    roundPoints: 0,
+    wonCards: (s.wonCards || 0) + won,
+    lastRaffle: { round: mineDraw.round, won: mineDraw.me ? 1 : 0, chance: mineDraw.chance },
+    winners: [...[...drawn].reverse(), ...(s.winners || [])].slice(0, 24),
   });
-  return { state: next, won, chance };
+  return { state: next, drawn };
 }
