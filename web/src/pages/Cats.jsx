@@ -456,7 +456,10 @@ function Boxes({ t, sb, setSb }) {
   const [result, setResult] = useState(null);
   const [strip, setStrip] = useState([]);
   const [offset, setOffset] = useState(0);
+  const [anim, setAnim] = useState(false); // включаем transition только на саму прокрутку
   const wrapRef = React.useRef(null);
+  const timerRef = React.useRef(null);
+  useEffect(() => () => clearTimeout(timerRef.current), []);
   const SOLD_DEMO = 1287; // демо-счётчик проданных боксов (когда песочница выключена)
 
   // Точный сдвиг ленты: центр выигрышной ячейки должен встать под маркер
@@ -489,15 +492,24 @@ function Boxes({ t, sb, setSb }) {
     }
     const items = Array.from({ length: 40 }, () => rollRarity());
     items[ROLL_WIN_INDEX] = win;
+    clearTimeout(timerRef.current);
     setStrip(items);
     setResult(null);
+    // ВАЖНО: сначала ставим ленту в ноль БЕЗ анимации. Раньше сброс и запуск
+    // шли в одном кадре с включённым transition, поэтому на втором открытии
+    // лента «ползла» из прошлой позиции в ту же самую и внешне зависала.
+    setAnim(false);
     setOffset(0);
     setPhase("rolling");
-    // запускаем прокрутку в следующем кадре, чтобы сработал transition
-    requestAnimationFrame(() => requestAnimationFrame(() => setOffset(winOffset())));
-    setTimeout(() => {
+    // прокрутку запускаем через кадр, когда нулевая позиция уже отрисована
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      setAnim(true);
+      setOffset(winOffset());
+    }));
+    timerRef.current = setTimeout(() => {
       setResult({ tier: win, sym, id: catId });
       setPhase("result");
+      setAnim(false);
     }, 4200);
   }
 
@@ -547,7 +559,7 @@ function Boxes({ t, sb, setSb }) {
           <div className="roll-marker" />
           <div className="roll-strip"
                style={{ transform: `translateX(${offset}px)`,
-                        transition: phase === "rolling" ? "transform 4.2s cubic-bezier(.12,.72,.11,1)" : "none" }}>
+                        transition: anim ? "transform 4.2s cubic-bezier(.12,.72,.11,1)" : "none" }}>
             {strip.map((tr, i) => (
               <div className="roll-item" key={i} style={{ borderColor: RARITIES[tr].color + "88" }}>
                 <TierArt tier={tr} size={64} />
