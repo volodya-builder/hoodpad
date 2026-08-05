@@ -2267,3 +2267,12 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .rev-faq summary { cursor: pointer; font-weight: 700; font-size: 14.5px; }
 .rev-faq p { color: var(--text-dim); font-size: 13.5px; line-height: 1.6; margin: 10px 0 2px; }
 @media (max-width: 720px) { .rev-cards { grid-template-columns: 1fr; } .rev-stats div { min-width: 120px; } }
+
+/* Метка beta у логотипа: сайт в бете, это не финальный продукт */
+.logo-beta {
+  color: #ff5252; font-size: 10px; font-weight: 800; letter-spacing: 1px;
+  text-transform: uppercase; margin-left: 7px; vertical-align: super;
+  border: 1px solid #ff525266; border-radius: 5px; padding: 1px 6px;
+  background: #ff52521a; white-space: nowrap;
+}
+@media (max-width: 700px) { .logo-beta { margin-left: 4px; padding: 1px 4px; font-size: 9px; } }

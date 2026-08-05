@@ -329,6 +329,7 @@ export default function App() {
             <img src="./logo-64.png" alt="" width="32" height="32"
                  style={{ borderRadius: 9, display: "block" }} />
             <span className="logo-word">HOOD</span>
+            <span className="logo-beta">beta</span>
           </a>
           {import.meta.env.BASE_URL !== "/" && (
             <span className="staging-badge" title="Тестовая версия — данные и вид могут отличаться от боевого сайта">
