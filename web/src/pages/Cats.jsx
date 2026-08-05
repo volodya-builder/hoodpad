@@ -1295,7 +1295,7 @@ function Clicker({ t, sb, setSb }) {
       setNow(Date.now());
       setG((s) => {
         const ticked = CL.tick(s);
-        const { state, drawn } = CL.settle(ticked, CL.roundPlayers(ticked.round), null);
+        const { state, drawn } = CL.settle(ticked, CL.roundPlayers(ticked.round, Date.now(), ticked.roundPoints || 0), null);
         if (drawn.length) {
           const mine = drawn.find((d) => d.me);
           if (mine) {
@@ -1336,20 +1336,19 @@ function Clicker({ t, sb, setSb }) {
   // соперники текущего раунда: пересчитываем раз в 5 секунд, чтобы список
   // не дёргался каждый тик, но очки у людей на глазах росли
   const pool = useMemo(
-    () => CL.roundPlayers(g.round, now),
-    [g.round, Math.floor(now / 5000)] // eslint-disable-line react-hooks/exhaustive-deps
+    () => CL.roundPlayers(g.round, now, g.roundPoints || 0),
+    [g.round, Math.floor(now / 5000), Math.floor((g.roundPoints || 0) / 50000)] // eslint-disable-line react-hooks/exhaustive-deps
   );
   const totalPoints = CL.poolTotal(pool) + (g.roundPoints || 0);
-  // таблица раунда: соперники + я, по убыванию очков
-  const board = useMemo(() => (
-    [...pool, { addr: t("ты"), points: g.roundPoints || 0, me: true }]
-      .map((p) => ({ ...p, pct: totalPoints > 0 ? (p.points / totalPoints) * 100 : 0 }))
-      .sort((a, b) => b.points - a.points)
-  ), [pool, g.roundPoints, totalPoints, t]);
+  // корзина билетов раунда: билеты по корню от очков + кэп 25% на кошелёк
+  const board = useMemo(
+    () => CL.ticketTable(pool, g.roundPoints || 0, t("ты")),
+    [pool, g.roundPoints, t]
+  );
 
   const perClick = CL.perClick(g);
   const perSec = CL.perSecond(g);
-  const chance = CL.raffleChance(g, totalPoints);
+  const chance = CL.raffleChance(g, pool);
   const combo = CL.comboMult(g);
   const crit = CL.critChance(g);
   const lvl = CL.levelProgress(g.totalEarned || 0);
@@ -1485,8 +1484,9 @@ function Clicker({ t, sb, setSb }) {
             </div>
             <div className="clk-raffle-kv">
               <span>{t("мои очки раунда")}: <b>{Math.floor(g.roundPoints || 0).toLocaleString("ru-RU")}</b></span>
+              <span>{t("мои билеты")}: <b>{CL.ticketsOf(g.roundPoints || 0).toLocaleString("ru-RU")}</b> <i className="dim">({t("корень от очков")})</i></span>
               <span>{t("всего у игроков")}: <b>{Math.round(totalPoints).toLocaleString("ru-RU")}</b></span>
-              <span>{t("котов в сутки")}: <b>{CL.ROUNDS_PER_DAY}</b></span>
+              <span>{t("потолок доли")}: <b>{CL.TICKET_CAP_PCT}%</b> {t("на кошелёк")}</span>
             </div>
             <button className="btn btn-block" onClick={doRaffle}>{t("Разыграть сейчас (тест)")}</button>
             {g.lastRaffle && (
@@ -1509,7 +1509,7 @@ function Clicker({ t, sb, setSb }) {
                 <div className={`ck-bd ${p.me ? "me" : ""}`} key={`${p.addr}-${i}`}>
                   <span className="ck-bd-n">{i + 1}</span>
                   <span className="ck-bd-a">{p.addr}</span>
-                  <span className="ck-bd-p">{Math.round(p.points).toLocaleString("ru-RU")}</span>
+                  <span className="ck-bd-p" title={t("билетов")}>{Math.round(p.tickets).toLocaleString("ru-RU")}</span>
                   <span className="ck-bd-c">{p.pct.toFixed(1)}%</span>
                   <span className="ck-bd-bar" style={{ width: `${Math.min(100, p.pct)}%` }} />
                 </div>

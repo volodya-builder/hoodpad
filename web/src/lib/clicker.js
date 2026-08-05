@@ -42,16 +42,19 @@ export const DEMO_PLAYERS = 11; // сколько «соперников» по�
  *  это одни и те же кошельки, а их очки плавно растут к концу раунда —
  *  как если бы они играли параллельно. После деплоя заменяется на реальный
  *  список из бэкенда/контракта. */
-export function roundPlayers(round = roundId(), ts = Date.now()) {
+export function roundPlayers(round = roundId(), ts = Date.now(), ref = 0) {
   let x = ((round % 9973) * 7919 + 13) % 233280;
   const rnd = () => ((x = (x * 9301 + 49297) % 233280) / 233280);
   const hex = "0123456789abcdef";
   const w = (n) => Array.from({ length: n }, () => hex[Math.floor(rnd() * 16)]).join("");
   // насколько раунд прошёл: в начале у всех мало очков, к концу — максимум
   const prog = Math.min(1, Math.max(0, 1 - msLeft(ts) / ROUND_MS));
+  // соперники масштабируются от результата игрока: иначе у прокачанного
+  // аккаунта таблица превращается в «я и одиннадцать нулей»
+  const scale = Math.max(20000, ref || 0);
   return Array.from({ length: DEMO_PLAYERS }, () => {
     const addr = `0x${w(4)}…${w(4)}`;
-    const peak = 3000 + Math.floor(rnd() * 27000);
+    const peak = scale * (0.15 + rnd() * 1.25);
     return { addr, points: Math.max(1, Math.round(peak * (0.12 + 0.88 * prog))) };
   });
 }
@@ -79,13 +82,13 @@ export const UPGRADES = [
   { id: "claw", cat: "click", kind: "click", ru: "Когти", desc: "+1 к силе клика", base: 25, effect: 1, grow: 1.5, icon: "🐾", req: 1 },
   { id: "suit", cat: "click", kind: "click", ru: "Костюм брокера", desc: "+5 к силе клика", base: 400, effect: 5, grow: 1.52, icon: "🕴️", req: 3 },
   { id: "insider", cat: "click", kind: "click", ru: "Инсайд", desc: "+30 к силе клика", base: 7000, effect: 30, grow: 1.55, icon: "🤫", req: 9 },
-  { id: "maker", cat: "click", kind: "click", ru: "Маркет-мейкер", desc: "+150 к силе клика", base: 65000, effect: 150, grow: 1.58, icon: "🏛️", req: 18 },
+  { id: "maker", cat: "click", kind: "click", ru: "Маркет-мейкер", desc: "+150 к силе клика", base: 65000, effect: 150, grow: 1.58, icon: "🏛️", req: 20 },
   // — пассивный доход
   { id: "terminal", cat: "income", kind: "auto", ru: "Терминал", desc: "+2 акции/сек", base: 120, effect: 2, grow: 1.5, icon: "🖥️", req: 1 },
   { id: "algo", cat: "income", kind: "auto", ru: "Алго-бот", desc: "+15 акций/сек", base: 1800, effect: 15, grow: 1.53, icon: "🤖", req: 5 },
   { id: "hedge", cat: "income", kind: "auto", ru: "Хедж-фонд", desc: "+90 акций/сек", base: 22000, effect: 90, grow: 1.55, icon: "🏦", req: 12 },
-  { id: "darkpool", cat: "income", kind: "auto", ru: "Тёмный пул", desc: "+600 акций/сек", base: 280000, effect: 600, grow: 1.6, icon: "🌑", req: 24 },
-  { id: "night", cat: "income", kind: "offline", ru: "Ночная смена", desc: "+15% автодобычи офлайн", base: 9000, effect: 15, grow: 1.9, icon: "🌙", req: 7, max: 5 },
+  { id: "darkpool", cat: "income", kind: "auto", ru: "Тёмный пул", desc: "+600 акций/сек", base: 280000, effect: 600, grow: 1.6, icon: "🌑", req: 28 },
+  { id: "night", cat: "income", kind: "offline", ru: "Ночная смена", desc: "+10% автодобычи офлайн", base: 9000, effect: 10, grow: 1.9, icon: "🌙", req: 7, max: 5 },
   // — удача
   { id: "insight", cat: "luck", kind: "crit", ru: "Чутьё рынка", desc: "+2% шанс крита", base: 900, effect: 2, grow: 1.6, icon: "👁️", req: 2, max: 20 },
   { id: "leverage", cat: "luck", kind: "critmult", ru: "Плечо", desc: "+2 к множителю крита", base: 6000, effect: 2, grow: 1.85, icon: "⚡", req: 10, max: 10 },
@@ -94,7 +97,7 @@ export const UPGRADES = [
   // — ритм и комбо
   { id: "tempo", cat: "rhythm", kind: "combowin", ru: "Чувство ритма", desc: "+0.15 сек на комбо", base: 1600, effect: 0.15, grow: 1.7, icon: "🎵", req: 4, max: 6 },
   { id: "streak", cat: "rhythm", kind: "combostep", ru: "Серия", desc: "−1 тап на ступень комбо", base: 14000, effect: 1, grow: 2.1, icon: "📈", req: 13, max: 3 },
-  { id: "frenzy", cat: "rhythm", kind: "combomax", ru: "Кошачий раж", desc: "+1 к пределу комбо", base: 26000, effect: 1, grow: 2.2, icon: "🔥", req: 16, max: 5 },
+  { id: "frenzy", cat: "rhythm", kind: "combomax", ru: "Кошачий раж", desc: "+1 к пределу комбо", base: 26000, effect: 1, grow: 2.2, icon: "🔥", req: 22, max: 5 },
 ];
 
 // Комбо: за быстрые тапы множитель растёт (пределы двигаются улучшениями)
@@ -106,17 +109,57 @@ export const COMBO_MAX = 5;
 export const GOLDEN_CHANCE = 0.012;   // ~1.2% на тап (базовый)
 export const GOLDEN_REWARD_SEC = 45;  // джекпот = 45 сек автодобычи (мин. 250)
 export const GOLDEN_BASE_MS = 20_000; // базовая длительность буста ×2
-export const OFFLINE_CAP_H = 8;       // офлайн-доход считается максимум за 8 часов
+export const OFFLINE_CAP_H = 4;       // офлайн-доход считается максимум за 4 часа
 
-// Уровень игрока по суммарно заработанному
+// Уровень игрока по суммарно заработанному.
+// Доход в кликере растёт экспоненциально, поэтому и шкала уровней
+// логарифмическая — иначе за полчаса набегала бы тысяча уровней и
+// разблокировка улучшений по уровню теряла бы смысл.
+// Ориентиры: ур.7 — минута игры, 15 — пять минут, 19 — полчаса,
+// 24 — восемь часов, ~30 — неделя.
+const LVL_BASE = 200, LVL_GROW = 1.9;
+const lvlNeed = (l) => (Math.pow(LVL_GROW, l) - 1) * LVL_BASE;
+
 export function levelOf(totalEarned) {
-  return Math.floor(Math.sqrt(Math.max(0, totalEarned) / 500)) + 1;
+  return Math.max(1, Math.floor(Math.log(1 + Math.max(0, totalEarned) / LVL_BASE) / Math.log(LVL_GROW)));
 }
 export function levelProgress(totalEarned) {
   const lvl = levelOf(totalEarned);
-  const cur = Math.pow(lvl - 1, 2) * 500;
-  const next = Math.pow(lvl, 2) * 500;
-  return { lvl, cur, next, pct: Math.min(100, ((totalEarned - cur) / (next - cur)) * 100) };
+  const cur = lvlNeed(lvl), next = lvlNeed(lvl + 1);
+  return { lvl, cur, next, pct: Math.min(100, Math.max(0, ((totalEarned - cur) / (next - cur)) * 100)) };
+}
+
+// ——— билеты розыгрыша ———
+// Билеты считаются НЕ линейно от очков, а по корню: игрок, который качается
+// вторую неделю, зарабатывает в сто раз больше новичка, но билетов у него
+// будет только в десять раз больше. Плюс кэп: в одни руки не больше четверти
+// корзины — тот же принцип честного объёма, что и на арене токенов.
+export const TICKET_CAP_PCT = 25;
+
+export function ticketsOf(points) {
+  return Math.floor(Math.sqrt(Math.max(0, points)));
+}
+
+/** Корзина билетов раунда: соперники + я, с применённым кэпом. */
+export function ticketTable(pool, minePoints, myLabel = "you") {
+  const rows = [
+    ...(pool || []).map((p) => ({ addr: p.addr, points: p.points, me: false })),
+    { addr: myLabel, points: Math.max(0, minePoints || 0), me: true },
+  ].map((r) => ({ ...r, tickets: ticketsOf(r.points) }));
+
+  let total = rows.reduce((a, r) => a + r.tickets, 0);
+  for (let pass = 0; pass < 4 && total > 0; pass++) {
+    const cap = (total * TICKET_CAP_PCT) / 100;
+    let changed = false;
+    for (const r of rows) {
+      if (r.tickets > cap) { total -= r.tickets - cap; r.tickets = cap; changed = true; }
+    }
+    if (!changed) break;
+  }
+  const sum = rows.reduce((a, r) => a + r.tickets, 0);
+  return rows
+    .map((r) => ({ ...r, pct: sum > 0 ? (r.tickets / sum) * 100 : 0 }))
+    .sort((a, b) => b.tickets - a.tickets);
 }
 
 const EMPTY = {
@@ -252,7 +295,7 @@ export function comboCap(s) {
 
 /** Доля автодобычи, которая капает офлайн (в процентах). */
 export function offlinePct(s) {
-  return Math.min(75, sumKind(s, "offline"));
+  return Math.min(50, sumKind(s, "offline"));
 }
 
 /** Множитель комбо по текущей серии тапов. */
@@ -324,7 +367,9 @@ export function tick(s) {
 }
 
 /** Доход, накопившийся пока страница была закрыта.
- *  Работает только с «Ночной сменой»: без неё офлайн ничего не даёт. */
+ *  Работает только с «Ночной сменой»: без неё офлайн ничего не даёт.
+ *  ВАЖНО: офлайн-очки идут на прокачку, но НЕ дают билетов в розыгрыш —
+ *  иначе выгоднее было бы не играть, а держать вкладку закрытой. */
 export function collectOffline(s) {
   const pct = offlinePct(s);
   const away = (Date.now() - (s.lastTick || Date.now())) / 1000;
@@ -336,7 +381,6 @@ export function collectOffline(s) {
     state: save({
       ...s,
       points: s.points + gain,
-      roundPoints: (s.roundPoints || 0) + gain,
       totalEarned: (s.totalEarned || 0) + gain,
       lastTick: Date.now(),
     }),
@@ -362,28 +406,28 @@ export function buy(s, id, n = 1) {
   });
 }
 
-/** Шанс выиграть кота в текущем раунде.
- *  Билеты пропорциональны очкам раунда, кот один: chance = мои очки / очки всех. */
-export function raffleChance(s, totalPoints) {
-  const mine = s.roundPoints || 0;
-  if (mine <= 0 || totalPoints <= 0) return 0;
-  return Math.min(99.9, Math.min(1, mine / totalPoints) * 100);
+/** Шанс выиграть кота в текущем раунде — доля моих билетов в корзине. */
+export function raffleChance(s, pool) {
+  const table = ticketTable(pool, s.roundPoints || 0);
+  const me = table.find((r) => r.me);
+  return me ? Math.min(99.9, me.pct) : 0;
 }
 
 /** Итог одного раунда: тянем один билет из общей корзины.
  *  pool — соперники раунда, mine — мои очки за раунд. */
 function drawOne(pool, mine, myAddr, round) {
-  const entries = [...pool, { addr: myAddr || "you", points: Math.max(0, mine), me: true }];
-  const total = entries.reduce((a, e) => a + e.points, 0);
+  const table = ticketTable(pool, mine, myAddr || "you");
+  const total = table.reduce((a, e) => a + e.tickets, 0);
   let r = Math.random() * total;
-  let win = entries[0];
-  for (const e of entries) { if ((r -= e.points) <= 0) { win = e; break; } }
+  let win = table[0];
+  for (const e of table) { if ((r -= e.tickets) <= 0) { win = e; break; } }
+  const mineRow = table.find((e) => e.me);
   return {
     round,
     ts: Math.min((round + 1) * ROUND_MS, Date.now()),
     addr: win.me ? (myAddr || "you") : (win.addr || demoWallet()),
     points: Math.round(win.points),
-    chance: total > 0 ? Math.round((mine / total) * 1000) / 10 : 0,
+    chance: mineRow ? Math.round(mineRow.pct * 10) / 10 : 0,
     me: !!win.me,
   };
 }
