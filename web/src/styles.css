@@ -2464,3 +2464,6 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .cm-foot b { font-size: 15px; }
 .sm-btn { padding: 7px 14px; font-size: 13px; }
 .cm-seller { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono, monospace); }
+
+/* Мем-арт старших редкостей котов */
+.cats-tier-img { border-radius: 12px; object-fit: cover; border: 1px solid transparent; background: #fff; flex: none; }

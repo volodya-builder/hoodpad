@@ -11,9 +11,21 @@ const RARITIES = [
   { key: "Common", ru: "Обычный", chance: 60, mult: 1, color: "#8b93a7" },
   { key: "Rare", ru: "Редкий", chance: 24, mult: 2, color: "#4aa3e0" },
   { key: "Epic", ru: "Эпический", chance: 10, mult: 3, color: "#a06bff" },
-  { key: "Mythic", ru: "Мифический", chance: 5, mult: 5, color: "#e0559a" },
-  { key: "Legendary", ru: "Легендарный", chance: 1, mult: 8, color: "#f5b544" },
+  { key: "Mythic", ru: "Мифический", chance: 5, mult: 5, color: "#e0559a", img: "./cats/mythic.jpg" },
+  { key: "Legendary", ru: "Легендарный", chance: 1, mult: 8, color: "#f5b544", img: "./cats/legendary.jpg" },
 ];
+
+// Арт уровня: фирменная картинка (мем-кот) для старших редкостей,
+// пиксель-кот в цвете уровня — для остальных
+function TierArt({ tier, size = 72 }) {
+  const r = RARITIES[tier];
+  if (r.img) {
+    return <img src={r.img} alt={r.key} className="cats-tier-img"
+                style={{ width: size, height: size, borderColor: r.color + "88" }}
+                onError={(e) => { e.currentTarget.style.display = "none"; }} />;
+  }
+  return <CatArt color={r.color} size={size} />;
+}
 
 // пиксель-кот в фирменном цвете тикера/редкости (SVG, без внешних ассетов)
 function CatArt({ color = "#7c88ff", size = 96 }) {
@@ -113,7 +125,7 @@ function Market({ t }) {
           return (
             <div className="cm-card" key={l.id} style={{ borderColor: r.color + "55" }}>
               <div className="cm-card-head">
-                <CatArt color={r.color} size={64} />
+                <TierArt tier={l.tier} size={64} />
                 <div>
                   <b>{t("Кот")} #{l.id}</b>
                   <span className="cm-tier" style={{ color: r.color }}>{t(r.ru)} ×{r.mult}</span>
@@ -189,7 +201,7 @@ export default function Cats() {
       <div className="cats-tiers">
         {RARITIES.map((r) => (
           <div className="cats-tier" key={r.key} style={{ borderColor: r.color + "66" }}>
-            <CatArt color={r.color} size={72} />
+            <TierArt tier={RARITIES.indexOf(r)} size={72} />
             <b style={{ color: r.color }}>{t(r.ru)}</b>
             <div className="cats-tier-kv"><span>{t("шанс")}</span><b>{r.chance}%</b></div>
             <div className="cats-tier-kv"><span>{t("вес выплат")}</span><b>×{r.mult}</b></div>
