@@ -82,7 +82,16 @@ export default function Create({ wallet, onConnect }) {
   const [ttype, setTtype] = useState("standard");
   const [tax, setTax] = useState({ buy: 3, sell: 3, mkt: 40, burn: 20, div: 30, lp: 10, minShare: 0, divToken: "self" });
   const taxTotal = tax.mkt + tax.burn + tax.div + tax.lp;
-  const setTaxK = (k) => (e) => setTax({ ...tax, [k]: Math.max(0, +e.target.value || 0) });
+  const ALLOC_KEYS = ["mkt", "burn", "div", "lp"];
+  // Ползунки аллокации упираются в остаток до 100% — перебор невозможен
+  const setTaxK = (k) => (e) => {
+    let v = Math.max(0, +e.target.value || 0);
+    if (ALLOC_KEYS.includes(k)) {
+      const others = ALLOC_KEYS.filter((x) => x !== k).reduce((s, x) => s + tax[x], 0);
+      v = Math.min(v, Math.max(0, 100 - others));
+    }
+    setTax({ ...tax, [k]: v });
+  };
   const [consent, setConsent] = useState(false);
   const [image, setImage] = useState("");
   const [advOpen, setAdvOpen] = useState(false);
