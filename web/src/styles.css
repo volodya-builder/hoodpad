@@ -2467,3 +2467,30 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 
 /* Мем-арт старших редкостей котов */
 .cats-tier-img { border-radius: 12px; object-fit: cover; border: 1px solid transparent; background: #fff; flex: none; }
+
+/* Кейсы с котами (CS:GO-style) */
+.box-hero { display: grid; grid-template-columns: 220px 1fr; gap: 22px; align-items: center; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; margin-top: 6px; }
+.box-left { display: flex; justify-content: center; }
+.box-art { position: relative; width: 150px; height: 130px; }
+.box-lid { position: absolute; top: 0; left: 0; right: 0; height: 34px; background: linear-gradient(135deg, #8a95ff, #5563e8); border-radius: 10px 10px 4px 4px; box-shadow: 0 6px 20px -6px #5563e8aa; }
+.box-body { position: absolute; top: 34px; left: 6px; right: 6px; bottom: 0; background: linear-gradient(160deg, #262b45, #191d30); border: 1px solid var(--border-gold); border-radius: 4px 4px 12px 12px; display: flex; align-items: center; justify-content: center; font-size: 44px; }
+.box-info h3 { font-size: 20px; margin: 0; }
+.box-supply { margin: 10px 0; }
+.box-bar { height: 8px; background: #ffffff12; border-radius: 5px; overflow: hidden; }
+.box-bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), #a5aeff); }
+.box-supply-kv { font-size: 12.5px; color: var(--text-dim); margin-top: 6px; }
+.box-supply-kv b { color: var(--text); font-size: 14px; }
+.box-odds { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; font-weight: 700; }
+.roll-wrap { position: relative; margin: 20px 0 0; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-soft); height: 120px; }
+.roll-marker { position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; background: var(--gold); z-index: 3; box-shadow: 0 0 14px 2px var(--gold); }
+.roll-strip { display: flex; gap: 10px; padding: 12px; position: absolute; left: 0; top: 0; }
+.roll-strip.spin { animation: rollspin 4.2s cubic-bezier(.12,.72,.11,1) forwards; }
+.roll-strip.done { transform: translateX(calc(-1 * (36 * 106px) + 50% - 48px)); }
+@keyframes rollspin { from { transform: translateX(0); } to { transform: translateX(calc(-1 * (36 * 106px) + 50% - 48px)); } }
+.roll-item { width: 96px; flex: none; height: 96px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.roll-item span { font-size: 10.5px; font-weight: 700; }
+.roll-result { display: flex; align-items: center; gap: 16px; border: 2px solid var(--gold); border-radius: var(--radius); padding: 16px 20px; margin-top: 14px; background: var(--card); animation: revslide .4s ease; }
+.roll-result b { font-size: 20px; }
+.rr-sub { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+.roll-result .btn { margin-left: auto; }
+@media (max-width: 700px) { .box-hero { grid-template-columns: 1fr; } }

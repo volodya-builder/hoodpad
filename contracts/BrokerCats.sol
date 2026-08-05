@@ -63,6 +63,10 @@ contract BrokerCats is Ownable {
     ///         каждый новый кот регистрируется в нём при минте.
     address public vault;
 
+    /// @notice Контракт кейсов (CatBox) — единственный, кто может минтить
+    ///         кота с заранее выпавшей редкостью. Ставится один раз.
+    address public box;
+
     Roster[] public roster;
     mapping(uint256 => Cat) public catOf;
     uint256 public totalMinted;
@@ -72,6 +76,7 @@ contract BrokerCats is Ownable {
     event CatMinted(address indexed to, uint256 indexed id, uint16 rosterId, uint8 rarity, bool free);
     event RosterAdded(uint16 indexed id, string ticker, address feed);
     event VaultSet(address vault);
+    event BoxSet(address box);
 
     constructor(uint256 mintPrice_, address proceeds_, string memory baseURI_) Ownable(msg.sender) {
         require(proceeds_ != address(0), "zero proceeds");
@@ -101,6 +106,14 @@ contract BrokerCats is Ownable {
         emit VaultSet(vault_);
     }
 
+    /// @notice Однократно привязать контракт кейсов.
+    function setBox(address box_) external onlyOwner {
+        require(box == address(0), "already set");
+        require(box_ != address(0), "zero box");
+        box = box_;
+        emit BoxSet(box_);
+    }
+
     function rosterCount() external view returns (uint256) {
         return roster.length;
     }
@@ -114,6 +127,22 @@ contract BrokerCats is Ownable {
         id = _mintCat(msg.sender, false);
         (bool ok, ) = proceeds.call{value: msg.value}("");
         require(ok, "proceeds send failed");
+    }
+
+    /// @notice Минт из кейса (CatBox): редкость решает бокс (commit-reveal),
+    ///         тикер — сид оттуда же. Звать может только привязанный бокс.
+    function mintFromBox(address to, uint8 rarity, uint256 seed) external returns (uint256 id) {
+        require(msg.sender == box && box != address(0), "not box");
+        require(rarity <= 4, "bad rarity");
+        require(totalMinted < MAX_SUPPLY, "sold out");
+        require(roster.length > 0, "roster empty");
+
+        id = ++totalMinted;
+        catOf[id] = Cat(uint16(seed % roster.length), rarity);
+        _mint(to, id);
+        emit CatMinted(to, id, catOf[id].rosterId, rarity, false);
+
+        if (vault != address(0)) ICatVaultHook(vault).register(id);
     }
 
     /// @notice Бесплатная раздача первым пользователям. Только owner,

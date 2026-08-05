@@ -1016,6 +1016,15 @@ const EN = {
   "Биржа откроется с деплоем контрактов — кот пока не продаётся.": "The market opens with the contract deploy — this cat is not for sale yet.",
   "Демо-витрина. Контракт биржи готов (эскроу, 2% казне, дивиденды переезжают с котом) — включим с деплоем.": "Demo storefront. The market contract is ready (escrow, 2% to treasury, dividends travel with the cat) — goes live with the deploy.",
   "Тикер: NVDA, AAPL…": "Ticker: NVDA, AAPL…",
+  "Кейсы": "Cases",
+  "Кейс с котом": "Cat case",
+  "Внутри — случайный NFT-кот одной из пяти редкостей. Всего боксов 10 000, и больше не будет никогда.": "Inside is a random NFT cat of one of five rarities. Only 10,000 boxes will ever exist.",
+  "боксов осталось из 10 000": "boxes left of 10,000",
+  "Открыть кейс": "Open case",
+  "Открываем…": "Opening…",
+  "Демо-открытие: настоящие боксы включатся с деплоем. Рандом в контракте — commit-reveal: подкрутить результат не может ни игрок, ни валидатор.": "Demo opening: real boxes go live with the deploy. On-chain randomness is commit-reveal — neither player nor validator can rig the result.",
+  "кот": "cat",
+  "Ещё раз": "Open another",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

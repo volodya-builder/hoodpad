@@ -155,9 +155,104 @@ function Market({ t }) {
   );
 }
 
+// Кейсы: рулетка открытия в стиле CS:GO
+function Boxes({ t }) {
+  const [phase, setPhase] = useState("idle"); // idle | rolling | result
+  const [result, setResult] = useState(null);
+  const [strip, setStrip] = useState([]);
+  const [opened, setOpened] = useState(0);
+  const SOLD_DEMO = 1287; // демо-счётчик проданных боксов
+
+  function rollRarity() {
+    const r = Math.random() * 100;
+    return r < 60 ? 0 : r < 84 ? 1 : r < 94 ? 2 : r < 99 ? 3 : 4;
+  }
+
+  function openBox() {
+    if (phase === "rolling") return;
+    const win = rollRarity();
+    // лента: 40 случайных котов, выигрыш — предпоследний (на него встанет маркер)
+    const items = Array.from({ length: 40 }, () => rollRarity());
+    items[36] = win;
+    setStrip(items);
+    setResult(null);
+    setPhase("rolling");
+    setTimeout(() => {
+      setResult({ tier: win, sym: RWA_POPULAR[Math.floor(Math.random() * RWA_POPULAR.length)] });
+      setOpened((n) => n + 1);
+      setPhase("result");
+    }, 4200);
+  }
+
+  const left = 10000 - SOLD_DEMO - opened;
+  const pct = ((SOLD_DEMO + opened) / 10000) * 100;
+
+  return (
+    <>
+      <div className="box-hero">
+        <div className="box-left">
+          <div className="box-art">
+            <div className="box-lid" />
+            <div className="box-body">🐱</div>
+          </div>
+        </div>
+        <div className="box-info">
+          <h3>{t("Кейс с котом")}</h3>
+          <p className="rev-sub" style={{ margin: "6px 0 12px" }}>
+            {t("Внутри — случайный NFT-кот одной из пяти редкостей. Всего боксов 10 000, и больше не будет никогда.")}
+          </p>
+          <div className="box-supply">
+            <div className="box-bar"><span style={{ width: `${pct}%` }} /></div>
+            <div className="box-supply-kv"><b>{left.toLocaleString("ru-RU")}</b> {t("боксов осталось из 10 000")}</div>
+          </div>
+          <div className="box-odds">
+            {RARITIES.map((r, i) => (
+              <span key={r.key} style={{ color: r.color }}>{t(r.ru)} {r.chance}%</span>
+            ))}
+          </div>
+          <div className="rev-cta" style={{ justifyContent: "flex-start", marginTop: 14 }}>
+            <button className="btn btn-primary" onClick={openBox} disabled={phase === "rolling"}>
+              {phase === "rolling" ? t("Открываем…") : `🎁 ${t("Открыть кейс")} · 0.02 ETH`}
+            </button>
+          </div>
+          <div className="hint">{t("Демо-открытие: настоящие боксы включатся с деплоем. Рандом в контракте — commit-reveal: подкрутить результат не может ни игрок, ни валидатор.")}</div>
+        </div>
+      </div>
+
+      {(phase === "rolling" || phase === "result") && (
+        <div className="roll-wrap">
+          <div className="roll-marker" />
+          <div className={`roll-strip ${phase === "rolling" ? "spin" : "done"}`}>
+            {strip.map((tr, i) => (
+              <div className="roll-item" key={i} style={{ borderColor: RARITIES[tr].color + "88" }}>
+                <TierArt tier={tr} size={64} />
+                <span style={{ color: RARITIES[tr].color }}>{t(RARITIES[tr].ru)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {phase === "result" && result && (
+        <div className="roll-result" style={{ borderColor: RARITIES[result.tier].color }}>
+          <TierArt tier={result.tier} size={96} />
+          <div>
+            <b style={{ color: RARITIES[result.tier].color }}>{t(RARITIES[result.tier].ru)} {t("кот")}!</b>
+            <div className="rr-sub">
+              <img src={stockLogo(result.sym)} alt="" className="q-logo" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+              {result.sym} · {t("вес выплат")} ×{RARITIES[result.tier].mult}
+            </div>
+          </div>
+          <button className="btn sm-btn" onClick={openBox}>{t("Ещё раз")}</button>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function Cats() {
   const { t } = useLang();
-  const [tab, setTab] = useState("about"); // about | market
+  const [tab, setTab] = useState("about"); // about | boxes | market
   const [ranges, setRanges] = useState({ tier: 2, per: 12, months: 6 });
   const set = (k) => (e) => setRanges({ ...ranges, [k]: +e.target.value });
 
@@ -191,9 +286,11 @@ export default function Cats() {
 
       <div className="quote-tabs" style={{ justifyContent: "center", margin: "10px 0 6px" }}>
         <button type="button" className={`quote-tab ${tab === "about" ? "on" : ""}`} onClick={() => setTab("about")}>{t("Об игре")}</button>
+        <button type="button" className={`quote-tab ${tab === "boxes" ? "on" : ""}`} onClick={() => setTab("boxes")}>🎁 {t("Кейсы")}</button>
         <button type="button" className={`quote-tab ${tab === "market" ? "on" : ""}`} onClick={() => setTab("market")}>🏪 {t("Биржа котов")}</button>
       </div>
 
+      {tab === "boxes" && <Boxes t={t} />}
       {tab === "market" && <Market t={t} />}
 
       {tab === "about" && (<>
