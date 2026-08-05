@@ -90,7 +90,9 @@ function Market({ t, sb, setSb }) {
     id: c.id, sym: c.sym, tier: c.tier, price: c.price, divs: c.divs, seller: t("я"), mine: true,
   })) : []), [sb, t]);
 
-  const ALL = useMemo(() => [...myLots, ...DEMO_LOTS], [myLots]);
+  // В тестовом режиме показываем ТОЛЬКО реально выставленных котов —
+  // фейковые лоты мешают проверять функционал.
+  const ALL = useMemo(() => (sb.enabled ? myLots : DEMO_LOTS), [myLots, sb.enabled]);
 
   const lots = useMemo(() => {
     let out = ALL.filter((l) =>
@@ -115,7 +117,7 @@ function Market({ t, sb, setSb }) {
       {toast && <div className="rev-toast">{toast}</div>}
       <div className="rev-stats" style={{ justifyContent: "flex-start", marginTop: 4 }}>
         <div><b>{ALL.length}</b><span>{t("лотов на бирже")}</span></div>
-        <div><b>{floor(0)} ETH</b><span>{t("флор Обычных")}</span></div>
+        <div><b>{floor(0) ?? "—"} ETH</b><span>{t("флор Обычных")}</span></div>
         <div><b>{floor(4) ?? "—"} ETH</b><span>{t("флор Легендарных")}</span></div>
         <div><b>2%</b><span>{t("комиссия биржи — в казну")}</span></div>
       </div>
@@ -172,10 +174,18 @@ function Market({ t, sb, setSb }) {
             </div>
           );
         })}
-        {lots.length === 0 && <div className="center dim" style={{ gridColumn: "1/-1", padding: 30 }}>{t("Ничего не найдено")}</div>}
+        {lots.length === 0 && (
+          <div className="center dim" style={{ gridColumn: "1/-1", padding: 30 }}>
+            {sb.enabled && ALL.length === 0
+              ? t("На бирже пусто — выстави кота из вкладки «Мои коты».")
+              : t("Ничего не найдено")}
+          </div>
+        )}
       </div>
       <div className="hint" style={{ marginTop: 10 }}>
-        {t("Демо-витрина. Контракт биржи готов (эскроу, 2% казне, дивиденды переезжают с котом) — включим с деплоем.")}
+        {sb.enabled
+          ? t("Тестовый режим: на бирже только твои реальные лоты. Контракт биржи готов (эскроу, 2% казне, дивиденды переезжают с котом).")
+          : t("Демо-витрина. Контракт биржи готов (эскроу, 2% казне, дивиденды переезжают с котом) — включим с деплоем.")}
       </div>
     </>
   );
