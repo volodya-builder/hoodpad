@@ -2424,7 +2424,7 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 @media (max-width: 700px) { .rev-vs, .rev-persona { grid-template-columns: 1fr; } }
 
 /* Коты-брокеры */
-.cats-tiers { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.cats-tiers { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
 .cats-tier { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .cats-tier b { font-size: 15px; }
 .cats-tier-kv { display: flex; justify-content: space-between; width: 100%; font-size: 12px; color: var(--text-dim); }
@@ -2434,3 +2434,16 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .cats-roster-item.dim { color: var(--text-dim); font-weight: 400; }
 .cats-roster-item .q-logo { width: 18px; height: 18px; border-radius: 50%; background: #fff; object-fit: contain; }
 @media (max-width: 700px) { .cats-tiers { grid-template-columns: 1fr 1fr; } }
+
+/* Выпадашка «Ещё» в меню — разгружает переполненную навигацию */
+.nav-more { position: relative; display: inline-block; }
+.nav-more-btn { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; background: none; border: none; font: inherit; }
+.nav-more-btn .chev { font-size: 9px; opacity: .7; }
+.nav-more-menu { position: absolute; top: calc(100% + 8px); left: 0; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 6px; min-width: 160px; z-index: 60; box-shadow: 0 14px 40px -14px #000c; }
+.nav-more-menu a { display: block; padding: 9px 12px; border-radius: 8px; font-size: 14px; white-space: nowrap; color: var(--text); }
+.nav-more-menu a:hover { background: var(--card-hover); }
+@media (max-width: 900px) { .nav-more { display: none; } }
+
+/* Дубли Аналитика/О нас — только в мобильном меню (на десктопе они в «Ещё») */
+.nav-pill-mob { display: none; }
+@media (max-width: 900px) { .nav-pill-mob { display: block; } }

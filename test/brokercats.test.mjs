@@ -67,8 +67,8 @@ test("минт: неверная цена — реверт; верная — к�
   const [ticker, feed, rarity, mult] = await read(cats, "catInfo", [1n]);
   assert.ok(["NVDA", "AAPL", "TSLA", "MSFT", "COIN"].includes(ticker));
   assert.equal(feed.toLowerCase(), FEED.toLowerCase());
-  assert.ok(rarity <= 3);
-  assert.ok([1, 2, 3, 5].includes(Number(mult)));
+  assert.ok(rarity <= 4);
+  assert.ok([1, 2, 3, 5, 8].includes(Number(mult)));
 });
 
 test("несколько минтов: id растут, редкости валидны", async () => {
@@ -76,7 +76,7 @@ test("несколько минтов: id растут, редкости вал�
   assert.equal(await read(cats, "totalMinted"), 6n);
   for (let id = 2n; id <= 6n; id++) {
     const [, , rarity] = await read(cats, "catInfo", [id]);
-    assert.ok(rarity <= 3);
+    assert.ok(rarity <= 4);
   }
 });
 

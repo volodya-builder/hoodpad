@@ -50,7 +50,7 @@ contract BrokerCats is Ownable {
 
     struct Cat {
         uint16 rosterId;
-        uint8 rarity;    // 0 Common ×1, 1 Rare ×2, 2 Epic ×3, 3 Legendary ×5
+        uint8 rarity;    // 0 Common ×1 · 1 Rare ×2 · 2 Epic ×3 · 3 Mythic ×5 · 4 Legendary ×8
     }
 
     uint256 public constant MAX_SUPPLY = 3000;
@@ -147,19 +147,22 @@ contract BrokerCats is Ownable {
         }
     }
 
-    /// @dev Common 60% ×1 · Rare 25% ×2 · Epic 11% ×3 · Legendary 4% ×5
+    /// @dev 5 уровней. Common 60% ×1 · Rare 24% ×2 · Epic 10% ×3 ·
+    ///      Mythic 5% ×5 · Legendary 1% ×8 (roll 0..99: 99 => Legendary).
     function _rollRarity(uint8 roll) internal pure returns (uint8) {
-        if (roll < 60) return 0;
-        if (roll < 85) return 1;
-        if (roll < 96) return 2;
-        return 3;
+        if (roll < 60) return 0; // 0..59  → 60%
+        if (roll < 84) return 1; // 60..83 → 24%
+        if (roll < 94) return 2; // 84..93 → 10%
+        if (roll < 99) return 3; // 94..98 → 5%
+        return 4;                // 99     → 1%
     }
 
     function rarityMultiplier(uint8 rarity) public pure returns (uint8) {
         if (rarity == 0) return 1;
         if (rarity == 1) return 2;
         if (rarity == 2) return 3;
-        return 5;
+        if (rarity == 3) return 5;
+        return 8; // Legendary
     }
 
     /// @notice Кот целиком: тикер, фид, редкость — одним вызовом для фронта.

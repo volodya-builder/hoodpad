@@ -988,7 +988,6 @@ const EN = {
   "Откуда берутся выплаты?": "Where do payouts come from?",
   "Из казны платформы: часть реальных комиссий с торгов hood конвертируется в токенизированные акции и распределяется между всеми котами. Нет комиссий — нет выплат; контракт ничего не обещает и не печатает.": "From the platform treasury: part of hood's real trading fees is converted into tokenized stocks and split across all cats. No fees, no payouts; the contract promises and prints nothing.",
   "Как влияет редкость?": "How does rarity matter?",
-  "Редкость задаёт вес кота при каждом распределении: Обычный ×1, Редкий ×2, Эпический ×3, Легендарный ×5. Легендарный кот получает в 5 раз больше акций с каждого транша, чем Обычный.": "Rarity sets a cat's weight in every distribution: Common ×1, Rare ×2, Epic ×3, Legendary ×5. A Legendary cat gets 5× more stocks per tranche than a Common one.",
   "Что будет с дивидендами, если я продам кота?": "What happens to dividends if I sell the cat?",
   "Дивиденды копятся на самом коте. Продал или подарил кота — невыплаченное уезжает вместе с ним новому владельцу. Кот — это актив с накопленной ценностью.": "Dividends accrue on the cat itself. Sell or gift the cat and the unclaimed amount goes with it to the new owner. The cat is an asset with stored value.",
   "Зачем бесплатная раздача?": "Why the free airdrop?",
@@ -997,6 +996,9 @@ const EN = {
   "Ранние пользователи получат котов бесплатно. Подпишись на @hoodandarrow и следи за анонсом аирдропа.": "Early users get free cats. Follow @hoodandarrow and watch for the airdrop announcement.",
   "Следить в X": "Follow on X",
   "Коты и выплаты — в разработке; контракты готовы и протестированы, но не задеплоены. Дивиденды холдерам могут во многих юрисдикциях считаться ценной бумагой — секция запустится после юридической проверки.": "Cats and payouts are in development; contracts are ready and tested but not deployed. Holder dividends may qualify as securities in many jurisdictions — the section launches after legal review.",
+  "Мифический": "Mythic",
+  "Редкость задаёт вес кота при каждом распределении: Обычный ×1, Редкий ×2, Эпический ×3, Мифический ×5, Легендарный ×8. Легендарный кот (шанс 1%) получает в 8 раз больше акций с каждого транша, чем Обычный.": "Rarity sets a cat weight in every distribution: Common ×1, Rare ×2, Epic ×3, Mythic ×5, Legendary ×8. A Legendary cat (1% chance) earns 8× more stocks per tranche than a Common one.",
+  "Ещё": "More",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

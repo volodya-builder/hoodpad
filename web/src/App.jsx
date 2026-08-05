@@ -101,8 +101,9 @@ export default function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [netMenu, setNetMenu] = useState(false);
+  const [moreMenu, setMoreMenu] = useState(false);
   useEffect(() => {
-    const close = () => setNetMenu(false);
+    const close = () => { setNetMenu(false); setMoreMenu(false); };
     document.addEventListener("click", close);
     return () => document.removeEventListener("click", close);
   }, []);
@@ -353,8 +354,18 @@ export default function App() {
             <a className={`nav-pill ${route.startsWith("/cats") ? "on" : ""}`} href="#/cats">🐱 {t("Коты")} <span className="rev-nav-beta">β</span></a>
             <a className={`nav-pill ${route.startsWith("/vote") ? "on" : ""}`} href="#/vote">{t("Голосование")}</a>
             <a className={`nav-pill ${route.startsWith("/treasury") ? "on" : ""}`} href="#/treasury">{t("Казна")}</a>
-            <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>
-            <a className={`nav-pill ${route.startsWith("/about") ? "on" : ""}`} href="#/about">{t("О нас")}</a>
+            <div className="nav-more" onClick={(e) => e.stopPropagation()}>
+              <button className={`nav-pill nav-more-btn ${(route.startsWith("/analytics") || route.startsWith("/about")) ? "on" : ""}`}
+                      onClick={() => setMoreMenu(!moreMenu)}>{t("Ещё")} <span className="chev">▾</span></button>
+              {moreMenu && (
+                <div className="nav-more-menu" onClick={() => { setMoreMenu(false); setMenuOpen(false); }}>
+                  <a href="#/analytics">{t("Аналитика")}</a>
+                  <a href="#/about">{t("О нас")}</a>
+                </div>
+              )}
+            </div>
+            <a className={`nav-pill nav-pill-mob ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>
+            <a className={`nav-pill nav-pill-mob ${route.startsWith("/about") ? "on" : ""}`} href="#/about">{t("О нас")}</a>
           </div>
           <nav className="nav">
             <button className={`icon-btn burger ${menuOpen ? "on" : ""}`} onClick={() => setMenuOpen(!menuOpen)} title={t("Меню")} aria-label="menu">
