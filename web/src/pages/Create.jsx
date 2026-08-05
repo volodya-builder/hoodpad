@@ -13,6 +13,17 @@ const Logo = ({ src, cls }) => (
        onError={(e) => { e.currentTarget.style.display = "none"; }} />
 );
 
+// Векторная иконка «график вверх» — вместо эмодзи, чтобы рендерилось
+// одинаково на всех платформах
+const TrendIcon = () => (
+  <svg className="rwa-ico" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+    <path d="M1.5 12.5 L6 8 L9 10.5 L14.5 5" fill="none" stroke="currentColor"
+          strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M11 5 H14.5 V8.5" fill="none" stroke="currentColor"
+          strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
 // Max developer buy: 5% of supply bought at launch.
 // gross ETH = (VIRT * s / (TOTAL - s)) / (1 - fee), s = 50M, VIRT = 1.625
 const MAX_DEV_BUY_ETH = 1.625 * 0.05e9 / 0.95e9 / 0.99; // ≈ 0.0864
@@ -236,7 +247,7 @@ export default function Create({ wallet, onConnect }) {
           <button type="button" className={`quote-tab ${quoteTab === "crypto" ? "on" : ""}`}
                   onClick={() => { setQuoteTab("crypto"); setQuote("ETH"); }}>{t("Крипта")}</button>
           <button type="button" className={`quote-tab ${quoteTab === "rwa" ? "on" : ""}`}
-                  onClick={() => setQuoteTab("rwa")}>📈 {t("Акции (RWA)")} <em className="ttype-beta">β</em></button>
+                  onClick={() => setQuoteTab("rwa")}><TrendIcon /> {t("Акции (RWA)")} <em className="ttype-beta">β</em></button>
         </div>
         {quoteTab === "crypto" ? (
           <div className="quote-grid">
@@ -399,10 +410,12 @@ export default function Create({ wallet, onConnect }) {
               </div>
               <div>
                 <label>{t("Дивиденды выплачиваются в")}</label>
-                <select value={tax.divToken} onChange={(e) => setTax({ ...tax, divToken: e.target.value })}>
-                  <option value="self">{t("самом токене")}</option>
-                  <option value="eth">ETH</option>
-                </select>
+                <div className="quote-tabs" style={{ margin: "6px 0 0" }}>
+                  <button type="button" className={`quote-tab qt-sm ${tax.divToken === "self" ? "on" : ""}`}
+                          onClick={() => setTax({ ...tax, divToken: "self" })}>{t("самом токене")}</button>
+                  <button type="button" className={`quote-tab qt-sm ${tax.divToken === "eth" ? "on" : ""}`}
+                          onClick={() => setTax({ ...tax, divToken: "eth" })}>ETH</button>
+                </div>
               </div>
             </div>
 

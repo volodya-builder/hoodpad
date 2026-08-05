@@ -2376,3 +2376,8 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .quote-chip .q-logo { margin-right: 6px; }
 .net-ico { width: 16px; height: 16px; border-radius: 50%; object-fit: cover; }
 .pv-qlogo { width: 16px; height: 16px; border-radius: 50%; vertical-align: -3px; margin-right: 5px; background: #fff; object-fit: contain; }
+
+/* Иконка RWA-вкладки + малые чипы-переключатели вместо системного select */
+.rwa-ico { vertical-align: -2px; margin-right: 2px; }
+.quote-tab { display: inline-flex; align-items: center; gap: 6px; }
+.quote-tab.qt-sm { padding: 8px 13px; font-size: 12.5px; }
