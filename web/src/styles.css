@@ -2634,7 +2634,33 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .ck-lvl-badge { background: var(--gold-dim); color: var(--gold); font-weight: 800; border-radius: 99px; padding: 4px 12px; white-space: nowrap; }
 .ck-lvl-bar { flex: 1; height: 10px; background: #ffffff10; border-radius: 6px; overflow: hidden; }
 .ck-lvl-bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), #a5aeff); transition: width .3s; }
-.ck-arena-wrap { display: grid; grid-template-columns: 1fr 320px; gap: 14px; }
+/* три колонки: прокачка · арена · розыгрыш — всё на одном экране */
+.ck-arena-wrap { display: grid; grid-template-columns: 268px minmax(0, 1fr) 320px; gap: 14px; align-items: start; }
+.ck-shop-col { display: flex; flex-direction: column; gap: 8px; }
+.ck-col-h { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; font-weight: 800; margin-bottom: 2px; }
+.ck-col-h .dim { font-size: 11px; font-weight: 600; }
+.ck-upg { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 9px; width: 100%;
+  text-align: left; padding: 9px 11px; border-radius: 12px; cursor: pointer; font: inherit;
+  background: var(--card); border: 1px solid var(--border); transition: border-color .15s, transform .08s, background .15s; }
+.ck-upg:hover:not(:disabled) { border-color: #7c88ff88; background: #7c88ff10; }
+.ck-upg:active:not(:disabled) { transform: scale(.98); }
+.ck-upg.off { opacity: .45; cursor: not-allowed; }
+.ck-upg.crit { border-left: 2px solid #ff525266; }
+.ck-upg.auto { border-left: 2px solid #4aa3e066; }
+.ck-upg.click { border-left: 2px solid #7c88ff66; }
+.ck-upg-ico { font-size: 20px; line-height: 1; text-align: center; }
+.ck-upg-txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ck-upg-txt b { font-size: 13px; }
+.ck-upg-txt i { font-style: normal; font-size: 11px; color: var(--text-dim); }
+.ck-upg-buy { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.ck-upg-buy b { font-size: 13px; color: var(--gold); font-variant-numeric: tabular-nums; }
+.ck-upg-buy i { font-style: normal; font-size: 10px; color: var(--text-dim); }
+@media (max-width: 1180px) {
+  .ck-arena-wrap { grid-template-columns: minmax(0, 1fr) 320px; }
+  .ck-shop-col { grid-column: 1 / -1; order: 3; flex-direction: row; flex-wrap: wrap; }
+  .ck-shop-col .ck-col-h { flex-basis: 100%; }
+  .ck-upg { width: calc(50% - 4px); }
+}
 .ck-arena {
   position: relative; min-height: 460px; border-radius: 20px; cursor: pointer; user-select: none; overflow: hidden;
   background: radial-gradient(600px 320px at 50% 40%, #7c88ff14, transparent 70%), var(--card);
@@ -2695,6 +2721,8 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
   .ck-arena-wrap { grid-template-columns: 1fr; }
   .ck-arena { min-height: 380px; }
   .ck-img { width: 230px; height: 230px; }
+  .ck-shop-col { order: 3; }
+  .ck-upg { width: 100%; }
 }
 
 /* Стакан заявок рядом с графиком */
@@ -2718,6 +2746,24 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .ob-legend i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
 .ob-legend i.ask { background: var(--red); } .ob-legend i.bid { background: var(--leaf); }
 @media (max-width: 860px) { .pc-row { grid-template-columns: 1fr; } }
+
+/* Док админки: выезжает слева, виден только команде */
+.adm-dock { position: fixed; left: 0; top: 50%; transform: translateY(-50%); z-index: 70;
+  display: flex; align-items: center; pointer-events: none; }
+.adm-dock .adm-body { pointer-events: auto; width: 360px; max-height: 82vh; overflow-y: auto;
+  background: var(--bg); border: 1px solid var(--border); border-left: none;
+  border-radius: 0 16px 16px 0; box-shadow: 24px 0 60px -30px #000;
+  margin-left: -376px; opacity: 0; transition: margin-left .22s ease, opacity .22s ease; padding: 12px; }
+.adm-dock.open .adm-body { margin-left: 0; opacity: 1; }
+.adm-tab { pointer-events: auto; order: 2; width: 34px; height: 58px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 17px;
+  background: var(--card); color: var(--text); border: 1px solid var(--border); border-left: none;
+  border-radius: 0 12px 12px 0; box-shadow: 8px 0 24px -12px #000; }
+.adm-tab:hover { background: #7c88ff22; border-color: #7c88ff66; }
+.adm-dock .sbx { margin: 0; border: none; background: none; padding: 0; }
+.adm-dock .sbx-grid { grid-template-columns: repeat(2, 1fr); }
+.adm-dock .sbx-actions { flex-wrap: wrap; }
+@media (max-width: 900px) { .adm-dock .adm-body { width: 84vw; margin-left: calc(-84vw - 16px); } }
 
 /* Фон арены кликера: шервудский трейдинг-лес + параллакс */
 /* картинка подставляется инлайн в Cats.jsx: путь относительный к странице,

@@ -3,6 +3,7 @@ import { useLang } from "../lib/i18n.jsx";
 import { RWA_POPULAR, stockLogo } from "../lib/rwa.js";
 import * as SB from "../lib/catstate.js";
 import * as CL from "../lib/clicker.js";
+import { isTeam } from "../lib/config.js";
 
 /** Коты-брокеры β — NFT-коты, привязанные к акциям, платят дивиденды из
  *  казны в токенизированных акциях; редкость даёт больший вес выплат.
@@ -883,6 +884,22 @@ function Holders({ t }) {
 // ---------------------------------------------------------------- песочница
 // Тестовый режим: 10 000 боксов себе, реальные открытия, листинги и дивиденды.
 // Состояние живёт в localStorage — обкатываем весь цикл до деплоя контрактов.
+// Док админки: панель уезжает влево за край экрана, наружу торчит язычок.
+// Виден только команде — обычный игрок о песочнице даже не догадывается.
+function AdminDock({ t, sb, setSb }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={`adm-dock ${open ? "open" : ""}`}>
+      <button className="adm-tab" onClick={() => setOpen(!open)} title={t("Админ-панель")}>
+        <span>{open ? "‹" : "🧪"}</span>
+      </button>
+      <div className="adm-body">
+        <SandboxPanel t={t} sb={sb} setSb={setSb} />
+      </div>
+    </div>
+  );
+}
+
 function SandboxPanel({ t, sb, setSb }) {
   const [amount, setAmount] = useState(50);
   const st = SB.stats(sb);
@@ -1073,6 +1090,33 @@ function Clicker({ t, sb, setSb }) {
       </div>
 
       <div className="ck-arena-wrap">
+        {/* слева: прокачка — под рукой, не надо листать вниз */}
+        <aside className="ck-shop-col">
+          <div className="ck-col-h">
+            <span>{t("Улучшения")}</span>
+            <span className="dim">{Math.floor(g.points).toLocaleString("ru-RU")} {t("очков")}</span>
+          </div>
+          {CL.UPGRADES.map((u) => {
+            const l = g.levels[u.id] || 0;
+            const cost = CL.upgradeCost(u, l);
+            const can = g.points >= cost;
+            return (
+              <button className={`ck-upg ${can ? "" : "off"} ${u.kind}`} key={u.id}
+                      disabled={!can} onClick={() => setG(CL.buy(g, u.id))}>
+                <span className="ck-upg-ico">{u.icon}</span>
+                <span className="ck-upg-txt">
+                  <b>{t(u.ru)}</b>
+                  <i>{t(u.desc)}</i>
+                </span>
+                <span className="ck-upg-buy">
+                  <b>{cost.toLocaleString("ru-RU")}</b>
+                  <i>{l > 0 ? `${t("ур.")} ${l}` : t("купить")}</i>
+                </span>
+              </button>
+            );
+          })}
+        </aside>
+
         {/* арена с котом */}
         <div className={`ck-arena ${goldenOn ? "boosted" : ""}`} onClick={onTap}
              onMouseMove={onMove} onMouseLeave={() => setPar({ x: 0, y: 0 })}>
@@ -1170,28 +1214,6 @@ function Clicker({ t, sb, setSb }) {
         </div>
       </div>
 
-      {/* магазин улучшений — широкой сеткой */}
-      <h2 className="rev-h2">{t("Улучшения")}</h2>
-      <div className="ck-shop">
-        {CL.UPGRADES.map((u) => {
-          const l = g.levels[u.id] || 0;
-          const cost = CL.upgradeCost(u, l);
-          const can = g.points >= cost;
-          return (
-            <div className={`ck-up ${can ? "" : "off"} ${u.kind}`} key={u.id}>
-              <div className="ck-up-top">
-                <b>{t(u.ru)}</b>
-                {l > 0 && <span className="ck-up-lvl">{t("ур.")} {l}</span>}
-              </div>
-              <span className="ck-up-desc">{t(u.desc)}</span>
-              <button className="btn btn-primary" disabled={!can} onClick={() => setG(CL.buy(g, u.id))}>
-                {cost.toLocaleString("ru-RU")} {t("очков")}
-              </button>
-            </div>
-          );
-        })}
-      </div>
-
       <div className="hint" style={{ marginTop: 12 }}>
         {t("Комбо ×5 за быстрые тапы, криты ×10, золотой кот с джекпотом и ×2. Каждые 30 минут один NFT-кот разыгрывается среди игроков — билетов тем больше, чем больше очков ты набрал за раунд. Очки за сутки дают буст к дивидендам котов (до +25%).")}
       </div>
@@ -1199,8 +1221,9 @@ function Clicker({ t, sb, setSb }) {
   );
 }
 
-export default function Cats() {
+export default function Cats({ wallet }) {
   const { t } = useLang();
+  const admin = isTeam(wallet?.account);
   const [tab, setTab] = useState("clicker"); // clicker | market | boxes | my | holders | about
   const [sb, setSb] = useState(() => SB.load());
   const [ranges, setRanges] = useState({ tier: 2, per: 12, months: 6 });
@@ -1243,7 +1266,7 @@ export default function Cats() {
         <button type="button" className={`quote-tab ${tab === "about" ? "on" : ""}`} onClick={() => setTab("about")}>{t("Об игре")}</button>
       </div>
 
-      <SandboxPanel t={t} sb={sb} setSb={setSb} />
+      {admin && <AdminDock t={t} sb={sb} setSb={setSb} />}
 
       {tab === "clicker" && <Clicker t={t} sb={sb} setSb={setSb} />}
       {tab === "boxes" && <Boxes t={t} sb={sb} setSb={setSb} />}

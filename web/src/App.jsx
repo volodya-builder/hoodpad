@@ -318,7 +318,7 @@ export default function App() {
   } else if (route === "/revenue") {
     page = <Revenue />;
   } else if (route === "/cats") {
-    page = <Cats />;
+    page = <Cats wallet={wallet} />;
   } else if (route === "/about") {
     page = <About />;
   } else if (route === "/privacy") {

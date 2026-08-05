@@ -39,12 +39,12 @@ function demoWallet() {
 
 // Улучшения: цена растёт на 55% за уровень
 export const UPGRADES = [
-  { id: "claw", ru: "Когти", en: "Claws", desc: "+1 к силе клика", base: 25, effect: 1, kind: "click" },
-  { id: "suit", ru: "Костюм брокера", en: "Broker suit", desc: "+5 к силе клика", base: 400, effect: 5, kind: "click" },
-  { id: "insight", ru: "Чутьё рынка", en: "Market sense", desc: "+2% шанс крита (×10)", base: 900, effect: 2, kind: "crit" },
-  { id: "terminal", ru: "Терминал", en: "Terminal", desc: "+2 акции/сек", base: 120, effect: 2, kind: "auto" },
-  { id: "algo", ru: "Алго-бот", en: "Algo bot", desc: "+15 акций/сек", base: 1800, effect: 15, kind: "auto" },
-  { id: "hedge", ru: "Хедж-фонд", en: "Hedge fund", desc: "+90 акций/сек", base: 22000, effect: 90, kind: "auto" },
+  { id: "claw", ru: "Когти", en: "Claws", desc: "+1 к силе клика", base: 25, effect: 1, kind: "click", icon: "🐾" },
+  { id: "suit", ru: "Костюм брокера", en: "Broker suit", desc: "+5 к силе клика", base: 400, effect: 5, kind: "click", icon: "🕴️" },
+  { id: "insight", ru: "Чутьё рынка", en: "Market sense", desc: "+2% шанс крита (×10)", base: 900, effect: 2, kind: "crit", icon: "👁️" },
+  { id: "terminal", ru: "Терминал", en: "Terminal", desc: "+2 акции/сек", base: 120, effect: 2, kind: "auto", icon: "🖥️" },
+  { id: "algo", ru: "Алго-бот", en: "Algo bot", desc: "+15 акций/сек", base: 1800, effect: 15, kind: "auto", icon: "🤖" },
+  { id: "hedge", ru: "Хедж-фонд", en: "Hedge fund", desc: "+90 акций/сек", base: 22000, effect: 90, kind: "auto", icon: "🏦" },
 ];
 
 // Комбо: за быстрые тапы множитель растёт до ×5

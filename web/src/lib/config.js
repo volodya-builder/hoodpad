@@ -71,6 +71,12 @@ try {
 export const TREASURY_ADDRESS =
   import.meta.env.VITE_TREASURY_ADDRESS ?? "0xb45661df6625decdc697dd2fa0556c2637ea063a";
 
+// Кошелёк команды (владелец контрактов). По нему открываются админ-панели
+// на фронте — то, что не должно видеть большинство посетителей.
+export const TEAM_ADDRESS =
+  (import.meta.env.VITE_TEAM_ADDRESS ?? "0xD3d14c10020ad9C582404669a2Fa11AfF2386255").toLowerCase();
+export const isTeam = (addr) => !!addr && addr.toLowerCase() === TEAM_ADDRESS;
+
 // On-chain chat contract (messages are events; zero = not deployed yet)
 export const CHAT_ADDRESS =
   import.meta.env.VITE_CHAT_ADDRESS ?? "0xbaf4de9b8f35c384058d31e2730a3146c0d1af3c";

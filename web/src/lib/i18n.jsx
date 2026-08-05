@@ -1159,6 +1159,8 @@ const EN = {
   "🐱‍👤 Золотой кот пойман! +{n} очков и ×2 на 20 секунд": "🐱‍👤 Golden cat caught! +{n} points and x2 for 20 seconds",
   "Комбо ×5 за быстрые тапы, криты ×10, золотой кот с джекпотом и ×2. Очки за сутки дают буст к дивидендам котов (до +25%) и билеты в розыгрыш 50 NFT в день.": "Combo up to x5 for fast taps, x10 crits, a golden cat with a jackpot and x2 boost. Daily points boost your cat dividends (up to +25%) and buy tickets into the 50-NFT daily raffle.",
   "Комбо ×5 за быстрые тапы, криты ×10, золотой кот с джекпотом и ×2. Каждые 30 минут один NFT-кот разыгрывается среди игроков — билетов тем больше, чем больше очков ты набрал за раунд. Очки за сутки дают буст к дивидендам котов (до +25%).": "Combo up to x5 for fast taps, x10 crits, a golden cat with a jackpot and x2 boost. Every 30 minutes one NFT cat is raffled among players — the more points you score in the round, the more tickets you hold. Daily points also boost your cat dividends (up to +25%).",
+  "Админ-панель": "Admin panel",
+  "купить": "buy",
   "объём": "volume",
   "продаж за 30 дней": "sales over 30 days",
   "продаж": "sales",
