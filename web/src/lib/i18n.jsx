@@ -1065,6 +1065,10 @@ const EN = {
   "выплачено": "paid",
   "ждёт": "pending",
   "Демо-история. После деплоя строится по событиям контракта выплат.": "Demo history. Built from payout-contract events after deploy.",
+  "Состав коллекции": "Collection breakdown",
+  "Коты холдера": "Holder cats",
+  "первые": "first",
+  "Демо-коллекция. После деплоя читается по он-чейн владению NFT.": "Demo collection. Read from on-chain NFT ownership after deploy.",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

@@ -423,8 +423,88 @@ function demoHolders() {
 }
 const HOLDERS = demoHolders();
 
+// Коллекция конкретного холдера (демо, детерминированно по адресу)
+function holderCats(h) {
+  let x = 0;
+  for (const ch of h.addr) x = (x * 31 + ch.charCodeAt(0)) % 233280;
+  const rnd = () => ((x = (x * 9301 + 49297) % 233280) / 233280);
+  const n = Math.min(h.cats, 18);
+  const rows = Array.from({ length: n }, (_, i) => {
+    const r = rnd();
+    let tier = r < 0.58 ? 0 : r < 0.8 ? 1 : r < 0.92 ? 2 : r < 0.985 ? 3 : 4;
+    if (i < h.legend) tier = 4; // легендарные из рейтинга — первыми
+    return {
+      id: 100 + Math.floor(rnd() * 900),
+      tier,
+      sym: RWA_POPULAR[Math.floor(rnd() * RWA_POPULAR.length)],
+      divs: Math.round(RARITIES[tier].mult * (1 + rnd() * 8) * 10) / 10,
+    };
+  });
+  return rows.sort((a, b) => b.tier - a.tier);
+}
+
+function HolderModal({ t, holder, onClose }) {
+  const rows = useMemo(() => holderCats(holder), [holder]);
+  const byTier = useMemo(() => {
+    const m = [0, 0, 0, 0, 0];
+    rows.forEach((c) => { m[c.tier] += 1; });
+    return m;
+  }, [rows]);
+
+  return (
+    <div className="modal-back open" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="rev-launch-modal cat-modal">
+        <div className="rev-lm-head">
+          <b className="hold-addr" style={{ fontSize: 15 }}>{holder.addr}</b>
+          <button className="icon-btn" onClick={onClose} aria-label="close">✕</button>
+        </div>
+
+        <div className="cat-modal-kv" style={{ gridTemplateColumns: "repeat(4,1fr)" }}>
+          <div><span>{t("котов")}</span><b>{holder.cats}</b></div>
+          <div><span>{t("вес")}</span><b>×{holder.weight}</b></div>
+          <div><span>{t("легендарных")}</span><b style={{ color: RARITIES[4].color }}>{holder.legend || "—"}</b></div>
+          <div><span>{t("заработано")}</span><b className="rev-gold">${holder.earned}</b></div>
+        </div>
+
+        <div className="cat-sec-title">{t("Состав коллекции")}</div>
+        <div className="hm-tiers">
+          {RARITIES.map((r, i) => (
+            <span key={r.key} style={{ color: byTier[i] ? r.color : "var(--text-dim)" }}>
+              {t(r.ru)}: <b>{byTier[i]}</b>
+            </span>
+          ))}
+        </div>
+
+        <div className="cat-sec-title">
+          {t("Коты холдера")} {rows.length < holder.cats && <span className="dim">({t("первые")} {rows.length})</span>}
+        </div>
+        <div className="hm-grid">
+          {rows.map((c, i) => {
+            const r = RARITIES[c.tier];
+            return (
+              <div className="hm-cat" key={i} style={{ borderColor: r.color + "55" }}>
+                <TierArt tier={c.tier} size={48} />
+                <div className="hm-cat-info">
+                  <b>#{c.id}</b>
+                  <span style={{ color: r.color }}>{t(r.ru)} ×{r.mult}</span>
+                  <span className="hm-cat-sym">
+                    <img src={stockLogo(c.sym)} alt="" className="q-logo" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                    {c.sym} · <span className="rev-gold">${c.divs}</span>
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="hint" style={{ marginTop: 12 }}>{t("Демо-коллекция. После деплоя читается по он-чейн владению NFT.")}</div>
+      </div>
+    </div>
+  );
+}
+
 function Holders({ t }) {
   const [sort, setSort] = useState("weight");
+  const [openHolder, setOpenHolder] = useState(null);
   const rows = useMemo(() => {
     const by = { weight: (a, b) => b.weight - a.weight, cats: (a, b) => b.cats - a.cats, earned: (a, b) => b.earned - a.earned }[sort];
     return [...HOLDERS].sort(by);
@@ -433,6 +513,7 @@ function Holders({ t }) {
 
   return (
     <>
+      {openHolder && <HolderModal t={t} holder={openHolder} onClose={() => setOpenHolder(null)} />}
       <div className="rev-stats" style={{ justifyContent: "flex-start", marginTop: 4 }}>
         <div><b>{HOLDERS.length}</b><span>{t("холдеров")}</span></div>
         <div><b>{totalCats}</b><span>{t("котов у холдеров")}</span></div>
@@ -451,7 +532,9 @@ function Holders({ t }) {
           <span>{t("легендарных")}</span><span>{t("вес")}</span><span>{t("заработано")}</span>
         </div>
         {rows.map((h, i) => (
-          <div className={`hold-row ${i < 3 ? "top" : ""}`} key={h.addr}>
+          <div className={`hold-row hold-row-click ${i < 3 ? "top" : ""}`} key={h.addr}
+               onClick={() => setOpenHolder(h)} role="button" tabIndex={0}
+               onKeyDown={(e) => e.key === "Enter" && setOpenHolder(h)}>
             <span className="hold-rank">{i + 1}</span>
             <span className="hold-addr">{h.addr}</span>
             <span><b>{h.cats}</b></span>
