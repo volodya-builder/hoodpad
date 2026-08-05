@@ -242,7 +242,7 @@ export default function Arena() {
                   <div className="ab-cell"><span>{t("Финал месяца")}</span>
                     <b className="ab-timer">{days}{t("д")} {hours}{t("ч")}</b></div>
                   {pool !== null && (
-                    <div className="ab-cell"><span>{t("Гранд-выкуп")}<span className="share-chip gold" title={t("30% баланса казны на конец месяца. Казна пополняется с каждой сделки все 30 дней — к финалу приз заметно больше сегодняшней оценки.")}>30% {t("казны")}</span></span>
+                    <div className="ab-cell"><span>{t("Гранд-выкуп")}<span className="share-chip gold" title={t("10% баланса казны на конец месяца. Казна пополняется с каждой сделки все 30 дней — к финалу приз заметно больше сегодняшней оценки.")}>10% {t("казны")}</span></span>
                       <b style={{ color: "var(--gold)" }}>{D(pool)} <span className="dim" style={{ fontWeight: 500, fontSize: 13 }}>({fmtEth(pool)} ETH)</span></b>
                       <span className="dim" style={{ fontSize: 11.5, marginTop: 3 }}>📈 {t("копится с каждой сделкой все 30 дней месяца")}</span></div>
                   )}
@@ -307,7 +307,7 @@ export default function Arena() {
           <div className="podium3">
             <div className="pod-head">
               🏆 {t("Призовой фонд дня")}
-              <span className="share-chip gold" title={t("Каждое утро казна тратит 50% своего баланса на вчерашний подиум")}>50% {t("казны")}</span>
+              <span className="share-chip gold" title={t("Каждое утро казна тратит 10% своего баланса на вчерашний подиум")}>10% {t("казны")}</span>
               <span className="dim" style={{ fontWeight: 500 }}> · {t("делится между тремя местами")}</span>
             </div>
             {[
@@ -326,7 +326,7 @@ export default function Arena() {
               );
             })}
             <div className="pod-note dim">
-              💡 {t("Каждое утро казна тратит половину баланса на вчерашний подиум: выкупает токены-призёры с рынка и сжигает их. Приз растёт с каждым днём торгов.")}
+              💡 {t("Каждое утро казна тратит десятую часть баланса на вчерашний подиум: выкупает токены-призёры с рынка и сжигает их. Приз растёт с каждым днём торгов.")}
             </div>
           </div>
 

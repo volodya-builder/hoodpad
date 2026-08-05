@@ -141,7 +141,7 @@ export default function VoteV2({ wallet, onConnect }) {
       {st && (<>
         <div className="vote-bar" style={{ marginTop: 16 }}>
           <div className="vb-cell"><span>{t("Раунд")}</span><b>#{String(st.epoch)}</b></div>
-          <div className="vb-cell"><span>{t("До выкупа")}<span className="share-chip gold" title={t("Раз в неделю казна тратит 20% баланса на выкуп и сжигание токена-победителя голосования")}>20% {t("казны")}</span></span><b className="ab-timer">{cd(st.endsIn)}</b></div>
+          <div className="vb-cell"><span>{t("До выкупа")}<span className="share-chip gold" title={t("Раз в неделю казна тратит 70% баланса на выкуп и сжигание токена-победителя голосования")}>70% {t("казны")}</span></span><b className="ab-timer">{cd(st.endsIn)}</b></div>
           <div className="vb-cell"><span>{t("Всего голосов")}</span><b>{totalVotes}</b></div>
           <div className="vb-cell">
             <span>{t("Мой голос")}</span>

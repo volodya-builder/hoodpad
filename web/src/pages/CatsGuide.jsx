@@ -205,8 +205,8 @@ export default function CatsGuide({ lang, rarities, onTab, t: tr }) {
         {/* ——— редкость */}
         <section id="g-rarity">
           <h2 className="rev-h2">{T("Редкость и награды", "Rarity and dividends")}</h2>
-          <p>{T("Казна периодически покупает токенизированные акции и раздаёт их котам. Делёж идёт по весу редкости: сумма делится на общий вес всех котов, и каждый получает свою долю.",
-                "The treasury periodically buys tokenized stocks and distributes them to cats. The split follows rarity weight: the amount is divided by the total weight of all cats and each one takes its share.")}</p>
+          <p>{T("Комиссия сделки (1%) делится контрактами: 50% создателю токена, 20% команде, 30% в казну платформы. Из казны на котов отведено 20% баланса: на них покупаются токенизированные акции и раздаются держателям. Делёж идёт по весу редкости: сумма делится на общий вес всех котов, и каждый получает свою долю.",
+                "The 1% trade fee is split by the contracts: 50% to the token creator, 20% to the team, 30% to the platform treasury. Cats are allocated 20% of the treasury balance: it buys tokenized stocks and hands them to holders. The split follows rarity weight: the amount is divided by the total weight of all cats and each one takes its share.")}</p>
           <div className="guide-example">
             <b>{T("Пример", "Example")}</b>
             <p>{T("Пусть в игре 100 котов: 60 Обычных (вес 1), 24 Редких (2), 10 Эпических (3), 5 Мифических (5), 1 Легендарный (8). Общий вес = 60 + 48 + 30 + 25 + 8 = 171. Казна раздаёт $1710 — доля одного веса $10. Обычный кот получит $10, Легендарный — $80, то есть в восемь раз больше.",
