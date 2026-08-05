@@ -1052,6 +1052,19 @@ const EN = {
   "вес": "weight",
   "заработано": "earned",
   "Демо-рейтинг. После деплоя строится по он-чейн владельцам NFT.": "Demo leaderboard. Built from on-chain NFT owners after deploy.",
+  "выплаты": "payouts",
+  "тикер кота": "cat ticker",
+  "всего выплачено": "paid out in total",
+  "ждёт клейма": "awaiting claim",
+  "По акциям": "By stock",
+  "История выплат": "Payout history",
+  "дата": "date",
+  "акция": "stock",
+  "количество": "amount",
+  "сумма": "value",
+  "выплачено": "paid",
+  "ждёт": "pending",
+  "Демо-история. После деплоя строится по событиям контракта выплат.": "Demo history. Built from payout-contract events after deploy.",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

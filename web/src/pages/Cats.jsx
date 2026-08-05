@@ -259,9 +259,91 @@ const MY_DEMO = [
   { id: 655, tier: 0, sym: "SPY", divs: 1.7, since: "1д" },
 ];
 
+// История выплат кота (демо, детерминированно по id)
+function catPayouts(cat) {
+  let x = cat.id;
+  const rnd = () => ((x = (x * 9301 + 49297) % 233280) / 233280);
+  const mult = RARITIES[cat.tier].mult;
+  const stocks = ["SPY", "NVDA", "AAPL", "QQQ", "MSFT"];
+  const n = 4 + Math.floor(rnd() * 5);
+  const rows = Array.from({ length: n }, (_, i) => {
+    const sym = stocks[Math.floor(rnd() * stocks.length)];
+    const usd = Math.round(mult * (0.6 + rnd() * 2.4) * 100) / 100;
+    return {
+      day: `${String(1 + Math.floor(rnd() * 28)).padStart(2, "0")}.08`,
+      sym,
+      usd,
+      qty: (usd / (40 + rnd() * 400)).toFixed(4),
+      status: i === 0 ? "pending" : "paid",
+    };
+  });
+  return rows;
+}
+
+function CatModal({ t, cat, onClose }) {
+  const r = RARITIES[cat.tier];
+  const rows = useMemo(() => catPayouts(cat), [cat]);
+  const byStock = useMemo(() => {
+    const m = {};
+    rows.forEach((x) => { m[x.sym] = (m[x.sym] || 0) + x.usd; });
+    return Object.entries(m).sort((a, b) => b[1] - a[1]);
+  }, [rows]);
+  const total = rows.reduce((s, x) => s + x.usd, 0);
+  const pending = rows.filter((x) => x.status === "pending").reduce((s, x) => s + x.usd, 0);
+
+  return (
+    <div className="modal-back open" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="rev-launch-modal cat-modal">
+        <div className="rev-lm-head">
+          <b>{t("Кот")} #{cat.id} · <span style={{ color: r.color }}>{t(r.ru)} ×{r.mult}</span></b>
+          <button className="icon-btn" onClick={onClose} aria-label="close">✕</button>
+        </div>
+
+        <div className="cat-modal-top">
+          <TierArt tier={cat.tier} size={92} />
+          <div className="cat-modal-kv">
+            <div><span>{t("тикер кота")}</span><b><img src={stockLogo(cat.sym)} alt="" className="q-logo" onError={(e) => { e.currentTarget.style.display = "none"; }} />{cat.sym}</b></div>
+            <div><span>{t("всего выплачено")}</span><b className="rev-gold">${total.toFixed(2)}</b></div>
+            <div><span>{t("ждёт клейма")}</span><b>${pending.toFixed(2)}</b></div>
+            <div><span>{t("в коллекции")}</span><b>{cat.since}</b></div>
+          </div>
+        </div>
+
+        <div className="cat-sec-title">{t("По акциям")}</div>
+        <div className="cat-bystock">
+          {byStock.map(([sym, usd]) => (
+            <div className="cat-bystock-row" key={sym}>
+              <span><img src={stockLogo(sym)} alt="" className="q-logo" onError={(e) => { e.currentTarget.style.display = "none"; }} />{sym}</span>
+              <span className="cat-bar"><i style={{ width: `${(usd / byStock[0][1]) * 100}%` }} /></span>
+              <b>${usd.toFixed(2)}</b>
+            </div>
+          ))}
+        </div>
+
+        <div className="cat-sec-title">{t("История выплат")}</div>
+        <div className="cat-payouts">
+          <div className="cat-pay-head"><span>{t("дата")}</span><span>{t("акция")}</span><span>{t("количество")}</span><span>{t("сумма")}</span><span></span></div>
+          {rows.map((x, i) => (
+            <div className="cat-pay-row" key={i}>
+              <span>{x.day}</span>
+              <span><img src={stockLogo(x.sym)} alt="" className="q-logo" onError={(e) => { e.currentTarget.style.display = "none"; }} />{x.sym}</span>
+              <span className="dim">{x.qty}</span>
+              <b>${x.usd.toFixed(2)}</b>
+              <span className={`cat-pay-status ${x.status}`}>{x.status === "paid" ? t("выплачено") : t("ждёт")}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="hint" style={{ marginTop: 12 }}>{t("Демо-история. После деплоя строится по событиям контракта выплат.")}</div>
+      </div>
+    </div>
+  );
+}
+
 function MyCats({ t }) {
   const [claimed, setClaimed] = useState(false);
   const [toast, setToast] = useState("");
+  const [openCat, setOpenCat] = useState(null);
   const pending = useMemo(() => MY_DEMO.reduce((s, c) => s + c.divs, 0), []);
   const weight = useMemo(() => MY_DEMO.reduce((s, c) => s + RARITIES[c.tier].mult, 0), []);
   const monthly = Math.round(pending * 0.42 * 100) / 100;
@@ -269,6 +351,7 @@ function MyCats({ t }) {
   return (
     <>
       {toast && <div className="rev-toast">{toast}</div>}
+      {openCat && <CatModal t={t} cat={openCat} onClose={() => setOpenCat(null)} />}
       <div className="rev-stats" style={{ justifyContent: "flex-start", marginTop: 4 }}>
         <div><b>{MY_DEMO.length}</b><span>{t("котов в коллекции")}</span></div>
         <div><b>×{weight}</b><span>{t("суммарный вес выплат")}</span></div>
@@ -292,7 +375,9 @@ function MyCats({ t }) {
         {MY_DEMO.map((c) => {
           const r = RARITIES[c.tier];
           return (
-            <div className="cm-card" key={c.id} style={{ borderColor: r.color + "55" }}>
+            <div className="cm-card cm-card-click" key={c.id} style={{ borderColor: r.color + "55" }}
+                 onClick={() => setOpenCat(c)} role="button" tabIndex={0}
+                 onKeyDown={(e) => e.key === "Enter" && setOpenCat(c)}>
               <div className="cm-card-head">
                 <TierArt tier={c.tier} size={64} />
                 <div>
@@ -305,9 +390,9 @@ function MyCats({ t }) {
                 <span className="cm-divs">${c.divs} {t("накоплено")}</span>
               </div>
               <div className="cm-foot">
-                <span className="cm-seller">{t("в коллекции")} {c.since}</span>
+                <span className="cm-seller">{t("выплаты")} →</span>
                 <button className="btn sm-btn"
-                        onClick={() => { setToast(t("Продажа откроется с деплоем контрактов.")); setTimeout(() => setToast(""), 2600); }}>
+                        onClick={(e) => { e.stopPropagation(); setToast(t("Продажа откроется с деплоем контрактов.")); setTimeout(() => setToast(""), 2600); }}>
                   {t("Продать")}
                 </button>
               </div>
