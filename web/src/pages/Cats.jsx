@@ -1028,6 +1028,79 @@ function SandboxPanel({ t, sb, setSb }) {
 // соперники и их очки берутся из clicker.js (roundPlayers) — детерминированно
 // по номеру раунда, чтобы у всех игроков был один и тот же список
 
+// Магазин прокачки: четыре ветки, покупка по 1 / 10 / максимум,
+// закрытые улучшения показываются с требуемым уровнем — видно, к чему идти.
+function Shop({ t, g, setG }) {
+  const [cat, setCat] = useState("click");
+  const [bulk, setBulk] = useState(1); // 1 | 10 | 0 (0 = максимум)
+  const lvl = CL.levelOf(g.totalEarned || 0);
+  const list = CL.UPGRADES.filter((u) => u.cat === cat);
+
+  // сколько улучшений в ветке доступно к покупке прямо сейчас — точка на вкладке
+  const ready = (id) => CL.UPGRADES.some((u) => u.cat === id && CL.unlocked(g, u)
+    && !CL.maxed(g, u) && g.points >= CL.upgradeCost(u, g.levels[u.id] || 0));
+
+  return (
+    <aside className="ck-shop-col">
+      <div className="ck-col-h">
+        <span>{t("Улучшения")}</span>
+        <span className="dim">{Math.floor(g.points).toLocaleString("ru-RU")} {t("очков")}</span>
+      </div>
+
+      <div className="ck-shop-tabs">
+        {CL.UPGRADE_CATS.map((c) => (
+          <button key={c.id} className={`ck-stab ${cat === c.id ? "on" : ""}`} onClick={() => setCat(c.id)}>
+            <span>{c.icon}</span>{t(c.ru)}
+            {ready(c.id) && <i className="ck-stab-dot" />}
+          </button>
+        ))}
+      </div>
+
+      <div className="ck-bulk">
+        {[1, 10, 0].map((n) => (
+          <button key={n} className={`ck-bulk-b ${bulk === n ? "on" : ""}`} onClick={() => setBulk(n)}>
+            {n === 0 ? t("макс") : `×${n}`}
+          </button>
+        ))}
+      </div>
+
+      {list.map((u) => {
+        const l = g.levels[u.id] || 0;
+        const open = CL.unlocked(g, u);
+        const full = CL.maxed(g, u);
+        const aff = CL.affordable(g, u, bulk === 0 ? 100 : bulk);
+        const count = bulk === 0 ? aff.n : Math.min(bulk, u.max ? u.max - l : bulk);
+        const cost = count > 0 ? CL.bulkCost(u, l, count) : CL.upgradeCost(u, l);
+        const can = open && !full && count > 0 && g.points >= cost;
+
+        if (!open) {
+          return (
+            <div className="ck-upg locked" key={u.id}>
+              <span className="ck-upg-ico">🔒</span>
+              <span className="ck-upg-txt"><b>{t(u.ru)}</b><i>{t("откроется на уровне")} {u.req}</i></span>
+              <span className="ck-upg-buy"><i>{t("ур.")} {lvl}/{u.req}</i></span>
+            </div>
+          );
+        }
+        return (
+          <button className={`ck-upg ${can ? "" : "off"} ${u.kind} ${full ? "full" : ""}`} key={u.id}
+                  disabled={!can} onClick={() => setG(CL.buy(g, u.id, count))}>
+            <span className="ck-upg-ico">{u.icon}</span>
+            <span className="ck-upg-txt">
+              <b>{t(u.ru)}</b>
+              <i>{t(u.desc)}{u.max ? ` · ${t("макс")} ${u.max}` : ""}</i>
+            </span>
+            <span className="ck-upg-buy">
+              {full ? <b className="rev-gold">MAX</b> : <b>{cost.toLocaleString("ru-RU")}</b>}
+              <i>{l > 0 ? `${t("ур.")} ${l}` : t("купить")}{!full && count > 1 ? ` · +${count}` : ""}</i>
+            </span>
+          </button>
+        );
+      })}
+    </aside>
+  );
+}
+
 function Clicker({ t, sb, setSb }) {
   const [g, setG] = useState(() => CL.load());
   const [flyers, setFlyers] = useState([]);
@@ -1075,6 +1148,18 @@ function Clicker({ t, sb, setSb }) {
     return () => clearInterval(id);
   }, []);
 
+  // офлайн-доход: считаем один раз при открытии вкладки
+  useEffect(() => {
+    const { state, gain, away } = CL.collectOffline(CL.load());
+    if (gain > 0) {
+      setG(state);
+      const h = Math.floor(away / 3600), m = Math.round((away % 3600) / 60);
+      say(t("🌙 Ночная смена наработала +{n} очков за {tm}")
+        .replace("{n}", gain.toLocaleString("ru-RU"))
+        .replace("{tm}", h ? `${h} ч ${m} мин` : `${m} мин`));
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // золотой кот сам исчезает через 4 секунды
   useEffect(() => {
     if (!golden) return;
@@ -1120,7 +1205,7 @@ function Clicker({ t, sb, setSb }) {
     setTimeout(() => setBump(false), 90);
     addFlyer(x, y, `+${res.gain}`, res.crit ? "crit" : res.mult > 1 ? "combo" : "");
     // шанс появления золотого кота
-    if (!golden && Math.random() < CL.GOLDEN_CHANCE) {
+    if (!golden && Math.random() < CL.goldenChance(g)) {
       setGolden({ x: 12 + Math.random() * 70, y: 12 + Math.random() * 66 });
     }
   }
@@ -1161,7 +1246,7 @@ function Clicker({ t, sb, setSb }) {
         <div className="ck-stat big"><b>{Math.floor(g.points).toLocaleString("ru-RU")}</b><span>{t("очков")}</span></div>
         <div className="ck-stat"><b>+{perClick}</b><span>{t("за клик")}</span></div>
         <div className="ck-stat"><b>+{perSec}/{t("сек")}</b><span>{t("автодобыча")}</span></div>
-        <div className="ck-stat"><b>{crit}%</b><span>{t("шанс крита")}</span></div>
+        <div className="ck-stat"><b>{crit}% <em className="ck-stat-x">×{CL.critMult(g)}</em></b><span>{t("шанс крита")}</span></div>
         <div className="ck-stat"><b className="rev-gold">{chance.toFixed(1)}%</b><span>{t("шанс в раунде")}</span></div>
         <div className="ck-stat"><b>{g.wonCards}</b><span>{t("выиграно котов")}</span></div>
       </div>
@@ -1174,32 +1259,8 @@ function Clicker({ t, sb, setSb }) {
       </div>
 
       <div className="ck-arena-wrap">
-        {/* слева: прокачка — под рукой, не надо листать вниз */}
-        <aside className="ck-shop-col">
-          <div className="ck-col-h">
-            <span>{t("Улучшения")}</span>
-            <span className="dim">{Math.floor(g.points).toLocaleString("ru-RU")} {t("очков")}</span>
-          </div>
-          {CL.UPGRADES.map((u) => {
-            const l = g.levels[u.id] || 0;
-            const cost = CL.upgradeCost(u, l);
-            const can = g.points >= cost;
-            return (
-              <button className={`ck-upg ${can ? "" : "off"} ${u.kind}`} key={u.id}
-                      disabled={!can} onClick={() => setG(CL.buy(g, u.id))}>
-                <span className="ck-upg-ico">{u.icon}</span>
-                <span className="ck-upg-txt">
-                  <b>{t(u.ru)}</b>
-                  <i>{t(u.desc)}</i>
-                </span>
-                <span className="ck-upg-buy">
-                  <b>{cost.toLocaleString("ru-RU")}</b>
-                  <i>{l > 0 ? `${t("ур.")} ${l}` : t("купить")}</i>
-                </span>
-              </button>
-            );
-          })}
-        </aside>
+        {/* слева: прокачка — ветки, разблокировка по уровню, покупка пачками */}
+        <Shop t={t} g={g} setG={setG} />
 
         {/* арена с котом */}
         <div className={`ck-arena ${goldenOn ? "boosted" : ""}`} onClick={onTap}
@@ -1209,7 +1270,7 @@ function Clicker({ t, sb, setSb }) {
             transform: `scale(1.08) translate(${par.x}px, ${par.y}px)`,
           }} />
           <div className="ck-bg-veil" />
-          {combo > 1 && <div className="ck-combo">COMBO ×{combo}</div>}
+          {combo > 1 && <div className="ck-combo">COMBO ×{combo}{combo >= CL.comboCap(g) ? " MAX" : ""}</div>}
           {goldenOn && <div className="ck-boost-tag">×2 {t("буст активен")}</div>}
           {/* кот — фоновая картинка, а не <img>: браузеры вешают на картинки
               свою панель «поиск по изображению», которая мешает тапать */}

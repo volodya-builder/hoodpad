@@ -2660,6 +2660,24 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .ck-upg-buy { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
 .ck-upg-buy b { font-size: 13px; color: var(--gold); font-variant-numeric: tabular-nums; }
 .ck-upg-buy i { font-style: normal; font-size: 10px; color: var(--text-dim); }
+/* ветки прокачки */
+.ck-shop-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 6px; }
+.ck-stab { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 6px 2px; border-radius: 10px; font: inherit; font-size: 10px; font-weight: 700; cursor: pointer;
+  color: var(--text-dim); background: var(--card); border: 1px solid var(--border); }
+.ck-stab span { font-size: 14px; line-height: 1; }
+.ck-stab.on { color: var(--text); border-color: #7c88ff88; background: #7c88ff18; }
+.ck-stab-dot { position: absolute; top: 5px; right: 6px; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--gold); box-shadow: 0 0 8px var(--gold); }
+/* сколько уровней берём за раз */
+.ck-bulk { display: flex; gap: 4px; margin-bottom: 6px; }
+.ck-bulk-b { flex: 1; padding: 4px 0; border-radius: 8px; font: inherit; font-size: 11px; font-weight: 700;
+  cursor: pointer; color: var(--text-dim); background: var(--card); border: 1px solid var(--border); }
+.ck-bulk-b.on { color: var(--text); border-color: #7c88ff88; background: #7c88ff18; }
+/* закрытые и выкупленные */
+.ck-upg.locked { opacity: .5; cursor: default; border-style: dashed; }
+.ck-upg.full { border-color: var(--border-gold); opacity: .85; cursor: default; }
+.ck-stat-x { font-style: normal; font-size: 12px; color: var(--text-dim); }
 @media (max-width: 1180px) {
   .ck-arena-wrap { grid-template-columns: minmax(0, 1fr) 320px; }
   .ck-shop-col { grid-column: 1 / -1; order: 3; flex-direction: row; flex-wrap: wrap; }

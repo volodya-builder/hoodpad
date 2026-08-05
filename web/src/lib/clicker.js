@@ -61,24 +61,52 @@ export function poolTotal(pool) {
   return pool.reduce((a, p) => a + p.points, 0);
 }
 
-// Улучшения: цена растёт на 55% за уровень
-export const UPGRADES = [
-  { id: "claw", ru: "Когти", en: "Claws", desc: "+1 к силе клика", base: 25, effect: 1, kind: "click", icon: "🐾" },
-  { id: "suit", ru: "Костюм брокера", en: "Broker suit", desc: "+5 к силе клика", base: 400, effect: 5, kind: "click", icon: "🕴️" },
-  { id: "insight", ru: "Чутьё рынка", en: "Market sense", desc: "+2% шанс крита (×10)", base: 900, effect: 2, kind: "crit", icon: "👁️" },
-  { id: "terminal", ru: "Терминал", en: "Terminal", desc: "+2 акции/сек", base: 120, effect: 2, kind: "auto", icon: "🖥️" },
-  { id: "algo", ru: "Алго-бот", en: "Algo bot", desc: "+15 акций/сек", base: 1800, effect: 15, kind: "auto", icon: "🤖" },
-  { id: "hedge", ru: "Хедж-фонд", en: "Hedge fund", desc: "+90 акций/сек", base: 22000, effect: 90, kind: "auto", icon: "🏦" },
+// Улучшения: четыре ветки, цена растёт за уровень, часть открывается по
+// уровню игрока — чтобы прокачка ощущалась как путь, а не как один список.
+//   cat  — ветка магазина: click | income | luck | rhythm
+//   kind — какая механика усиливается
+//   req  — с какого уровня доступно, max — потолок уровней (если есть)
+//   grow — множитель цены за уровень
+export const UPGRADE_CATS = [
+  { id: "click", ru: "Клик", en: "Click", icon: "🖐" },
+  { id: "income", ru: "Доход", en: "Income", icon: "⚙️" },
+  { id: "luck", ru: "Удача", en: "Luck", icon: "🍀" },
+  { id: "rhythm", ru: "Ритм", en: "Rhythm", icon: "🎵" },
 ];
 
-// Комбо: за быстрые тапы множитель растёт до ×5
+export const UPGRADES = [
+  // — сила клика
+  { id: "claw", cat: "click", kind: "click", ru: "Когти", desc: "+1 к силе клика", base: 25, effect: 1, grow: 1.5, icon: "🐾", req: 1 },
+  { id: "suit", cat: "click", kind: "click", ru: "Костюм брокера", desc: "+5 к силе клика", base: 400, effect: 5, grow: 1.52, icon: "🕴️", req: 3 },
+  { id: "insider", cat: "click", kind: "click", ru: "Инсайд", desc: "+30 к силе клика", base: 7000, effect: 30, grow: 1.55, icon: "🤫", req: 9 },
+  { id: "maker", cat: "click", kind: "click", ru: "Маркет-мейкер", desc: "+150 к силе клика", base: 65000, effect: 150, grow: 1.58, icon: "🏛️", req: 18 },
+  // — пассивный доход
+  { id: "terminal", cat: "income", kind: "auto", ru: "Терминал", desc: "+2 акции/сек", base: 120, effect: 2, grow: 1.5, icon: "🖥️", req: 1 },
+  { id: "algo", cat: "income", kind: "auto", ru: "Алго-бот", desc: "+15 акций/сек", base: 1800, effect: 15, grow: 1.53, icon: "🤖", req: 5 },
+  { id: "hedge", cat: "income", kind: "auto", ru: "Хедж-фонд", desc: "+90 акций/сек", base: 22000, effect: 90, grow: 1.55, icon: "🏦", req: 12 },
+  { id: "darkpool", cat: "income", kind: "auto", ru: "Тёмный пул", desc: "+600 акций/сек", base: 280000, effect: 600, grow: 1.6, icon: "🌑", req: 24 },
+  { id: "night", cat: "income", kind: "offline", ru: "Ночная смена", desc: "+15% автодобычи офлайн", base: 9000, effect: 15, grow: 1.9, icon: "🌙", req: 7, max: 5 },
+  // — удача
+  { id: "insight", cat: "luck", kind: "crit", ru: "Чутьё рынка", desc: "+2% шанс крита", base: 900, effect: 2, grow: 1.6, icon: "👁️", req: 2, max: 20 },
+  { id: "leverage", cat: "luck", kind: "critmult", ru: "Плечо", desc: "+2 к множителю крита", base: 6000, effect: 2, grow: 1.85, icon: "⚡", req: 10, max: 10 },
+  { id: "luckycat", cat: "luck", kind: "golden", ru: "Кошачья удача", desc: "+0.3% шанс золотого кота", base: 4000, effect: 0.3, grow: 1.75, icon: "🍀", req: 6, max: 12 },
+  { id: "valerian", cat: "luck", kind: "goldendur", ru: "Валерьянка", desc: "+8 сек буста ×2", base: 11000, effect: 8, grow: 1.8, icon: "🌿", req: 11, max: 8 },
+  // — ритм и комбо
+  { id: "tempo", cat: "rhythm", kind: "combowin", ru: "Чувство ритма", desc: "+0.15 сек на комбо", base: 1600, effect: 0.15, grow: 1.7, icon: "🎵", req: 4, max: 6 },
+  { id: "streak", cat: "rhythm", kind: "combostep", ru: "Серия", desc: "−1 тап на ступень комбо", base: 14000, effect: 1, grow: 2.1, icon: "📈", req: 13, max: 3 },
+  { id: "frenzy", cat: "rhythm", kind: "combomax", ru: "Кошачий раж", desc: "+1 к пределу комбо", base: 26000, effect: 1, grow: 2.2, icon: "🔥", req: 16, max: 5 },
+];
+
+// Комбо: за быстрые тапы множитель растёт (пределы двигаются улучшениями)
 export const COMBO_WINDOW_MS = 900;   // пауза дольше — комбо сбрасывается
 export const COMBO_STEP = 6;          // каждые N тапов подряд +1 к множителю
 export const COMBO_MAX = 5;
 
 // Золотой кот: редкое событие, тап по нему даёт джекпот
-export const GOLDEN_CHANCE = 0.012;   // ~1.2% на тап
+export const GOLDEN_CHANCE = 0.012;   // ~1.2% на тап (базовый)
 export const GOLDEN_REWARD_SEC = 45;  // джекпот = 45 сек автодобычи (мин. 250)
+export const GOLDEN_BASE_MS = 20_000; // базовая длительность буста ×2
+export const OFFLINE_CAP_H = 8;       // офлайн-доход считается максимум за 8 часов
 
 // Уровень игрока по суммарно заработанному
 export function levelOf(totalEarned) {
@@ -115,7 +143,41 @@ function today() {
 }
 
 export function upgradeCost(u, level) {
-  return Math.round(u.base * Math.pow(1.55, level));
+  return Math.round(u.base * Math.pow(u.grow || 1.55, level));
+}
+
+/** Цена за n уровней подряд. */
+export function bulkCost(u, level, n) {
+  let sum = 0;
+  for (let i = 0; i < n; i++) sum += upgradeCost(u, level + i);
+  return sum;
+}
+
+/** Сколько уровней можно купить на текущий баланс (с учётом потолка). */
+export function affordable(s, u, cap = 100) {
+  const level = s.levels[u.id] || 0;
+  let n = 0, sum = 0;
+  const room = u.max ? u.max - level : Infinity;
+  while (n < cap && n < room) {
+    const next = sum + upgradeCost(u, level + n);
+    if (next > s.points) break;
+    sum = next; n += 1;
+  }
+  return { n, sum };
+}
+
+/** Открыто ли улучшение (по уровню игрока) и не упёрлось ли в потолок. */
+export function unlocked(s, u) {
+  return levelOf(s.totalEarned || 0) >= (u.req || 1);
+}
+export function maxed(s, u) {
+  return !!u.max && (s.levels[u.id] || 0) >= u.max;
+}
+
+/** Сумма эффектов улучшения данного типа. */
+function sumKind(s, kind) {
+  return UPGRADES.filter((u) => u.kind === kind)
+    .reduce((acc, u) => acc + (s.levels[u.id] || 0) * u.effect, 0);
 }
 
 export function load() {
@@ -145,25 +207,57 @@ export function reset() {
 
 /** Сила клика: база 1 + сумма эффектов click-улучшений. */
 export function perClick(s) {
-  return UPGRADES.filter((u) => u.kind === "click")
-    .reduce((acc, u) => acc + (s.levels[u.id] || 0) * u.effect, 1);
+  return 1 + sumKind(s, "click");
 }
 
 /** Автодобыча в секунду. */
 export function perSecond(s) {
-  return UPGRADES.filter((u) => u.kind === "auto")
-    .reduce((acc, u) => acc + (s.levels[u.id] || 0) * u.effect, 0);
+  return sumKind(s, "auto");
 }
 
-/** Шанс критического удара (×10) в процентах. */
+/** Шанс критического удара в процентах. */
 export function critChance(s) {
-  return Math.min(50, UPGRADES.filter((u) => u.kind === "crit")
-    .reduce((acc, u) => acc + (s.levels[u.id] || 0) * u.effect, 1));
+  return Math.min(50, 1 + sumKind(s, "crit"));
+}
+
+/** Множитель критического удара (базовый ×10, «Плечо» добавляет). */
+export function critMult(s) {
+  return 10 + sumKind(s, "critmult");
+}
+
+/** Шанс появления золотого кота на тап (доля, не проценты). */
+export function goldenChance(s) {
+  return Math.min(0.09, GOLDEN_CHANCE + sumKind(s, "golden") / 100);
+}
+
+/** Сколько держится буст ×2 после золотого кота, мс. */
+export function goldenDurMs(s) {
+  return GOLDEN_BASE_MS + sumKind(s, "goldendur") * 1000;
+}
+
+/** Окно комбо: сколько можно медлить между тапами, мс. */
+export function comboWindow(s) {
+  return COMBO_WINDOW_MS + Math.round(sumKind(s, "combowin") * 1000);
+}
+
+/** Сколько тапов нужно на следующую ступень комбо. */
+export function comboStep(s) {
+  return Math.max(2, COMBO_STEP - sumKind(s, "combostep"));
+}
+
+/** Потолок множителя комбо. */
+export function comboCap(s) {
+  return COMBO_MAX + sumKind(s, "combomax");
+}
+
+/** Доля автодобычи, которая капает офлайн (в процентах). */
+export function offlinePct(s) {
+  return Math.min(75, sumKind(s, "offline"));
 }
 
 /** Множитель комбо по текущей серии тапов. */
 export function comboMult(s) {
-  return Math.min(COMBO_MAX, 1 + Math.floor(s.combo / COMBO_STEP));
+  return Math.min(comboCap(s), 1 + Math.floor(s.combo / comboStep(s)));
 }
 
 /** Активен ли бонус ×2 после золотого кота. */
@@ -174,14 +268,14 @@ export function goldenActive(s) {
 /** Клик по коту. Возвращает состояние и что произошло (крит/золотой). */
 export function click(s) {
   const now = Date.now();
-  const keepCombo = now - (s.lastClickAt || 0) < COMBO_WINDOW_MS;
+  const keepCombo = now - (s.lastClickAt || 0) < comboWindow(s);
   const combo = keepCombo ? s.combo + 1 : 1;
-  const mult = Math.min(COMBO_MAX, 1 + Math.floor(combo / COMBO_STEP));
+  const mult = Math.min(comboCap(s), 1 + Math.floor(combo / comboStep(s)));
   const crit = Math.random() * 100 < critChance(s);
   const golden = goldenActive(s);
 
   let gain = perClick(s) * mult;
-  if (crit) gain *= 10;
+  if (crit) gain *= critMult(s);
   if (golden) gain *= 2;
   gain = Math.round(gain);
 
@@ -206,7 +300,7 @@ export function catchGolden(s) {
     points: s.points + jackpot,
     roundPoints: (s.roundPoints || 0) + jackpot,
     totalEarned: (s.totalEarned || 0) + jackpot,
-    goldenUntil: Date.now() + 20_000,
+    goldenUntil: Date.now() + goldenDurMs(s),
     goldenCaught: (s.goldenCaught || 0) + 1,
   });
   return { state: next, jackpot };
@@ -225,21 +319,46 @@ export function tick(s) {
     totalEarned: (s.totalEarned || 0) + gain,
     lastTick: now,
     // комбо остывает, если давно не тапали
-    combo: now - (s.lastClickAt || 0) > COMBO_WINDOW_MS ? 0 : s.combo,
+    combo: now - (s.lastClickAt || 0) > comboWindow(s) ? 0 : s.combo,
   });
 }
 
-/** Купить уровень улучшения. */
-export function buy(s, id) {
+/** Доход, накопившийся пока страница была закрыта.
+ *  Работает только с «Ночной сменой»: без неё офлайн ничего не даёт. */
+export function collectOffline(s) {
+  const pct = offlinePct(s);
+  const away = (Date.now() - (s.lastTick || Date.now())) / 1000;
+  if (pct <= 0 || away < 120) return { state: { ...s, lastTick: Date.now() }, gain: 0, away: 0 };
+  const capped = Math.min(away, OFFLINE_CAP_H * 3600);
+  const gain = Math.floor(perSecond(s) * capped * (pct / 100));
+  if (gain <= 0) return { state: { ...s, lastTick: Date.now() }, gain: 0, away: 0 };
+  return {
+    state: save({
+      ...s,
+      points: s.points + gain,
+      roundPoints: (s.roundPoints || 0) + gain,
+      totalEarned: (s.totalEarned || 0) + gain,
+      lastTick: Date.now(),
+    }),
+    gain,
+    away: Math.round(capped),
+  };
+}
+
+/** Купить n уровней улучшения (по умолчанию один). */
+export function buy(s, id, n = 1) {
   const u = UPGRADES.find((x) => x.id === id);
-  if (!u) return s;
+  if (!u || !unlocked(s, u)) return s;
   const level = s.levels[id] || 0;
-  const cost = upgradeCost(u, level);
+  const room = u.max ? u.max - level : Infinity;
+  const count = Math.min(n, room);
+  if (count <= 0) return s;
+  const cost = bulkCost(u, level, count);
   if (s.points < cost) return s;
   return save({
     ...s,
     points: s.points - cost,
-    levels: { ...s.levels, [id]: level + 1 },
+    levels: { ...s.levels, [id]: level + count },
   });
 }
 
