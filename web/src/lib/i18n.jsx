@@ -999,6 +999,23 @@ const EN = {
   "Мифический": "Mythic",
   "Редкость задаёт вес кота при каждом распределении: Обычный ×1, Редкий ×2, Эпический ×3, Мифический ×5, Легендарный ×8. Легендарный кот (шанс 1%) получает в 8 раз больше акций с каждого транша, чем Обычный.": "Rarity sets a cat weight in every distribution: Common ×1, Rare ×2, Epic ×3, Mythic ×5, Legendary ×8. A Legendary cat (1% chance) earns 8× more stocks per tranche than a Common one.",
   "Ещё": "More",
+  "Об игре": "About the game",
+  "Биржа котов": "Cat market",
+  "лотов на бирже": "cats listed",
+  "флор Обычных": "Common floor",
+  "флор Легендарных": "Legendary floor",
+  "комиссия биржи — в казну": "market fee to treasury",
+  "Все": "All",
+  "Дешевле": "Cheapest",
+  "Реже": "Rarest",
+  "Дивиденднее": "Most dividends",
+  "Кот": "Cat",
+  "дивидендов внутри": "dividends inside",
+  "Накопленные дивиденды уедут с котом к покупателю": "Accrued dividends travel with the cat to the buyer",
+  "продавец": "seller",
+  "Биржа откроется с деплоем контрактов — кот пока не продаётся.": "The market opens with the contract deploy — this cat is not for sale yet.",
+  "Демо-витрина. Контракт биржи готов (эскроу, 2% казне, дивиденды переезжают с котом) — включим с деплоем.": "Demo storefront. The market contract is ready (escrow, 2% to treasury, dividends travel with the cat) — goes live with the deploy.",
+  "Тикер: NVDA, AAPL…": "Ticker: NVDA, AAPL…",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

@@ -34,8 +34,118 @@ function CatArt({ color = "#7c88ff", size = 96 }) {
   );
 }
 
+// Демо-лоты биржи (детерминированно): id, тикер, редкость, цена, дивиденды на коте
+function demoListings() {
+  const syms = RWA_POPULAR;
+  let x = 42;
+  const rnd = () => ((x = (x * 9301 + 49297) % 233280) / 233280);
+  return Array.from({ length: 24 }, (_, i) => {
+    const r = rnd();
+    const tier = r < 0.55 ? 0 : r < 0.78 ? 1 : r < 0.9 ? 2 : r < 0.98 ? 3 : 4;
+    const base = [0.012, 0.035, 0.09, 0.28, 1.2][tier];
+    return {
+      id: 101 + i,
+      sym: syms[Math.floor(rnd() * syms.length)],
+      tier,
+      price: Math.round(base * (0.8 + rnd() * 0.6) * 1000) / 1000,
+      divs: Math.round([1, 2, 3, 5, 8][tier] * (2 + rnd() * 9) * 100) / 100,
+      seller: "0x" + Math.floor(rnd() * 0xffff).toString(16).padStart(4, "0") + "…" + Math.floor(rnd() * 0xffff).toString(16).padStart(4, "0"),
+    };
+  });
+}
+const DEMO_LOTS = demoListings();
+
+function Market({ t }) {
+  const [tier, setTier] = useState(-1); // -1 = все
+  const [q, setQ] = useState("");
+  const [sort, setSort] = useState("price_asc");
+  const [toast, setToast] = useState("");
+
+  const lots = useMemo(() => {
+    let out = DEMO_LOTS.filter((l) =>
+      (tier === -1 || l.tier === tier) && (!q || l.sym.includes(q))
+    );
+    const by = {
+      price_asc: (a, b) => a.price - b.price,
+      price_desc: (a, b) => b.price - a.price,
+      rarity: (a, b) => b.tier - a.tier,
+      divs: (a, b) => b.divs - a.divs,
+    }[sort];
+    return [...out].sort(by);
+  }, [tier, q, sort]);
+
+  const floor = (tr) => {
+    const arr = DEMO_LOTS.filter((l) => l.tier === tr);
+    return arr.length ? Math.min(...arr.map((l) => l.price)) : null;
+  };
+
+  return (
+    <>
+      {toast && <div className="rev-toast">{toast}</div>}
+      <div className="rev-stats" style={{ justifyContent: "flex-start", marginTop: 4 }}>
+        <div><b>{DEMO_LOTS.length}</b><span>{t("лотов на бирже")}</span></div>
+        <div><b>{floor(0)} ETH</b><span>{t("флор Обычных")}</span></div>
+        <div><b>{floor(4) ?? "—"} ETH</b><span>{t("флор Легендарных")}</span></div>
+        <div><b>2%</b><span>{t("комиссия биржи — в казну")}</span></div>
+      </div>
+
+      <div className="cm-filters">
+        <div className="quote-tabs" style={{ margin: 0, flexWrap: "wrap" }}>
+          <button type="button" className={`quote-tab qt-sm ${tier === -1 ? "on" : ""}`} onClick={() => setTier(-1)}>{t("Все")}</button>
+          {RARITIES.map((r, i) => (
+            <button type="button" key={r.key} className={`quote-tab qt-sm ${tier === i ? "on" : ""}`}
+                    style={tier === i ? { borderColor: r.color, color: r.color } : {}}
+                    onClick={() => setTier(i)}>{t(r.ru)}</button>
+          ))}
+        </div>
+        <input className="cm-search" value={q} onChange={(e) => setQ(e.target.value.toUpperCase())}
+               placeholder={t("Тикер: NVDA, AAPL…")} />
+        <div className="quote-tabs" style={{ margin: 0 }}>
+          <button type="button" className={`quote-tab qt-sm ${sort === "price_asc" ? "on" : ""}`} onClick={() => setSort("price_asc")}>{t("Дешевле")}</button>
+          <button type="button" className={`quote-tab qt-sm ${sort === "rarity" ? "on" : ""}`} onClick={() => setSort("rarity")}>{t("Реже")}</button>
+          <button type="button" className={`quote-tab qt-sm ${sort === "divs" ? "on" : ""}`} onClick={() => setSort("divs")}>{t("Дивиденднее")}</button>
+        </div>
+      </div>
+
+      <div className="cm-grid">
+        {lots.map((l) => {
+          const r = RARITIES[l.tier];
+          return (
+            <div className="cm-card" key={l.id} style={{ borderColor: r.color + "55" }}>
+              <div className="cm-card-head">
+                <CatArt color={r.color} size={64} />
+                <div>
+                  <b>{t("Кот")} #{l.id}</b>
+                  <span className="cm-tier" style={{ color: r.color }}>{t(r.ru)} ×{r.mult}</span>
+                </div>
+              </div>
+              <div className="cm-kv">
+                <span><img src={stockLogo(l.sym)} alt="" className="q-logo" onError={(e) => { e.currentTarget.style.display = "none"; }} />{l.sym}</span>
+                <span className="cm-divs" title={t("Накопленные дивиденды уедут с котом к покупателю")}>${l.divs} {t("дивидендов внутри")}</span>
+              </div>
+              <div className="cm-foot">
+                <b>{l.price} ETH</b>
+                <button className="btn btn-primary sm-btn"
+                        onClick={() => { setToast(t("Биржа откроется с деплоем контрактов — кот пока не продаётся.")); setTimeout(() => setToast(""), 2600); }}>
+                  {t("Купить")}
+                </button>
+              </div>
+              <div className="cm-seller">{t("продавец")}: {l.seller}</div>
+            </div>
+          );
+        })}
+        {lots.length === 0 && <div className="center dim" style={{ gridColumn: "1/-1", padding: 30 }}>{t("Ничего не найдено")}</div>}
+      </div>
+      <div className="hint" style={{ marginTop: 10 }}>
+        {t("Демо-витрина. Контракт биржи готов (эскроу, 2% казне, дивиденды переезжают с котом) — включим с деплоем.")}
+      </div>
+    </>
+  );
+}
+
 export default function Cats() {
   const { t } = useLang();
+  const [tab, setTab] = useState("about"); // about | market
   const [ranges, setRanges] = useState({ tier: 2, per: 12, months: 6 });
   const set = (k) => (e) => setRanges({ ...ranges, [k]: +e.target.value });
 
@@ -67,6 +177,14 @@ export default function Cats() {
         </div>
       </div>
 
+      <div className="quote-tabs" style={{ justifyContent: "center", margin: "10px 0 6px" }}>
+        <button type="button" className={`quote-tab ${tab === "about" ? "on" : ""}`} onClick={() => setTab("about")}>{t("Об игре")}</button>
+        <button type="button" className={`quote-tab ${tab === "market" ? "on" : ""}`} onClick={() => setTab("market")}>🏪 {t("Биржа котов")}</button>
+      </div>
+
+      {tab === "market" && <Market t={t} />}
+
+      {tab === "about" && (<>
       <h2 className="rev-h2">{t("Уровни редкости")}</h2>
       <div className="cats-tiers">
         {RARITIES.map((r) => (
@@ -132,6 +250,7 @@ export default function Cats() {
         <p className="rev-sub">{t("Ранние пользователи получат котов бесплатно. Подпишись на @hoodandarrow и следи за анонсом аирдропа.")}</p>
         <a className="btn btn-primary" style={{ marginTop: 14 }} href="https://x.com/hoodandarrow" target="_blank" rel="noreferrer">{t("Следить в X")}</a>
       </div>
+      </>)}
 
       <p className="rev-legal">
         {t("Коты и выплаты — в разработке; контракты готовы и протестированы, но не задеплоены. Дивиденды холдерам могут во многих юрисдикциях считаться ценной бумагой — секция запустится после юридической проверки.")}

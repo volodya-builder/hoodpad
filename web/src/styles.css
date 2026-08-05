@@ -2447,3 +2447,20 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 /* Дубли Аналитика/О нас — только в мобильном меню (на десктопе они в «Ещё») */
 .nav-pill-mob { display: none; }
 @media (max-width: 900px) { .nav-pill-mob { display: block; } }
+
+/* Биржа котов */
+.cm-filters { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 18px 0 14px; }
+.cm-search { max-width: 200px; }
+.cm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.cm-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 10px; transition: transform .15s; }
+.cm-card:hover { transform: translateY(-2px); }
+.cm-card-head { display: flex; gap: 12px; align-items: center; }
+.cm-card-head b { display: block; font-size: 14.5px; }
+.cm-tier { font-size: 12px; font-weight: 700; }
+.cm-kv { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; }
+.cm-kv span { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; }
+.cm-divs { color: var(--leaf); font-weight: 600 !important; font-size: 11.5px; }
+.cm-foot { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 10px; }
+.cm-foot b { font-size: 15px; }
+.sm-btn { padding: 7px 14px; font-size: 13px; }
+.cm-seller { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono, monospace); }
