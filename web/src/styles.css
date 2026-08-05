@@ -2494,3 +2494,21 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .rr-sub { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-dim); margin-top: 4px; }
 .roll-result .btn { margin-left: auto; }
 @media (max-width: 700px) { .box-hero { grid-template-columns: 1fr; } }
+
+/* Мои коты + рейтинг холдеров */
+.my-claim { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--card); border: 1px solid var(--border-gold); border-radius: var(--radius); padding: 16px 20px; margin: 16px 0; flex-wrap: wrap; }
+.my-claim b { font-size: 15px; }
+.hold-table { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.hold-head, .hold-row { display: grid; grid-template-columns: 44px 1.6fr 0.8fr 1fr 0.8fr 1fr; gap: 8px; align-items: center; padding: 11px 16px; font-size: 13px; }
+.hold-head { color: var(--text-dim); font-size: 11.5px; text-transform: uppercase; letter-spacing: .4px; border-bottom: 1px solid var(--border); }
+.hold-row { border-bottom: 1px solid var(--border); }
+.hold-row:last-child { border-bottom: none; }
+.hold-row:hover { background: var(--card-hover); }
+.hold-row.top .hold-rank { color: var(--gold); font-weight: 800; }
+.hold-rank { font-weight: 700; color: var(--text-dim); }
+.hold-addr { font-family: var(--font-mono, monospace); font-size: 12.5px; }
+@media (max-width: 700px) {
+  .hold-head, .hold-row { grid-template-columns: 32px 1.4fr 0.7fr 0.9fr; font-size: 12px; }
+  .hold-head span:nth-child(5), .hold-head span:nth-child(6),
+  .hold-row span:nth-child(5), .hold-row span:nth-child(6) { display: none; }
+}

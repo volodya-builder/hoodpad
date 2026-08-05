@@ -250,9 +250,140 @@ function Boxes({ t }) {
   );
 }
 
+// Мои коты: коллекция, накопленный доход, клейм
+const MY_DEMO = [
+  { id: 118, tier: 4, sym: "NVDA", divs: 42.8, since: "12д" },
+  { id: 207, tier: 3, sym: "TSLA", divs: 18.4, since: "9д" },
+  { id: 341, tier: 2, sym: "AAPL", divs: 9.1, since: "6д" },
+  { id: 502, tier: 1, sym: "COIN", divs: 4.3, since: "3д" },
+  { id: 655, tier: 0, sym: "SPY", divs: 1.7, since: "1д" },
+];
+
+function MyCats({ t }) {
+  const [claimed, setClaimed] = useState(false);
+  const [toast, setToast] = useState("");
+  const pending = useMemo(() => MY_DEMO.reduce((s, c) => s + c.divs, 0), []);
+  const weight = useMemo(() => MY_DEMO.reduce((s, c) => s + RARITIES[c.tier].mult, 0), []);
+  const monthly = Math.round(pending * 0.42 * 100) / 100;
+
+  return (
+    <>
+      {toast && <div className="rev-toast">{toast}</div>}
+      <div className="rev-stats" style={{ justifyContent: "flex-start", marginTop: 4 }}>
+        <div><b>{MY_DEMO.length}</b><span>{t("котов в коллекции")}</span></div>
+        <div><b>×{weight}</b><span>{t("суммарный вес выплат")}</span></div>
+        <div><b className="rev-gold">${pending.toFixed(2)}</b><span>{t("к клейму сейчас")}</span></div>
+        <div><b>${monthly}</b><span>{t("в среднем в месяц")}</span></div>
+      </div>
+
+      <div className="my-claim">
+        <div>
+          <b>{t("Доступно к выводу")}: <span className="rev-gold">${claimed ? "0.00" : pending.toFixed(2)}</span></b>
+          <div className="hint" style={{ marginTop: 4 }}>{t("Дивиденды приходят в токенизированных акциях (SPY, NVDA и др.)")}</div>
+        </div>
+        <button className="btn btn-primary" disabled={claimed}
+                onClick={() => { setClaimed(true); setToast(t("Клейм откроется с деплоем контрактов.")); setTimeout(() => setToast(""), 2600); }}>
+          {t("Забрать всё")}
+        </button>
+      </div>
+
+      <h2 className="rev-h2">{t("Мои коты")} <span className="rev-demo-tag">{t("демо")}</span></h2>
+      <div className="cm-grid">
+        {MY_DEMO.map((c) => {
+          const r = RARITIES[c.tier];
+          return (
+            <div className="cm-card" key={c.id} style={{ borderColor: r.color + "55" }}>
+              <div className="cm-card-head">
+                <TierArt tier={c.tier} size={64} />
+                <div>
+                  <b>{t("Кот")} #{c.id}</b>
+                  <span className="cm-tier" style={{ color: r.color }}>{t(r.ru)} ×{r.mult}</span>
+                </div>
+              </div>
+              <div className="cm-kv">
+                <span><img src={stockLogo(c.sym)} alt="" className="q-logo" onError={(e) => { e.currentTarget.style.display = "none"; }} />{c.sym}</span>
+                <span className="cm-divs">${c.divs} {t("накоплено")}</span>
+              </div>
+              <div className="cm-foot">
+                <span className="cm-seller">{t("в коллекции")} {c.since}</span>
+                <button className="btn sm-btn"
+                        onClick={() => { setToast(t("Продажа откроется с деплоем контрактов.")); setTimeout(() => setToast(""), 2600); }}>
+                  {t("Продать")}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="hint" style={{ marginTop: 10 }}>{t("Демо-коллекция. Подключим к кошельку после деплоя контрактов.")}</div>
+    </>
+  );
+}
+
+// Рейтинг холдеров
+function demoHolders() {
+  let x = 7;
+  const rnd = () => ((x = (x * 9301 + 49297) % 233280) / 233280);
+  const rows = Array.from({ length: 12 }, (_, i) => {
+    const cats = Math.max(1, Math.round(rnd() * 34) + (i < 3 ? 20 : 0));
+    const legend = Math.round(rnd() * (i < 3 ? 4 : 1));
+    const weight = Math.round(cats * (1.4 + rnd() * 1.6)) + legend * 8;
+    return {
+      addr: "0x" + Math.floor(rnd() * 0xffffff).toString(16).padStart(6, "0") + "…" + Math.floor(rnd() * 0xffff).toString(16).padStart(4, "0"),
+      cats, legend, weight,
+      earned: Math.round(weight * (3 + rnd() * 12) * 10) / 10,
+    };
+  });
+  return rows.sort((a, b) => b.weight - a.weight);
+}
+const HOLDERS = demoHolders();
+
+function Holders({ t }) {
+  const [sort, setSort] = useState("weight");
+  const rows = useMemo(() => {
+    const by = { weight: (a, b) => b.weight - a.weight, cats: (a, b) => b.cats - a.cats, earned: (a, b) => b.earned - a.earned }[sort];
+    return [...HOLDERS].sort(by);
+  }, [sort]);
+  const totalCats = HOLDERS.reduce((s, h) => s + h.cats, 0);
+
+  return (
+    <>
+      <div className="rev-stats" style={{ justifyContent: "flex-start", marginTop: 4 }}>
+        <div><b>{HOLDERS.length}</b><span>{t("холдеров")}</span></div>
+        <div><b>{totalCats}</b><span>{t("котов у холдеров")}</span></div>
+        <div><b>{HOLDERS.reduce((s, h) => s + h.legend, 0)}</b><span>{t("легендарных на руках")}</span></div>
+      </div>
+
+      <div className="quote-tabs" style={{ margin: "16px 0 12px" }}>
+        <button type="button" className={`quote-tab qt-sm ${sort === "weight" ? "on" : ""}`} onClick={() => setSort("weight")}>{t("По весу выплат")}</button>
+        <button type="button" className={`quote-tab qt-sm ${sort === "cats" ? "on" : ""}`} onClick={() => setSort("cats")}>{t("По числу котов")}</button>
+        <button type="button" className={`quote-tab qt-sm ${sort === "earned" ? "on" : ""}`} onClick={() => setSort("earned")}>{t("По заработку")}</button>
+      </div>
+
+      <div className="hold-table">
+        <div className="hold-head">
+          <span>#</span><span>{t("кошелёк")}</span><span>{t("котов")}</span>
+          <span>{t("легендарных")}</span><span>{t("вес")}</span><span>{t("заработано")}</span>
+        </div>
+        {rows.map((h, i) => (
+          <div className={`hold-row ${i < 3 ? "top" : ""}`} key={h.addr}>
+            <span className="hold-rank">{i + 1}</span>
+            <span className="hold-addr">{h.addr}</span>
+            <span><b>{h.cats}</b></span>
+            <span style={{ color: h.legend ? RARITIES[4].color : "var(--text-dim)" }}>{h.legend || "—"}</span>
+            <span>×{h.weight}</span>
+            <span className="rev-gold">${h.earned}</span>
+          </div>
+        ))}
+      </div>
+      <div className="hint" style={{ marginTop: 10 }}>{t("Демо-рейтинг. После деплоя строится по он-чейн владельцам NFT.")}</div>
+    </>
+  );
+}
+
 export default function Cats() {
   const { t } = useLang();
-  const [tab, setTab] = useState("about"); // about | boxes | market
+  const [tab, setTab] = useState("about"); // about | boxes | market | my | holders
   const [ranges, setRanges] = useState({ tier: 2, per: 12, months: 6 });
   const set = (k) => (e) => setRanges({ ...ranges, [k]: +e.target.value });
 
@@ -288,10 +419,14 @@ export default function Cats() {
         <button type="button" className={`quote-tab ${tab === "about" ? "on" : ""}`} onClick={() => setTab("about")}>{t("Об игре")}</button>
         <button type="button" className={`quote-tab ${tab === "boxes" ? "on" : ""}`} onClick={() => setTab("boxes")}>🎁 {t("Кейсы")}</button>
         <button type="button" className={`quote-tab ${tab === "market" ? "on" : ""}`} onClick={() => setTab("market")}>🏪 {t("Биржа котов")}</button>
+        <button type="button" className={`quote-tab ${tab === "my" ? "on" : ""}`} onClick={() => setTab("my")}>{t("Мои коты")}</button>
+        <button type="button" className={`quote-tab ${tab === "holders" ? "on" : ""}`} onClick={() => setTab("holders")}>🏆 {t("Рейтинг")}</button>
       </div>
 
       {tab === "boxes" && <Boxes t={t} />}
       {tab === "market" && <Market t={t} />}
+      {tab === "my" && <MyCats t={t} />}
+      {tab === "holders" && <Holders t={t} />}
 
       {tab === "about" && (<>
       <h2 className="rev-h2">{t("Уровни редкости")}</h2>
