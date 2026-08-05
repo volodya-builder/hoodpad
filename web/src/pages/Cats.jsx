@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useLang } from "../lib/i18n.jsx";
 import { RWA_POPULAR, stockLogo } from "../lib/rwa.js";
+import * as SB from "../lib/catstate.js";
 
 /** Коты-брокеры β — NFT-коты, привязанные к акциям, платят дивиденды из
  *  казны в токенизированных акциях; редкость даёт больший вес выплат.
@@ -67,14 +68,32 @@ function demoListings() {
 }
 const DEMO_LOTS = demoListings();
 
-function Market({ t }) {
+// «5м назад» / «2ч» / «3д» — короткий возраст кота
+function timeAgoShort(ts) {
+  const s = Math.max(1, Math.floor((Date.now() - ts) / 1000));
+  if (s < 60) return `${s}с`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}м`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}ч`;
+  return `${Math.floor(h / 24)}д`;
+}
+
+function Market({ t, sb, setSb }) {
   const [tier, setTier] = useState(-1); // -1 = все
   const [q, setQ] = useState("");
   const [sort, setSort] = useState("price_asc");
   const [toast, setToast] = useState("");
 
+  // мои лоты из песочницы идут первыми и помечены
+  const myLots = useMemo(() => (sb.enabled ? sb.cats.filter((c) => c.listed).map((c) => ({
+    id: c.id, sym: c.sym, tier: c.tier, price: c.price, divs: c.divs, seller: t("я"), mine: true,
+  })) : []), [sb, t]);
+
+  const ALL = useMemo(() => [...myLots, ...DEMO_LOTS], [myLots]);
+
   const lots = useMemo(() => {
-    let out = DEMO_LOTS.filter((l) =>
+    let out = ALL.filter((l) =>
       (tier === -1 || l.tier === tier) && (!q || l.sym.includes(q))
     );
     const by = {
@@ -84,10 +103,10 @@ function Market({ t }) {
       divs: (a, b) => b.divs - a.divs,
     }[sort];
     return [...out].sort(by);
-  }, [tier, q, sort]);
+  }, [tier, q, sort, ALL]);
 
   const floor = (tr) => {
-    const arr = DEMO_LOTS.filter((l) => l.tier === tr);
+    const arr = ALL.filter((l) => l.tier === tr);
     return arr.length ? Math.min(...arr.map((l) => l.price)) : null;
   };
 
@@ -95,7 +114,7 @@ function Market({ t }) {
     <>
       {toast && <div className="rev-toast">{toast}</div>}
       <div className="rev-stats" style={{ justifyContent: "flex-start", marginTop: 4 }}>
-        <div><b>{DEMO_LOTS.length}</b><span>{t("лотов на бирже")}</span></div>
+        <div><b>{ALL.length}</b><span>{t("лотов на бирже")}</span></div>
         <div><b>{floor(0)} ETH</b><span>{t("флор Обычных")}</span></div>
         <div><b>{floor(4) ?? "—"} ETH</b><span>{t("флор Легендарных")}</span></div>
         <div><b>2%</b><span>{t("комиссия биржи — в казну")}</span></div>
@@ -123,11 +142,11 @@ function Market({ t }) {
         {lots.map((l) => {
           const r = RARITIES[l.tier];
           return (
-            <div className="cm-card" key={l.id} style={{ borderColor: r.color + "55" }}>
+            <div className={`cm-card ${l.mine ? "cm-mine" : ""}`} key={(l.mine ? "my" : "d") + l.id} style={{ borderColor: r.color + "55" }}>
               <div className="cm-card-head">
                 <TierArt tier={l.tier} size={64} />
                 <div>
-                  <b>{t("Кот")} #{l.id}</b>
+                  <b>{t("Кот")} #{l.id} {l.mine && <span className="cm-mine-tag">{t("мой")}</span>}</b>
                   <span className="cm-tier" style={{ color: r.color }}>{t(r.ru)} ×{r.mult}</span>
                 </div>
               </div>
@@ -137,10 +156,17 @@ function Market({ t }) {
               </div>
               <div className="cm-foot">
                 <b>{l.price} ETH</b>
-                <button className="btn btn-primary sm-btn"
-                        onClick={() => { setToast(t("Биржа откроется с деплоем контрактов — кот пока не продаётся.")); setTimeout(() => setToast(""), 2600); }}>
-                  {t("Купить")}
-                </button>
+                {l.mine ? (
+                  <button className="btn sm-btn"
+                          onClick={() => { setSb(SB.unlistCat(sb, l.id)); setToast(t("Снято с продажи")); setTimeout(() => setToast(""), 2200); }}>
+                    {t("Снять")}
+                  </button>
+                ) : (
+                  <button className="btn btn-primary sm-btn"
+                          onClick={() => { setToast(t("Биржа откроется с деплоем контрактов — кот пока не продаётся.")); setTimeout(() => setToast(""), 2600); }}>
+                    {t("Купить")}
+                  </button>
+                )}
               </div>
               <div className="cm-seller">{t("продавец")}: {l.seller}</div>
             </div>
@@ -156,12 +182,11 @@ function Market({ t }) {
 }
 
 // Кейсы: рулетка открытия в стиле CS:GO
-function Boxes({ t }) {
+function Boxes({ t, sb, setSb }) {
   const [phase, setPhase] = useState("idle"); // idle | rolling | result
   const [result, setResult] = useState(null);
   const [strip, setStrip] = useState([]);
-  const [opened, setOpened] = useState(0);
-  const SOLD_DEMO = 1287; // демо-счётчик проданных боксов
+  const SOLD_DEMO = 1287; // демо-счётчик проданных боксов (когда песочница выключена)
 
   function rollRarity() {
     const r = Math.random() * 100;
@@ -170,22 +195,30 @@ function Boxes({ t }) {
 
   function openBox() {
     if (phase === "rolling") return;
-    const win = rollRarity();
-    // лента: 40 случайных котов, выигрыш — предпоследний (на него встанет маркер)
+    // в песочнице бокс реально тратится и кот попадает в коллекцию
+    let win, sym = null, catId = null;
+    if (sb.enabled) {
+      if (sb.myBoxes <= 0) return;
+      const { state, cat } = SB.openBox(sb, RWA_POPULAR);
+      setSb(state);
+      win = cat.tier; sym = cat.sym; catId = cat.id;
+    } else {
+      win = rollRarity();
+      sym = RWA_POPULAR[Math.floor(Math.random() * RWA_POPULAR.length)];
+    }
     const items = Array.from({ length: 40 }, () => rollRarity());
     items[36] = win;
     setStrip(items);
     setResult(null);
     setPhase("rolling");
     setTimeout(() => {
-      setResult({ tier: win, sym: RWA_POPULAR[Math.floor(Math.random() * RWA_POPULAR.length)] });
-      setOpened((n) => n + 1);
+      setResult({ tier: win, sym, id: catId });
       setPhase("result");
     }, 4200);
   }
 
-  const left = 10000 - SOLD_DEMO - opened;
-  const pct = ((SOLD_DEMO + opened) / 10000) * 100;
+  const left = sb.enabled ? sb.boxesLeft : 10000 - SOLD_DEMO;
+  const pct = ((10000 - left) / 10000) * 100;
 
   return (
     <>
@@ -211,11 +244,17 @@ function Boxes({ t }) {
             ))}
           </div>
           <div className="rev-cta" style={{ justifyContent: "flex-start", marginTop: 14 }}>
-            <button className="btn btn-primary" onClick={openBox} disabled={phase === "rolling"}>
-              {phase === "rolling" ? t("Открываем…") : `🎁 ${t("Открыть кейс")} · 0.02 ETH`}
+            <button className="btn btn-primary" onClick={openBox} disabled={phase === "rolling" || (sb.enabled && sb.myBoxes <= 0)}>
+              {phase === "rolling" ? t("Открываем…")
+                : sb.enabled ? `🎁 ${t("Открыть кейс")} · ${sb.myBoxes.toLocaleString("ru-RU")} ${t("шт. у меня")}`
+                : `🎁 ${t("Открыть кейс")} · 0.02 ETH`}
             </button>
           </div>
-          <div className="hint">{t("Демо-открытие: настоящие боксы включатся с деплоем. Рандом в контракте — commit-reveal: подкрутить результат не может ни игрок, ни валидатор.")}</div>
+          <div className="hint">
+            {sb.enabled
+              ? t("Тестовый режим: бокс списывается по-настоящему, кот попадает в «Мои коты» и на биржу.")
+              : t("Демо-открытие: настоящие боксы включатся с деплоем. Рандом в контракте — commit-reveal: подкрутить результат не может ни игрок, ни валидатор.")}
+          </div>
         </div>
       </div>
 
@@ -237,7 +276,7 @@ function Boxes({ t }) {
         <div className="roll-result" style={{ borderColor: RARITIES[result.tier].color }}>
           <TierArt tier={result.tier} size={96} />
           <div>
-            <b style={{ color: RARITIES[result.tier].color }}>{t(RARITIES[result.tier].ru)} {t("кот")}!</b>
+            <b style={{ color: RARITIES[result.tier].color }}>{t(RARITIES[result.tier].ru)} {t("кот")}{result.id ? ` #${result.id}` : ""}!</b>
             <div className="rr-sub">
               <img src={stockLogo(result.sym)} alt="" className="q-logo" onError={(e) => { e.currentTarget.style.display = "none"; }} />
               {result.sym} · {t("вес выплат")} ×{RARITIES[result.tier].mult}
@@ -340,13 +379,28 @@ function CatModal({ t, cat, onClose }) {
   );
 }
 
-function MyCats({ t }) {
+function MyCats({ t, sb, setSb }) {
   const [claimed, setClaimed] = useState(false);
   const [toast, setToast] = useState("");
   const [openCat, setOpenCat] = useState(null);
-  const pending = useMemo(() => MY_DEMO.reduce((s, c) => s + c.divs, 0), []);
-  const weight = useMemo(() => MY_DEMO.reduce((s, c) => s + RARITIES[c.tier].mult, 0), []);
+  const say = (m) => { setToast(m); setTimeout(() => setToast(""), 2600); };
+
+  // в песочнице показываем настоящую коллекцию, иначе демо
+  const live = sb.enabled;
+  const list = live
+    ? sb.cats.map((c) => ({ ...c, since: timeAgoShort(c.mintedAt) }))
+    : MY_DEMO;
+  const pending = useMemo(() => list.reduce((s, c) => s + c.divs, 0), [list]);
+  const weight = useMemo(() => list.reduce((s, c) => s + RARITIES[c.tier].mult, 0), [list]);
   const monthly = Math.round(pending * 0.42 * 100) / 100;
+
+  function doList(c) {
+    const raw = window.prompt(t("Цена в ETH:"), c.price || "0.05");
+    const price = parseFloat(String(raw).replace(",", "."));
+    if (!price || price <= 0) return;
+    setSb(SB.listCat(sb, c.id, price));
+    say(t("Кот #{id} выставлен на биржу").replace("{id}", c.id));
+  }
 
   return (
     <>
@@ -361,18 +415,30 @@ function MyCats({ t }) {
 
       <div className="my-claim">
         <div>
-          <b>{t("Доступно к выводу")}: <span className="rev-gold">${claimed ? "0.00" : pending.toFixed(2)}</span></b>
+          <b>{t("Доступно к выводу")}: <span className="rev-gold">${live ? pending.toFixed(2) : (claimed ? "0.00" : pending.toFixed(2))}</span></b>
           <div className="hint" style={{ marginTop: 4 }}>{t("Дивиденды приходят в токенизированных акциях (SPY, NVDA и др.)")}</div>
         </div>
-        <button className="btn btn-primary" disabled={claimed}
-                onClick={() => { setClaimed(true); setToast(t("Клейм откроется с деплоем контрактов.")); setTimeout(() => setToast(""), 2600); }}>
+        <button className="btn btn-primary" disabled={live ? pending <= 0 : claimed}
+                onClick={() => {
+                  if (live) {
+                    const { state, sum } = SB.claimAll(sb);
+                    setSb(state);
+                    say(t("Получено ${sum} в акциях").replace("{sum}", sum.toFixed(2)));
+                  } else {
+                    setClaimed(true);
+                    say(t("Клейм откроется с деплоем контрактов."));
+                  }
+                }}>
           {t("Забрать всё")}
         </button>
       </div>
 
-      <h2 className="rev-h2">{t("Мои коты")} <span className="rev-demo-tag">{t("демо")}</span></h2>
+      <h2 className="rev-h2">{t("Мои коты")} {!live && <span className="rev-demo-tag">{t("демо")}</span>}</h2>
+      {live && list.length === 0 && (
+        <div className="center dim" style={{ padding: 30 }}>{t("Пока пусто — открой кейс во вкладке «Кейсы».")}</div>
+      )}
       <div className="cm-grid">
-        {MY_DEMO.map((c) => {
+        {list.map((c) => {
           const r = RARITIES[c.tier];
           return (
             <div className="cm-card cm-card-click" key={c.id} style={{ borderColor: r.color + "55" }}
@@ -390,11 +456,21 @@ function MyCats({ t }) {
                 <span className="cm-divs">${c.divs} {t("накоплено")}</span>
               </div>
               <div className="cm-foot">
-                <span className="cm-seller">{t("выплаты")} →</span>
-                <button className="btn sm-btn"
-                        onClick={(e) => { e.stopPropagation(); setToast(t("Продажа откроется с деплоем контрактов.")); setTimeout(() => setToast(""), 2600); }}>
-                  {t("Продать")}
-                </button>
+                <span className="cm-seller">{c.listed ? `${t("на бирже")} · ${c.price} ETH` : `${t("выплаты")} →`}</span>
+                {live ? (
+                  c.listed ? (
+                    <button className="btn sm-btn" onClick={(e) => { e.stopPropagation(); setSb(SB.unlistCat(sb, c.id)); say(t("Снято с продажи")); }}>
+                      {t("Снять")}
+                    </button>
+                  ) : (
+                    <button className="btn sm-btn" onClick={(e) => { e.stopPropagation(); doList(c); }}>{t("Продать")}</button>
+                  )
+                ) : (
+                  <button className="btn sm-btn"
+                          onClick={(e) => { e.stopPropagation(); say(t("Продажа откроется с деплоем контрактов.")); }}>
+                    {t("Продать")}
+                  </button>
+                )}
               </div>
             </div>
           );
@@ -549,9 +625,65 @@ function Holders({ t }) {
   );
 }
 
+// ---------------------------------------------------------------- песочница
+// Тестовый режим: 10 000 боксов себе, реальные открытия, листинги и дивиденды.
+// Состояние живёт в localStorage — обкатываем весь цикл до деплоя контрактов.
+function SandboxPanel({ t, sb, setSb }) {
+  const [amount, setAmount] = useState(50);
+  const st = SB.stats(sb);
+
+  return (
+    <div className="sbx">
+      <div className="sbx-head">
+        <b>🧪 {t("Тестовый режим")}</b>
+        <span className="rev-demo-tag">{sb.enabled ? t("включён") : t("выключен")}</span>
+      </div>
+      {!sb.enabled ? (
+        <>
+          <p className="hint" style={{ margin: "0 0 10px" }}>
+            {t("Выдаст тебе все 10 000 боксов, чтобы обкатать цикл: открытие кейсов, коллекция, биржа, дивиденды. Состояние хранится только в этом браузере.")}
+          </p>
+          <button className="btn btn-primary" onClick={() => setSb(SB.enableSandbox(RWA_POPULAR))}>
+            {t("Выдать себе 10 000 боксов")}
+          </button>
+        </>
+      ) : (
+        <>
+          <div className="sbx-grid">
+            <div><b>{sb.myBoxes.toLocaleString("ru-RU")}</b><span>{t("боксов у меня")}</span></div>
+            <div><b>{sb.opened.toLocaleString("ru-RU")}</b><span>{t("открыто")}</span></div>
+            <div><b>{st.count}</b><span>{t("котов")}</span></div>
+            <div><b>×{st.weight}</b><span>{t("вес")}</span></div>
+            <div><b className="rev-gold">${st.divs}</b><span>{t("дивидендов")}</span></div>
+            <div><b>{st.listed}</b><span>{t("на бирже")}</span></div>
+          </div>
+          <div className="sbx-actions">
+            <div className="suffix-input" style={{ maxWidth: 180 }}>
+              <input value={amount} onChange={(e) => setAmount(+e.target.value || 0)} inputMode="decimal" />
+              <b>$</b>
+            </div>
+            <button className="btn" onClick={() => setSb(SB.distribute(sb, amount))} disabled={!st.count}>
+              {t("Раздать дивиденды из казны")}
+            </button>
+            <button className="btn btn-danger" onClick={() => setSb(SB.reset())}>{t("Сбросить песочницу")}</button>
+          </div>
+          {sb.log?.length > 0 && (
+            <div className="sbx-log">
+              {sb.log.slice(0, 6).map((l, i) => (
+                <div key={i}><span>{new Date(l.ts).toLocaleTimeString("ru-RU")}</span> {l.text}</div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function Cats() {
   const { t } = useLang();
   const [tab, setTab] = useState("about"); // about | boxes | market | my | holders
+  const [sb, setSb] = useState(() => SB.load());
   const [ranges, setRanges] = useState({ tier: 2, per: 12, months: 6 });
   const set = (k) => (e) => setRanges({ ...ranges, [k]: +e.target.value });
 
@@ -591,9 +723,11 @@ export default function Cats() {
         <button type="button" className={`quote-tab ${tab === "holders" ? "on" : ""}`} onClick={() => setTab("holders")}>🏆 {t("Рейтинг")}</button>
       </div>
 
-      {tab === "boxes" && <Boxes t={t} />}
-      {tab === "market" && <Market t={t} />}
-      {tab === "my" && <MyCats t={t} />}
+      <SandboxPanel t={t} sb={sb} setSb={setSb} />
+
+      {tab === "boxes" && <Boxes t={t} sb={sb} setSb={setSb} />}
+      {tab === "market" && <Market t={t} sb={sb} setSb={setSb} />}
+      {tab === "my" && <MyCats t={t} sb={sb} setSb={setSb} />}
       {tab === "holders" && <Holders t={t} />}
 
       {tab === "about" && (<>

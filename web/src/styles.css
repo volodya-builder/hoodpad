@@ -2553,3 +2553,16 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .hm-cat-sym { display: inline-flex; align-items: center; gap: 4px; color: var(--text-dim); }
 .hm-cat-sym .q-logo { width: 14px; height: 14px; }
 @media (max-width: 620px) { .hm-grid { grid-template-columns: 1fr; } }
+
+/* Панель тестового режима (песочница котов) */
+.sbx { border: 1px dashed var(--border-gold); border-radius: var(--radius); padding: 14px 16px; margin: 10px 0 18px; background: var(--gold-dim); }
+.sbx-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 14px; }
+.sbx-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.sbx-grid div { background: var(--card); border-radius: 9px; padding: 8px 10px; }
+.sbx-grid b { display: block; font-size: 16px; }
+.sbx-grid span { font-size: 10.5px; color: var(--text-dim); }
+.sbx-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.sbx-log { margin-top: 10px; font-size: 11.5px; color: var(--text-dim); font-family: var(--font-mono, monospace); display: flex; flex-direction: column; gap: 2px; }
+.sbx-log span { color: var(--gold); margin-right: 6px; }
+.cm-mine { box-shadow: 0 0 0 1px var(--gold) inset; }
+.cm-mine-tag { font-size: 10px; background: var(--gold-dim); color: var(--gold); border-radius: 99px; padding: 1px 7px; margin-left: 4px; vertical-align: middle; }
