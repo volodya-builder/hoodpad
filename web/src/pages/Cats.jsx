@@ -14,8 +14,8 @@ const RARITIES = [
   { key: "Common", ru: "Обычный", chance: 60, mult: 1, color: "#8b93a7" },
   { key: "Rare", ru: "Редкий", chance: 24, mult: 2, color: "#4aa3e0" },
   { key: "Epic", ru: "Эпический", chance: 10, mult: 3, color: "#a06bff" },
-  { key: "Mythic", ru: "Мифический", chance: 5, mult: 5, color: "#e0559a", img: "./cats/mythic-cut.png" },
-  { key: "Legendary", ru: "Легендарный", chance: 1, mult: 8, color: "#f5b544", img: "./cats/legendary-cut.png" },
+  { key: "Mythic", ru: "Мифический", chance: 5, mult: 5, color: "#e0559a", img: "./cats/mythic.webp" },
+  { key: "Legendary", ru: "Легендарный", chance: 1, mult: 8, color: "#f5b544", img: "./cats/legendary.webp" },
 ];
 
 // Арт уровня: фирменная картинка (мем-кот) для старших редкостей,
@@ -1202,12 +1202,12 @@ function Clicker({ t, sb, setSb }) {
           {/* кот — фоновая картинка, а не <img>: браузеры вешают на картинки
               свою панель «поиск по изображению», которая мешает тапать */}
           <div className={`ck-img ${bump ? "bump" : ""}`} role="img" aria-label="cat"
-               style={{ backgroundImage: "url(./cats/legendary-cut.png)" }} />
+               style={{ backgroundImage: "url(./cats/legendary.webp)" }} />
           <div className="ck-tap-hint">{t("Тапай кота")}</div>
 
           {golden && (
             <button className="ck-golden" style={{ left: `${golden.x}%`, top: `${golden.y}%` }} onClick={tapGolden}>
-              <i style={{ backgroundImage: "url(./cats/mythic-cut.png)" }} />
+              <i style={{ backgroundImage: "url(./cats/mythic.webp)" }} />
               <span>{t("Лови!")}</span>
             </button>
           )}
@@ -1282,7 +1282,7 @@ function Clicker({ t, sb, setSb }) {
               <div className="ck-winners">
                 {(g.winners || []).slice(0, 8).map((wn, i) => (
                   <div className={`ck-win ${wn.me ? "me" : ""}`} key={`${wn.round}-${wn.ts}-${i}`}>
-                    <img src="./cats/legendary-cut.png" alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                    <img src="./cats/legendary.webp" alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                     <span className="ck-win-addr">{wn.me ? t("ты") : wn.addr}</span>
                     <span className="ck-win-pts">{wn.points.toLocaleString("ru-RU")} {t("оч.")}</span>
                     <span className="ck-win-ts">{fmtTime(wn.ts)}</span>

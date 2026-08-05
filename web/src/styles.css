@@ -2672,7 +2672,7 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 }
 .ck-arena.boosted { box-shadow: 0 0 0 2px var(--gold) inset, 0 0 60px -20px var(--gold); }
 /* кот без подложки: вырезанный PNG прямо на фоне арены */
-.ck-img { width: 360px; height: 360px; background: center / contain no-repeat; transition: transform .08s ease;
+.ck-img { width: 400px; height: 430px; background: center / contain no-repeat; transition: transform .08s ease;
   user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   filter: drop-shadow(0 26px 30px #000a) drop-shadow(0 0 22px #7c88ff35); }
 .ck-img.bump { transform: scale(.93); }
@@ -2739,7 +2739,7 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 @media (max-width: 900px) {
   .ck-arena-wrap { grid-template-columns: 1fr; }
   .ck-arena { min-height: 380px; }
-  .ck-img { width: 230px; height: 230px; }
+  .ck-img { width: 240px; height: 260px; }
   .ck-shop-col { order: 3; }
   .ck-upg { width: 100%; }
 }
