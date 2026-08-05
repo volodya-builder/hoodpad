@@ -791,7 +791,8 @@ function Boxes({ t, sb, setSb }) {
         </div>
       )}
       <div className="box-grid">
-        {/* левая колонка: сам кейс и действия */}
+        {/* левая колонка: кейс, действия и шансы под ним */}
+        <div className="box-main">
         <div className="box-card">
           <div className="box-art">
             <div className="box-glow" />
@@ -836,9 +837,7 @@ function Boxes({ t, sb, setSb }) {
           </div>
         </div>
 
-        {/* правая колонка: шансы и лента открытий */}
-        <div className="box-side">
-          <div className="ck-card">
+          <div className="ck-card box-odds-card">
             <div className="ck-card-h">
               <span>{t("Что может выпасть")}</span>
               <span className="ck-round-tag">{t("шансы в контракте")}</span>
@@ -856,6 +855,10 @@ function Boxes({ t, sb, setSb }) {
             </div>
           </div>
 
+        </div>
+
+        {/* правая колонка: лента открытий */}
+        <div className="box-side">
           <div className="ck-card">
             <div className="ck-card-h">
               <span>{t("Последние открытия")}</span>
@@ -1917,24 +1920,13 @@ export default function Cats({ wallet }) {
 
   return (
     <div className="rev-page">
-      {/* Компактная шапка: суть в одну строку, живой статус вместо
-          юридического абзаца (полный текст — в инструкции и в подвале),
-          одно главное действие. Так игра попадает на первый экран. */}
-      <div className="cats-hero">
-        <div className="cats-hero-l">
-          <h1>{t("Коты-брокеры")} <span className="cats-hero-beta">β</span></h1>
-          <p className="cats-hero-sub">
-            {t("Тапай кота, лови NFT каждые полчаса, держи — и получай награды в токенизированных акциях.")}
-          </p>
-          <div className="cats-hero-cta">
-            <button className="btn btn-primary" onClick={() => goTab("clicker")}>{t("Играть")}</button>
-            <button className="btn" onClick={() => goTab("guide")}>{t("Как это работает")}</button>
-          </div>
-          <p className="cats-hero-note">
-            {t("Награды не гарантированы, зависят от комиссий платформы и могут прекратиться. Кот — коллекционный NFT, а не доля в платформе.")}
-          </p>
-        </div>
-
+      {/* Компактная шапка: только название и суть одной строкой. Кнопки
+          «Играть» и «Как это работает» убраны — они дублировали вкладки
+          «Кликер» и «Инструкция», а маркетинговый блок занимал весь первый
+          экран на каждой вкладке. Оговорки живут в инструкции и в подвале. */}
+      <div className="cats-head">
+        <h1>{t("Коты-брокеры")} <span className="cats-hero-beta">β</span></h1>
+        <p>{t("Тапай кота, лови NFT каждые полчаса, держи — и получай награды в токенизированных акциях.")}</p>
       </div>
 
       <div id="cats-tabs" className="quote-tabs" style={{ justifyContent: "center", margin: "10px 0 6px", flexWrap: "wrap" }}>

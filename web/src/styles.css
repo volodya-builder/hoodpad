@@ -3043,3 +3043,11 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .clk-rank-pos span { font-size: 10px; color: var(--text-dim); }
 .clk-rank-gap { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
 .clk-rank-gap b { color: var(--text); }
+
+/* компактный заголовок страницы котов вместо маркетингового блока */
+.cats-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin: 16px 0 10px; }
+.cats-head h1 { font-size: 26px; margin: 0; letter-spacing: -.01em; }
+.cats-head p { margin: 0; font-size: 13px; color: var(--text-dim); }
+.box-main { display: flex; flex-direction: column; gap: 12px; }
+.box-odds-card { margin: 0; }
+@media (max-width: 760px) { .cats-head p { flex-basis: 100%; } }
