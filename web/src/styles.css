@@ -2887,9 +2887,11 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 }
 .ck-bg-veil {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  /* фон-паттерн сам по себе тёмный и спокойный: сильная вуаль его бы съела.
+     Оставляем лёгкое свечение под котом и мягкую виньетку по краям. */
   background:
-    radial-gradient(ellipse 34% 48% at 50% 52%, #0b0e14c4 0%, #0b0e1478 45%, transparent 72%),
-    linear-gradient(to bottom, #0b0e1477, transparent 26%, transparent 74%, #0b0e14b0);
+    radial-gradient(ellipse 42% 52% at 50% 50%, #7c88ff14 0%, transparent 70%),
+    radial-gradient(ellipse 120% 100% at 50% 50%, transparent 45%, #0b0e1499 100%);
 }
 .ck-arena { background: var(--card); }
 /* накладка-ловушка: перехватывает наведение, чтобы браузер не видел под
