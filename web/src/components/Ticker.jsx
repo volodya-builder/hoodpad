@@ -7,7 +7,7 @@ import { useSupport } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 
 // Бегущая строка событий: арена, крупные сделки, новые токены, казна,
-// голосование, Гранд-Арена. Данные — из общих SWR-кэшей, лишних запросов нет.
+// Гранд-Арена. Данные — из общих SWR-кэшей, лишних запросов нет.
 export default function Ticker() {
   const { t } = useLang();
   const rate = useEthUsd();
@@ -48,11 +48,6 @@ export default function Ticker() {
 
   // казна
   items.push(<>🏦 {t("Накоплено на выкупы")}: <b>{D(support.totalEth || treasuryFromTrades(st))}</b></>);
-
-  // голосование: до конца недельного раунда
-  const EP = 7 * 86400;
-  const left = EP - (Math.floor(Date.now() / 1000) % EP);
-  items.push(<>🗳 {t("Голосование")}: {t("до выкупа")} <b>{Math.floor(left / 86400)}{t("д")} {Math.floor((left % 86400) / 3600)}{t("ч")}</b></>);
 
   // гранд-арена
   const ga = grandArena(st.tokens, st.trades);

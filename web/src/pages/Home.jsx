@@ -128,7 +128,7 @@ export default function Home({ onSearch }) {
       )}
       <a className="cushion-banner" href="#/treasury">
         🛡 {t("Казна вернула рынку")}: <b>{support.totalEth * rate >= 1000 ? usd(support.totalEth * rate) : "$" + (support.totalEth * rate).toFixed(2)}</b> <span className="dim">({fmtEth(support.totalEth)} ETH)</span>
-        {support.totalEth === 0 && <span className="dim"> · {t("копится с каждой сделки — первые выкупы после голосования")}</span>} →
+        {support.totalEth === 0 && <span className="dim"> · {t("копится с каждой сделки — выкупы начнутся, когда наберётся сумма")}</span>} →
       </a>
       {error && <div className="error">{error}</div>}
       {!tokens && !error && <div className="center">{t("Загружаю токены из блокчейна…")}</div>}
@@ -186,7 +186,7 @@ export default function Home({ onSearch }) {
           {sort === "fav" ? (
             t("Пока нет избранных — нажмите ☆ на карточке токена.")
           ) : sort === "cushion" ? (
-            t("Казна пока никого не выкупала — как пройдёт голосование, выкупленные токены появятся здесь.")
+            t("Казна пока никого не выкупала — выкупленные токены появятся здесь.")
           ) : (
             <>
               {t("Токенов пока нет — станьте первым.")}{" "}

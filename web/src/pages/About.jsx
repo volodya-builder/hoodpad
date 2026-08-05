@@ -77,23 +77,6 @@ export default function About() {
         </a>
       </div>
 
-      <h2 className="sec-h2" style={{ marginTop: 68 }}>{t("Голосование направляет казну")}</h2>
-      <div className="page-sub" style={{ margin: "7px 0 0", maxWidth: 680, lineHeight: 1.65 }}>
-        {t("Казна не принадлежит команде — куда пойдут выкупы, решают трейдеры. Раунд длится неделю, итоги и сами выкупы видны в блокчейне.")}
-      </div>
-      <div className="ana-grid" style={{ margin: "18px 0 8px", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-        {[
-          [t("Кто голосует"), t("Любой кошелёк, наторговавший на hood от $500 за всё время. Один кошелёк — один голос за раунд. Никаких токенов управления.")],
-          [t("Как побеждают"), t("Голос отдаётся за любой токен площадки. В конце недели токен с наибольшим числом голосов получает выкуп казны.")],
-          [t("Что делает казна"), t("Покупает токен-победитель прямо на кривой и сжигает купленное. Меньше предложение — крепче цена. Вывести ETH из казны нельзя даже владельцу.")],
-        ].map(([title, text], i) => (
-          <div className="ana-card" key={i}>
-            <div className="fact-title">{title}</div>
-            <div className="s" style={{ marginTop: 6, lineHeight: 1.55 }}>{text}</div>
-          </div>
-        ))}
-      </div>
-
       <h2 className="sec-h2" style={{ marginTop: 68 }}>⚔️ {t("Арена: каждый день — бой на выживание")}</h2>
       <div className="page-sub" style={{ margin: "7px 0 0", maxWidth: 680, lineHeight: 1.65 }}>
         {t("Все торгуемые токены автоматически участвуют в суточном турнире. Всё считается из он-чейн сделок — подкрутить невозможно.")}
@@ -118,7 +101,6 @@ export default function About() {
 
       <div className="cta-row">
         <a className="btn btn-primary" href="#/create">{t("Запустить токен")}</a>
-        <a className="btn" href="#/vote">{t("Смотреть голосование")}</a>
         <a className="btn" href="#/treasury">{t("Открыть казну")}</a>
       </div>
     </div>

@@ -181,7 +181,7 @@ export default function Arena() {
                   <div className="rl-fcard">
                     <div className="rl-fpct">20%</div>
                     <div className="rl-frate">🗳 {t("каждую неделю")}</div>
-                    <div className="rl-fname">{t("Победитель голосования")}</div>
+                    <div className="rl-fname">{t("Выкуплено казной")}</div>
                     <div className="rl-fdesc dim">{t("Голосуют кошельки с честным объёмом от $500 и торговлей в 2+ дня. Один кошелёк — один голос.")}</div>
                   </div>
                   <div className="rl-fcard">

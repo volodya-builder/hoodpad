@@ -181,9 +181,9 @@ export default function Treasury() {
                 <span className="dim" style={{ fontSize: 12 }}>{t("Раунд")} #{aiReport.epoch} · {timeAgo(aiReport.ts)}</span>
               </div>
               <div className="ait-body">
-                {t("Казна автономно выкупила победителя голосования и сожгла купленное:")}{" "}
+                {t("Казна автономно выкупила токен и сожгла купленное:")}{" "}
                 <b>${aiReport.sym || short(aiReport.winner)}</b> — {fmtEth(Number(aiReport.treasuryEth))} ETH,{" "}
-                {t("сила голоса")} {fmtEth(Number(aiReport.votePower))} ETH, {t("объём недели")} {fmtEth(aiReport.weekVolumeEth)} ETH.
+                {t("объём недели")} {fmtEth(aiReport.weekVolumeEth)} ETH.
                 {aiReport.tx && <> <a href={`${EXPLORER}/tx/${aiReport.tx}`} target="_blank" rel="noreferrer">{t("транзакция")} →</a></>}
               </div>
               <div className="dim" style={{ fontSize: 11, marginTop: 6 }}>

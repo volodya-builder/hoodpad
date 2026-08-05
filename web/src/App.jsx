@@ -8,7 +8,6 @@ import Arena from "./pages/Arena.jsx";
 import Trader from "./pages/Trader.jsx";
 import Ticker from "./components/Ticker.jsx";
 import Profile from "./pages/Profile.jsx";
-import Vote from "./pages/Vote.jsx";
 import About from "./pages/About.jsx";
 import Treasury from "./pages/Treasury.jsx";
 import Admin from "./pages/Admin.jsx";
@@ -310,7 +309,8 @@ export default function App() {
   } else if (route.startsWith("/trader/")) {
     page = <Trader address={route.split("/trader/")[1]} />;
   } else if (route === "/vote") {
-    page = <Vote wallet={wallet} onConnect={connect} />;
+    // голосование убрано из продукта: старые ссылки ведут в казну
+    page = <Treasury wallet={wallet} onConnect={connect} />;
   } else if (route === "/treasury") {
     page = <Treasury />;
   } else if (route === "/admin") {
@@ -347,12 +347,11 @@ export default function App() {
             </span>
           )}
           <div className={`nav-pills ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(false)}>
-            <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/leaderboard") && !route.startsWith("/profile") && !route.startsWith("/vote") && !route.startsWith("/treasury") && !route.startsWith("/about") && !route.startsWith("/arena") ? "on" : ""}`} href="#/">{t("Обзор")}</a>
+            <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/leaderboard") && !route.startsWith("/profile") && !route.startsWith("/treasury") && !route.startsWith("/about") && !route.startsWith("/arena") ? "on" : ""}`} href="#/">{t("Обзор")}</a>
             <a className={`nav-pill nav-hot ${route.startsWith("/arena") ? "on" : ""}`} href="#/arena">
               ⚔️ {t("Арена")} <span className="hot-flame">🔥</span>
             </a>
             <a className={`nav-pill ${route.startsWith("/cats") ? "on" : ""}`} href="#/cats">🐱 {t("Коты")} <span className="rev-nav-beta">β</span></a>
-            <a className={`nav-pill ${route.startsWith("/vote") ? "on" : ""}`} href="#/vote">{t("Голосование")}</a>
             <a className={`nav-pill ${route.startsWith("/treasury") ? "on" : ""}`} href="#/treasury">{t("Казна")}</a>
             <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>
             <a className={`nav-pill ${route.startsWith("/about") ? "on" : ""}`} href="#/about">{t("О нас")}</a>
@@ -458,7 +457,6 @@ export default function App() {
             <div className="fcol">
               <h4>{t("Продукт")}</h4>
               <a href="#/arena">⚔️ {t("Арена")} 🔥</a>
-              <a href="#/vote">{t("Голосование")}</a>
               <a href="#/treasury">{t("Казна")}</a>
               <a href="#/analytics">{t("Аналитика")}</a>
             </div>
