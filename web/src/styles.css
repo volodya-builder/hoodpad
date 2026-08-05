@@ -2638,7 +2638,9 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .ck-lvl-bar { flex: 1; height: 10px; background: #ffffff10; border-radius: 6px; overflow: hidden; }
 .ck-lvl-bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), #a5aeff); transition: width .3s; }
 /* три колонки: прокачка · арена · розыгрыш — всё на одном экране */
-.ck-arena-wrap { display: grid; grid-template-columns: 236px minmax(0, 1fr) 300px; gap: 12px; align-items: start; }
+/* блок кликера шире страницы: арене нужен простор под широкий фон */
+.ck-arena-wrap { display: grid; grid-template-columns: 222px minmax(0, 1fr) 296px; gap: 12px; align-items: start;
+  width: min(1560px, 94vw); margin-left: 50%; transform: translateX(-50%); }
 .ck-shop-col { display: flex; flex-direction: column; gap: 8px; }
 .ck-col-h { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; font-weight: 800; margin-bottom: 2px; }
 .ck-col-h .dim { font-size: 11px; font-weight: 600; }
@@ -2665,7 +2667,7 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
   .ck-upg { width: calc(50% - 4px); }
 }
 .ck-arena {
-  position: relative; min-height: 620px; border-radius: 20px; cursor: pointer; user-select: none; overflow: hidden;
+  position: relative; min-height: 580px; border-radius: 20px; cursor: pointer; user-select: none; overflow: hidden;
   background: radial-gradient(600px 320px at 50% 40%, #7c88ff14, transparent 70%), var(--card);
   border: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center;
   transition: box-shadow .3s;
@@ -2795,8 +2797,8 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .ck-bg-veil {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background:
-    radial-gradient(circle at 50% 48%, #0b0e14e8 0%, #0b0e14b0 34%, transparent 62%),
-    linear-gradient(to bottom, #0b0e1499, transparent 30%, transparent 72%, #0b0e14cc);
+    radial-gradient(ellipse 34% 48% at 50% 52%, #0b0e14c4 0%, #0b0e1478 45%, transparent 72%),
+    linear-gradient(to bottom, #0b0e1477, transparent 26%, transparent 74%, #0b0e14b0);
 }
 .ck-arena { background: var(--card); }
 .ck-arena > .ck-img, .ck-arena > .ck-tap-hint, .ck-arena > .ck-combo,
