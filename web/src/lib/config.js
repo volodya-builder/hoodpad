@@ -77,6 +77,22 @@ export const TEAM_ADDRESS =
   (import.meta.env.VITE_TEAM_ADDRESS ?? "0xD3d14c10020ad9C582404669a2Fa11AfF2386255").toLowerCase();
 export const isTeam = (addr) => !!addr && addr.toLowerCase() === TEAM_ADDRESS;
 
+// ——— Коты-брокеры (NFT + дивиденды акциями) ———
+// Пусто = контракты не задеплоены: вкладка живёт в демо/песочнице.
+// После деплоя (scripts/deploy-cats.js) достаточно вписать адреса сюда
+// или задать переменные окружения — фронт сам переключится на он-чейн.
+export const CATS_ADDRESS = import.meta.env.VITE_CATS_ADDRESS ?? "";
+export const CAT_VAULT_ADDRESS = import.meta.env.VITE_CAT_VAULT_ADDRESS ?? "";
+export const CAT_BOX_ADDRESS = import.meta.env.VITE_CAT_BOX_ADDRESS ?? "";
+export const CAT_MARKET_ADDRESS = import.meta.env.VITE_CAT_MARKET_ADDRESS ?? "";
+/** Игра работает на контрактах, а не в песочнице. */
+export const CATS_LIVE = Boolean(CATS_ADDRESS && CAT_BOX_ADDRESS);
+
+// ——— RWA-лончпад: запуск токенов за токенизированные акции ———
+// Пусто = форма запуска за акции сохраняет черновик вместо транзакции.
+export const QUOTE_FACTORY_ADDRESS = import.meta.env.VITE_QUOTE_FACTORY_ADDRESS ?? "";
+export const QUOTE_LIVE = Boolean(QUOTE_FACTORY_ADDRESS);
+
 // On-chain chat contract (messages are events; zero = not deployed yet)
 export const CHAT_ADDRESS =
   import.meta.env.VITE_CHAT_ADDRESS ?? "0xbaf4de9b8f35c384058d31e2730a3146c0d1af3c";

@@ -75,3 +75,61 @@ export const votePowerAbi = parseAbi([
   "function minPower() view returns (uint256)",
   "event Voted(address indexed trader, uint256 indexed epoch, address indexed token, uint256 power)",
 ]);
+
+// ——— Коты-брокеры ————————————————————————————————————————————————
+// Минимальный набор для фронта: чтение коллекции и рынка + действия игрока.
+// Полные ABI лежат в artifacts/ после компиляции контрактов.
+
+export const catsAbi = parseAbi([
+  "function balanceOf(address owner) view returns (uint256)",
+  "function ownerOf(uint256 id) view returns (address)",
+  "function totalMinted() view returns (uint256)",
+  "function MAX_SUPPLY() view returns (uint256)",
+  "function catInfo(uint256 id) view returns (string ticker, address feed, uint8 rarity, uint8 multiplier)",
+  "function rarityMultiplier(uint8 rarity) pure returns (uint8)",
+  "function rosterCount() view returns (uint256)",
+  "function tokenURI(uint256 id) view returns (string)",
+  "function approve(address to, uint256 id)",
+  "function getApproved(uint256 id) view returns (address)",
+  "function transferFrom(address from, address to, uint256 id)",
+  "event CatMinted(address indexed to, uint256 indexed id, uint16 rosterId, uint8 rarity, bool free)",
+  "event Transfer(address indexed from, address indexed to, uint256 indexed id)",
+]);
+
+export const catBoxAbi = parseAbi([
+  "function boxPrice() view returns (uint256)",
+  "function sold() view returns (uint256)",
+  "function opened() view returns (uint256)",
+  "function boxesLeft() view returns (uint256)",
+  "function boxesOf(address owner) view returns (uint256[])",
+  "function openable(uint256 boxId) view returns (bool ready, bool expired)",
+  "function buy() payable",
+  "function open(uint256 boxId)",
+  "function recommit(uint256 boxId)",
+  "event BoxBought(address indexed buyer, uint256 indexed boxId, uint256 commitBlock)",
+  "event BoxOpened(address indexed owner, uint256 indexed boxId, uint256 indexed catId, uint8 rarity)",
+]);
+
+export const catVaultAbi = parseAbi([
+  "function weightOf(uint256 catId) view returns (uint256)",
+  "function totalWeight() view returns (uint256)",
+  "function pendingOf(uint256 catId, address token) view returns (uint256)",
+  "function pendingAll(uint256 catId) view returns (address[] tokens, uint256[] amounts)",
+  "function payoutTokens(uint256 index) view returns (address)",
+  "function payoutTokensCount() view returns (uint256)",
+  "function claim(uint256 catId, address to)",
+  "event Funded(address indexed token, uint256 amount, uint256 totalWeight)",
+  "event Claimed(uint256 indexed catId, address indexed token, address to, uint256 amount)",
+]);
+
+export const catMarketAbi = parseAbi([
+  "function FEE_BPS() view returns (uint16)",
+  "function listedCount() view returns (uint256)",
+  "function listings(uint256 offset, uint256 limit) view returns (uint256[] ids, address[] sellers, uint256[] prices, uint8[] rarities)",
+  "function listingOf(uint256 catId) view returns (address seller, uint96 price)",
+  "function list(uint256 catId, uint256 price)",
+  "function cancel(uint256 catId)",
+  "function buy(uint256 catId) payable",
+  "event Listed(uint256 indexed catId, address indexed seller, uint256 price)",
+  "event Bought(uint256 indexed catId, address indexed buyer, address indexed seller, uint256 price, uint256 fee)",
+]);

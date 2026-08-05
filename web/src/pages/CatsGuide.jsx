@@ -42,8 +42,8 @@ export default function CatsGuide({ lang, rarities, onTab, t: tr }) {
      T("Сейчас — да, прогресс лежит в браузере, это бета. До запуска раздачи очки раунда переедут на сервер и в контракт, иначе боты выметут всех котов. Пока розыгрыш работает как демонстрация механики.",
        "Right now — yes, progress lives in your browser, this is a beta. Before the giveaway goes live, round points move to the server and on-chain, otherwise bots would sweep every cat. For now the raffle demonstrates the mechanic.")],
     [T("Сколько всего будет котов?", "How many cats will there be?"),
-     T("Максимум 3000. Из них 10 000 кейсов не сделать — кейсов ровно 10 000 на весь срок жизни игры, и когда они закончатся, новых не будет: коты появятся только на вторичном рынке.",
-       "3000 at most. There are exactly 10,000 cases for the entire lifetime of the game, and once they are gone there will be no more: cats will only be available on the secondary market.")],
+     T("Ровно 10 500 и ни одним больше: 10 000 приходят из кейсов и 500 отведено на бесплатную раздачу первым пользователям. Оба лимита зашиты в контракт константами — поднять их не может даже владелец. Когда кейсы закончатся, новых котов не будет: только вторичный рынок.",
+       "Exactly 10,500 and not one more: 10,000 come from cases and 500 are reserved for the free giveaway to early users. Both limits are hardcoded constants in the contract — not even the owner can raise them. Once the cases run out there will be no new cats: secondary market only.")],
   ];
 
   return (

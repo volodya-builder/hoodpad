@@ -13,6 +13,10 @@ interface ICatVaultHook {
     function register(uint256 id) external;
 }
 
+interface ICatRenderer {
+    function tokenURI(uint256 id, string calldata ticker, uint8 rarity) external view returns (string memory);
+}
+
 /// @title BrokerCats — NFT-коты, привязанные к реальным акциям
 /// @notice Фэнтези-спорт на токенизированных акциях Robinhood Chain:
 ///         минт кота случайно назначает тикер (из ростера) и редкость-множитель.
@@ -53,7 +57,11 @@ contract BrokerCats is Ownable {
         uint8 rarity;    // 0 Common ×1 · 1 Rare ×2 · 2 Epic ×3 · 3 Mythic ×5 · 4 Legendary ×8
     }
 
-    uint256 public constant MAX_SUPPLY = 3000;
+    /// @notice Потолок коллекции = 10 000 кейсов (CatBox.MAX_BOXES) + 500 на
+    ///         бесплатную раздачу. Считается от кейсов, иначе последние
+    ///         купленные боксы не смогли бы открыться: минт упал бы на
+    ///         «sold out», а деньги за бокс уже были бы списаны.
+    uint256 public constant MAX_SUPPLY = 10_500;
     /// @notice Лимит бесплатной раздачи первым пользователям (аирдроп).
     uint256 public constant AIRDROP_CAP = 500;
     uint256 public immutable mintPrice;
@@ -67,6 +75,11 @@ contract BrokerCats is Ownable {
     ///         кота с заранее выпавшей редкостью. Ставится один раз.
     address public box;
 
+    /// @notice Он-чейн рендерер метаданных (CatRenderer). Ноль = метаданные
+    ///         берутся по baseURI. Меняется владельцем: картинку можно
+    ///         улучшить, не трогая сам NFT-контракт и владение котами.
+    address public renderer;
+
     Roster[] public roster;
     mapping(uint256 => Cat) public catOf;
     uint256 public totalMinted;
@@ -77,6 +90,7 @@ contract BrokerCats is Ownable {
     event RosterAdded(uint16 indexed id, string ticker, address feed);
     event VaultSet(address vault);
     event BoxSet(address box);
+    event RendererSet(address renderer);
 
     constructor(uint256 mintPrice_, address proceeds_, string memory baseURI_) Ownable(msg.sender) {
         require(proceeds_ != address(0), "zero proceeds");
@@ -96,6 +110,14 @@ contract BrokerCats is Ownable {
 
     function setBaseURI(string calldata uri) external onlyOwner {
         baseURI = uri;
+    }
+
+    /// @notice Привязать он-чейн рендерер метаданных. В отличие от vault и
+    ///         box, меняется свободно: это только картинка, на владение и
+    ///         дивиденды он не влияет. Ноль возвращает работу через baseURI.
+    function setRenderer(address renderer_) external onlyOwner {
+        renderer = renderer_;
+        emit RendererSet(renderer_);
     }
 
     /// @notice Однократно привязать хранилище дивидендов.
@@ -120,9 +142,13 @@ contract BrokerCats is Ownable {
 
     // ------------------------------------------------------------- mint
 
-    /// @notice Минт: фикс-цена, случайный тикер и редкость. Выручка сразу
-    ///         уходит в proceeds — на контракте деньги не лежат.
+    /// @notice Прямой минт: фикс-цена, случайный тикер и редкость. Выручка
+    ///         сразу уходит в proceeds — на контракте деньги не лежат.
+    /// @dev    Как только привязан бокс, прямой минт закрывается: иначе он
+    ///         съедал бы supply, зарезервированный под уже проданные кейсы,
+    ///         и часть боксов не смогла бы открыться.
     function mint() external payable returns (uint256 id) {
+        require(box == address(0), "use box");
         require(msg.value == mintPrice, "wrong price");
         id = _mintCat(msg.sender, false);
         (bool ok, ) = proceeds.call{value: msg.value}("");
@@ -251,8 +277,15 @@ contract BrokerCats is Ownable {
         _checkReceiver(from, to, tokenId, data);
     }
 
+    /// @notice Метаданные кота. Если привязан рендерер — картинка и JSON
+    ///         собираются прямо в блокчейне из редкости и тикера. Иначе
+    ///         работает обычный baseURI + id (запасной путь).
     function tokenURI(uint256 tokenId) external view returns (string memory) {
         require(_ownerOf[tokenId] != address(0), "no token");
+        if (renderer != address(0)) {
+            Cat memory c = catOf[tokenId];
+            return ICatRenderer(renderer).tokenURI(tokenId, roster[c.rosterId].ticker, c.rarity);
+        }
         return string(abi.encodePacked(baseURI, _toString(tokenId)));
     }
 
