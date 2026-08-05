@@ -915,6 +915,12 @@ const EN = {
   "Дивиденды": "Dividends",
   "Ликвидность": "Liquidity",
   "Не распределено": "Unallocated",
+  "Валюта курвы": "Curve currency",
+  "Крипта": "Crypto",
+  "Акции (RWA)": "Stocks (RWA)",
+  "Поиск тикера: NVDA, AAPL, TSLA…": "Search ticker: NVDA, AAPL, TSLA…",
+  "Токен будет торговаться за акцию Robinhood (канонические Stock Tokens, {n} шт.). Запуск с RWA-валютой откроется с деплоем ERC20-пула курвы — выбор сохранится в черновике.": "Your token will trade against a Robinhood stock (canonical Stock Tokens, {n} listed). RWA-quoted launches open with the ERC20 curve pool deploy — your pick is saved as a draft.",
+  "Запуск с валютой-акцией откроется с деплоем ERC20-пула курвы. Черновик с выбором {sym} сохранён.": "Stock-quoted launches open with the ERC20 curve pool deploy. Draft with {sym} saved.",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

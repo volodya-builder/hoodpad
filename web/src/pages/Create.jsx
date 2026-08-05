@@ -5,6 +5,7 @@ import { factoryAbi } from "../lib/abi.js";
 import { FACTORY_ADDRESS } from "../lib/config.js";
 import { useSplit, injectNewToken } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
+import { RWA_TOKENS, RWA_POPULAR } from "../lib/rwa.js";
 
 // Max developer buy: 5% of supply bought at launch.
 // gross ETH = (VIRT * s / (TOTAL - s)) / (1 - fee), s = 50M, VIRT = 1.625
@@ -80,6 +81,11 @@ export default function Create({ wallet, onConnect }) {
   // Тип токена: standard (работает сейчас) | tax (β — конфиг сохраняется черновиком
   // до деплоя tax-контрактов v3; UI полный, чтобы собирать спрос и параметры)
   const [ttype, setTtype] = useState("standard");
+  // Валюта курвы: ETH (работает сейчас) | RWA — токенизированная акция Robinhood
+  // (канонический реестр в lib/rwa.js; запуск откроется с ERC20-quote пулом)
+  const [quoteTab, setQuoteTab] = useState("crypto");
+  const [quote, setQuote] = useState("ETH"); // "ETH" | символ акции
+  const [rwaSearch, setRwaSearch] = useState("");
   const [tax, setTax] = useState({ buy: 3, sell: 3, mkt: 40, burn: 20, div: 30, lp: 10, minShare: 0, divToken: "self" });
   const taxTotal = tax.mkt + tax.burn + tax.div + tax.lp;
   const ALLOC_KEYS = ["mkt", "burn", "div", "lp"];
@@ -123,6 +129,10 @@ export default function Create({ wallet, onConnect }) {
   async function submit(e) {
     e.preventDefault();
     setError("");
+    if (quote !== "ETH") {
+      try { localStorage.setItem("hood_rwa_draft", JSON.stringify({ form, quote, savedAt: Date.now() })); } catch (e) { /* ignore */ }
+      return setError(t("Запуск с валютой-акцией откроется с деплоем ERC20-пула курвы. Черновик с выбором {sym} сохранён.").replace("{sym}", quote));
+    }
     if (ttype === "tax") {
       if (taxTotal !== 100) return setError(t("Аллокация налога должна давать ровно 100%."));
       try { localStorage.setItem("hood_tax_draft", JSON.stringify({ form, tax, savedAt: Date.now() })); } catch (e) { /* ignore */ }
@@ -214,6 +224,36 @@ export default function Create({ wallet, onConnect }) {
             <span>{t("налог с трейдов: кошелёк, сжигание, дивиденды, ликвидность")}</span>
           </div>
         </div>
+
+        <label>{t("Валюта курвы")}</label>
+        <div className="quote-tabs">
+          <button type="button" className={`quote-tab ${quoteTab === "crypto" ? "on" : ""}`}
+                  onClick={() => { setQuoteTab("crypto"); setQuote("ETH"); }}>{t("Крипта")}</button>
+          <button type="button" className={`quote-tab ${quoteTab === "rwa" ? "on" : ""}`}
+                  onClick={() => setQuoteTab("rwa")}>📈 {t("Акции (RWA)")} <em className="ttype-beta">β</em></button>
+        </div>
+        {quoteTab === "crypto" ? (
+          <div className="quote-grid">
+            <button type="button" className={`quote-chip ${quote === "ETH" ? "on" : ""}`} onClick={() => setQuote("ETH")}>ETH</button>
+          </div>
+        ) : (
+          <>
+            <input className="quote-search" value={rwaSearch} onChange={(e) => setRwaSearch(e.target.value.toUpperCase())}
+                   placeholder={t("Поиск тикера: NVDA, AAPL, TSLA…")} />
+            <div className="quote-grid">
+              {(rwaSearch
+                ? RWA_TOKENS.filter((x) => x.sym.includes(rwaSearch)).slice(0, 18)
+                : RWA_TOKENS.filter((x) => RWA_POPULAR.includes(x.sym))
+              ).map((x) => (
+                <button type="button" key={x.sym} className={`quote-chip ${quote === x.sym ? "on" : ""}`}
+                        onClick={() => setQuote(x.sym)} title={x.addr}>{x.sym}</button>
+              ))}
+            </div>
+            <div className="hint">
+              {t("Токен будет торговаться за акцию Robinhood (канонические Stock Tokens, {n} шт.). Запуск с RWA-валютой откроется с деплоем ERC20-пула курвы — выбор сохранится в черновике.").replace("{n}", String(RWA_TOKENS.length))}
+            </div>
+          </>
+        )}
 
         <div className="field-row">
           <div>
@@ -420,6 +460,7 @@ export default function Create({ wallet, onConnect }) {
         <div className="preview-stats">
           <div className="row"><span className="k">{t("Комиссия запуска")}</span><span className="v green">0 ETH</span></div>
           <div className="row"><span className="k">{t("Вам с каждого трейда")}</span><span className="v green">{t("{pct}% комиссии").replace("{pct}", split.creator)}</span></div>
+          <div className="row"><span className="k">{t("Валюта курвы")}</span><span className="v">{quote === "ETH" ? "ETH" : `📈 ${quote}`}</span></div>
           <div className="row"><span className="k">{t("Градация")}</span><span className="v">6.5 ETH</span></div>
           <div className="row"><span className="k">{t("Ликвидность")}</span><span className="v">{t("Заперта навсегда")}</span></div>
           {buyValue > 0 && (

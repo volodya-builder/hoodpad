@@ -2359,3 +2359,13 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .tax-legend i { width: 9px; height: 9px; border-radius: 2px; flex: none; }
 .tax-legend .bad { color: var(--red); }
 @media (max-width: 700px) { .tax-alloc-wrap { grid-template-columns: 1fr; } .tax-donut-col { flex-direction: row; } .tax-donut { flex: none; } }
+
+/* Валюта курвы: вкладки Крипта/RWA и чипы тикеров */
+.quote-tabs { display: flex; gap: 8px; margin: 6px 0 10px; }
+.quote-tab { background: var(--card); border: 1px solid var(--border); border-radius: 99px; color: var(--text-dim); padding: 7px 16px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.quote-tab.on { border-color: var(--gold); color: var(--text); background: var(--gold-dim); }
+.quote-search { margin-bottom: 8px; }
+.quote-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+.quote-chip { background: var(--card); border: 1px solid var(--border); border-radius: 10px; color: var(--text); padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.quote-chip:hover { border-color: var(--border-gold); }
+.quote-chip.on { border-color: var(--gold); background: var(--gold-dim); }
