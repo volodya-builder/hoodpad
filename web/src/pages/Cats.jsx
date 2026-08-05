@@ -455,11 +455,11 @@ function Market({ t, sb, setSb }) {
   return (
     <>
       {toast && <div className="rev-toast">{toast}</div>}
-      <div className="rev-stats" style={{ justifyContent: "flex-start", marginTop: 4 }}>
+      <div className="cm-kpis">
         <div><b>{ALL.length}</b><span>{t("лотов на бирже")}</span></div>
         <div><b>{floor(0) ?? "—"} ETH</b><span>{t("флор Обычных")}</span></div>
         <div><b>{floor(4) ?? "—"} ETH</b><span>{t("флор Легендарных")}</span></div>
-        <div><b>2%</b><span>{t("комиссия биржи — в казну")}</span></div>
+        <div><b>2%</b><span>{t("комиссия — в казну")}</span></div>
         {sb.enabled && <div><b className="rev-gold">{(sb.balance || 0)} ETH</b><span>{t("тестовый баланс")}</span></div>}
         {sb.enabled && <div><b>{(sb.trades || []).length}</b><span>{t("сделок")}</span></div>}
       </div>
@@ -479,69 +479,9 @@ function Market({ t, sb, setSb }) {
         </div>
       </div>
 
-      {/* Мои коты прямо на бирже — быстро выставить */}
-      {sb.enabled && (
-        <div className="mm-block">
-          <div className="mm-head">
-            <b>{t("Мои коты")} <span className="dim">({myIdle.length} {t("свободно")})</span></b>
-          </div>
-          {myIdle.length === 0 ? (
-            <div className="dim" style={{ fontSize: 13 }}>
-              {sb.cats.length === 0
-                ? t("Пока пусто — открой кейс во вкладке «Кейсы».")
-                : t("Все коты уже выставлены на бирже.")}
-            </div>
-          ) : (
-            <div className="mm-list">
-              {myIdle.map((c) => {
-                const r = RARITIES[c.tier];
-                return (
-                  <div className="mm-row" key={c.id}>
-                    <TierArt tier={c.tier} size={38} />
-                    <span className="mm-id">#{c.id}</span>
-                    <span className="mm-tier" style={{ color: r.color }}>{t(r.ru)} ×{r.mult}</span>
-                    <span className="mm-sym">
-                      <img src={stockLogo(c.sym)} alt="" className="q-logo" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-                      {c.sym}
-                    </span>
-                    <span className="mm-divs">${c.divs}</span>
-                    <button className="btn btn-primary sm-btn" onClick={() => quickList(c)}>{t("Выставить")}</button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* проданные коты: можно выкупить обратно и проверить покупку */}
-      {sb.enabled && (sb.sold || []).length > 0 && (
-        <div className="mm-block">
-          <div className="mm-head">
-            <b>{t("Продано")} <span className="dim">({sb.sold.length})</span></b>
-            <span className="dim" style={{ fontSize: 12 }}>{t("выкупи обратно — сделка тоже попадёт в график")}</span>
-          </div>
-          <div className="mm-list">
-            {sb.sold.map((c) => {
-              const r = RARITIES[c.tier];
-              return (
-                <div className="mm-row" key={c.id}>
-                  <TierArt tier={c.tier} size={38} />
-                  <span className="mm-id">#{c.id}</span>
-                  <span className="mm-tier" style={{ color: r.color }}>{t(r.ru)} ×{r.mult}</span>
-                  <span className="mm-sym">
-                    <img src={stockLogo(c.sym)} alt="" className="q-logo" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-                    {c.sym}
-                  </span>
-                  <span className="mm-divs">{c.soldPrice} ETH</span>
-                  <button className="btn btn-primary sm-btn" onClick={() => doBuyBack(c)}>{t("Выкупить")}</button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
+      {/* витрина лотов слева, свой инвентарь — в боковой колонке */}
+      <div className="cm-layout">
+        <div className="cm-main">
       <div className="cm-filters">
         <div className="quote-tabs" style={{ margin: 0, flexWrap: "wrap" }}>
           <button type="button" className={`quote-tab qt-sm ${tier === -1 ? "on" : ""}`} onClick={() => setTier(-1)}>{t("Все")}</button>
@@ -605,6 +545,74 @@ function Market({ t, sb, setSb }) {
           </div>
         )}
       </div>
+        </div>
+        <aside className="cm-aside">
+      {/* Мои коты прямо на бирже — быстро выставить */}
+      {sb.enabled && (
+        <div className="mm-block">
+          <div className="mm-head">
+            <b>{t("Мои коты")} <span className="dim">({myIdle.length} {t("свободно")})</span></b>
+          </div>
+          {myIdle.length === 0 ? (
+            <div className="dim" style={{ fontSize: 13 }}>
+              {sb.cats.length === 0
+                ? t("Пока пусто — открой кейс во вкладке «Кейсы».")
+                : t("Все коты уже выставлены на бирже.")}
+            </div>
+          ) : (
+            <div className="mm-list">
+              {myIdle.map((c) => {
+                const r = RARITIES[c.tier];
+                return (
+                  <div className="mm-row" key={c.id}>
+                    <TierArt tier={c.tier} size={38} />
+                    <span className="mm-id">#{c.id}</span>
+                    <span className="mm-tier" style={{ color: r.color }}>{t(r.ru)} ×{r.mult}</span>
+                    <span className="mm-sym">
+                      <img src={stockLogo(c.sym)} alt="" className="q-logo" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                      {c.sym}
+                    </span>
+                    <span className="mm-divs">${c.divs}</span>
+                    <button className="btn btn-primary sm-btn" onClick={() => quickList(c)}>{t("Выставить")}</button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* проданные коты: можно выкупить обратно и проверить покупку */}
+      {sb.enabled && (sb.sold || []).length > 0 && (
+        <div className="mm-block">
+          <div className="mm-head">
+            <b>{t("Продано")} <span className="dim">({sb.sold.length})</span></b>
+            <span className="dim" style={{ fontSize: 12 }}>{t("выкупи обратно — сделка тоже попадёт в график")}</span>
+          </div>
+          <div className="mm-list">
+            {sb.sold.map((c) => {
+              const r = RARITIES[c.tier];
+              return (
+                <div className="mm-row" key={c.id}>
+                  <TierArt tier={c.tier} size={38} />
+                  <span className="mm-id">#{c.id}</span>
+                  <span className="mm-tier" style={{ color: r.color }}>{t(r.ru)} ×{r.mult}</span>
+                  <span className="mm-sym">
+                    <img src={stockLogo(c.sym)} alt="" className="q-logo" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                    {c.sym}
+                  </span>
+                  <span className="mm-divs">{c.soldPrice} ETH</span>
+                  <button className="btn btn-primary sm-btn" onClick={() => doBuyBack(c)}>{t("Выкупить")}</button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+        </aside>
+      </div>
+
       <div className="hint" style={{ marginTop: 10 }}>
         {sb.enabled
           ? t("Тестовый режим: на бирже только твои реальные лоты. Контракт биржи готов (эскроу, 2% казне, награды переезжают с котом).")
@@ -657,9 +665,33 @@ function Boxes({ t, sb, setSb }) {
     setAskAck(false);
   }
 
+  // пакетное открытие: рулетку не крутим, показываем сводку по редкостям —
+  // так проверять механику и открывать десятками намного быстрее
+  const [batch, setBatch] = useState(null);
+  function openMany(n) {
+    if (phase === "rolling") return;
+    if (!ack) return setAskAck(true);
+    if (!sb.enabled || sb.myBoxes < n) return;
+    let state = sb;
+    const byTier = [0, 0, 0, 0, 0];
+    let best = null;
+    for (let i = 0; i < n; i++) {
+      const res = SB.openBox(state, RWA_POPULAR);
+      if (!res.cat) break;
+      state = res.state;
+      byTier[res.cat.tier] += 1;
+      if (best === null || res.cat.tier > best) best = res.cat.tier;
+    }
+    setSb(state);
+    setBatch({ total: byTier.reduce((a, b) => a + b, 0), byTier, best });
+    setPhase("idle");
+    setResult(null);
+  }
+
   function openBox() {
     if (phase === "rolling") return;
     if (!ack) return setAskAck(true);
+    setBatch(null);
     // в песочнице бокс реально тратится и кот попадает в коллекцию
     let win, sym = null, catId = null;
     if (sb.enabled) {
@@ -694,8 +726,14 @@ function Boxes({ t, sb, setSb }) {
     }, 4200);
   }
 
-  const left = sb.enabled ? sb.boxesLeft : 10000 - SOLD_DEMO;
-  const pct = ((10000 - left) / 10000) * 100;
+  const BOX_TOTAL = SB.BOX_TOTAL;
+  const left = sb.enabled ? sb.boxesLeft : BOX_TOTAL - SOLD_DEMO;
+  const pct = ((BOX_TOTAL - left) / BOX_TOTAL) * 100;
+  // лента последних открытий: в тесте — настоящие коты, иначе пусто
+  const opened = useMemo(
+    () => (sb.enabled ? [...sb.cats].sort((a, b) => b.mintedAt - a.mintedAt) : []),
+    [sb]
+  );
 
   return (
     <>
@@ -723,41 +761,124 @@ function Boxes({ t, sb, setSb }) {
         </div>
       )}
 
-      <div className="box-hero">
-        <div className="box-left">
+      <div className="box-grid">
+        {/* левая колонка: сам кейс и действия */}
+        <div className="box-card">
           <div className="box-art">
+            <div className="box-glow" />
             <div className="box-lid" />
             <div className="box-body">🐱</div>
           </div>
-        </div>
-        <div className="box-info">
           <h3>{t("Кейс с котом")}</h3>
-          <p className="rev-sub" style={{ margin: "6px 0 12px" }}>
-            {t("Внутри — случайный NFT-кот одной из пяти редкостей. Всего боксов 10 000, и больше не будет никогда.")}
+          <p className="box-lead">
+            {t("Внутри — случайный NFT-кот одной из пяти редкостей. Кейсов ровно 10 000 на всю жизнь игры.")}
           </p>
+
           <div className="box-supply">
-            <div className="box-bar"><span style={{ width: `${pct}%` }} /></div>
-            <div className="box-supply-kv"><b>{left.toLocaleString("ru-RU")}</b> {t("боксов осталось из 10 000")}</div>
+            <div className="box-bar"><span style={{ width: `${Math.max(pct, 0.6)}%` }} /></div>
+            <div className="box-supply-kv">
+              <span><b>{(BOX_TOTAL - left).toLocaleString("ru-RU")}</b> {t("открыто")}</span>
+              <span className="dim">{left.toLocaleString("ru-RU")} {t("осталось")}</span>
+            </div>
           </div>
-          <div className="box-odds">
-            {RARITIES.map((r, i) => (
-              <span key={r.key} style={{ color: r.color }}>{t(r.ru)} {r.chance}%</span>
-            ))}
-          </div>
-          <div className="rev-cta" style={{ justifyContent: "flex-start", marginTop: 14 }}>
-            <button className="btn btn-primary" onClick={openBox} disabled={phase === "rolling" || (sb.enabled && sb.myBoxes <= 0)}>
+
+          <div className="box-actions">
+            <button className="btn btn-primary btn-block" onClick={() => openBox()}
+                    disabled={phase === "rolling" || (sb.enabled && sb.myBoxes <= 0)}>
               {phase === "rolling" ? t("Открываем…")
-                : sb.enabled ? `🎁 ${t("Открыть кейс")} · ${sb.myBoxes.toLocaleString("ru-RU")} ${t("шт. у меня")}`
+                : sb.enabled ? `🎁 ${t("Открыть кейс")}`
                 : `🎁 ${t("Открыть кейс")} · 0.02 ETH`}
             </button>
+            {sb.enabled && (
+              <button className="btn btn-block" onClick={() => openMany(10)}
+                      disabled={phase === "rolling" || sb.myBoxes < 10}>
+                {t("Открыть 10 сразу")}
+              </button>
+            )}
           </div>
-          <div className="hint">
+          {sb.enabled && (
+            <div className="box-mine">{t("у меня боксов")}: <b>{sb.myBoxes.toLocaleString("ru-RU")}</b></div>
+          )}
+
+          <div className="hint" style={{ marginTop: 10 }}>
             {sb.enabled
               ? t("Тестовый режим: бокс списывается по-настоящему, кот попадает в «Мои коты» и на биржу.")
               : t("Демо-открытие: настоящие боксы включатся с деплоем. Рандом в контракте — commit-reveal: подкрутить результат не может ни игрок, ни валидатор.")}
           </div>
         </div>
+
+        {/* правая колонка: шансы и лента открытий */}
+        <div className="box-side">
+          <div className="ck-card">
+            <div className="ck-card-h">
+              <span>{t("Что может выпасть")}</span>
+              <span className="ck-round-tag">{t("шансы в контракте")}</span>
+            </div>
+            <div className="box-odds-list">
+              {RARITIES.map((r, i) => (
+                <div className="box-odd" key={r.key} style={{ borderLeftColor: r.color }}>
+                  <TierArt tier={i} size={34} />
+                  <span className="box-odd-name" style={{ color: r.color }}>{t(r.ru)}</span>
+                  <span className="box-odd-mult">{t("вес")} ×{r.mult}</span>
+                  <span className="box-odd-pct">{r.chance}%</span>
+                  <span className="box-odd-bar" style={{ width: `${r.chance}%`, background: r.color }} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="ck-card">
+            <div className="ck-card-h">
+              <span>{t("Последние открытия")}</span>
+              {opened.length > 0 && <span className="ck-round-tag">{opened.length}</span>}
+            </div>
+            {opened.length === 0 ? (
+              <div className="hint">{t("Пока пусто — открой первый кейс, и коты появятся здесь.")}</div>
+            ) : (
+              <div className="box-feed">
+                {opened.slice(0, 8).map((c) => {
+                  const r = RARITIES[c.tier];
+                  return (
+                    <div className="box-feed-row" key={c.id} style={{ borderLeftColor: r.color }}>
+                      <TierArt tier={c.tier} size={28} />
+                      <span className="box-feed-id">#{c.id}</span>
+                      <span style={{ color: r.color }}>{t(r.ru)}</span>
+                      <span className="box-feed-sym">
+                        <img src={stockLogo(c.sym)} alt="" className="q-logo" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                        {c.sym}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* итог пакетного открытия */}
+      {batch && (
+        <div className="box-batch">
+          <div className="box-batch-h">
+            <b>{t("Открыто кейсов")}: {batch.total}</b>
+            <button className="icon-btn" onClick={() => setBatch(null)} aria-label="close">✕</button>
+          </div>
+          <div className="box-batch-grid">
+            {batch.byTier.map((n, i) => (
+              <div className="box-batch-cell" key={i} style={{ borderColor: RARITIES[i].color + (n ? "88" : "33") }}>
+                <TierArt tier={i} size={40} />
+                <b style={{ color: n ? RARITIES[i].color : "var(--text-dim)" }}>{n}</b>
+                <span>{t(RARITIES[i].ru)}</span>
+              </div>
+            ))}
+          </div>
+          {batch.best != null && (
+            <div className="box-batch-best">
+              {t("лучший")}: <b style={{ color: RARITIES[batch.best].color }}>{t(RARITIES[batch.best].ru)}</b>
+            </div>
+          )}
+        </div>
+      )}
 
       {(phase === "rolling" || phase === "result") && (
         <div className="roll-wrap" ref={wrapRef}>
@@ -1157,9 +1278,10 @@ function HolderModal({ t, holder, onClose, trades }) {
   );
 }
 
-function Holders({ t, sb }) {
+function Holders({ t, sb, wallet }) {
   const [sort, setSort] = useState("weight");
   const [openHolder, setOpenHolder] = useState(null);
+  const myAddr = wallet?.account ? shortAddr(wallet.account) : t("гость");
 
   // в тестовом режиме рейтинг строится ТОЛЬКО из настоящих владельцев
   // (пока это один кошелёк — мой); выдуманных холдеров не показываем
@@ -1168,34 +1290,94 @@ function Holders({ t, sb }) {
     if (!sb.cats.length) return [];
     const st = SB.stats(sb);
     return [{
-      addr: t("я"),
+      addr: myAddr, me: true,
       cats: st.count,
       legend: st.byTier[4],
       weight: st.weight,
       earned: Math.round(st.divs * 10) / 10,
       list: sb.cats.map((c) => ({ id: c.id, tier: c.tier, sym: c.sym, divs: c.divs })),
+      trades: sb.trades || [],
     }];
-  }, [sb, t]);
+  }, [sb, myAddr]);
 
   const rows = useMemo(() => {
     const by = { weight: (a, b) => b.weight - a.weight, cats: (a, b) => b.cats - a.cats, earned: (a, b) => b.earned - a.earned }[sort];
     return [...source].sort(by);
   }, [sort, source]);
+
   const totalCats = source.reduce((s, h) => s + h.cats, 0);
+  const totalWeight = source.reduce((s, h) => s + h.weight, 0);
+  const totalEarned = Math.round(source.reduce((s, h) => s + h.earned, 0) * 10) / 10;
+
+  // распределение редкостей по всем котам рейтинга — видно, чего в игре мало
+  const spread = useMemo(() => {
+    const m = [0, 0, 0, 0, 0];
+    for (const h of source) {
+      if (h.list) h.list.forEach((c) => { m[c.tier] += 1; });
+      else holderCats(h).forEach((c) => { m[c.tier] += 1; });
+    }
+    const sum = m.reduce((a, b) => a + b, 0) || 1;
+    return m.map((n) => ({ n, pct: (n / sum) * 100 }));
+  }, [source]);
+
+  const podium = rows.slice(0, 3);
+  const myRank = rows.findIndex((h) => h.me);
 
   return (
     <>
-      {openHolder && <HolderModal t={t} holder={openHolder} onClose={() => setOpenHolder(null)} />}
-      <div className="rev-stats" style={{ justifyContent: "flex-start", marginTop: 4 }}>
-        <div><b>{source.length}</b><span>{t("холдеров")}</span></div>
-        <div><b>{totalCats}</b><span>{t("котов у холдеров")}</span></div>
-        <div><b>{source.reduce((s, h) => s + h.legend, 0)}</b><span>{t("легендарных на руках")}</span></div>
+      {openHolder && (
+        <HolderModal t={t} holder={openHolder} trades={openHolder.trades} onClose={() => setOpenHolder(null)} />
+      )}
+
+      <div className="hold-top">
+        <div className="hold-kpis">
+          <div><b>{source.length}</b><span>{t("холдеров")}</span></div>
+          <div><b>{totalCats}</b><span>{t("котов на руках")}</span></div>
+          <div><b>×{totalWeight}</b><span>{t("общий вес")}</span></div>
+          <div><b className="rev-gold">${totalEarned}</b><span>{t("роздано наград")}</span></div>
+        </div>
+
+        {/* из чего состоит коллекция игроков */}
+        <div className="hold-spread">
+          <div className="hold-spread-h">{t("Состав коллекции")}</div>
+          <div className="hold-spread-bar">
+            {spread.map((x, i) => x.pct > 0 && (
+              <span key={i} style={{ width: `${x.pct}%`, background: RARITIES[i].color }}
+                    title={`${t(RARITIES[i].ru)}: ${x.n}`} />
+            ))}
+          </div>
+          <div className="hold-spread-legend">
+            {RARITIES.map((r, i) => (
+              <span key={r.key}><i style={{ background: r.color }} />{t(r.ru)} <b>{spread[i].n}</b></span>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <div className="quote-tabs" style={{ margin: "16px 0 12px" }}>
+      {/* подиум: три первых холдера крупно */}
+      {podium.length > 0 && (
+        <div className="hold-podium">
+          {podium.map((h, i) => (
+            <div className={`hold-pod p${i + 1} ${h.me ? "me" : ""}`} key={h.addr}
+                 role="button" tabIndex={0} onClick={() => setOpenHolder(h)}
+                 onKeyDown={(e) => e.key === "Enter" && setOpenHolder(h)}>
+              <div className="hold-pod-medal">{["🥇", "🥈", "🥉"][i]}</div>
+              <div className="hold-pod-addr">{h.addr}</div>
+              <div className="hold-pod-kv">
+                <span><b>{h.cats}</b>{t("котов")}</span>
+                <span><b>×{h.weight}</b>{t("вес")}</span>
+                <span><b className="rev-gold">${h.earned}</b>{t("наград")}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="quote-tabs" style={{ margin: "18px 0 12px" }}>
         <button type="button" className={`quote-tab qt-sm ${sort === "weight" ? "on" : ""}`} onClick={() => setSort("weight")}>{t("По весу выплат")}</button>
         <button type="button" className={`quote-tab qt-sm ${sort === "cats" ? "on" : ""}`} onClick={() => setSort("cats")}>{t("По числу котов")}</button>
         <button type="button" className={`quote-tab qt-sm ${sort === "earned" ? "on" : ""}`} onClick={() => setSort("earned")}>{t("По заработку")}</button>
+        {myRank >= 0 && <span className="hold-myrank">{t("ты на")} {myRank + 1} {t("месте")}</span>}
       </div>
 
       <div className="hold-table">
@@ -1204,7 +1386,7 @@ function Holders({ t, sb }) {
           <span>{t("легендарных")}</span><span>{t("вес")}</span><span>{t("заработано")}</span>
         </div>
         {rows.map((h, i) => (
-          <div className={`hold-row hold-row-click ${i < 3 ? "top" : ""}`} key={h.addr}
+          <div className={`hold-row hold-row-click ${i < 3 ? "top" : ""} ${h.me ? "mine" : ""}`} key={h.addr}
                onClick={() => setOpenHolder(h)} role="button" tabIndex={0}
                onKeyDown={(e) => e.key === "Enter" && setOpenHolder(h)}>
             <span className="hold-rank">{i + 1}</span>
@@ -1216,8 +1398,10 @@ function Holders({ t, sb }) {
           </div>
         ))}
         {rows.length === 0 && (
-          <div className="center dim" style={{ padding: 30 }}>
-            {t("Холдеров пока нет — рейтинг наполнится, когда коты появятся на руках.")}
+          <div className="hold-empty">
+            <TierArt tier={4} size={64} />
+            <b>{t("Рейтинг пока пуст")}</b>
+            <span>{t("Он наполнится, как только коты появятся на руках: открой кейс или выиграй кота в кликере.")}</span>
           </div>
         )}
       </div>
@@ -1230,11 +1414,6 @@ function Holders({ t, sb }) {
   );
 }
 
-// ---------------------------------------------------------------- песочница
-// Тестовый режим: 10 000 боксов себе, реальные открытия, листинги и награды.
-// Состояние живёт в localStorage — обкатываем весь цикл до деплоя контрактов.
-// Док админки: панель уезжает влево за край экрана, наружу торчит язычок.
-// Виден только команде — обычный игрок о песочнице даже не догадывается.
 function AdminDock({ t, sb, setSb }) {
   const [open, setOpen] = useState(false);
   return (
@@ -1381,11 +1560,12 @@ function Shop({ t, g, setG }) {
   );
 }
 
-function Clicker({ t, sb, setSb, wallet }) {
+function Clicker({ t, sb, setSb, wallet, admin }) {
   // в таблицах показываем адрес кошелька, а не «ты»: так строка выглядит
   // одинаково для всех участников и по ней сразу видно, чей это профиль
   const myAddr = wallet?.account ? shortAddr(wallet.account) : t("гость");
   const [openPlayer, setOpenPlayer] = useState(null);
+  const [side, setSide] = useState("board"); // что показывать: игроков или победителей
   const [g, setG] = useState(() => CL.load());
   const [flyers, setFlyers] = useState([]);
   const [bump, setBump] = useState(false);
@@ -1533,8 +1713,6 @@ function Clicker({ t, sb, setSb, wallet }) {
         <div className="ck-stat"><b>+{perClick}</b><span>{t("за клик")}</span></div>
         <div className="ck-stat"><b>+{perSec}/{t("сек")}</b><span>{t("автодобыча")}</span></div>
         <div className="ck-stat"><b>{crit}% <em className="ck-stat-x">×{CL.critMult(g)}</em></b><span>{t("шанс крита")}</span></div>
-        <div className="ck-stat"><b className="rev-gold">{chance.toFixed(1)}%</b><span>{t("шанс в раунде")}</span></div>
-        <div className="ck-stat"><b>{g.wonCards}</b><span>{t("выиграно котов")}</span></div>
       </div>
 
       {/* уровень игрока */}
@@ -1609,7 +1787,9 @@ function Clicker({ t, sb, setSb, wallet }) {
               <span>{t("всего у игроков")}: <b>{Math.round(totalPoints).toLocaleString("ru-RU")}</b></span>
               <span>{t("потолок доли")}: <b>{CL.TICKET_CAP_PCT}%</b> {t("на кошелёк")}</span>
             </div>
-            <button className="btn btn-block" onClick={doRaffle}>{t("Разыграть сейчас (тест)")}</button>
+            {admin && (
+              <button className="btn btn-block" onClick={doRaffle}>{t("Разыграть сейчас (тест)")}</button>
+            )}
             {g.lastRaffle && (
               <div className="hint" style={{ marginTop: 6 }}>
                 {g.lastRaffle.won
@@ -1619,36 +1799,38 @@ function Clicker({ t, sb, setSb, wallet }) {
             )}
           </div>
 
-          {/* кто сейчас в раунде и с каким шансом */}
+          {/* участники и победители — одна карточка с переключателем:
+              два отдельных списка занимали пол-экрана и повторяли друг друга */}
           <div className="ck-card">
-            <div className="ck-card-h">
-              <span>{t("Игроки раунда")}</span>
-              <span className="ck-round-tag">{board.length}</span>
+            <div className="ck-card-h ck-card-tabs">
+              <button className={`ck-mini-tab ${side === "board" ? "on" : ""}`} onClick={() => setSide("board")}>
+                {t("Игроки")} <i>{board.length}</i>
+              </button>
+              <button className={`ck-mini-tab ${side === "wins" ? "on" : ""}`} onClick={() => setSide("wins")}>
+                {t("Победители")}{(g.winners || []).length > 0 && <i>{(g.winners || []).length}</i>}
+              </button>
             </div>
-            <div className="ck-board">
-              {board.map((p, i) => (
-                <div className={`ck-bd ${p.me ? "me" : ""}`} key={`${p.addr}-${i}`}
-                     role="button" tabIndex={0} title={t("Открыть профиль")}
-                     onClick={() => setOpenPlayer(playerProfile(p, sb, t))}
-                     onKeyDown={(e) => e.key === "Enter" && setOpenPlayer(playerProfile(p, sb, t))}>
-                  <span className="ck-bd-n">{i + 1}</span>
-                  <span className="ck-bd-a">{p.addr}</span>
-                  <span className="ck-bd-p" title={t("билетов")}>{Math.round(p.tickets).toLocaleString("ru-RU")}</span>
-                  <span className="ck-bd-c">{p.pct.toFixed(1)}%</span>
-                  <span className="ck-bd-bar" style={{ width: `${Math.min(100, p.pct)}%` }} />
-                </div>
-              ))}
-            </div>
-          </div>
 
-          {/* победители последних раундов */}
-          <div className="ck-card">
-            <div className="ck-card-h">{t("Победители раундов")}</div>
-            {(g.winners || []).length === 0 ? (
+            {side === "board" ? (
+              <div className="ck-board">
+                {board.map((p, i) => (
+                  <div className={`ck-bd ${p.me ? "me" : ""}`} key={`${p.addr}-${i}`}
+                       role="button" tabIndex={0} title={t("Открыть профиль")}
+                       onClick={() => setOpenPlayer(playerProfile(p, sb, t))}
+                       onKeyDown={(e) => e.key === "Enter" && setOpenPlayer(playerProfile(p, sb, t))}>
+                    <span className="ck-bd-n">{i + 1}</span>
+                    <span className="ck-bd-a">{p.addr}</span>
+                    <span className="ck-bd-p" title={t("билетов")}>{Math.round(p.tickets).toLocaleString("ru-RU")}</span>
+                    <span className="ck-bd-c">{p.pct.toFixed(1)}%</span>
+                    <span className="ck-bd-bar" style={{ width: `${Math.min(100, p.pct)}%` }} />
+                  </div>
+                ))}
+              </div>
+            ) : (g.winners || []).length === 0 ? (
               <div className="hint">{t("Пока никто не выигрывал — первый раунд ещё идёт.")}</div>
             ) : (
               <div className="ck-winners">
-                {(g.winners || []).slice(0, 8).map((wn, i) => (
+                {(g.winners || []).slice(0, 10).map((wn, i) => (
                   <div className={`ck-win ${wn.me ? "me" : ""}`} key={`${wn.round}-${wn.ts}-${i}`}
                        role="button" tabIndex={0} title={t("Открыть профиль")}
                        onClick={() => setOpenPlayer(playerProfile({ ...wn, addr: wn.me ? myAddr : wn.addr }, sb, t))}>
@@ -1665,6 +1847,7 @@ function Clicker({ t, sb, setSb, wallet }) {
           <div className="ck-card">
             <div className="ck-card-h">{t("Рекорды")}</div>
             <div className="clk-raffle-kv">
+              <span>{t("выиграно котов")}: <b className="rev-gold">{g.wonCards}</b></span>
               <span>{t("кликов всего")}: <b>{g.totalClicks.toLocaleString("ru-RU")}</b></span>
               <span>{t("лучшее комбо")}: <b>{g.bestCombo || 0}</b></span>
               <span>{t("золотых котов")}: <b className="rev-gold">{g.goldenCaught || 0}</b></span>
@@ -1720,7 +1903,7 @@ export default function Cats({ wallet }) {
       {/* Компактная шапка: суть в одну строку, живой статус вместо
           юридического абзаца (полный текст — в инструкции и в подвале),
           одно главное действие. Так игра попадает на первый экран. */}
-      <div className="cats-hero">
+      <div className={`cats-hero ${tab === "clicker" ? "slim" : ""}`}>
         <div className="cats-hero-l">
           <h1>{t("Коты-брокеры")} <span className="cats-hero-beta">β</span></h1>
           <p className="cats-hero-sub">
@@ -1735,8 +1918,10 @@ export default function Cats({ wallet }) {
           </p>
         </div>
 
-        {/* живые цифры: сколько ждать следующего кота и что уже происходит */}
-        <div className="cats-hero-r">
+        {/* живые цифры показываем там, где своего таймера нет: на кликере
+            он уже есть в панели розыгрыша, дублировать одно и то же число
+            на одном экране — лишний шум */}
+        {tab !== "clicker" && <div className="cats-hero-r">
           <div className="cats-hero-stat big">
             <b>{CL.fmtLeft(CL.msLeft(heroNow))}</b>
             <span>{t("до следующего кота")}</span>
@@ -1751,7 +1936,7 @@ export default function Cats({ wallet }) {
           <div className="cats-hero-stat">
             <b className="rev-gold">{t("бесплатно")}</b><span>{t("участие в розыгрыше")}</span>
           </div>
-        </div>
+        </div>}
       </div>
 
       <div id="cats-tabs" className="quote-tabs" style={{ justifyContent: "center", margin: "10px 0 6px", flexWrap: "wrap" }}>
@@ -1765,11 +1950,11 @@ export default function Cats({ wallet }) {
 
       {admin && <AdminDock t={t} sb={sb} setSb={setSb} />}
 
-      {tab === "clicker" && <Clicker t={t} sb={sb} setSb={setSb} wallet={wallet} />}
+      {tab === "clicker" && <Clicker t={t} sb={sb} setSb={setSb} wallet={wallet} admin={admin} />}
       {tab === "boxes" && <Boxes t={t} sb={sb} setSb={setSb} />}
       {tab === "market" && <Market t={t} sb={sb} setSb={setSb} />}
       {tab === "my" && <MyCats t={t} sb={sb} setSb={setSb} />}
-      {tab === "holders" && <Holders t={t} sb={sb} />}
+      {tab === "holders" && <Holders t={t} sb={sb} wallet={wallet} />}
       {tab === "guide" && (<>
         <CatsGuide lang={lang} t={t} rarities={RARITIES} onTab={goTab} />
 
