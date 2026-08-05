@@ -909,7 +909,16 @@ function Clicker({ t, sb, setSb }) {
   const [bump, setBump] = useState(false);
   const [toast, setToast] = useState("");
   const [golden, setGolden] = useState(null); // { x, y } — золотой кот на поле
+  const [par, setPar] = useState({ x: 0, y: 0 }); // лёгкий параллакс фона
   const say = (m) => { setToast(m); setTimeout(() => setToast(""), 2600); };
+
+  function onMove(e) {
+    const r = e.currentTarget.getBoundingClientRect();
+    setPar({
+      x: ((e.clientX - r.left) / r.width - 0.5) * -18,
+      y: ((e.clientY - r.top) / r.height - 0.5) * -12,
+    });
+  }
 
   useEffect(() => {
     const id = setInterval(() => setG((s) => CL.tick(s)), 1000);
@@ -999,7 +1008,10 @@ function Clicker({ t, sb, setSb }) {
 
       <div className="ck-arena-wrap">
         {/* арена с котом */}
-        <div className={`ck-arena ${goldenOn ? "boosted" : ""}`} onClick={onTap}>
+        <div className={`ck-arena ${goldenOn ? "boosted" : ""}`} onClick={onTap}
+             onMouseMove={onMove} onMouseLeave={() => setPar({ x: 0, y: 0 })}>
+          <div className="ck-bg" style={{ transform: `scale(1.08) translate(${par.x}px, ${par.y}px)` }} />
+          <div className="ck-bg-veil" />
           {combo > 1 && <div className="ck-combo">COMBO ×{combo}</div>}
           {goldenOn && <div className="ck-boost-tag">×2 {t("буст активен")}</div>}
           <img src="./cats/legendary.jpg" alt="" className={`ck-img ${bump ? "bump" : ""}`}
