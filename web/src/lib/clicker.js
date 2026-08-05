@@ -1,7 +1,8 @@
 /** Кликер «Кот-брокер»: тапаешь легендарного кота — сыплются акции.
- *  Очки (тикеты) копятся, тратятся на улучшения и дают:
- *    • буст к дивидендам котов (игроки зарабатывают больше),
- *    • билеты в розыгрыш NFT-кота — каждые 30 минут разыгрывается один кот.
+ *  Очки копятся, тратятся на улучшения и дают билеты в розыгрыш.
+ *  Очки нужны ТОЛЬКО для розыгрыша NFT-котов: каждые 30 минут один кот
+ *  уходит игроку. На дивиденды котов игра не влияет никак — выплаты идут
+ *  строго по редкости NFT, чтобы кликер не превращался в доходную бумагу.
  *  Состояние в localStorage; при деплое переезжает в бэкенд/контракт,
  *  а очки раунда фиксируются он-чейн для честного розыгрыша. */
 
@@ -11,8 +12,6 @@ export const ROUND_MIN = 30;                       // длительность �
 export const ROUND_MS = ROUND_MIN * 60 * 1000;
 export const CARDS_PER_ROUND = 1;                  // один NFT-кот за раунд
 export const ROUNDS_PER_DAY = Math.round((24 * 60) / ROUND_MIN); // 48 котов в сутки
-export const BOOST_PER_10K = 1;       // +1% к дивидендам за каждые 10k очков дня
-export const BOOST_CAP = 25;          // максимум +25%
 
 /** Раунды нарезаны по абсолютному времени — у всех игроков они совпадают. */
 export function roundId(ts = Date.now()) { return Math.floor(ts / ROUND_MS); }
@@ -94,7 +93,6 @@ export function levelProgress(totalEarned) {
 
 const EMPTY = {
   points: 0,        // текущий баланс очков (тратится на улучшения)
-  earnedToday: 0,   // очки за сегодня — по ним считается буст к дивидендам
   roundPoints: 0,   // очки текущего 30-минутного раунда — билеты в розыгрыш
   round: roundId(), // номер раунда, за который уже начислены очки
   winners: [],      // последние победители: { round, ts, addr, points, chance, me }
@@ -124,10 +122,9 @@ export function load() {
   try {
     const raw = localStorage.getItem(KEY);
     const s = raw ? { ...EMPTY, ...JSON.parse(raw) } : { ...EMPTY };
-    // новый день — обнуляем дневной счётчик (шансы считаются за сутки)
+    // смена суток: сбрасываем только пометку о последнем розыгрыше
     if (s.day !== today()) {
       s.day = today();
-      s.earnedToday = 0;
       s.lastRaffle = null;
     }
     return s;
@@ -191,7 +188,6 @@ export function click(s) {
   const next = save({
     ...s,
     points: s.points + gain,
-    earnedToday: s.earnedToday + gain,
     roundPoints: (s.roundPoints || 0) + gain,
     totalEarned: (s.totalEarned || 0) + gain,
     totalClicks: s.totalClicks + 1,
@@ -208,7 +204,6 @@ export function catchGolden(s) {
   const next = save({
     ...s,
     points: s.points + jackpot,
-    earnedToday: s.earnedToday + jackpot,
     roundPoints: (s.roundPoints || 0) + jackpot,
     totalEarned: (s.totalEarned || 0) + jackpot,
     goldenUntil: Date.now() + 20_000,
@@ -226,7 +221,6 @@ export function tick(s) {
   return save({
     ...s,
     points: s.points + gain,
-    earnedToday: s.earnedToday + gain,
     roundPoints: (s.roundPoints || 0) + gain,
     totalEarned: (s.totalEarned || 0) + gain,
     lastTick: now,
@@ -247,11 +241,6 @@ export function buy(s, id) {
     points: s.points - cost,
     levels: { ...s.levels, [id]: level + 1 },
   });
-}
-
-/** Буст к дивидендам котов за сегодняшнюю активность (в процентах). */
-export function dividendBoost(s) {
-  return Math.min(BOOST_CAP, Math.floor(s.earnedToday / 10000) * BOOST_PER_10K);
 }
 
 /** Шанс выиграть кота в текущем раунде.

@@ -1162,6 +1162,8 @@ const EN = {
   "Админ-панель": "Admin panel",
   "купить": "buy",
   "Игроки раунда": "Round players",
+  "шанс в раунде": "round odds",
+  "Комбо ×5 за быстрые тапы, криты ×10, золотой кот с джекпотом и ×2. Каждые 30 минут один NFT-кот разыгрывается среди игроков — билетов тем больше, чем больше очков ты набрал за раунд. На выплаты дивидендов игра не влияет: доля кота зависит только от его редкости.": "Combo up to x5 for fast taps, x10 crits, a golden cat with a jackpot and x2 boost. Every 30 minutes one NFT cat is raffled among players — the more points you score in the round, the more tickets you hold. The game does not affect dividends: a cat's share depends on its rarity only.",
   "Сделок пока не было — график и объём появятся после первых продаж.": "No trades yet — the chart and volume appear after the first sales.",
   "Заявок нет. Выстави кота на продажу — лот появится здесь.": "No orders. List a cat for sale and it will show up here.",
   "Холдеров пока нет — рейтинг наполнится, когда коты появятся на руках.": "No holders yet — the leaderboard fills up once cats are owned.",

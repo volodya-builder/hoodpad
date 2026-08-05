@@ -1010,8 +1010,9 @@ function SandboxPanel({ t, sb, setSb }) {
 }
 
 // ---------------------------------------------------------------- кликер
-// Тапаешь легендарного кота — сыплются акции. Очки дают буст к дивидендам
-// и билеты в розыгрыш: каждые 30 минут один NFT-кот уходит игроку.
+// Тапаешь легендарного кота — сыплются акции. Очки дают только билеты в
+// розыгрыш: каждые 30 минут один NFT-кот уходит игроку. На дивиденды игра
+// не влияет — это чистый маркетинг, раздача котов и хайп вокруг проекта.
 // соперники и их очки берутся из clicker.js (roundPlayers) — детерминированно
 // по номеру раунда, чтобы у всех игроков был один и тот же список
 
@@ -1085,7 +1086,6 @@ function Clicker({ t, sb, setSb }) {
 
   const perClick = CL.perClick(g);
   const perSec = CL.perSecond(g);
-  const boost = CL.dividendBoost(g);
   const chance = CL.raffleChance(g, totalPoints);
   const combo = CL.comboMult(g);
   const crit = CL.critChance(g);
@@ -1150,7 +1150,7 @@ function Clicker({ t, sb, setSb }) {
         <div className="ck-stat"><b>+{perClick}</b><span>{t("за клик")}</span></div>
         <div className="ck-stat"><b>+{perSec}/{t("сек")}</b><span>{t("автодобыча")}</span></div>
         <div className="ck-stat"><b>{crit}%</b><span>{t("шанс крита")}</span></div>
-        <div className="ck-stat"><b className="rev-gold">+{boost}%</b><span>{t("к дивидендам")}</span></div>
+        <div className="ck-stat"><b className="rev-gold">{chance.toFixed(1)}%</b><span>{t("шанс в раунде")}</span></div>
         <div className="ck-stat"><b>{g.wonCards}</b><span>{t("выиграно котов")}</span></div>
       </div>
 
@@ -1306,7 +1306,7 @@ function Clicker({ t, sb, setSb }) {
       </div>
 
       <div className="hint" style={{ marginTop: 12 }}>
-        {t("Комбо ×5 за быстрые тапы, криты ×10, золотой кот с джекпотом и ×2. Каждые 30 минут один NFT-кот разыгрывается среди игроков — билетов тем больше, чем больше очков ты набрал за раунд. Очки за сутки дают буст к дивидендам котов (до +25%).")}
+        {t("Комбо ×5 за быстрые тапы, криты ×10, золотой кот с джекпотом и ×2. Каждые 30 минут один NFT-кот разыгрывается среди игроков — билетов тем больше, чем больше очков ты набрал за раунд. На выплаты дивидендов игра не влияет: доля кота зависит только от его редкости.")}
       </div>
     </>
   );
