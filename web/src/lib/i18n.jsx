@@ -1131,6 +1131,20 @@ const EN = {
   "Последний розыгрыш: мимо. Шанс был {c}%": "Last draw: missed. Odds were {c}%",
   "Сбросить прогресс": "Reset progress",
   "Очки за сутки дают буст к дивидендам котов (до +25%) и билеты в розыгрыш 50 NFT в день. После деплоя очки фиксируются он-чейн, розыгрыш — прозрачный контракт.": "Daily points boost your cat dividends (up to +25%) and buy tickets into the 50-NFT daily raffle. After deploy, points are recorded on-chain and the draw runs in a transparent contract.",
+  "шанс крита": "crit chance",
+  "Уровень": "Level",
+  "до": "to",
+  "буст активен": "boost active",
+  "Лови!": "Catch!",
+  "Рекорды": "Records",
+  "лучшее комбо": "best combo",
+  "золотых котов": "golden cats",
+  "всего заработано": "earned all-time",
+  "ур.": "lv.",
+  "+2% шанс крита (×10)": "+2% crit chance (x10)",
+  "Чутьё рынка": "Market sense",
+  "🐱‍👤 Золотой кот пойман! +{n} очков и ×2 на 20 секунд": "🐱‍👤 Golden cat caught! +{n} points and x2 for 20 seconds",
+  "Комбо ×5 за быстрые тапы, криты ×10, золотой кот с джекпотом и ×2. Очки за сутки дают буст к дивидендам котов (до +25%) и билеты в розыгрыш 50 NFT в день.": "Combo up to x5 for fast taps, x10 crits, a golden cat with a jackpot and x2 boost. Daily points boost your cat dividends (up to +25%) and buy tickets into the 50-NFT daily raffle.",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

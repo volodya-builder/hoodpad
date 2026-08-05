@@ -815,30 +815,57 @@ function Clicker({ t, sb, setSb }) {
   const [flyers, setFlyers] = useState([]);
   const [bump, setBump] = useState(false);
   const [toast, setToast] = useState("");
+  const [golden, setGolden] = useState(null); // { x, y } — золотой кот на поле
   const say = (m) => { setToast(m); setTimeout(() => setToast(""), 2600); };
 
-  // автодобыча раз в секунду
   useEffect(() => {
     const id = setInterval(() => setG((s) => CL.tick(s)), 1000);
     return () => clearInterval(id);
   }, []);
 
+  // золотой кот сам исчезает через 4 секунды
+  useEffect(() => {
+    if (!golden) return;
+    const id = setTimeout(() => setGolden(null), 4000);
+    return () => clearTimeout(id);
+  }, [golden]);
+
   const perClick = CL.perClick(g);
   const perSec = CL.perSecond(g);
   const boost = CL.dividendBoost(g);
   const chance = CL.raffleChance(g, TOTAL_POINTS_DEMO);
+  const combo = CL.comboMult(g);
+  const crit = CL.critChance(g);
+  const lvl = CL.levelProgress(g.totalEarned || 0);
+  const goldenOn = CL.goldenActive(g);
+
+  function addFlyer(x, y, text, cls) {
+    const id = Date.now() + Math.random();
+    const sym = RWA_POPULAR[Math.floor(Math.random() * RWA_POPULAR.length)];
+    setFlyers((f) => [...f, { id, x, y, text, cls, sym, dx: (Math.random() - 0.5) * 110 }]);
+    setTimeout(() => setFlyers((f) => f.filter((z) => z.id !== id)), 1100);
+  }
 
   function onTap(e) {
-    setG((s) => CL.click(s));
-    setBump(true);
-    setTimeout(() => setBump(false), 90);
-    // монетка-акция улетает из точки клика
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left, y = e.clientY - rect.top;
-    const sym = RWA_POPULAR[Math.floor(Math.random() * RWA_POPULAR.length)];
-    const id = Date.now() + Math.random();
-    setFlyers((f) => [...f, { id, x, y, sym, amt: perClick, dx: (Math.random() - 0.5) * 90 }]);
-    setTimeout(() => setFlyers((f) => f.filter((z) => z.id !== id)), 1100);
+    const res = CL.click(g);
+    setG(res.state);
+    setBump(true);
+    setTimeout(() => setBump(false), 90);
+    addFlyer(x, y, `+${res.gain}`, res.crit ? "crit" : res.mult > 1 ? "combo" : "");
+    // шанс появления золотого кота
+    if (!golden && Math.random() < CL.GOLDEN_CHANCE) {
+      setGolden({ x: 12 + Math.random() * 70, y: 12 + Math.random() * 66 });
+    }
+  }
+
+  function tapGolden(e) {
+    e.stopPropagation();
+    const { state, jackpot } = CL.catchGolden(g);
+    setG(state);
+    setGolden(null);
+    say(t("🐱‍👤 Золотой кот пойман! +{n} очков и ×2 на 20 секунд").replace("{n}", jackpot.toLocaleString("ru-RU")));
   }
 
   function doRaffle() {
@@ -846,7 +873,6 @@ function Clicker({ t, sb, setSb }) {
     const { state, won, chance: ch } = CL.runRaffle(g, TOTAL_POINTS_DEMO);
     setG(state);
     if (won) {
-      // в песочнице победа сразу даёт настоящего кота в коллекцию
       if (sb.enabled) {
         const { state: s2 } = SB.openBox({ ...sb, myBoxes: sb.myBoxes + 1 }, RWA_POPULAR);
         setSb(s2);
@@ -861,60 +887,51 @@ function Clicker({ t, sb, setSb }) {
     <>
       {toast && <div className="rev-toast">{toast}</div>}
 
-      <div className="clk-wrap">
-        <div className="clk-left">
-          <div className="clk-stats">
-            <div><b>{Math.floor(g.points).toLocaleString("ru-RU")}</b><span>{t("очков")}</span></div>
-            <div><b>+{perClick}</b><span>{t("за клик")}</span></div>
-            <div><b>+{perSec}/{t("сек")}</b><span>{t("автодобыча")}</span></div>
-            <div><b className="rev-gold">+{boost}%</b><span>{t("к дивидендам")}</span></div>
-          </div>
+      {/* верхняя панель показателей */}
+      <div className="ck-top">
+        <div className="ck-stat big"><b>{Math.floor(g.points).toLocaleString("ru-RU")}</b><span>{t("очков")}</span></div>
+        <div className="ck-stat"><b>+{perClick}</b><span>{t("за клик")}</span></div>
+        <div className="ck-stat"><b>+{perSec}/{t("сек")}</b><span>{t("автодобыча")}</span></div>
+        <div className="ck-stat"><b>{crit}%</b><span>{t("шанс крита")}</span></div>
+        <div className="ck-stat"><b className="rev-gold">+{boost}%</b><span>{t("к дивидендам")}</span></div>
+        <div className="ck-stat"><b>{g.wonCards}</b><span>{t("выиграно котов")}</span></div>
+      </div>
 
-          <div className="clk-cat" onClick={onTap}>
-            <img src="./cats/legendary.jpg" alt="" className={`clk-img ${bump ? "bump" : ""}`}
-                 onError={(e) => { e.currentTarget.style.display = "none"; }} />
-            <div className="clk-hint">{t("Тапай кота")}</div>
-            {flyers.map((f) => (
-              <span key={f.id} className="clk-fly" style={{ left: f.x, top: f.y, "--dx": `${f.dx}px` }}>
-                <img src={stockLogo(f.sym)} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-                +{f.amt}
-              </span>
-            ))}
-          </div>
+      {/* уровень игрока */}
+      <div className="ck-level">
+        <span className="ck-lvl-badge">{t("Уровень")} {lvl.lvl}</span>
+        <div className="ck-lvl-bar"><span style={{ width: `${lvl.pct}%` }} /></div>
+        <span className="dim">{Math.floor(lvl.pct)}% {t("до")} {lvl.lvl + 1}</span>
+      </div>
 
-          <div className="clk-today">
-            <span>{t("очков за сегодня")}: <b>{Math.floor(g.earnedToday).toLocaleString("ru-RU")}</b></span>
-            <span>{t("кликов всего")}: <b>{g.totalClicks.toLocaleString("ru-RU")}</b></span>
-          </div>
+      <div className="ck-arena-wrap">
+        {/* арена с котом */}
+        <div className={`ck-arena ${goldenOn ? "boosted" : ""}`} onClick={onTap}>
+          {combo > 1 && <div className="ck-combo">COMBO ×{combo}</div>}
+          {goldenOn && <div className="ck-boost-tag">×2 {t("буст активен")}</div>}
+          <img src="./cats/legendary.jpg" alt="" className={`ck-img ${bump ? "bump" : ""}`}
+               onError={(e) => { e.currentTarget.style.display = "none"; }} />
+          <div className="ck-tap-hint">{t("Тапай кота")}</div>
+
+          {golden && (
+            <button className="ck-golden" style={{ left: `${golden.x}%`, top: `${golden.y}%` }} onClick={tapGolden}>
+              <img src="./cats/mythic.jpg" alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+              <span>{t("Лови!")}</span>
+            </button>
+          )}
+
+          {flyers.map((f) => (
+            <span key={f.id} className={`ck-fly ${f.cls}`} style={{ left: f.x, top: f.y, "--dx": `${f.dx}px` }}>
+              <img src={stockLogo(f.sym)} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+              {f.text}{f.cls === "crit" ? " CRIT!" : ""}
+            </span>
+          ))}
         </div>
 
-        <div className="clk-right">
-          <div className="clk-sec">{t("Улучшения")}</div>
-          <div className="clk-shop">
-            {CL.UPGRADES.map((u) => {
-              const lvl = g.levels[u.id] || 0;
-              const cost = CL.upgradeCost(u, lvl);
-              const can = g.points >= cost;
-              return (
-                <div className={`clk-up ${can ? "" : "off"}`} key={u.id}>
-                  <div className="clk-up-info">
-                    <b>{t(u.ru)} {lvl > 0 && <span className="clk-lvl">ур. {lvl}</span>}</b>
-                    <span>{t(u.desc)}</span>
-                  </div>
-                  <button className="btn btn-primary sm-btn" disabled={!can} onClick={() => setG(CL.buy(g, u.id))}>
-                    {cost.toLocaleString("ru-RU")}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="clk-sec">{t("Ежедневный розыгрыш")}</div>
-          <div className="clk-raffle">
-            <div className="clk-raffle-top">
-              <b>{CL.CARDS_PER_DAY} NFT-{t("котов в день")}</b>
-              <span className="dim">{t("шанс по очкам за сутки")}</span>
-            </div>
+        {/* правая колонка: розыгрыш + итоги */}
+        <div className="ck-side">
+          <div className="ck-card">
+            <div className="ck-card-h">{CL.CARDS_PER_DAY} NFT-{t("котов в день")}</div>
             <div className="clk-chance">
               <div className="clk-chance-bar"><span style={{ width: `${Math.min(100, chance)}%` }} /></div>
               <b>{chance.toFixed(1)}%</b>
@@ -922,11 +939,10 @@ function Clicker({ t, sb, setSb }) {
             <div className="clk-raffle-kv">
               <span>{t("мои очки")}: <b>{Math.floor(g.earnedToday).toLocaleString("ru-RU")}</b></span>
               <span>{t("всего у игроков")}: <b>{TOTAL_POINTS_DEMO.toLocaleString("ru-RU")}</b></span>
-              <span>{t("выиграно котов")}: <b className="rev-gold">{g.wonCards}</b></span>
             </div>
-            <button className="btn btn-primary btn-block" onClick={doRaffle}>{t("Разыграть сейчас")} <span className="dim">({t("демо")})</span></button>
+            <button className="btn btn-primary btn-block" onClick={doRaffle}>{t("Разыграть сейчас")}</button>
             {g.lastRaffle && (
-              <div className="hint" style={{ marginTop: 8 }}>
+              <div className="hint" style={{ marginTop: 6 }}>
                 {g.lastRaffle.won
                   ? t("Последний розыгрыш: победа! Шанс был {c}%").replace("{c}", g.lastRaffle.chance)
                   : t("Последний розыгрыш: мимо. Шанс был {c}%").replace("{c}", g.lastRaffle.chance)}
@@ -934,12 +950,43 @@ function Clicker({ t, sb, setSb }) {
             )}
           </div>
 
-          <button className="btn" style={{ marginTop: 10 }} onClick={() => setG(CL.reset())}>{t("Сбросить прогресс")}</button>
+          <div className="ck-card">
+            <div className="ck-card-h">{t("Рекорды")}</div>
+            <div className="clk-raffle-kv">
+              <span>{t("кликов всего")}: <b>{g.totalClicks.toLocaleString("ru-RU")}</b></span>
+              <span>{t("лучшее комбо")}: <b>{g.bestCombo || 0}</b></span>
+              <span>{t("золотых котов")}: <b className="rev-gold">{g.goldenCaught || 0}</b></span>
+              <span>{t("всего заработано")}: <b>{Math.floor(g.totalEarned || 0).toLocaleString("ru-RU")}</b></span>
+            </div>
+            <button className="btn btn-block" onClick={() => setG(CL.reset())}>{t("Сбросить прогресс")}</button>
+          </div>
         </div>
       </div>
 
+      {/* магазин улучшений — широкой сеткой */}
+      <h2 className="rev-h2">{t("Улучшения")}</h2>
+      <div className="ck-shop">
+        {CL.UPGRADES.map((u) => {
+          const l = g.levels[u.id] || 0;
+          const cost = CL.upgradeCost(u, l);
+          const can = g.points >= cost;
+          return (
+            <div className={`ck-up ${can ? "" : "off"} ${u.kind}`} key={u.id}>
+              <div className="ck-up-top">
+                <b>{t(u.ru)}</b>
+                {l > 0 && <span className="ck-up-lvl">{t("ур.")} {l}</span>}
+              </div>
+              <span className="ck-up-desc">{t(u.desc)}</span>
+              <button className="btn btn-primary" disabled={!can} onClick={() => setG(CL.buy(g, u.id))}>
+                {cost.toLocaleString("ru-RU")} {t("очков")}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
       <div className="hint" style={{ marginTop: 12 }}>
-        {t("Очки за сутки дают буст к дивидендам котов (до +25%) и билеты в розыгрыш 50 NFT в день. После деплоя очки фиксируются он-чейн, розыгрыш — прозрачный контракт.")}
+        {t("Комбо ×5 за быстрые тапы, криты ×10, золотой кот с джекпотом и ×2. Очки за сутки дают буст к дивидендам котов (до +25%) и билеты в розыгрыш 50 NFT в день.")}
       </div>
     </>
   );
@@ -947,7 +994,7 @@ function Clicker({ t, sb, setSb }) {
 
 export default function Cats() {
   const { t } = useLang();
-  const [tab, setTab] = useState("about"); // about | clicker | boxes | market | my | holders
+  const [tab, setTab] = useState("clicker"); // clicker | market | boxes | my | holders | about
   const [sb, setSb] = useState(() => SB.load());
   const [ranges, setRanges] = useState({ tier: 2, per: 12, months: 6 });
   const set = (k) => (e) => setRanges({ ...ranges, [k]: +e.target.value });
@@ -980,13 +1027,13 @@ export default function Cats() {
         </div>
       </div>
 
-      <div className="quote-tabs" style={{ justifyContent: "center", margin: "10px 0 6px" }}>
-        <button type="button" className={`quote-tab ${tab === "about" ? "on" : ""}`} onClick={() => setTab("about")}>{t("Об игре")}</button>
+      <div className="quote-tabs" style={{ justifyContent: "center", margin: "10px 0 6px", flexWrap: "wrap" }}>
         <button type="button" className={`quote-tab ${tab === "clicker" ? "on" : ""}`} onClick={() => setTab("clicker")}>🐾 {t("Кликер")}</button>
-        <button type="button" className={`quote-tab ${tab === "boxes" ? "on" : ""}`} onClick={() => setTab("boxes")}>🎁 {t("Кейсы")}</button>
         <button type="button" className={`quote-tab ${tab === "market" ? "on" : ""}`} onClick={() => setTab("market")}>🏪 {t("Биржа котов")}</button>
+        <button type="button" className={`quote-tab ${tab === "boxes" ? "on" : ""}`} onClick={() => setTab("boxes")}>🎁 {t("Кейсы")}</button>
         <button type="button" className={`quote-tab ${tab === "my" ? "on" : ""}`} onClick={() => setTab("my")}>{t("Мои коты")}</button>
         <button type="button" className={`quote-tab ${tab === "holders" ? "on" : ""}`} onClick={() => setTab("holders")}>🏆 {t("Рейтинг")}</button>
+        <button type="button" className={`quote-tab ${tab === "about" ? "on" : ""}`} onClick={() => setTab("about")}>{t("Об игре")}</button>
       </div>
 
       <SandboxPanel t={t} sb={sb} setSb={setSb} />
