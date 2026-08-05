@@ -1162,6 +1162,7 @@ const EN = {
   "Админ-панель": "Admin panel",
   "купить": "buy",
   "Игроки раунда": "Round players",
+  "Инструкция": "Guide",
   "Клик": "Click", "Доход": "Income", "Удача": "Luck", "Ритм": "Rhythm",
   "макс": "max",
   "откроется на уровне": "unlocks at level",

@@ -52,12 +52,12 @@ function buildCandles(points, trades, rate, ivSec) {
   return { candles, volumes };
 }
 
-export default function CandleChart({ points, trades, rate, marks, lines }) {
+export default function CandleChart({ points, trades, rate, marks, lines, defaultIv = 300, unit }) {
   const { t } = useLang();
   const ref = useRef(null);
   const chartRef = useRef(null); // { chart, cs, vs, priceLines, fitted, volByTime, volTotal, dirByTime, times, rate }
   const legendRef = useRef(null);
-  const [iv, setIv] = useState(300);
+  const [iv, setIv] = useState(defaultIv);
   const [logScale, setLogScale] = useState(false);
   const [fs, setFs] = useState(false); // полноэкранный режим
   const [showLines, setShowLines] = useState(true); // уровни заявок на графике

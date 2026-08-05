@@ -4,6 +4,9 @@ import { RWA_POPULAR, stockLogo } from "../lib/rwa.js";
 import * as SB from "../lib/catstate.js";
 import * as CL from "../lib/clicker.js";
 import { isTeam } from "../lib/config.js";
+import CandleChart from "../components/CandleChart.jsx";
+import CatsGuide from "./CatsGuide.jsx";
+import { useEthUsd } from "../lib/price.js";
 
 /** Коты-брокеры β — NFT-коты, привязанные к акциям, платят дивиденды из
  *  казны в токенизированных акциях; редкость даёт больший вес выплат.
@@ -110,8 +113,57 @@ function volumeHistory(days = 30) {
 }
 const VOL_HISTORY = volumeHistory(30);
 
-// Живой график из настоящих сделок песочницы: каждая продажа и выкуп
-// добавляют точку и столбик объёма. Никаких выдуманных данных.
+// Свечной график котов — тот же компонент, что на странице токена:
+// TradingView Lightweight Charts со свечами, объёмом, таймфреймами,
+// логарифмической шкалой и полноэкранным режимом.
+function CatChart({ t, tier, live, sb, rate }) {
+  const r = RARITIES[tier];
+  const { points, trades } = useMemo(() => {
+    if (live) {
+      // настоящие сделки песочницы: цена лота = точка, она же объём сделки
+      const rows = (sb.trades || []).filter((x) => x.tier === tier).sort((a, b) => a.ts - b.ts);
+      return {
+        points: rows.map((x) => ({ ts: x.ts, mcap: x.price })),
+        trades: rows.map((x) => ({ ts: x.ts, eth: x.price })),
+      };
+    }
+    // демо-витрина: 30 дней истории по редкости
+    const DAY = 86400000, series = PRICE_HISTORY[tier], vols = VOL_HISTORY[tier];
+    const t0 = Date.now() - (series.length - 1) * DAY;
+    return {
+      points: series.map((p, i) => ({ ts: t0 + i * DAY, mcap: p })),
+      trades: series.map((p, i) => ({ ts: t0 + i * DAY, eth: p * vols[i] })),
+    };
+  }, [live, sb, tier]);
+
+  if (live && points.length === 0) {
+    return (
+      <div className="pc-wrap">
+        <div className="pc-head"><span style={{ color: r.color }}>{t(r.ru)}</span><b>— ETH</b></div>
+        <div className="pc-empty">
+          {t("Сделок пока не было — выстави кота и нажми «Продать», график оживёт.")}
+        </div>
+      </div>
+    );
+  }
+
+  const last = points[points.length - 1].mcap, first = points[0].mcap;
+  const chg = first ? ((last - first) / first) * 100 : 0;
+
+  return (
+    <div className="pc-wrap">
+      <div className="pc-head">
+        <span style={{ color: r.color }}>{t(r.ru)}</span>
+        <b>{last} ETH</b>
+        <span className={chg >= 0 ? "pc-up" : "pc-down"}>{chg >= 0 ? "▲" : "▼"} {Math.abs(chg).toFixed(1)}%</span>
+        <span className="dim">{live ? t("по твоим сделкам") : t("за 30 дней")}</span>
+      </div>
+      <CandleChart points={points} trades={trades} rate={rate} defaultIv={live ? 60 : 86400} />
+    </div>
+  );
+}
+
+// Старый лёгкий график остаётся для узких мест (не используется на бирже)
 function LiveChart({ t, tier, rows }) {
   const r = RARITIES[tier];
   const W = 640, H = 150, P = 8, VH = 52, VP = 4;
@@ -329,6 +381,7 @@ function OrderBook({ t, tier, myLots, live }) {
 }
 
 function Market({ t, sb, setSb }) {
+  const rate = useEthUsd();
   const [tier, setTier] = useState(-1); // -1 = все
   const [q, setQ] = useState("");
   const [sort, setSort] = useState("price_asc");
@@ -421,7 +474,7 @@ function Market({ t, sb, setSb }) {
           ))}
         </div>
         <div className="pc-row">
-          <PriceChart t={t} tier={chartTier} live={sb.enabled} sb={sb} />
+          <CatChart t={t} tier={chartTier} live={sb.enabled} sb={sb} rate={rate} />
           <OrderBook t={t} tier={chartTier} myLots={myLots} live={sb.enabled} />
         </div>
       </div>
@@ -1504,9 +1557,14 @@ function Clicker({ t, sb, setSb }) {
 }
 
 export default function Cats({ wallet }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const admin = isTeam(wallet?.account);
-  const [tab, setTab] = useState("clicker"); // clicker | market | boxes | my | holders | about
+  const [tab, setTab] = useState("clicker"); // clicker | market | boxes | my | holders | guide | about
+  // переход на вкладку с прокруткой к её началу
+  const goTab = (id) => {
+    setTab(id);
+    setTimeout(() => document.getElementById("cats-tabs")?.scrollIntoView({ behavior: "smooth", block: "start" }), 30);
+  };
   const [sb, setSb] = useState(() => SB.load());
   const [ranges, setRanges] = useState({ tier: 2, per: 12, months: 6 });
   const set = (k) => (e) => setRanges({ ...ranges, [k]: +e.target.value });
@@ -1535,16 +1593,17 @@ export default function Cats({ wallet }) {
         </p>
         <div className="rev-cta">
           <button className="btn btn-primary" onClick={() => document.getElementById("cats-wl")?.scrollIntoView({ behavior: "smooth" })}>{t("В список на бесплатного кота")}</button>
-          <a className="btn" href="#cats-how">{t("Как это работает")}</a>
+          <button className="btn" onClick={() => goTab("guide")}>{t("Как это работает")}</button>
         </div>
       </div>
 
-      <div className="quote-tabs" style={{ justifyContent: "center", margin: "10px 0 6px", flexWrap: "wrap" }}>
+      <div id="cats-tabs" className="quote-tabs" style={{ justifyContent: "center", margin: "10px 0 6px", flexWrap: "wrap" }}>
         <button type="button" className={`quote-tab ${tab === "clicker" ? "on" : ""}`} onClick={() => setTab("clicker")}>🐾 {t("Кликер")}</button>
         <button type="button" className={`quote-tab ${tab === "market" ? "on" : ""}`} onClick={() => setTab("market")}>🏪 {t("Биржа котов")}</button>
         <button type="button" className={`quote-tab ${tab === "boxes" ? "on" : ""}`} onClick={() => setTab("boxes")}>🎁 {t("Кейсы")}</button>
         <button type="button" className={`quote-tab ${tab === "my" ? "on" : ""}`} onClick={() => setTab("my")}>{t("Мои коты")}</button>
         <button type="button" className={`quote-tab ${tab === "holders" ? "on" : ""}`} onClick={() => setTab("holders")}>🏆 {t("Рейтинг")}</button>
+        <button type="button" className={`quote-tab ${tab === "guide" ? "on" : ""}`} onClick={() => setTab("guide")}>📖 {t("Инструкция")}</button>
         <button type="button" className={`quote-tab ${tab === "about" ? "on" : ""}`} onClick={() => setTab("about")}>{t("Об игре")}</button>
       </div>
 
@@ -1555,6 +1614,7 @@ export default function Cats({ wallet }) {
       {tab === "market" && <Market t={t} sb={sb} setSb={setSb} />}
       {tab === "my" && <MyCats t={t} sb={sb} setSb={setSb} />}
       {tab === "holders" && <Holders t={t} sb={sb} />}
+      {tab === "guide" && <CatsGuide lang={lang} t={t} rarities={RARITIES} onTab={goTab} />}
 
       {tab === "about" && (<>
       <h2 className="rev-h2">{t("Уровни редкости")}</h2>
