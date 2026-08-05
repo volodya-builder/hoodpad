@@ -1586,7 +1586,6 @@ export default function Cats({ wallet }) {
   return (
     <div className="rev-page">
       <div className="rev-hero">
-        <span className="chip rev-beta">β · {t("контракты готовы, скоро деплой")}</span>
         <h1>🐱 {t("Коты-брокеры")}</h1>
         <p className="rev-sub">
           {t("NFT-коты, привязанные к настоящим акциям. Казна платит держателям котов дивиденды в токенизированных акциях — чем выше редкость кота, тем больше его доля. Держишь кота — ты совладелец платформы.")}
