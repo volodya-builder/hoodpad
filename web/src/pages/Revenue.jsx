@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useLang } from "../lib/i18n.jsx";
 import { CHAT_DB_URL } from "../lib/config.js";
 
@@ -36,6 +36,50 @@ function Spark({ data, w = 240, h = 56, stroke = "var(--gold)" }) {
       <polyline points={pts} fill="none" stroke={stroke} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" opacity=".9" />
       <circle cx={X(data.length - 1)} cy={Y(data[data.length - 1])} r="3" fill={stroke} />
     </svg>
+  );
+}
+
+// Живая лента микроплатежей агентов (демо: симулируем поток x402-вызовов)
+const AGENT_NAMES = ["gpt-trader-04", "claude-scout", "arb-bot-x7", "data-crawler", "signal-daemon", "quote-fetcher", "vault-keeper", "mev-sniffer", "kyc-checker", "geo-resolver"];
+const TOOLS = ["VASYA", "GEO", "SIGF", "onchain-intel", "price-feed", "sentiment", "rug-scan"];
+
+function LiveTicker({ t }) {
+  const [rows, setRows] = useState(() =>
+    Array.from({ length: 5 }, (_, i) => ({
+      id: i,
+      agent: AGENT_NAMES[i % AGENT_NAMES.length],
+      tool: TOOLS[i % TOOLS.length],
+      amt: (0.5 + Math.random() * 5).toFixed(3),
+    }))
+  );
+  useEffect(() => {
+    const id = setInterval(() => {
+      setRows((prev) => {
+        const next = {
+          id: Date.now() + Math.random(),
+          agent: AGENT_NAMES[Math.floor(Math.random() * AGENT_NAMES.length)],
+          tool: TOOLS[Math.floor(Math.random() * TOOLS.length)],
+          amt: (0.5 + Math.random() * 5).toFixed(3),
+        };
+        return [next, ...prev].slice(0, 5);
+      });
+    }, 1400 + Math.random() * 900);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div className="rev-ticker">
+      <div className="rev-ticker-head">
+        <span className="rev-live-dot" /> {t("Живой поток платежей агентов")} <span className="rev-demo-tag">{t("демо")}</span>
+      </div>
+      {rows.map((r, i) => (
+        <div className="rev-tick-row" key={r.id} style={{ opacity: 1 - i * 0.15 }}>
+          <span className="rev-tick-agent">{r.agent}</span>
+          <span className="rev-tick-arrow">→</span>
+          <span className="rev-tick-tool">${r.tool}</span>
+          <span className="rev-tick-amt">+{r.amt}¢</span>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -254,10 +298,69 @@ export default function Revenue() {
         </div>
       </div>
 
+      <LiveTicker t={t} />
+
       <h2 className="rev-h2" id="rev-how">{t("Как текут деньги")}</h2>
       <div className="rev-flow-wrap"><FlowDiagram t={t} /></div>
 
-      <h2 className="rev-h2">{t("Витрина после запуска")} <span className="rev-demo-tag">{t("демо")}</span></h2>
+      <h2 className="rev-h2">{t("Мем-токен против revenue-токена")}</h2>
+      <div className="rev-vs">
+        <div className="rev-vs-col meme">
+          <div className="rev-vs-title">{t("Обычный мем-токен")}</div>
+          {[
+            t("Стоит только на вере и хайпе"),
+            t("Доход — лишь если продать дороже"),
+            t("Кончился хайп — цена в ноль"),
+            t("Ничего за токеном не стоит"),
+          ].map((x) => <div className="rev-vs-item bad" key={x}><span>✕</span>{x}</div>)}
+        </div>
+        <div className="rev-vs-col rev">
+          <div className="rev-vs-title">{t("Revenue-токен")} <span className="rev-demo-tag">hood</span></div>
+          {[
+            t("Привязан к работающему сервису"),
+            t("Дивиденды капают, даже если не продавать"),
+            t("Растёт выручка — обоснованно растёт цена"),
+            t("Выручка видна в блокчейне, подделать нельзя"),
+          ].map((x) => <div className="rev-vs-item ok" key={x}><span>✓</span>{x}</div>)}
+        </div>
+      </div>
+
+      <h2 className="rev-h2">{t("Кому это выгодно")}</h2>
+      <div className="rev-persona">
+        <div className="rev-persona-card">
+          <div className="rev-persona-h">{t("Разработчику API")}</div>
+          <p>{t("Банк не даст кредит, венчур не придёт к маленькому сервису, грант — лотерея. Токен на hood — доступный капитал сейчас + бесплатный маркетинг: сам запуск приводит толпу инвесторов, которые становятся и пользователями.")}</p>
+          <div className="rev-persona-tags">
+            <span>{t("капитал без банка")}</span><span>{t("маркетинг")}</span><span>{t("комьюнити")}</span>
+          </div>
+          <button className="btn btn-primary" onClick={() => setLaunchOpen(true)}>+ {t("Запустить revenue-токен")}</button>
+        </div>
+        <div className="rev-persona-card">
+          <div className="rev-persona-h">{t("Инвестору")}</div>
+          <p>{t("Не лотерея на хайпе, а актив с денежным потоком: покупаешь долю выручки работающего сервиса и получаешь дивиденды в стейблкоинах. Выручка публична в блокчейне — можно оценить бизнес до покупки, как акцию.")}</p>
+          <div className="rev-persona-tags">
+            <span>{t("дивиденды в USDC")}</span><span>{t("прозрачная выручка")}</span><span>{t("оценка как акции")}</span>
+          </div>
+          <a className="btn" href="#rev-storefront">{t("Смотреть токены")}</a>
+        </div>
+      </div>
+
+      <h2 className="rev-h2">{t("Дорожная карта")}</h2>
+      <div className="rev-roadmap">
+        {[
+          { s: t("Готово"), d: t("Витрина, калькулятор, форма запуска, сбор заявок"), st: "done" },
+          { s: t("Сейчас"), d: t("Контракты: копилка-сплиттер и дивиденды (протестированы)"), st: "done" },
+          { s: t("Дальше"), d: t("Testnet Base: живые запуски без реальных денег"), st: "now" },
+          { s: t("Потом"), d: t("Юридическая структура и mainnet"), st: "next" },
+        ].map((r, i) => (
+          <div className={`rev-rm-step ${r.st}`} key={i}>
+            <div className="rev-rm-dot" />
+            <div className="rev-rm-body"><b>{r.s}</b><span>{r.d}</span></div>
+          </div>
+        ))}
+      </div>
+
+      <h2 className="rev-h2" id="rev-storefront">{t("Витрина после запуска")} <span className="rev-demo-tag">{t("демо")}</span></h2>
       <div className="rev-cards">
         {DEMO.map((d, i) => (
           <div className="rev-card rev-card-click" key={d.sym} onClick={() => setDetail(i)}

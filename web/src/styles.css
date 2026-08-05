@@ -2384,3 +2384,41 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .rwa-ico { vertical-align: -2px; margin-right: 2px; }
 .quote-tab { display: inline-flex; align-items: center; gap: 6px; }
 .quote-tab.qt-sm { padding: 8px 13px; font-size: 12.5px; }
+
+/* Revenue v4: живая лента, сравнение, персоны, дорожная карта */
+.rev-ticker { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin: 26px 0; }
+.rev-ticker-head { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-dim); margin-bottom: 10px; }
+.rev-live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--leaf); box-shadow: 0 0 0 0 var(--leaf); animation: revpulse 1.6s infinite; }
+@keyframes revpulse { 0% { box-shadow: 0 0 0 0 #4caf6d88; } 70% { box-shadow: 0 0 0 6px #4caf6d00; } 100% { box-shadow: 0 0 0 0 #4caf6d00; } }
+.rev-tick-row { display: flex; align-items: center; gap: 10px; font-size: 13px; padding: 5px 0; font-family: var(--font-mono, monospace); border-top: 1px solid var(--border); transition: opacity .4s; }
+.rev-tick-row:first-of-type { animation: revslide .4s ease; }
+@keyframes revslide { from { opacity: 0; transform: translateY(-4px); } }
+.rev-tick-agent { color: var(--text-dim); }
+.rev-tick-arrow { color: var(--gold); }
+.rev-tick-tool { color: var(--text); font-weight: 700; }
+.rev-tick-amt { margin-left: auto; color: var(--leaf); font-weight: 700; }
+.rev-vs { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.rev-vs-col { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+.rev-vs-col.rev { border-color: var(--border-gold); }
+.rev-vs-title { font-weight: 800; font-size: 15px; margin-bottom: 12px; }
+.rev-vs-item { display: flex; align-items: flex-start; gap: 9px; font-size: 13.5px; padding: 7px 0; color: var(--text-dim); line-height: 1.45; }
+.rev-vs-item span { flex: none; font-weight: 800; }
+.rev-vs-item.bad span { color: var(--red); }
+.rev-vs-item.ok span { color: var(--leaf); }
+.rev-vs-item.ok { color: var(--text); }
+.rev-persona { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.rev-persona-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.rev-persona-h { font-size: 17px; font-weight: 800; margin-bottom: 8px; }
+.rev-persona-card p { color: var(--text-dim); font-size: 13.5px; line-height: 1.6; margin: 0 0 12px; }
+.rev-persona-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.rev-persona-tags span { font-size: 11.5px; background: var(--gold-dim); color: var(--gold); border-radius: 99px; padding: 3px 10px; }
+.rev-roadmap { display: flex; flex-direction: column; gap: 2px; }
+.rev-rm-step { display: flex; gap: 14px; padding: 4px 0; }
+.rev-rm-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border-strong); margin-top: 3px; flex: none; position: relative; }
+.rev-rm-step:not(:last-child) .rev-rm-dot::after { content: ""; position: absolute; left: 50%; top: 14px; transform: translateX(-50%); width: 2px; height: 34px; background: var(--border); }
+.rev-rm-step.done .rev-rm-dot { background: var(--gold); border-color: var(--gold); }
+.rev-rm-step.now .rev-rm-dot { border-color: var(--gold); box-shadow: 0 0 0 4px var(--gold-dim); }
+.rev-rm-body b { display: block; font-size: 14px; }
+.rev-rm-body span { font-size: 12.5px; color: var(--text-dim); }
+.rev-rm-step.next .rev-rm-body b, .rev-rm-step.next .rev-rm-body span { opacity: .6; }
+@media (max-width: 700px) { .rev-vs, .rev-persona { grid-template-columns: 1fr; } }
