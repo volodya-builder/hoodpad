@@ -2923,3 +2923,24 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .hm-trade-price { font-variant-numeric: tabular-nums; color: var(--text); }
 .ck-bd[role="button"], .ck-win[role="button"] { cursor: pointer; }
 .ck-bd[role="button"]:hover, .ck-win[role="button"]:hover { background: #7c88ff1f; }
+
+/* ——— шапка страницы котов: компактно, с живым статусом ——— */
+.cats-hero { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px;
+  align-items: center; margin: 18px 0 18px; }
+.cats-hero-l h1 { font-size: 38px; line-height: 1.1; margin: 0 0 10px; letter-spacing: -.02em; }
+.cats-hero-beta { font-size: 15px; font-weight: 700; color: #a5aeff; vertical-align: super; margin-left: 4px; }
+.cats-hero-sub { font-size: 16px; line-height: 1.6; color: var(--text-dim); margin: 0 0 16px; max-width: 560px; }
+.cats-hero-cta { display: flex; gap: 10px; flex-wrap: wrap; }
+.cats-hero-note { font-size: 11.5px; line-height: 1.55; color: var(--text-dim); opacity: .75;
+  margin: 14px 0 0; max-width: 560px; }
+.cats-hero-r { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cats-hero-stat { background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  padding: 12px 14px; text-align: center; }
+.cats-hero-stat b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+.cats-hero-stat span { font-size: 11px; color: var(--text-dim); }
+.cats-hero-stat.big { grid-column: 1 / -1; padding: 14px; }
+.cats-hero-stat.big b { font-size: 34px; color: var(--gold); letter-spacing: .5px; }
+@media (max-width: 900px) {
+  .cats-hero { grid-template-columns: 1fr; gap: 16px; }
+  .cats-hero-l h1 { font-size: 30px; }
+}

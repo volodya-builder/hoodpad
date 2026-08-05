@@ -1685,6 +1685,12 @@ function Clicker({ t, sb, setSb, wallet }) {
 export default function Cats({ wallet }) {
   const { t, lang } = useLang();
   const admin = isTeam(wallet?.account);
+  // таймер в шапке тикает независимо от вкладки кликера
+  const [heroNow, setHeroNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setHeroNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
   const [tab, setTab] = useState("clicker"); // clicker | market | boxes | my | holders | guide | about
   // переход на вкладку с прокруткой к её началу
   const goTab = (id) => {
@@ -1711,14 +1717,40 @@ export default function Cats({ wallet }) {
 
   return (
     <div className="rev-page">
-      <div className="rev-hero">
-        <h1>🐱 {t("Коты-брокеры")}</h1>
-        <p className="rev-sub">
-          {t("NFT-коты, привязанные к настоящим акциям. Платформа периодически раздаёт держателям котов награды в токенизированных акциях: чем реже кот, тем больше его вес в раздаче. Награды не гарантированы, не являются доходом от доли в платформе и могут прекратиться в любой момент.")}
-        </p>
-        <div className="rev-cta">
-          <button className="btn btn-primary" onClick={() => document.getElementById("cats-wl")?.scrollIntoView({ behavior: "smooth" })}>{t("В список на бесплатного кота")}</button>
-          <button className="btn" onClick={() => goTab("guide")}>{t("Как это работает")}</button>
+      {/* Компактная шапка: суть в одну строку, живой статус вместо
+          юридического абзаца (полный текст — в инструкции и в подвале),
+          одно главное действие. Так игра попадает на первый экран. */}
+      <div className="cats-hero">
+        <div className="cats-hero-l">
+          <h1>{t("Коты-брокеры")} <span className="cats-hero-beta">β</span></h1>
+          <p className="cats-hero-sub">
+            {t("Тапай кота, лови NFT каждые полчаса, держи — и получай награды в токенизированных акциях.")}
+          </p>
+          <div className="cats-hero-cta">
+            <button className="btn btn-primary" onClick={() => goTab("clicker")}>{t("Играть")}</button>
+            <button className="btn" onClick={() => goTab("guide")}>{t("Как это работает")}</button>
+          </div>
+          <p className="cats-hero-note">
+            {t("Награды не гарантированы, зависят от комиссий платформы и могут прекратиться. Кот — коллекционный NFT, а не доля в платформе.")}
+          </p>
+        </div>
+
+        {/* живые цифры: сколько ждать следующего кота и что уже происходит */}
+        <div className="cats-hero-r">
+          <div className="cats-hero-stat big">
+            <b>{CL.fmtLeft(CL.msLeft(heroNow))}</b>
+            <span>{t("до следующего кота")}</span>
+          </div>
+          <div className="cats-hero-stat">
+            <b>{CL.ROUNDS_PER_DAY}</b><span>{t("котов в сутки")}</span>
+          </div>
+          <div className="cats-hero-stat">
+            <b>{(sb.enabled ? sb.boxesLeft : SB.BOX_TOTAL).toLocaleString("ru-RU")}</b>
+            <span>{t("кейсов осталось")}</span>
+          </div>
+          <div className="cats-hero-stat">
+            <b className="rev-gold">{t("бесплатно")}</b><span>{t("участие в розыгрыше")}</span>
+          </div>
         </div>
       </div>
 
