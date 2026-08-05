@@ -133,6 +133,77 @@ function PriceChart({ t, tier }) {
   );
 }
 
+// Стакан заявок по редкости: биды (покупка) снизу, аски (продажа) сверху.
+// Демо-книга детерминирована; после деплоя строится из активных лотов
+// (аски = listings контракта) и офферов покупателей.
+function orderBook(tier, myLots) {
+  const base = PRICE_HISTORY[tier][PRICE_HISTORY[tier].length - 1];
+  let x = 7000 + tier * 137;
+  const rnd = () => ((x = (x * 9301 + 49297) % 233280) / 233280);
+  const asks = Array.from({ length: 6 }, (_, i) => ({
+    price: Math.round(base * (1 + (i + 1) * (0.04 + rnd() * 0.03)) * 10000) / 10000,
+    qty: 1 + Math.floor(rnd() * 5),
+  }));
+  const bids = Array.from({ length: 6 }, (_, i) => ({
+    price: Math.round(base * (1 - (i + 1) * (0.04 + rnd() * 0.03)) * 10000) / 10000,
+    qty: 1 + Math.floor(rnd() * 5),
+  }));
+  // мои реальные лоты этой редкости добавляем в аски
+  (myLots || []).filter((l) => l.tier === tier).forEach((l) => {
+    asks.push({ price: l.price, qty: 1, mine: true });
+  });
+  asks.sort((a, b) => a.price - b.price);
+  bids.sort((a, b) => b.price - a.price);
+  return { asks: asks.slice(0, 7).reverse(), bids: bids.slice(0, 7) };
+}
+
+function OrderBook({ t, tier, myLots }) {
+  const { asks, bids } = useMemo(() => orderBook(tier, myLots), [tier, myLots]);
+  const maxQty = Math.max(...asks.map((a) => a.qty), ...bids.map((b) => b.qty), 1);
+  const bestAsk = asks[asks.length - 1]?.price ?? 0;
+  const bestBid = bids[0]?.price ?? 0;
+  const spread = bestAsk && bestBid ? ((bestAsk - bestBid) / bestAsk) * 100 : 0;
+
+  return (
+    <div className="ob">
+      <div className="ob-head">
+        <span>{t("Стакан заявок")}</span>
+        <span className="dim">{t("цена")} · {t("кол-во")}</span>
+      </div>
+
+      <div className="ob-side">
+        {asks.map((a, i) => (
+          <div className="ob-row ask" key={`a${i}`}>
+            <span className="ob-bar" style={{ width: `${(a.qty / maxQty) * 100}%` }} />
+            <span className="ob-price">{a.price}</span>
+            <span className="ob-qty">{a.qty}{a.mine && <b className="ob-mine">•</b>}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="ob-spread">
+        <b>{bestBid} / {bestAsk}</b>
+        <span className="dim">{t("спред")} {spread.toFixed(1)}%</span>
+      </div>
+
+      <div className="ob-side">
+        {bids.map((b, i) => (
+          <div className="ob-row bid" key={`b${i}`}>
+            <span className="ob-bar" style={{ width: `${(b.qty / maxQty) * 100}%` }} />
+            <span className="ob-price">{b.price}</span>
+            <span className="ob-qty">{b.qty}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="ob-foot">
+        <span className="ob-legend"><i className="ask" />{t("продажа")}</span>
+        <span className="ob-legend"><i className="bid" />{t("покупка")}</span>
+      </div>
+    </div>
+  );
+}
+
 function Market({ t, sb, setSb }) {
   const [tier, setTier] = useState(-1); // -1 = все
   const [q, setQ] = useState("");
@@ -199,7 +270,10 @@ function Market({ t, sb, setSb }) {
                     onClick={() => setChartTier(i)}>{t(r.ru)}</button>
           ))}
         </div>
-        <PriceChart t={t} tier={chartTier} />
+        <div className="pc-row">
+          <PriceChart t={t} tier={chartTier} />
+          <OrderBook t={t} tier={chartTier} myLots={myLots} />
+        </div>
       </div>
 
       {/* Мои коты прямо на бирже — быстро выставить */}
@@ -307,11 +381,25 @@ function Market({ t, sb, setSb }) {
 }
 
 // Кейсы: рулетка открытия в стиле CS:GO
+const ROLL_ITEM = 96, ROLL_GAP = 10, ROLL_PAD = 12, ROLL_WIN_INDEX = 36;
+
 function Boxes({ t, sb, setSb }) {
   const [phase, setPhase] = useState("idle"); // idle | rolling | result
   const [result, setResult] = useState(null);
   const [strip, setStrip] = useState([]);
+  const [offset, setOffset] = useState(0);
+  const wrapRef = React.useRef(null);
   const SOLD_DEMO = 1287; // демо-счётчик проданных боксов (когда песочница выключена)
+
+  // Точный сдвиг ленты: центр выигрышной ячейки должен встать под маркер
+  // (маркер — ровно посередине контейнера). В CSS проценты в translateX
+  // считаются от ширины САМОЙ ленты, поэтому раньше лента останавливалась
+  // на произвольном коте — считаем в пикселях по реальной ширине контейнера.
+  function winOffset() {
+    const w = wrapRef.current?.clientWidth || 640;
+    const cellCenter = ROLL_PAD + ROLL_WIN_INDEX * (ROLL_ITEM + ROLL_GAP) + ROLL_ITEM / 2;
+    return Math.round(w / 2 - cellCenter);
+  }
 
   function rollRarity() {
     const r = Math.random() * 100;
@@ -332,10 +420,13 @@ function Boxes({ t, sb, setSb }) {
       sym = RWA_POPULAR[Math.floor(Math.random() * RWA_POPULAR.length)];
     }
     const items = Array.from({ length: 40 }, () => rollRarity());
-    items[36] = win;
+    items[ROLL_WIN_INDEX] = win;
     setStrip(items);
     setResult(null);
+    setOffset(0);
     setPhase("rolling");
+    // запускаем прокрутку в следующем кадре, чтобы сработал transition
+    requestAnimationFrame(() => requestAnimationFrame(() => setOffset(winOffset())));
     setTimeout(() => {
       setResult({ tier: win, sym, id: catId });
       setPhase("result");
@@ -384,9 +475,11 @@ function Boxes({ t, sb, setSb }) {
       </div>
 
       {(phase === "rolling" || phase === "result") && (
-        <div className="roll-wrap">
+        <div className="roll-wrap" ref={wrapRef}>
           <div className="roll-marker" />
-          <div className={`roll-strip ${phase === "rolling" ? "spin" : "done"}`}>
+          <div className="roll-strip"
+               style={{ transform: `translateX(${offset}px)`,
+                        transition: phase === "rolling" ? "transform 4.2s cubic-bezier(.12,.72,.11,1)" : "none" }}>
             {strip.map((tr, i) => (
               <div className="roll-item" key={i} style={{ borderColor: RARITIES[tr].color + "88" }}>
                 <TierArt tier={tr} size={64} />

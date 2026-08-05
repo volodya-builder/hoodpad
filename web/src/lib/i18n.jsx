@@ -1145,6 +1145,12 @@ const EN = {
   "Чутьё рынка": "Market sense",
   "🐱‍👤 Золотой кот пойман! +{n} очков и ×2 на 20 секунд": "🐱‍👤 Golden cat caught! +{n} points and x2 for 20 seconds",
   "Комбо ×5 за быстрые тапы, криты ×10, золотой кот с джекпотом и ×2. Очки за сутки дают буст к дивидендам котов (до +25%) и билеты в розыгрыш 50 NFT в день.": "Combo up to x5 for fast taps, x10 crits, a golden cat with a jackpot and x2 boost. Daily points boost your cat dividends (up to +25%) and buy tickets into the 50-NFT daily raffle.",
+  "Стакан заявок": "Order book",
+  "цена": "price",
+  "кол-во": "qty",
+  "спред": "spread",
+  "продажа": "asks",
+  "покупка": "bids",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

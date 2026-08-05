@@ -2484,9 +2484,6 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .roll-wrap { position: relative; margin: 20px 0 0; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-soft); height: 120px; }
 .roll-marker { position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; background: var(--gold); z-index: 3; box-shadow: 0 0 14px 2px var(--gold); }
 .roll-strip { display: flex; gap: 10px; padding: 12px; position: absolute; left: 0; top: 0; }
-.roll-strip.spin { animation: rollspin 4.2s cubic-bezier(.12,.72,.11,1) forwards; }
-.roll-strip.done { transform: translateX(calc(-1 * (36 * 106px) + 50% - 48px)); }
-@keyframes rollspin { from { transform: translateX(0); } to { transform: translateX(calc(-1 * (36 * 106px) + 50% - 48px)); } }
 .roll-item { width: 96px; flex: none; height: 96px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
 .roll-item span { font-size: 10.5px; font-weight: 700; }
 .roll-result { display: flex; align-items: center; gap: 16px; border: 2px solid var(--gold); border-radius: var(--radius); padding: 16px 20px; margin-top: 14px; background: var(--card); animation: revslide .4s ease; }
@@ -2674,3 +2671,25 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
   .ck-arena { min-height: 380px; }
   .ck-img { width: 230px; height: 230px; }
 }
+
+/* Стакан заявок рядом с графиком */
+.pc-row { display: grid; grid-template-columns: 1fr 260px; gap: 14px; align-items: start; }
+.ob { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px; padding: 10px; font-family: var(--font-mono, monospace); }
+.ob-head { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); margin-bottom: 6px; }
+.ob-side { display: flex; flex-direction: column; gap: 1px; }
+.ob-row { position: relative; display: flex; justify-content: space-between; align-items: center; padding: 3px 7px; font-size: 12px; border-radius: 4px; overflow: hidden; }
+.ob-bar { position: absolute; right: 0; top: 0; bottom: 0; opacity: .16; }
+.ob-row.ask .ob-bar { background: var(--red); }
+.ob-row.bid .ob-bar { background: var(--leaf); }
+.ob-row.ask .ob-price { color: #ff8080; }
+.ob-row.bid .ob-price { color: #74d69a; }
+.ob-price, .ob-qty { position: relative; z-index: 1; }
+.ob-qty { color: var(--text-dim); }
+.ob-mine { color: var(--gold); margin-left: 4px; }
+.ob-spread { display: flex; justify-content: space-between; align-items: baseline; padding: 7px; margin: 5px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); font-size: 12.5px; }
+.ob-spread b { font-size: 13.5px; }
+.ob-foot { display: flex; gap: 12px; margin-top: 8px; font-size: 10.5px; color: var(--text-dim); }
+.ob-legend { display: inline-flex; align-items: center; gap: 4px; }
+.ob-legend i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+.ob-legend i.ask { background: var(--red); } .ob-legend i.bid { background: var(--leaf); }
+@media (max-width: 860px) { .pc-row { grid-template-columns: 1fr; } }
