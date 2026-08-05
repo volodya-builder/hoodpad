@@ -679,7 +679,7 @@ html[data-theme="light"] .grad-wrap { background: radial-gradient(700px 260px at
 /* ---------------- nav pills / header controls */
 .nav-pills { display: flex; background: #111210; border: 1px solid var(--border); border-radius: 999px; padding: 3px; gap: 3px; margin: 0 auto; min-width: 0; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 .nav-pills::-webkit-scrollbar { display: none; }
-.nav-pill { padding: 7px 16px; border-radius: 999px; font-size: 13.5px; font-weight: 600; color: var(--text-dim); cursor: pointer; transition: all .15s; white-space: nowrap; flex: none; }
+.nav-pill { padding: 7px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--text-dim); cursor: pointer; transition: all .15s; white-space: nowrap; flex: none; }
 .nav-pill.on { background: var(--bg-soft); color: var(--text); }
 
 /* «Арена» в меню — просто огонёк, без пульсации */

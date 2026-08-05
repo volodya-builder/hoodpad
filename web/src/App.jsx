@@ -354,18 +354,8 @@ export default function App() {
             <a className={`nav-pill ${route.startsWith("/cats") ? "on" : ""}`} href="#/cats">🐱 {t("Коты")} <span className="rev-nav-beta">β</span></a>
             <a className={`nav-pill ${route.startsWith("/vote") ? "on" : ""}`} href="#/vote">{t("Голосование")}</a>
             <a className={`nav-pill ${route.startsWith("/treasury") ? "on" : ""}`} href="#/treasury">{t("Казна")}</a>
-            <div className="nav-more">
-              <button className={`nav-pill nav-more-btn ${(route.startsWith("/analytics") || route.startsWith("/about")) ? "on" : ""}`}
-                      onClick={(e) => { e.stopPropagation(); setMoreMenu(!moreMenu); }}>{t("Ещё")} <span className="chev">▾</span></button>
-              {moreMenu && (
-                <div className="nav-more-menu" onClick={() => { setMoreMenu(false); setMenuOpen(false); }}>
-                  <a href="#/analytics">{t("Аналитика")}</a>
-                  <a href="#/about">{t("О нас")}</a>
-                </div>
-              )}
-            </div>
-            <a className={`nav-pill nav-pill-mob ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>
-            <a className={`nav-pill nav-pill-mob ${route.startsWith("/about") ? "on" : ""}`} href="#/about">{t("О нас")}</a>
+            <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>
+            <a className={`nav-pill ${route.startsWith("/about") ? "on" : ""}`} href="#/about">{t("О нас")}</a>
           </div>
           <nav className="nav">
             <button className={`icon-btn burger ${menuOpen ? "on" : ""}`} onClick={() => setMenuOpen(!menuOpen)} title={t("Меню")} aria-label="menu">
