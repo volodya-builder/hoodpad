@@ -1002,6 +1002,43 @@ function demoHolders() {
 }
 const HOLDERS = demoHolders();
 
+/** Короткий адрес кошелька: 0xd3d1…6255 */
+function shortAddr(a) {
+  return a && a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : (a || "");
+}
+
+/** Профиль игрока для модалки: свой собирается из настоящей песочницы,
+ *  чужой — из детерминированной демо-коллекции по адресу. */
+function playerProfile(p, sb, t) {
+  const round = {
+    points: p.points || 0,
+    tickets: p.tickets != null ? p.tickets : 0,
+    pct: p.pct != null ? p.pct : (p.chance || 0),
+  };
+  if (p.me && sb?.enabled) {
+    const st = SB.stats(sb);
+    return {
+      addr: p.addr, me: true, round,
+      cats: st.count, legend: st.byTier[4], weight: st.weight,
+      earned: Math.round(st.divs * 10) / 10,
+      list: sb.cats.map((c) => ({ id: c.id, tier: c.tier, sym: c.sym, divs: c.divs })),
+      trades: sb.trades || [],
+    };
+  }
+  // детерминированный демо-профиль: одинаковый при каждом открытии
+  let x = 0;
+  for (const ch of String(p.addr)) x = (x * 31 + ch.charCodeAt(0)) % 233280;
+  const rnd = () => ((x = (x * 9301 + 49297) % 233280) / 233280);
+  const cats = p.me ? 0 : 1 + Math.floor(rnd() * 14);
+  const legend = rnd() < 0.12 ? 1 : 0;
+  return {
+    addr: p.addr, me: !!p.me, round, cats, legend,
+    weight: cats + legend * 7 + Math.floor(rnd() * cats * 2),
+    earned: Math.round(cats * (2 + rnd() * 12) * 10) / 10,
+    trades: [],
+  };
+}
+
 // Коллекция конкретного холдера (демо, детерминированно по адресу)
 function holderCats(h) {
   if (h.list) return [...h.list].sort((a, b) => b.tier - a.tier); // настоящая коллекция
@@ -1023,8 +1060,9 @@ function holderCats(h) {
   return rows.sort((a, b) => b.tier - a.tier);
 }
 
-function HolderModal({ t, holder, onClose }) {
+function HolderModal({ t, holder, onClose, trades }) {
   const rows = useMemo(() => holderCats(holder), [holder]);
+  const myTrades = useMemo(() => [...(trades || [])].reverse().slice(0, 12), [trades]);
   const byTier = useMemo(() => {
     const m = [0, 0, 0, 0, 0];
     rows.forEach((c) => { m[c.tier] += 1; });
@@ -1035,7 +1073,10 @@ function HolderModal({ t, holder, onClose }) {
     <div className="modal-back open" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="rev-launch-modal cat-modal">
         <div className="rev-lm-head">
-          <b className="hold-addr" style={{ fontSize: 15 }}>{holder.addr}</b>
+          <b className="hold-addr" style={{ fontSize: 15 }}>
+            {holder.addr}
+            {holder.me && <span className="cm-mine-tag" style={{ marginLeft: 8 }}>{t("это ты")}</span>}
+          </b>
           <button className="icon-btn" onClick={onClose} aria-label="close">✕</button>
         </div>
 
@@ -1045,6 +1086,18 @@ function HolderModal({ t, holder, onClose }) {
           <div><span>{t("легендарных")}</span><b style={{ color: RARITIES[4].color }}>{holder.legend || "—"}</b></div>
           <div><span>{t("заработано")}</span><b className="rev-gold">${holder.earned}</b></div>
         </div>
+
+        {/* результат в текущем раунде — если профиль открыт из таблицы игроков */}
+        {holder.round && (
+          <>
+            <div className="cat-sec-title">{t("В текущем раунде")}</div>
+            <div className="cat-modal-kv" style={{ gridTemplateColumns: "repeat(3,1fr)" }}>
+              <div><span>{t("очки")}</span><b>{Math.round(holder.round.points).toLocaleString("ru-RU")}</b></div>
+              <div><span>{t("билеты")}</span><b>{Math.round(holder.round.tickets).toLocaleString("ru-RU")}</b></div>
+              <div><span>{t("шанс")}</span><b className="rev-gold">{holder.round.pct.toFixed(1)}%</b></div>
+            </div>
+          </>
+        )}
 
         <div className="cat-sec-title">{t("Состав коллекции")}</div>
         <div className="hm-tiers">
@@ -1076,7 +1129,29 @@ function HolderModal({ t, holder, onClose }) {
             );
           })}
         </div>
-        <div className="hint" style={{ marginTop: 12 }}>{t("Демо-коллекция. После деплоя читается по он-чейн владению NFT.")}</div>
+        {/* сделки: настоящие для своего профиля, для чужих их не выдумываем */}
+        {myTrades.length > 0 && (
+          <>
+            <div className="cat-sec-title">{t("Сделки")}</div>
+            <div className="hm-trades">
+              {myTrades.map((tr, i) => (
+                <div className={`hm-trade ${tr.side}`} key={i}>
+                  <span className="hm-trade-side">{tr.side === "sell" ? t("продажа") : t("покупка")}</span>
+                  <span>#{tr.id}</span>
+                  <span className="dim">{RARITIES[tr.tier] ? t(RARITIES[tr.tier].ru) : ""}</span>
+                  <span className="hm-trade-price">{tr.price} ETH</span>
+                  <span className="dim">{new Date(tr.ts).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        <div className="hint" style={{ marginTop: 12 }}>
+          {holder.me
+            ? t("Твои коты и сделки из тестового режима. После деплоя всё читается из блокчейна.")
+            : t("Демо-коллекция. После деплоя читается по он-чейн владению NFT.")}
+        </div>
       </div>
     </div>
   );
@@ -1306,7 +1381,11 @@ function Shop({ t, g, setG }) {
   );
 }
 
-function Clicker({ t, sb, setSb }) {
+function Clicker({ t, sb, setSb, wallet }) {
+  // в таблицах показываем адрес кошелька, а не «ты»: так строка выглядит
+  // одинаково для всех участников и по ней сразу видно, чей это профиль
+  const myAddr = wallet?.account ? shortAddr(wallet.account) : t("гость");
+  const [openPlayer, setOpenPlayer] = useState(null);
   const [g, setG] = useState(() => CL.load());
   const [flyers, setFlyers] = useState([]);
   const [bump, setBump] = useState(false);
@@ -1381,8 +1460,8 @@ function Clicker({ t, sb, setSb }) {
   const totalPoints = CL.poolTotal(pool) + (g.roundPoints || 0);
   // корзина билетов раунда: билеты по корню от очков + кэп 25% на кошелёк
   const board = useMemo(
-    () => CL.ticketTable(pool, g.roundPoints || 0, t("ты")),
-    [pool, g.roundPoints, t]
+    () => CL.ticketTable(pool, g.roundPoints || 0, myAddr),
+    [pool, g.roundPoints, myAddr]
   );
 
   const perClick = CL.perClick(g);
@@ -1444,6 +1523,9 @@ function Clicker({ t, sb, setSb }) {
   return (
     <>
       {toast && <div className="rev-toast">{toast}</div>}
+      {openPlayer && (
+        <HolderModal t={t} holder={openPlayer} trades={openPlayer.trades} onClose={() => setOpenPlayer(null)} />
+      )}
 
       {/* верхняя панель показателей */}
       <div className="ck-top">
@@ -1545,7 +1627,10 @@ function Clicker({ t, sb, setSb }) {
             </div>
             <div className="ck-board">
               {board.map((p, i) => (
-                <div className={`ck-bd ${p.me ? "me" : ""}`} key={`${p.addr}-${i}`}>
+                <div className={`ck-bd ${p.me ? "me" : ""}`} key={`${p.addr}-${i}`}
+                     role="button" tabIndex={0} title={t("Открыть профиль")}
+                     onClick={() => setOpenPlayer(playerProfile(p, sb, t))}
+                     onKeyDown={(e) => e.key === "Enter" && setOpenPlayer(playerProfile(p, sb, t))}>
                   <span className="ck-bd-n">{i + 1}</span>
                   <span className="ck-bd-a">{p.addr}</span>
                   <span className="ck-bd-p" title={t("билетов")}>{Math.round(p.tickets).toLocaleString("ru-RU")}</span>
@@ -1564,9 +1649,11 @@ function Clicker({ t, sb, setSb }) {
             ) : (
               <div className="ck-winners">
                 {(g.winners || []).slice(0, 8).map((wn, i) => (
-                  <div className={`ck-win ${wn.me ? "me" : ""}`} key={`${wn.round}-${wn.ts}-${i}`}>
+                  <div className={`ck-win ${wn.me ? "me" : ""}`} key={`${wn.round}-${wn.ts}-${i}`}
+                       role="button" tabIndex={0} title={t("Открыть профиль")}
+                       onClick={() => setOpenPlayer(playerProfile({ ...wn, addr: wn.me ? myAddr : wn.addr }, sb, t))}>
                     <img src="./cats/legendary.webp" alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-                    <span className="ck-win-addr">{wn.me ? t("ты") : wn.addr}</span>
+                    <span className="ck-win-addr">{wn.me ? myAddr : wn.addr}</span>
                     <span className="ck-win-pts">{wn.points.toLocaleString("ru-RU")} {t("оч.")}</span>
                     <span className="ck-win-ts">{fmtTime(wn.ts)}</span>
                   </div>
@@ -1642,37 +1729,17 @@ export default function Cats({ wallet }) {
         <button type="button" className={`quote-tab ${tab === "my" ? "on" : ""}`} onClick={() => setTab("my")}>{t("Мои коты")}</button>
         <button type="button" className={`quote-tab ${tab === "holders" ? "on" : ""}`} onClick={() => setTab("holders")}>🏆 {t("Рейтинг")}</button>
         <button type="button" className={`quote-tab ${tab === "guide" ? "on" : ""}`} onClick={() => setTab("guide")}>📖 {t("Инструкция")}</button>
-        <button type="button" className={`quote-tab ${tab === "about" ? "on" : ""}`} onClick={() => setTab("about")}>{t("Об игре")}</button>
       </div>
 
       {admin && <AdminDock t={t} sb={sb} setSb={setSb} />}
 
-      {tab === "clicker" && <Clicker t={t} sb={sb} setSb={setSb} />}
+      {tab === "clicker" && <Clicker t={t} sb={sb} setSb={setSb} wallet={wallet} />}
       {tab === "boxes" && <Boxes t={t} sb={sb} setSb={setSb} />}
       {tab === "market" && <Market t={t} sb={sb} setSb={setSb} />}
       {tab === "my" && <MyCats t={t} sb={sb} setSb={setSb} />}
       {tab === "holders" && <Holders t={t} sb={sb} />}
-      {tab === "guide" && <CatsGuide lang={lang} t={t} rarities={RARITIES} onTab={goTab} />}
-
-      {tab === "about" && (<>
-      <h2 className="rev-h2">{t("Уровни редкости")}</h2>
-      <div className="cats-tiers">
-        {RARITIES.map((r) => (
-          <div className="cats-tier" key={r.key} style={{ borderColor: r.color + "66" }}>
-            <TierArt tier={RARITIES.indexOf(r)} size={72} />
-            <b style={{ color: r.color }}>{t(r.ru)}</b>
-            <div className="cats-tier-kv"><span>{t("шанс")}</span><b>{r.chance}%</b></div>
-            <div className="cats-tier-kv"><span>{t("вес выплат")}</span><b>×{r.mult}</b></div>
-          </div>
-        ))}
-      </div>
-
-      <h2 className="rev-h2" id="cats-how">{t("Как работают награды")}</h2>
-      <div className="rev-steps">
-        <div className="rev-step"><b>{t("1 · Казна собирает комиссии")}</b><span>{t("Часть реальных сборов hood с торгов идёт в кошачью казну.")}</span></div>
-        <div className="rev-step"><b>{t("2 · Покупка акций")}</b><span>{t("Казна конвертирует их в токенизированные акции (SPY, NVDA и др.).")}</span></div>
-        <div className="rev-step"><b>{t("3 · Раздача по весу")}</b><span>{t("Контракт делит акции между котами по редкости. Клеймишь — акции на кошелёк.")}</span></div>
-      </div>
+      {tab === "guide" && (<>
+        <CatsGuide lang={lang} t={t} rarities={RARITIES} onTab={goTab} />
 
       <h2 className="rev-h2">{t("Прикинь награды кота")} <span className="rev-demo-tag">{t("демо")}</span></h2>
       <div className="rev-calc">
@@ -1708,11 +1775,6 @@ export default function Cats({ wallet }) {
           </div>
         ))}
         <div className="cats-roster-item dim">+88 {t("ещё")}</div>
-      </div>
-
-      <h2 className="rev-h2">{t("Вопросы")}</h2>
-      <div className="rev-faq">
-        {faq.map(([q, a]) => (<details key={q}><summary>{q}</summary><p>{a}</p></details>))}
       </div>
 
       <div className="rev-form-wrap" id="cats-wl">
