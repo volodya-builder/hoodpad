@@ -9,6 +9,10 @@ interface IERC721Receiver {
         returns (bytes4);
 }
 
+interface ICatVaultHook {
+    function register(uint256 id) external;
+}
+
 /// @title BrokerCats — NFT-коты, привязанные к реальным акциям
 /// @notice Фэнтези-спорт на токенизированных акциях Robinhood Chain:
 ///         минт кота случайно назначает тикер (из ростера) и редкость-множитель.
@@ -50,16 +54,24 @@ contract BrokerCats is Ownable {
     }
 
     uint256 public constant MAX_SUPPLY = 3000;
+    /// @notice Лимит бесплатной раздачи первым пользователям (аирдроп).
+    uint256 public constant AIRDROP_CAP = 500;
     uint256 public immutable mintPrice;
     address public immutable proceeds;
+
+    /// @notice Хранилище дивидендов (CatStockVault). Ставится один раз;
+    ///         каждый новый кот регистрируется в нём при минте.
+    address public vault;
 
     Roster[] public roster;
     mapping(uint256 => Cat) public catOf;
     uint256 public totalMinted;
+    uint256 public airdropped;
     string public baseURI;
 
-    event CatMinted(address indexed to, uint256 indexed id, uint16 rosterId, uint8 rarity);
+    event CatMinted(address indexed to, uint256 indexed id, uint16 rosterId, uint8 rarity, bool free);
     event RosterAdded(uint16 indexed id, string ticker, address feed);
+    event VaultSet(address vault);
 
     constructor(uint256 mintPrice_, address proceeds_, string memory baseURI_) Ownable(msg.sender) {
         require(proceeds_ != address(0), "zero proceeds");
@@ -81,6 +93,14 @@ contract BrokerCats is Ownable {
         baseURI = uri;
     }
 
+    /// @notice Однократно привязать хранилище дивидендов.
+    function setVault(address vault_) external onlyOwner {
+        require(vault == address(0), "already set");
+        require(vault_ != address(0), "zero vault");
+        vault = vault_;
+        emit VaultSet(vault_);
+    }
+
     function rosterCount() external view returns (uint256) {
         return roster.length;
     }
@@ -91,21 +111,40 @@ contract BrokerCats is Ownable {
     ///         уходит в proceeds — на контракте деньги не лежат.
     function mint() external payable returns (uint256 id) {
         require(msg.value == mintPrice, "wrong price");
+        id = _mintCat(msg.sender, false);
+        (bool ok, ) = proceeds.call{value: msg.value}("");
+        require(ok, "proceeds send failed");
+    }
+
+    /// @notice Бесплатная раздача первым пользователям. Только owner,
+    ///         жёсткий кап AIRDROP_CAP — «напечатать себе бесплатных котов
+    ///         без ограничений» невозможно даже владельцу.
+    function airdrop(address[] calldata to) external onlyOwner {
+        require(airdropped + to.length <= AIRDROP_CAP, "airdrop cap");
+        airdropped += to.length;
+        for (uint256 i = 0; i < to.length; i++) {
+            _mintCat(to[i], true);
+        }
+    }
+
+    function _mintCat(address to, bool free) internal returns (uint256 id) {
         require(totalMinted < MAX_SUPPLY, "sold out");
         require(roster.length > 0, "roster empty");
 
         id = ++totalMinted;
 
         uint256 rnd = uint256(keccak256(abi.encodePacked(
-            blockhash(block.number - 1), msg.sender, id
+            blockhash(block.number - 1), to, id
         )));
         catOf[id] = Cat(uint16(rnd % roster.length), _rollRarity(uint8((rnd >> 128) % 100)));
 
-        _mint(msg.sender, id);
-        emit CatMinted(msg.sender, id, catOf[id].rosterId, catOf[id].rarity);
+        _mint(to, id);
+        emit CatMinted(to, id, catOf[id].rosterId, catOf[id].rarity, free);
 
-        (bool ok, ) = proceeds.call{value: msg.value}("");
-        require(ok, "proceeds send failed");
+        // регистрация в дивидендах: не блокируем минт, если хранилища ещё нет
+        if (vault != address(0)) {
+            ICatVaultHook(vault).register(id);
+        }
     }
 
     /// @dev Common 60% ×1 · Rare 25% ×2 · Epic 11% ×3 · Legendary 4% ×5
