@@ -869,6 +869,22 @@ const EN = {
   "Платежи идут в блокчейне и видны каждому. Копилка — контракт с зашитыми долями: ни разработчик, ни hood не могут изменить правила или забрать чужое.": "Payments settle on-chain in public view. The piggy bank is a contract with hard-coded shares: neither the developer nor hood can change the rules or take what isn't theirs.",
   "Когда запуск?": "When does it launch?",
   "Сначала testnet в сети Base (без реальных денег), параллельно — юридическая проверка: revenue-токены во многих странах считаются ценными бумагами. Ранние из списка получат запуск без комиссии.": "Base testnet first (no real money), with legal review in parallel: revenue tokens qualify as securities in many countries. Early-list members launch fee-free.",
+  "Запустить revenue-токен": "Launch a revenue token",
+  "Как это работает": "How it works",
+  "Тикер": "Ticker",
+  "Ссылка на API / GitHub / сайт": "API / GitHub / website link",
+  "тебе": "you keep",
+  "Сапплай": "Supply",
+  "На продажу, %": "For sale, %",
+  "Цена, $": "Price, $",
+  "Соберёшь при полной продаже": "You raise if fully sold",
+  "комиссия hood 2% с продажи": "hood takes 2% of the sale",
+  "Это заявка в очередь testnet Base — деньги не участвуют. Первые 20 запусков — без комиссии платформы. Параметры сохраним и напишем тебе, когда откроем запуск.": "This books a spot in the Base testnet queue — no money involved. The first 20 launches pay zero platform fee. We save your parameters and ping you when launches open.",
+  "Забронировать запуск": "Book my launch",
+  "Выручка по месяцам": "Monthly revenue",
+  "Откроется вместе с testnet Base": "Opens together with Base testnet",
+  "Купить": "Buy",
+  "Открыть карточку": "Open card",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

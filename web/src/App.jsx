@@ -424,6 +424,7 @@ export default function App() {
               <a href="#/arena">⚔️ {t("Арена")} 🔥</a>
               <a href="#/vote">{t("Голосование")}</a>
               <a href="#/treasury">{t("Казна")}</a>
+              <a href="#/revenue">{t("Revenue")} β</a>
               <a href="#/analytics">{t("Аналитика")}</a>
             </div>
             <div className="fcol">
