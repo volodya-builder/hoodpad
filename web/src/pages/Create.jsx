@@ -75,8 +75,14 @@ export default function Create({ wallet, onConnect }) {
   const { t } = useLang();
   const [form, setForm] = useState({
     name: "", symbol: "", description: "", x: "", telegram: "", initialBuy: "",
-    creatorWallet: "", website: "",
+    creatorWallet: "", website: "", github: "", youtube: "",
   });
+  // Тип токена: standard (работает сейчас) | tax (β — конфиг сохраняется черновиком
+  // до деплоя tax-контрактов v3; UI полный, чтобы собирать спрос и параметры)
+  const [ttype, setTtype] = useState("standard");
+  const [tax, setTax] = useState({ buy: 3, sell: 3, mkt: 40, burn: 20, div: 30, lp: 10, minShare: 0, divToken: "self" });
+  const taxTotal = tax.mkt + tax.burn + tax.div + tax.lp;
+  const setTaxK = (k) => (e) => setTax({ ...tax, [k]: Math.max(0, +e.target.value || 0) });
   const [consent, setConsent] = useState(false);
   const [image, setImage] = useState("");
   const [advOpen, setAdvOpen] = useState(false);
@@ -108,6 +114,11 @@ export default function Create({ wallet, onConnect }) {
   async function submit(e) {
     e.preventDefault();
     setError("");
+    if (ttype === "tax") {
+      if (taxTotal !== 100) return setError(t("Аллокация налога должна давать ровно 100%."));
+      try { localStorage.setItem("hood_tax_draft", JSON.stringify({ form, tax, savedAt: Date.now() })); } catch (e) { /* ignore */ }
+      return setError(t("Tax-токены (v3) на подходе: контракты в разработке. Черновик с твоими параметрами сохранён — запуск откроется в один клик."));
+    }
     if (!wallet) return onConnect();
     if (!image) return setError(t("Добавьте картинку токена."));
     if (!form.name.trim() || !form.symbol.trim()) return setError(t("Нужны название и тикер."));
@@ -123,6 +134,8 @@ export default function Create({ wallet, onConnect }) {
         x: form.x.trim(),
         telegram: form.telegram.trim(),
         website: form.website.trim(),
+        github: form.github.trim(),
+        youtube: form.youtube.trim(),
       };
       const uri =
         "data:application/json;base64," +
@@ -165,6 +178,8 @@ export default function Create({ wallet, onConnect }) {
 
   const ctaLabel = busy
     ? t("Запускаем…")
+    : ttype === "tax"
+    ? t("Сохранить черновик tax-токена")
     : !wallet
     ? t("Подключите кошелёк")
     : !image
@@ -179,6 +194,17 @@ export default function Create({ wallet, onConnect }) {
     <div className="create-layout">
       <form className="panel" onSubmit={submit}>
         <h2>{t("Запустить токен")}</h2>
+
+        <div className="ttype-row">
+          <div className={`ttype-card ${ttype === "standard" ? "on" : ""}`} onClick={() => setTtype("standard")}>
+            <b>{t("Обычный токен")}</b>
+            <span>{t("фиксированный сапплай, без налога — работает сейчас")}</span>
+          </div>
+          <div className={`ttype-card ${ttype === "tax" ? "on" : ""}`} onClick={() => setTtype("tax")}>
+            <b>{t("Tax-токен")} <em className="ttype-beta">β</em></b>
+            <span>{t("налог с трейдов: кошелёк, сжигание, дивиденды, ликвидность")}</span>
+          </div>
+        </div>
 
         <div className="field-row">
           <div>
@@ -236,6 +262,76 @@ export default function Create({ wallet, onConnect }) {
             </div>
           </div>
         </div>
+
+        <div className="field-row">
+          <div>
+            <label>GitHub</label>
+            <div className="prefix-input">
+              <span>github.com/</span>
+              <input value={form.github} onChange={set("github")} placeholder="repo" />
+            </div>
+          </div>
+          <div>
+            <label>YouTube</label>
+            <div className="prefix-input">
+              <span>youtube.com/</span>
+              <input value={form.youtube} onChange={set("youtube")} placeholder="@channel" />
+            </div>
+          </div>
+        </div>
+
+        {ttype === "tax" && (
+          <div className="tax-panel">
+            <div className="tax-head">{t("Настройки налога")} <span className="rev-demo-tag">β</span></div>
+
+            <div className="field-row">
+              <div>
+                <label>{t("Налог на покупку")}: <b>{tax.buy}%</b></label>
+                <input type="range" min="0" max="10" step="1" value={tax.buy} onChange={setTaxK("buy")} />
+              </div>
+              <div>
+                <label>{t("Налог на продажу")}: <b>{tax.sell}%</b></label>
+                <input type="range" min="0" max="10" step="1" value={tax.sell} onChange={setTaxK("sell")} />
+              </div>
+            </div>
+
+            <div className="tax-head2">{t("Куда идёт налог")} <b className={taxTotal === 100 ? "ok" : "bad"}>{taxTotal}%</b></div>
+            <div className="tax-alloc">
+              <label>{t("Кошелёк создателя (дев, маркетинг)")}: <b>{tax.mkt}%</b>
+                <input type="range" min="0" max="100" step="5" value={tax.mkt} onChange={setTaxK("mkt")} /></label>
+              <label>{t("Сжигание (дефляция)")}: <b>{tax.burn}%</b>
+                <input type="range" min="0" max="100" step="5" value={tax.burn} onChange={setTaxK("burn")} /></label>
+              <label>{t("Дивиденды холдерам")}: <b>{tax.div}%</b>
+                <input type="range" min="0" max="100" step="5" value={tax.div} onChange={setTaxK("div")} /></label>
+              <label>{t("В ликвидность")}: <b>{tax.lp}%</b>
+                <input type="range" min="0" max="100" step="5" value={tax.lp} onChange={setTaxK("lp")} /></label>
+            </div>
+            <div className="tax-bar">
+              <div style={{ flex: Math.max(tax.mkt, 0.01) }} className="tb-mkt" />
+              <div style={{ flex: Math.max(tax.burn, 0.01) }} className="tb-burn" />
+              <div style={{ flex: Math.max(tax.div, 0.01) }} className="tb-div" />
+              <div style={{ flex: Math.max(tax.lp, 0.01) }} className="tb-lp" />
+              {taxTotal < 100 && <div style={{ flex: 100 - taxTotal }} className="tb-un" />}
+            </div>
+            {taxTotal !== 100 && <div className="hint bad">{t("Сумма аллокации должна быть ровно 100% (сейчас {n}%).").replace("{n}", String(taxTotal))}</div>}
+
+            <div className="field-row">
+              <div>
+                <label>{t("Мин. баланс для дивидендов (токенов)")}</label>
+                <input type="number" min="0" value={tax.minShare} onChange={setTaxK("minShare")} />
+              </div>
+              <div>
+                <label>{t("Дивиденды выплачиваются в")}</label>
+                <select value={tax.divToken} onChange={(e) => setTax({ ...tax, divToken: e.target.value })}>
+                  <option value="self">{t("самом токене")}</option>
+                  <option value="eth">ETH</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="hint">{t("Tax-контракты v3 в разработке (аналог flap tax token: асимметричный налог, авто-раздача). Сейчас конфиг сохраняется черновиком — запуск откроется в один клик, черновик подставится сам.")}</div>
+          </div>
+        )}
 
         <label>{t("Покупка создателя")}</label>
         <div className="suffix-input">

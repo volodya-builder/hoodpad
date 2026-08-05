@@ -2307,3 +2307,37 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .rev-bar { flex: 1; background: var(--gold); opacity: .85; border-radius: 3px 3px 0 0; min-height: 4px; transition: height .3s; }
 .rev-bar:hover { opacity: 1; }
 @media (max-width: 700px) { .rev-lm-grid, .rev-lm-grid3 { grid-template-columns: 1fr; } .rev-cta .btn { width: 100%; } }
+
+/* Селектор сети в шапке */
+.net-wrap { position: relative; }
+.net-btn { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; width: auto !important; padding: 0 12px; }
+.net-btn .chev { font-size: 9px; opacity: .7; }
+.net-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); display: inline-block; }
+.net-dot.bnb { background: #f5b544; }
+.net-dot.base { background: #2a78d6; }
+.net-menu { position: absolute; top: calc(100% + 8px); right: 0; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 6px; min-width: 200px; z-index: 60; }
+.net-item { display: flex; align-items: center; gap: 8px; padding: 9px 11px; border-radius: 8px; font-size: 13px; white-space: nowrap; }
+.net-item.on { background: var(--gold-dim); font-weight: 700; }
+.net-item.soon { opacity: .55; cursor: default; }
+.net-check { margin-left: auto; color: var(--gold); }
+.net-soon { margin-left: auto; font-size: 10.5px; color: var(--text-dim); border: 1px solid var(--border); border-radius: 99px; padding: 1px 7px; }
+@media (max-width: 900px) { .net-btn { display: none; } }
+
+/* Выбор типа токена + tax-панель */
+.ttype-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0 6px; }
+.ttype-card { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; cursor: pointer; transition: border-color .15s; }
+.ttype-card:hover { border-color: var(--border-gold); }
+.ttype-card.on { border-color: var(--gold); background: var(--gold-dim); }
+.ttype-card b { display: block; font-size: 14px; margin-bottom: 4px; }
+.ttype-card span { font-size: 11.5px; color: var(--text-dim); line-height: 1.4; display: block; }
+.ttype-beta { color: var(--gold); font-style: normal; font-size: 11px; vertical-align: super; }
+.tax-panel { border: 1px dashed var(--border-gold); border-radius: 12px; padding: 14px; margin: 14px 0; }
+.tax-head { font-weight: 800; font-size: 14px; margin-bottom: 10px; }
+.tax-head2 { font-weight: 700; font-size: 13px; margin: 14px 0 6px; }
+.tax-head2 .ok { color: var(--leaf); } .tax-head2 .bad { color: var(--red); }
+.tax-panel input[type="range"] { width: 100%; accent-color: var(--gold); }
+.tax-alloc label { display: block; font-size: 12px; color: var(--text-dim); margin-top: 8px; }
+.tax-alloc b { color: var(--text); }
+.tax-bar { display: flex; height: 10px; border-radius: 6px; overflow: hidden; margin-top: 10px; }
+.tb-mkt { background: var(--gold); } .tb-burn { background: #e06a4a; }
+.tb-div { background: #4caf6d; } .tb-lp { background: #4aa3e0; } .tb-un { background: #ffffff14; }

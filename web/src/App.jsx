@@ -99,6 +99,12 @@ export default function App() {
   }, []);
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [netMenu, setNetMenu] = useState(false);
+  useEffect(() => {
+    const close = () => setNetMenu(false);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, []);
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem("hood_theme") || ""; } catch (e) { return ""; }
   });
@@ -352,6 +358,22 @@ export default function App() {
               {menuOpen ? "✕" : "☰"}
             </button>
             <button className="icon-btn nav-search" onClick={() => setSearchOpen(true)} title="Поиск (Ctrl+K)">⌕</button>
+            <div className="net-wrap">
+              <button className="icon-btn net-btn" onClick={(e) => { e.stopPropagation(); setNetMenu(!netMenu); }} title={t("Сеть")}>
+                <span className="net-dot" /> Robinhood <span className="chev">▾</span>
+              </button>
+              {netMenu && (
+                <div className="net-menu" onClick={(e) => e.stopPropagation()}>
+                  <div className="net-item on"><span className="net-dot" /> Robinhood Chain <span className="net-check">✓</span></div>
+                  <div className="net-item soon" title={t("Откроется после деплоя контрактов в BSC")}>
+                    <span className="net-dot bnb" /> BNB Chain <span className="net-soon">{t("скоро")}</span>
+                  </div>
+                  <div className="net-item soon" title="Base — вместе с Revenue β">
+                    <span className="net-dot base" /> Base <span className="net-soon">{t("скоро")}</span>
+                  </div>
+                </div>
+              )}
+            </div>
             <button className="icon-btn lang-btn" onClick={() => setLang(lang === "en" ? "ru" : "en")}
                     title="Язык / Language">
               <span className={lang !== "en" ? "on" : ""}>RU</span>
