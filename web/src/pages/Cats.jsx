@@ -110,22 +110,78 @@ function volumeHistory(days = 30) {
 }
 const VOL_HISTORY = volumeHistory(30);
 
-function PriceChart({ t, tier, live }) {
-  // live = включён тестовый режим: рисуем только настоящие сделки, а их нет —
-  // выдумывать историю нельзя, честнее показать пустоту
-  if (live) {
+// Живой график из настоящих сделок песочницы: каждая продажа и выкуп
+// добавляют точку и столбик объёма. Никаких выдуманных данных.
+function LiveChart({ t, tier, rows }) {
+  const r = RARITIES[tier];
+  const W = 640, H = 150, P = 8, VH = 52, VP = 4;
+  if (rows.length < 2) {
     return (
       <div className="pc-wrap">
         <div className="pc-head">
-          <span style={{ color: RARITIES[tier].color }}>{t(RARITIES[tier].ru)}</span>
-          <b>— ETH</b>
+          <span style={{ color: r.color }}>{t(r.ru)}</span>
+          <b>{rows.length ? `${rows[0].price} ETH` : "— ETH"}</b>
+          {rows.length === 1 && <span className="dim">{t("1 сделка")}</span>}
         </div>
         <div className="pc-empty">
-          {t("Сделок пока не было — график и объём появятся после первых продаж.")}
+          {rows.length === 0
+            ? t("Сделок пока не было — выстави кота и нажми «Продать», график оживёт.")
+            : t("Нужна ещё одна сделка, чтобы построить линию цены.")}
         </div>
       </div>
     );
   }
+  const data = rows.map((x) => x.price);
+  const vol = rows.map((x) => x.n);
+  const mx = Math.max(...data), mn = Math.min(...data);
+  const X = (i) => P + (i / (data.length - 1)) * (W - P * 2);
+  const Y = (v) => H - P - ((v - mn) / Math.max(mx - mn, 1e-9)) * (H - P * 2);
+  const line = data.map((v, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ");
+  const area = `${line} L${X(data.length - 1).toFixed(1)},${H} L${X(0).toFixed(1)},${H} Z`;
+  const last = data[data.length - 1], first = data[0];
+  const chg = ((last - first) / first) * 100;
+  const vMax = Math.max(...vol, 1);
+  const bw = Math.max(3, ((W - P * 2) / vol.length) * 0.62);
+
+  return (
+    <div className="pc-wrap">
+      <div className="pc-head">
+        <span style={{ color: r.color }}>{t(r.ru)}</span>
+        <b>{last} ETH</b>
+        <span className={chg >= 0 ? "pc-up" : "pc-down"}>{chg >= 0 ? "▲" : "▼"} {Math.abs(chg).toFixed(1)}%</span>
+        <span className="dim">{t("по твоим сделкам")}</span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="pc-svg" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id={`lcg${tier}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor={r.color} stopOpacity=".28" />
+            <stop offset="1" stopColor={r.color} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path d={area} fill={`url(#lcg${tier})`} />
+        <path d={line} fill="none" stroke={r.color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+        {data.map((v, i) => <circle key={i} cx={X(i)} cy={Y(v)} r="2.6" fill={r.color} />)}
+      </svg>
+      <div className="pc-vol-h">
+        <span>{t("объём")}</span>
+        <span className="dim">{vol.reduce((a, b) => a + b, 0)} {t("сделок")}</span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${VH}`} className="pc-vol" preserveAspectRatio="none">
+        {vol.map((v, i) => {
+          const up = i === 0 ? true : data[i] >= data[i - 1];
+          const h = Math.max(2, (v / vMax) * (VH - VP * 2));
+          return <rect key={i} x={X(i) - bw / 2} y={VH - VP - h} width={bw} height={h} rx="1"
+                       fill={up ? "#3fbf7f" : "#ff5b6a"} fillOpacity=".8" />;
+        })}
+      </svg>
+      <div className="pc-foot"><span>{t("мин")} {mn} ETH</span><span>{t("макс")} {mx} ETH</span></div>
+    </div>
+  );
+}
+
+function PriceChart({ t, tier, live, sb }) {
+  // live = включён тестовый режим: показываем только настоящие сделки
+  if (live) return <LiveChart t={t} tier={tier} rows={SB.tradeSeries(sb, tier)} />;
   const data = PRICE_HISTORY[tier];
   const vol = VOL_HISTORY[tier];
   const r = RARITIES[tier];
@@ -283,6 +339,30 @@ function Market({ t, sb, setSb }) {
   // мои коты, которые ещё НЕ выставлены — их можно выставить прямо отсюда
   const myIdle = sb.enabled ? sb.cats.filter((c) => !c.listed) : [];
 
+  // Тестовая сделка: покупатель забирает лот по цене листинга.
+  // Пишется в историю — из неё живёт график и объём.
+  function doSell(l) {
+    const { state, trade } = SB.sellNow(sb, l.id);
+    if (!trade) return say(t("Лот не найден"));
+    setSb(state);
+    setChartTier(l.tier);
+    say(t("Продано за {p} ETH · комиссия 2% в казну").replace("{p}", trade.price));
+  }
+
+  // Выкуп проданного кота обратно — проверка стороны покупателя
+  function doBuyBack(c) {
+    const raw = window.prompt(t("Цена покупки в ETH:"), String(c.soldPrice));
+    if (raw === null) return;
+    const price = parseFloat(String(raw).replace(",", "."));
+    if (!price || price <= 0) return;
+    const { state, trade, error } = SB.buyBack(sb, c.id, price);
+    if (error === "no_funds") return say(t("Не хватает тестового ETH — сначала продай кота."));
+    if (!trade) return say(t("Лот не найден"));
+    setSb(state);
+    setChartTier(c.tier);
+    say(t("Куплен кот #{id} за {p} ETH").replace("{id}", c.id).replace("{p}", price));
+  }
+
   function quickList(c) {
     const suggest = [0.012, 0.035, 0.09, 0.28, 1.2][c.tier];
     const raw = window.prompt(t("Цена в ETH:"), String(suggest));
@@ -327,6 +407,8 @@ function Market({ t, sb, setSb }) {
         <div><b>{floor(0) ?? "—"} ETH</b><span>{t("флор Обычных")}</span></div>
         <div><b>{floor(4) ?? "—"} ETH</b><span>{t("флор Легендарных")}</span></div>
         <div><b>2%</b><span>{t("комиссия биржи — в казну")}</span></div>
+        {sb.enabled && <div><b className="rev-gold">{(sb.balance || 0)} ETH</b><span>{t("тестовый баланс")}</span></div>}
+        {sb.enabled && <div><b>{(sb.trades || []).length}</b><span>{t("сделок")}</span></div>}
       </div>
 
       {/* График истории цен по редкостям */}
@@ -339,7 +421,7 @@ function Market({ t, sb, setSb }) {
           ))}
         </div>
         <div className="pc-row">
-          <PriceChart t={t} tier={chartTier} live={sb.enabled} />
+          <PriceChart t={t} tier={chartTier} live={sb.enabled} sb={sb} />
           <OrderBook t={t} tier={chartTier} myLots={myLots} live={sb.enabled} />
         </div>
       </div>
@@ -376,6 +458,34 @@ function Market({ t, sb, setSb }) {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* проданные коты: можно выкупить обратно и проверить покупку */}
+      {sb.enabled && (sb.sold || []).length > 0 && (
+        <div className="mm-block">
+          <div className="mm-head">
+            <b>{t("Продано")} <span className="dim">({sb.sold.length})</span></b>
+            <span className="dim" style={{ fontSize: 12 }}>{t("выкупи обратно — сделка тоже попадёт в график")}</span>
+          </div>
+          <div className="mm-list">
+            {sb.sold.map((c) => {
+              const r = RARITIES[c.tier];
+              return (
+                <div className="mm-row" key={c.id}>
+                  <TierArt tier={c.tier} size={38} />
+                  <span className="mm-id">#{c.id}</span>
+                  <span className="mm-tier" style={{ color: r.color }}>{t(r.ru)} ×{r.mult}</span>
+                  <span className="mm-sym">
+                    <img src={stockLogo(c.sym)} alt="" className="q-logo" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                    {c.sym}
+                  </span>
+                  <span className="mm-divs">{c.soldPrice} ETH</span>
+                  <button className="btn btn-primary sm-btn" onClick={() => doBuyBack(c)}>{t("Выкупить")}</button>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -416,10 +526,13 @@ function Market({ t, sb, setSb }) {
               <div className="cm-foot">
                 <b>{l.price} ETH</b>
                 {l.mine ? (
-                  <button className="btn sm-btn"
-                          onClick={() => { setSb(SB.unlistCat(sb, l.id)); setToast(t("Снято с продажи")); setTimeout(() => setToast(""), 2200); }}>
-                    {t("Снять")}
-                  </button>
+                  <span className="cm-acts">
+                    <button className="btn btn-primary sm-btn" onClick={() => doSell(l)}>{t("Продать")}</button>
+                    <button className="btn sm-btn"
+                            onClick={() => { setSb(SB.unlistCat(sb, l.id)); say(t("Снято с продажи")); }}>
+                      {t("Снять")}
+                    </button>
+                  </span>
                 ) : (
                   <button className="btn btn-primary sm-btn"
                           onClick={() => { setToast(t("Биржа откроется с деплоем контрактов — кот пока не продаётся.")); setTimeout(() => setToast(""), 2600); }}>

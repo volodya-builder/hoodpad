@@ -2678,6 +2678,7 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .ck-upg.locked { opacity: .5; cursor: default; border-style: dashed; }
 .ck-upg.full { border-color: var(--border-gold); opacity: .85; cursor: default; }
 .ck-stat-x { font-style: normal; font-size: 12px; color: var(--text-dim); }
+.cm-acts { display: flex; gap: 6px; }
 @media (max-width: 1180px) {
   .ck-arena-wrap { grid-template-columns: minmax(0, 1fr) 320px; }
   .ck-shop-col { grid-column: 1 / -1; order: 3; flex-direction: row; flex-wrap: wrap; }
