@@ -1,6 +1,6 @@
 /** Песочница котов: полноценная симуляция игры в браузере (localStorage).
  *  Нужна, чтобы обкатать весь цикл — открыть бокс, получить кота, выставить
- *  на биржу, увидеть дивиденды и рейтинг — ДО деплоя контрактов.
+ *  на биржу, увидеть награды и рейтинг — ДО деплоя контрактов.
  *  Шансы и веса совпадают с контрактами BrokerCats/CatBox один в один.
  *  Когда контракты задеплоим, этот модуль заменяется чтением из сети. */
 
@@ -166,7 +166,7 @@ export function tradeSeries(s, tier) {
   return [...map.values()].sort((a, b) => a.k - b.k);
 }
 
-/** Симуляция раздачи дивидендов казной: делит сумму по весам редкости. */
+/** Симуляция раздачи наград казной: делит сумму по весам редкости. */
 export function distribute(s, usdTotal) {
   const totalWeight = s.cats.reduce((acc, c) => acc + RARITY[c.tier].mult, 0);
   if (totalWeight === 0) return s;
@@ -181,7 +181,7 @@ export function distribute(s, usdTotal) {
   return save(next);
 }
 
-/** Забрать дивиденды со всех котов. */
+/** Забрать награды со всех котов. */
 export function claimAll(s) {
   const sum = s.cats.reduce((acc, c) => acc + c.divs, 0);
   const cats = s.cats.map((c) => ({ ...c, divs: 0 }));

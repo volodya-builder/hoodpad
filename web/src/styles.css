@@ -2903,3 +2903,9 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .ck-arena > .ck-boost-tag, .ck-arena > .ck-golden, .ck-arena > .ck-fly { position: relative; z-index: 2; }
 .ck-arena > .ck-golden, .ck-arena > .ck-fly { position: absolute; }
 .ck-img { box-shadow: 0 20px 60px -20px #000; }
+
+/* подтверждение перед покупкой кейса */
+.box-ack { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 7px; }
+.box-ack li { font-size: 13px; line-height: 1.55; color: var(--text-dim); }
+.footer-disclaimer { font-size: 11px; line-height: 1.6; padding: 14px 0 0; margin-top: 14px;
+  border-top: 1px solid var(--border); max-width: 980px; }

@@ -77,7 +77,7 @@ export const TEAM_ADDRESS =
   (import.meta.env.VITE_TEAM_ADDRESS ?? "0xD3d14c10020ad9C582404669a2Fa11AfF2386255").toLowerCase();
 export const isTeam = (addr) => !!addr && addr.toLowerCase() === TEAM_ADDRESS;
 
-// ——— Коты-брокеры (NFT + дивиденды акциями) ———
+// ——— Коты-брокеры (NFT + награды акциями) ———
 // Пусто = контракты не задеплоены: вкладка живёт в демо/песочнице.
 // После деплоя (scripts/deploy-cats.js) достаточно вписать адреса сюда
 // или задать переменные окружения — фронт сам переключится на он-чейн.

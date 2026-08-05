@@ -13,7 +13,7 @@ const SECTIONS = [
   { id: "upgrades", ru: "Прокачка", en: "Upgrades" },
   { id: "raffle", ru: "Розыгрыш котов", en: "Cat raffle" },
   { id: "boxes", ru: "Кейсы", en: "Cases" },
-  { id: "rarity", ru: "Редкость и дивиденды", en: "Rarity and dividends" },
+  { id: "rarity", ru: "Редкость и награды", en: "Rarity and dividends" },
   { id: "market", ru: "Биржа", en: "Marketplace" },
   { id: "strategy", ru: "Стратегия новичка", en: "Beginner strategy" },
   { id: "faq", ru: "Частые вопросы", en: "FAQ" },
@@ -29,11 +29,11 @@ export default function CatsGuide({ lang, rarities, onTab, t: tr }) {
     [T("Нужно ли что-то платить, чтобы играть?", "Do I have to pay to play?"),
      T("Нет. Кликер бесплатный, очки в нём ничего не стоят и ничего не стоят обратно. Платными будут только кейсы после деплоя — но кота можно получить и даром, выиграв в получасовом розыгрыше.",
        "No. The clicker is free, points cost nothing and are worth nothing on their own. Only cases will cost money after deploy — but you can also get a cat for free by winning the half-hour raffle.")],
-    [T("Влияет ли игра на размер дивидендов?", "Does the game affect my dividends?"),
+    [T("Влияет ли игра на размер наград?", "Does the game affect my dividends?"),
      T("Нет, и это принципиально. Сколько ты натапал, на выплаты не влияет никак: доля кота считается только по его редкости. Кликер нужен ровно для одного — раздавать NFT-котов и приводить людей на платформу.",
        "No, and that is deliberate. How much you tap does not affect payouts at all: a cat's share depends only on its rarity. The clicker exists for exactly one purpose — to give cats away and bring people in.")],
-    [T("Что будет с дивидендами, если я продам кота?", "What happens to dividends if I sell a cat?"),
-     T("Невыплаченные дивиденды копятся на самом коте и уезжают вместе с ним к покупателю. Поэтому кот с большой накопленной суммой стоит дороже — это видно в карточке лота строкой «дивидендов внутри».",
+    [T("Что будет с наградами, если я продам кота?", "What happens to dividends if I sell a cat?"),
+     T("Невыплаченные награды копятся на самом коте и уезжают вместе с ним к покупателю. Поэтому кот с большой накопленной суммой стоит дороже — это видно в карточке лота строкой «наград внутри».",
        "Unclaimed dividends accrue on the cat itself and travel with it to the buyer. That is why a cat with a large accrued balance is worth more — the listing card shows it as “dividends inside”.")],
     [T("Откуда берутся деньги на выплаты?", "Where does the payout money come from?"),
      T("Из комиссий платформы: часть реальных сборов hood с торгов конвертируется в токенизированные акции и раздаётся котам. Нет торгов — нет выплат. Контракт ничего не обещает, не печатает и не гарантирует доходность.",
@@ -63,7 +63,7 @@ export default function CatsGuide({ lang, rarities, onTab, t: tr }) {
         <section id="g-start">
           <h2 className="rev-h2">{T("С чего начать", "Getting started")}</h2>
           <p className="guide-lead">
-            {T("Коты-брокеры — это игра внутри hood. Ты тапаешь кота и копишь очки, очки дают билеты в розыгрыш NFT-котов, а кот приносит дивиденды в токенизированных акциях из казны платформы. Ниже — как устроен каждый шаг.",
+            {T("Коты-брокеры — это игра внутри hood. Ты тапаешь кота и копишь очки, очки дают билеты в розыгрыш NFT-котов, а кот приносит награды в токенизированных акциях из казны платформы. Ниже — как устроен каждый шаг.",
                "Broker Cats is a game inside hood. You tap a cat and collect points, points buy tickets into the NFT cat raffle, and a cat earns dividends in tokenized stocks from the platform treasury. Below is how each step works.")}
           </p>
           <div className="guide-steps">
@@ -71,7 +71,7 @@ export default function CatsGuide({ lang, rarities, onTab, t: tr }) {
               ["1", T("Тапай кота", "Tap the cat"), T("Открой вкладку «Кликер» и жми по коту. Каждый тап приносит очки — это твои билеты.", "Open the Clicker tab and tap the cat. Every tap gives points — those are your tickets.")],
               ["2", T("Качай улучшения", "Buy upgrades"), T("Очки тратятся на улучшения слева. Они ускоряют добычу — и билетов становится больше.", "Points are spent on upgrades on the left. They speed up mining — so you hold more tickets.")],
               ["3", T("Жди розыгрыш", "Wait for the draw"), T("Каждые 30 минут один NFT-кот уходит случайному игроку. Чем больше очков за раунд, тем выше шанс.", "Every 30 minutes one NFT cat goes to a random player. The more round points, the better your odds.")],
-              ["4", T("Получай дивиденды", "Collect dividends"), T("Кот на руках получает долю выплат казны в акциях. Чем реже кот, тем больше доля.", "A cat you hold receives a share of treasury payouts in stocks. The rarer the cat, the bigger the share.")],
+              ["4", T("Получай награды", "Collect dividends"), T("Кот на руках получает долю выплат казны в акциях. Чем реже кот, тем больше доля.", "A cat you hold receives a share of treasury payouts in stocks. The rarer the cat, the bigger the share.")],
             ].map(([n, h, p]) => (
               <div className="guide-step" key={n}>
                 <span className="guide-num">{n}</span>
@@ -198,7 +198,7 @@ export default function CatsGuide({ lang, rarities, onTab, t: tr }) {
 
         {/* ——— редкость */}
         <section id="g-rarity">
-          <h2 className="rev-h2">{T("Редкость и дивиденды", "Rarity and dividends")}</h2>
+          <h2 className="rev-h2">{T("Редкость и награды", "Rarity and dividends")}</h2>
           <p>{T("Казна периодически покупает токенизированные акции и раздаёт их котам. Делёж идёт по весу редкости: сумма делится на общий вес всех котов, и каждый получает свою долю.",
                 "The treasury periodically buys tokenized stocks and distributes them to cats. The split follows rarity weight: the amount is divided by the total weight of all cats and each one takes its share.")}</p>
           <div className="guide-example">
@@ -216,7 +216,7 @@ export default function CatsGuide({ lang, rarities, onTab, t: tr }) {
           <div className="guide-steps">
             {[
               ["1", T("Выставить", "List"), T("В блоке «Мои коты» жми «Выставить» и назначь цену. Кот уезжает в эскроу контракта — продавец не может его подменить или увести из-под сделки.", "In the My cats block press List and set a price. The cat goes into contract escrow — the seller cannot swap it or pull it out from under a deal.")],
-              ["2", T("Продажа", "Sale"), T("Покупатель платит цену лота одной транзакцией. 98% уходит продавцу, 2% — в казну платформы. Кот и все накопленные на нём дивиденды переходят покупателю.", "The buyer pays the listing price in one transaction. 98% goes to the seller, 2% to the platform treasury. The cat and all dividends accrued on it go to the buyer.")],
+              ["2", T("Продажа", "Sale"), T("Покупатель платит цену лота одной транзакцией. 98% уходит продавцу, 2% — в казну платформы. Кот и все накопленные на нём награды переходят покупателю.", "The buyer pays the listing price in one transaction. 98% goes to the seller, 2% to the platform treasury. The cat and all dividends accrued on it go to the buyer.")],
               ["3", T("Снять", "Cancel"), T("Пока лот не купили, его можно снять в любой момент — кот вернётся в коллекцию.", "As long as nobody bought it, a listing can be cancelled at any time — the cat returns to your collection.")],
             ].map(([n, h, p]) => (
               <div className="guide-step" key={n}>

@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { useLang } from "../lib/i18n.jsx";
 import { CHAT_DB_URL } from "../lib/config.js";
 
-/** Revenue β v3 — токены с дивидендами из x402-выручки.
+/** Revenue β v3 — токены с наградами из x402-выручки.
  *  Запуск-форма (заявка в RTDB), витрина со спарклайнами и детальной
  *  карточкой, анимированная схема потока, калькулятор, FAQ. */
 
@@ -105,7 +105,7 @@ function FlowDiagram({ t }) {
       <circle r="3" className="rev-dot"><animateMotion dur="1.6s" begin="0.7s" repeatCount="indefinite" path="M392 176 L470 176" /></circle>
       <circle r="3" className="rev-dot"><animateMotion dur="1.6s" begin="1.1s" repeatCount="indefinite" path="M392 189 L470 232" /></circle>
       <g className="rev-fbox"><rect x="480" y="28" width="146" height="44" rx="10" /><text x="553" y="46" className="rev-ft">{t("Разработчик")}</text><text x="553" y="62" className="rev-fs">69%</text></g>
-      <g className="rev-fbox rev-fgold"><rect x="480" y="154" width="146" height="44" rx="10" /><text x="553" y="172" className="rev-ft">{t("Холдеры токена")}</text><text x="553" y="188" className="rev-fs">30% · {t("дивиденды")}</text></g>
+      <g className="rev-fbox rev-fgold"><rect x="480" y="154" width="146" height="44" rx="10" /><text x="553" y="172" className="rev-ft">{t("Холдеры токена")}</text><text x="553" y="188" className="rev-fs">30% · {t("награды")}</text></g>
       <g className="rev-fbox"><rect x="480" y="212" width="146" height="44" rx="10" /><text x="553" y="230" className="rev-ft">hood</text><text x="553" y="246" className="rev-fs">1%</text></g>
     </svg>
   );
@@ -219,7 +219,7 @@ function DetailModal({ t, d, paid, onSim, onClose }) {
         </div>
 
         <div className="rev-card-kv" style={{ marginTop: 12 }}>
-          <div><b className="rev-gold">{d.yld}%</b><span>{t("дивидендная доходность")}</span></div>
+          <div><b className="rev-gold">{d.yld}%</b><span>{t("доля выручки держателям")}</span></div>
           <div><b>{d.payers}</b><span>{t("платящих агентов")}</span></div>
           <div><b>${paid.toLocaleString("en-US")}</b><span>{t("выплачено холдерам")}</span></div>
         </div>
@@ -282,7 +282,7 @@ export default function Revenue() {
 
       <div className="rev-hero">
         <span className="chip rev-beta">β · {t("скоро в testnet Base")}</span>
-        <h1>{t("Токены с дивидендами")}</h1>
+        <h1>{t("Токены с наградами")}</h1>
         <p className="rev-sub">
           {t("Мемы живут верой. Эти токены — выручкой: AI-агенты платят за API, контракт раздаёт холдерам долю каждого платежа. Пассивный доход в стейблкоинах, который видно в блокчейне.")}
         </p>
@@ -318,7 +318,7 @@ export default function Revenue() {
           <div className="rev-vs-title">{t("Revenue-токен")} <span className="rev-demo-tag">hood</span></div>
           {[
             t("Привязан к работающему сервису"),
-            t("Дивиденды капают, даже если не продавать"),
+            t("Награды капают, даже если не продавать"),
             t("Растёт выручка — обоснованно растёт цена"),
             t("Выручка видна в блокчейне, подделать нельзя"),
           ].map((x) => <div className="rev-vs-item ok" key={x}><span>✓</span>{x}</div>)}
@@ -337,9 +337,9 @@ export default function Revenue() {
         </div>
         <div className="rev-persona-card">
           <div className="rev-persona-h">{t("Инвестору")}</div>
-          <p>{t("Не лотерея на хайпе, а актив с денежным потоком: покупаешь долю выручки работающего сервиса и получаешь дивиденды в стейблкоинах. Выручка публична в блокчейне — можно оценить бизнес до покупки, как акцию.")}</p>
+          <p>{t("Не лотерея на хайпе, а актив с денежным потоком: покупаешь долю выручки работающего сервиса и получаешь награды в стейблкоинах. Выручка публична в блокчейне — можно оценить бизнес до покупки, как акцию.")}</p>
           <div className="rev-persona-tags">
-            <span>{t("дивиденды в USDC")}</span><span>{t("прозрачная выручка")}</span><span>{t("оценка как акции")}</span>
+            <span>{t("награды в USDC")}</span><span>{t("прозрачная выручка")}</span><span>{t("оценка как акции")}</span>
           </div>
           <a className="btn" href="#rev-storefront">{t("Смотреть токены")}</a>
         </div>
@@ -349,7 +349,7 @@ export default function Revenue() {
       <div className="rev-roadmap">
         {[
           { s: t("Готово"), d: t("Витрина, калькулятор, форма запуска, сбор заявок"), st: "done" },
-          { s: t("Сейчас"), d: t("Контракты: копилка-сплиттер и дивиденды (протестированы)"), st: "done" },
+          { s: t("Сейчас"), d: t("Контракты: копилка-сплиттер и награды (протестированы)"), st: "done" },
           { s: t("Дальше"), d: t("Testnet Base: живые запуски без реальных денег"), st: "now" },
           { s: t("Потом"), d: t("Юридическая структура и mainnet"), st: "next" },
         ].map((r, i) => (
@@ -372,7 +372,7 @@ export default function Revenue() {
             <Spark data={d.hist} />
             <div className="rev-card-kv">
               <div><b>${d.rev.toLocaleString("en-US")}</b><span>{t("выручка")}{t("/мес")}</span></div>
-              <div><b className="rev-gold">{d.yld}%</b><span>{t("дивидендная доходность")}</span></div>
+              <div><b className="rev-gold">{d.yld}%</b><span>{t("доля выручки держателям")}</span></div>
               <div><b>${paid[i].toLocaleString("en-US")}</b><span>{t("выплачено холдерам")}</span></div>
             </div>
             <div className="rev-card-open dim">{t("Открыть карточку")} →</div>
@@ -381,7 +381,7 @@ export default function Revenue() {
       </div>
 
       <div className="rev-calc">
-        <h2>{t("Посчитай дивиденды")}</h2>
+        <h2>{t("Посчитай награды")}</h2>
         <div className="rev-sliders">
           <label><span>{t("Выручка сервиса")}: <b>${rev.toLocaleString("en-US")}{t("/мес")}</b></span>
             <input type="range" min="500" max="50000" step="500" value={rev} onChange={(e) => setRev(+e.target.value)} /></label>
@@ -402,7 +402,7 @@ export default function Revenue() {
         </div>
         <div className="rev-out">
           <div><b>${pool.toLocaleString("en-US")}</b><span>{t("пул холдеров в месяц")}</span></div>
-          <div><b>${mine.toLocaleString("en-US")}</b><span>{t("твои дивиденды в месяц")}</span></div>
+          <div><b>${mine.toLocaleString("en-US")}</b><span>{t("твои награды в месяц")}</span></div>
           <div><b>${(mine * 12).toLocaleString("en-US")}</b><span>{t("за год")}</span></div>
         </div>
       </div>

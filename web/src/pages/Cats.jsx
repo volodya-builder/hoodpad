@@ -8,7 +8,7 @@ import CandleChart from "../components/CandleChart.jsx";
 import CatsGuide from "./CatsGuide.jsx";
 import { useEthUsd } from "../lib/price.js";
 
-/** Коты-брокеры β — NFT-коты, привязанные к акциям, платят дивиденды из
+/** Коты-брокеры β — NFT-коты, привязанные к акциям, платят награды из
  *  казны в токенизированных акциях; редкость даёт больший вес выплат.
  *  Контракты BrokerCats + CatStockVault готовы и оттестированы; пока не
  *  задеплоены — страница объясняет механику и собирает waitlist на аирдроп. */
@@ -52,7 +52,7 @@ function CatArt({ color = "#7c88ff", size = 96 }) {
   );
 }
 
-// Демо-лоты биржи (детерминированно): id, тикер, редкость, цена, дивиденды на коте
+// Демо-лоты биржи (детерминированно): id, тикер, редкость, цена, награды на коте
 function demoListings() {
   const syms = RWA_POPULAR;
   let x = 42;
@@ -574,7 +574,7 @@ function Market({ t, sb, setSb }) {
               </div>
               <div className="cm-kv">
                 <span><img src={stockLogo(l.sym)} alt="" className="q-logo" onError={(e) => { e.currentTarget.style.display = "none"; }} />{l.sym}</span>
-                <span className="cm-divs" title={t("Накопленные дивиденды уедут с котом к покупателю")}>${l.divs} {t("дивидендов внутри")}</span>
+                <span className="cm-divs" title={t("Накопленные награды уедут с котом к покупателю")}>${l.divs} {t("наград внутри")}</span>
               </div>
               <div className="cm-foot">
                 <b>{l.price} ETH</b>
@@ -607,8 +607,8 @@ function Market({ t, sb, setSb }) {
       </div>
       <div className="hint" style={{ marginTop: 10 }}>
         {sb.enabled
-          ? t("Тестовый режим: на бирже только твои реальные лоты. Контракт биржи готов (эскроу, 2% казне, дивиденды переезжают с котом).")
-          : t("Демо-витрина. Контракт биржи готов (эскроу, 2% казне, дивиденды переезжают с котом) — включим с деплоем.")}
+          ? t("Тестовый режим: на бирже только твои реальные лоты. Контракт биржи готов (эскроу, 2% казне, награды переезжают с котом).")
+          : t("Демо-витрина. Контракт биржи готов (эскроу, 2% казне, награды переезжают с котом) — включим с деплоем.")}
       </div>
     </>
   );
@@ -643,8 +643,23 @@ function Boxes({ t, sb, setSb }) {
     return r < 60 ? 0 : r < 84 ? 1 : r < 94 ? 2 : r < 99 ? 3 : 4;
   }
 
+  // Подтверждение перед первой покупкой кейса. Платный предмет со случайным
+  // содержимым в ряде юрисдикций регулируется как азартная игра, поэтому
+  // возраст и местонахождение подтверждаются явно, а факт — сохраняется.
+  const AGE_KEY = "hood_box_ack_v1";
+  const [ack, setAck] = useState(() => {
+    try { return localStorage.getItem(AGE_KEY) === "1"; } catch (e) { return false; }
+  });
+  const [askAck, setAskAck] = useState(false);
+  function confirmAck() {
+    try { localStorage.setItem(AGE_KEY, "1"); } catch (e) { /* ignore */ }
+    setAck(true);
+    setAskAck(false);
+  }
+
   function openBox() {
     if (phase === "rolling") return;
+    if (!ack) return setAskAck(true);
     // в песочнице бокс реально тратится и кот попадает в коллекцию
     let win, sym = null, catId = null;
     if (sb.enabled) {
@@ -684,6 +699,30 @@ function Boxes({ t, sb, setSb }) {
 
   return (
     <>
+      {askAck && (
+        <div className="modal-back open" onClick={(e) => e.target === e.currentTarget && setAskAck(false)}>
+          <div className="rev-launch-modal" style={{ maxWidth: 460 }}>
+            <div className="rev-lm-head">
+              <b>{t("Перед покупкой кейса")}</b>
+              <button className="icon-btn" onClick={() => setAskAck(false)} aria-label="close">✕</button>
+            </div>
+            <ul className="box-ack">
+              <li>{t("Содержимое кейса случайно. Шансы редкостей раскрыты выше и зашиты в контракт.")}</li>
+              <li>{t("В каждом кейсе гарантированно один NFT-кот — пустых исходов нет.")}</li>
+              <li>{t("Покупка окончательна: возврат, обмен и отмена невозможны.")}</li>
+              <li>{t("Кот — коллекционный предмет. Его цена, ликвидность и любые раздачи из казны не гарантированы.")}</li>
+            </ul>
+            <p className="hint" style={{ margin: "10px 0 14px" }}>
+              {t("Нажимая «Подтверждаю», вы заявляете, что вам исполнилось 18 лет и вы не находитесь в юрисдикции, где платные предметы со случайным содержимым запрещены или регулируются как азартные игры.")}
+            </p>
+            <div className="rev-cta" style={{ justifyContent: "flex-start" }}>
+              <button className="btn btn-primary" onClick={confirmAck}>{t("Подтверждаю")}</button>
+              <button className="btn" onClick={() => setAskAck(false)}>{t("Отмена")}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="box-hero">
         <div className="box-left">
           <div className="box-art">
@@ -880,7 +919,7 @@ function MyCats({ t, sb, setSb }) {
       <div className="my-claim">
         <div>
           <b>{t("Доступно к выводу")}: <span className="rev-gold">${live ? pending.toFixed(2) : (claimed ? "0.00" : pending.toFixed(2))}</span></b>
-          <div className="hint" style={{ marginTop: 4 }}>{t("Дивиденды приходят в токенизированных акциях (SPY, NVDA и др.)")}</div>
+          <div className="hint" style={{ marginTop: 4 }}>{t("Награды приходят в токенизированных акциях (SPY, NVDA и др.)")}</div>
         </div>
         <button className="btn btn-primary" disabled={live ? pending <= 0 : claimed}
                 onClick={() => {
@@ -1117,7 +1156,7 @@ function Holders({ t, sb }) {
 }
 
 // ---------------------------------------------------------------- песочница
-// Тестовый режим: 10 000 боксов себе, реальные открытия, листинги и дивиденды.
+// Тестовый режим: 10 000 боксов себе, реальные открытия, листинги и награды.
 // Состояние живёт в localStorage — обкатываем весь цикл до деплоя контрактов.
 // Док админки: панель уезжает влево за край экрана, наружу торчит язычок.
 // Виден только команде — обычный игрок о песочнице даже не догадывается.
@@ -1148,7 +1187,7 @@ function SandboxPanel({ t, sb, setSb }) {
       {!sb.enabled ? (
         <>
           <p className="hint" style={{ margin: "0 0 10px" }}>
-            {t("Выдаст тебе все 10 000 боксов, чтобы обкатать цикл: открытие кейсов, коллекция, биржа, дивиденды. Состояние хранится только в этом браузере.")}
+            {t("Выдаст тебе все 10 000 боксов, чтобы обкатать цикл: открытие кейсов, коллекция, биржа, награды. Состояние хранится только в этом браузере.")}
           </p>
           <button className="btn btn-primary" onClick={() => setSb(SB.enableSandbox(RWA_POPULAR))}>
             {t("Выдать себе 10 000 боксов")}
@@ -1161,7 +1200,7 @@ function SandboxPanel({ t, sb, setSb }) {
             <div><b>{sb.opened.toLocaleString("ru-RU")}</b><span>{t("открыто")}</span></div>
             <div><b>{st.count}</b><span>{t("котов")}</span></div>
             <div><b>×{st.weight}</b><span>{t("вес")}</span></div>
-            <div><b className="rev-gold">${st.divs}</b><span>{t("дивидендов")}</span></div>
+            <div><b className="rev-gold">${st.divs}</b><span>{t("наград")}</span></div>
             <div><b>{st.listed}</b><span>{t("на бирже")}</span></div>
           </div>
           <div className="sbx-actions">
@@ -1170,7 +1209,7 @@ function SandboxPanel({ t, sb, setSb }) {
               <b>$</b>
             </div>
             <button className="btn" onClick={() => setSb(SB.distribute(sb, amount))} disabled={!st.count}>
-              {t("Раздать дивиденды из казны")}
+              {t("Раздать награды из казны")}
             </button>
             <button className="btn btn-danger" onClick={() => setSb(SB.reset())}>{t("Сбросить песочницу")}</button>
           </div>
@@ -1189,7 +1228,7 @@ function SandboxPanel({ t, sb, setSb }) {
 
 // ---------------------------------------------------------------- кликер
 // Тапаешь легендарного кота — сыплются акции. Очки дают только билеты в
-// розыгрыш: каждые 30 минут один NFT-кот уходит игроку. На дивиденды игра
+// розыгрыш: каждые 30 минут один NFT-кот уходит игроку. На награды игра
 // не влияет — это чистый маркетинг, раздача котов и хайп вокруг проекта.
 // соперники и их очки берутся из clicker.js (roundPlayers) — детерминированно
 // по номеру раунда, чтобы у всех игроков был один и тот же список
@@ -1550,7 +1589,7 @@ function Clicker({ t, sb, setSb }) {
       </div>
 
       <div className="hint" style={{ marginTop: 12 }}>
-        {t("Комбо ×5 за быстрые тапы, криты ×10, золотой кот с джекпотом и ×2. Каждые 30 минут один NFT-кот разыгрывается среди игроков — билетов тем больше, чем больше очков ты набрал за раунд. На выплаты дивидендов игра не влияет: доля кота зависит только от его редкости.")}
+        {t("Комбо ×5 за быстрые тапы, криты ×10, золотой кот с джекпотом и ×2. Каждые 30 минут один NFT-кот разыгрывается среди игроков — билетов тем больше, чем больше очков ты набрал за раунд. На выплаты наград игра не влияет: доля кота зависит только от его редкости.")}
       </div>
     </>
   );
@@ -1569,7 +1608,7 @@ export default function Cats({ wallet }) {
   const [ranges, setRanges] = useState({ tier: 2, per: 12, months: 6 });
   const set = (k) => (e) => setRanges({ ...ranges, [k]: +e.target.value });
 
-  // простой калькулятор дивидендов кота
+  // простой калькулятор наград кота
   const tierMult = RARITIES[ranges.tier].mult;
   const monthly = useMemo(() => Math.round(ranges.per * tierMult / 3 * 100) / 100, [ranges.per, tierMult]);
   const total = useMemo(() => Math.round(monthly * ranges.months * 100) / 100, [monthly, ranges.months]);
@@ -1579,8 +1618,8 @@ export default function Cats({ wallet }) {
   const faq = [
     [t("Откуда берутся выплаты?"), t("Из казны платформы: часть реальных комиссий с торгов hood конвертируется в токенизированные акции и распределяется между всеми котами. Нет комиссий — нет выплат; контракт ничего не обещает и не печатает.")],
     [t("Как влияет редкость?"), t("Редкость задаёт вес кота при каждом распределении: Обычный ×1, Редкий ×2, Эпический ×3, Мифический ×5, Легендарный ×8. Легендарный кот (шанс 1%) получает в 8 раз больше акций с каждого транша, чем Обычный.")],
-    [t("Что будет с дивидендами, если я продам кота?"), t("Дивиденды копятся на самом коте. Продал или подарил кота — невыплаченное уезжает вместе с ним новому владельцу. Кот — это актив с накопленной ценностью.")],
-    [t("Зачем бесплатная раздача?"), t("Первые коты раздаются бесплатно ранним пользователям: держа кота, ты становишься совладельцем — тебе выгодно продвигать платформу, ведь чем больше на ней торгуют, тем больше акций падает твоему коту.")],
+    [t("Что будет с наградами, если я продам кота?"), t("Награды копятся на самом коте. Продал или подарил кота — невыплаченное уезжает вместе с ним новому владельцу. Кот — это актив с накопленной ценностью.")],
+    [t("Зачем бесплатная раздача?"), t("Первые коты раздаются бесплатно ранним пользователям — так собирается активное комьюнити вокруг игры. Кот остаётся коллекционным предметом: он не даёт доли в платформе, права голоса и никаких обязательств с нашей стороны.")],
   ];
 
   return (
@@ -1588,7 +1627,7 @@ export default function Cats({ wallet }) {
       <div className="rev-hero">
         <h1>🐱 {t("Коты-брокеры")}</h1>
         <p className="rev-sub">
-          {t("NFT-коты, привязанные к настоящим акциям. Казна платит держателям котов дивиденды в токенизированных акциях — чем выше редкость кота, тем больше его доля. Держишь кота — ты совладелец платформы.")}
+          {t("NFT-коты, привязанные к настоящим акциям. Платформа периодически раздаёт держателям котов награды в токенизированных акциях: чем реже кот, тем больше его вес в раздаче. Награды не гарантированы, не являются доходом от доли в платформе и могут прекратиться в любой момент.")}
         </p>
         <div className="rev-cta">
           <button className="btn btn-primary" onClick={() => document.getElementById("cats-wl")?.scrollIntoView({ behavior: "smooth" })}>{t("В список на бесплатного кота")}</button>
@@ -1628,14 +1667,14 @@ export default function Cats({ wallet }) {
         ))}
       </div>
 
-      <h2 className="rev-h2" id="cats-how">{t("Как работают дивиденды")}</h2>
+      <h2 className="rev-h2" id="cats-how">{t("Как работают награды")}</h2>
       <div className="rev-steps">
         <div className="rev-step"><b>{t("1 · Казна собирает комиссии")}</b><span>{t("Часть реальных сборов hood с торгов идёт в кошачью казну.")}</span></div>
         <div className="rev-step"><b>{t("2 · Покупка акций")}</b><span>{t("Казна конвертирует их в токенизированные акции (SPY, NVDA и др.).")}</span></div>
         <div className="rev-step"><b>{t("3 · Раздача по весу")}</b><span>{t("Контракт делит акции между котами по редкости. Клеймишь — акции на кошелёк.")}</span></div>
       </div>
 
-      <h2 className="rev-h2">{t("Прикинь дивиденды кота")} <span className="rev-demo-tag">{t("демо")}</span></h2>
+      <h2 className="rev-h2">{t("Прикинь награды кота")} <span className="rev-demo-tag">{t("демо")}</span></h2>
       <div className="rev-calc">
         <div className="rev-sliders">
           <label>

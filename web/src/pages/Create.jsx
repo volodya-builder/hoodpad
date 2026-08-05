@@ -238,7 +238,7 @@ export default function Create({ wallet, onConnect }) {
           </div>
           <div className={`ttype-card ${ttype === "tax" ? "on" : ""}`} onClick={() => setTtype("tax")}>
             <b>{t("Tax-токен")} <em className="ttype-beta">β</em></b>
-            <span>{t("налог с трейдов: кошелёк, сжигание, дивиденды, ликвидность")}</span>
+            <span>{t("налог с трейдов: кошелёк, сжигание, награды, ликвидность")}</span>
           </div>
         </div>
 
@@ -385,7 +385,7 @@ export default function Create({ wallet, onConnect }) {
                 <div className="tax-legend">
                   <span><i style={{ background: "var(--gold)" }} />{t("Кошелёк создателя")} <b>{tax.mkt}%</b></span>
                   <span><i style={{ background: "#8b5cf6" }} />{t("Сжигание")} <b>{tax.burn}%</b></span>
-                  <span><i style={{ background: "#e06a4a" }} />{t("Дивиденды")} <b>{tax.div}%</b></span>
+                  <span><i style={{ background: "#e06a4a" }} />{t("Награды")} <b>{tax.div}%</b></span>
                   <span><i style={{ background: "#2bd4c8" }} />{t("Ликвидность")} <b>{tax.lp}%</b></span>
                   {taxTotal < 100 && <span><i style={{ background: "#ffffff26" }} />{t("Не распределено")} <b className="bad">{100 - taxTotal}%</b></span>}
                 </div>
@@ -395,7 +395,7 @@ export default function Create({ wallet, onConnect }) {
                   <input type="range" min="0" max="100" step="5" value={tax.mkt} onChange={setTaxK("mkt")} /></label>
                 <label>{t("Сжигание (дефляция)")}: <b>{tax.burn}%</b>
                   <input type="range" min="0" max="100" step="5" value={tax.burn} onChange={setTaxK("burn")} /></label>
-                <label>{t("Дивиденды холдерам")}: <b>{tax.div}%</b>
+                <label>{t("Награды холдерам")}: <b>{tax.div}%</b>
                   <input type="range" min="0" max="100" step="5" value={tax.div} onChange={setTaxK("div")} /></label>
                 <label>{t("В ликвидность")}: <b>{tax.lp}%</b>
                   <input type="range" min="0" max="100" step="5" value={tax.lp} onChange={setTaxK("lp")} /></label>
@@ -405,11 +405,11 @@ export default function Create({ wallet, onConnect }) {
 
             <div className="field-row">
               <div>
-                <label>{t("Мин. баланс для дивидендов (токенов)")}</label>
+                <label>{t("Мин. баланс для наград (токенов)")}</label>
                 <input type="number" min="0" value={tax.minShare} onChange={setTaxK("minShare")} />
               </div>
               <div>
-                <label>{t("Дивиденды выплачиваются в")}</label>
+                <label>{t("Награды выплачиваются в")}</label>
                 <div className="quote-tabs" style={{ margin: "6px 0 0" }}>
                   <button type="button" className={`quote-tab qt-sm ${tax.divToken === "self" ? "on" : ""}`}
                           onClick={() => setTax({ ...tax, divToken: "self" })}>{t("самом токене")}</button>
