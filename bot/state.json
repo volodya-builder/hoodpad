@@ -291,7 +291,7 @@
     "0xdb9c409b1e2c8904cd12ea5b36adffc1d2fa4130": "not-erc20"
   },
   "launchTimes": [],
-  "lastBlock": "59742258",
+  "lastBlock": "59811479",
   "retry": [
     "0x77f5576be773f864ffdae999f01dd5ef767abe47",
     "0xc490df2c774372d023ea2ce8bfc6f4450c7d61e6",
@@ -301,13 +301,13 @@
     "0xc2e230810c20914350bd9ab839ff264f80f93954"
   ],
   "imgTries": {
-    "0x77f5576be773f864ffdae999f01dd5ef767abe47": 2,
+    "0x77f5576be773f864ffdae999f01dd5ef767abe47": 5,
     "0x1ecd7dcccdf5e2882bfc7fff66f07d25e6361254": 1,
-    "0xc490df2c774372d023ea2ce8bfc6f4450c7d61e6": 2,
-    "0xd2a64907d30e720a37b8abdba17bccda10ce9fd5": 1,
-    "0x5fa861e09db4cf29cd96c1e96addc70e53a8fe61": 1,
-    "0xac4c3b5d663ac1032bf4d72a79d8b452a639539a": 1,
-    "0xc2e230810c20914350bd9ab839ff264f80f93954": 1
+    "0xc490df2c774372d023ea2ce8bfc6f4450c7d61e6": 5,
+    "0xd2a64907d30e720a37b8abdba17bccda10ce9fd5": 4,
+    "0x5fa861e09db4cf29cd96c1e96addc70e53a8fe61": 4,
+    "0xac4c3b5d663ac1032bf4d72a79d8b452a639539a": 4,
+    "0xc2e230810c20914350bd9ab839ff264f80f93954": 4
   },
   "feeCursor": 0
 }
