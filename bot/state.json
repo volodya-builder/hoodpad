@@ -288,26 +288,26 @@
     "0x06f1a1b054f7bcb59652def0b320f7e6744392b6": "not-erc20",
     "0x011ed2072b5701949f1d19b71b766f369bac826f": "not-erc20",
     "0xe3476e3325601191dbec99dba3069df93c994b8e": "not-erc20",
-    "0xdb9c409b1e2c8904cd12ea5b36adffc1d2fa4130": "not-erc20"
+    "0xdb9c409b1e2c8904cd12ea5b36adffc1d2fa4130": "not-erc20",
+    "0x77f5576be773f864ffdae999f01dd5ef767abe47": "img-failed",
+    "0xc490df2c774372d023ea2ce8bfc6f4450c7d61e6": "img-failed"
   },
   "launchTimes": [],
-  "lastBlock": "59811479",
+  "lastBlock": "59871233",
   "retry": [
-    "0x77f5576be773f864ffdae999f01dd5ef767abe47",
-    "0xc490df2c774372d023ea2ce8bfc6f4450c7d61e6",
     "0xd2a64907d30e720a37b8abdba17bccda10ce9fd5",
     "0x5fa861e09db4cf29cd96c1e96addc70e53a8fe61",
     "0xac4c3b5d663ac1032bf4d72a79d8b452a639539a",
     "0xc2e230810c20914350bd9ab839ff264f80f93954"
   ],
   "imgTries": {
-    "0x77f5576be773f864ffdae999f01dd5ef767abe47": 5,
+    "0x77f5576be773f864ffdae999f01dd5ef767abe47": 8,
     "0x1ecd7dcccdf5e2882bfc7fff66f07d25e6361254": 1,
-    "0xc490df2c774372d023ea2ce8bfc6f4450c7d61e6": 5,
-    "0xd2a64907d30e720a37b8abdba17bccda10ce9fd5": 4,
-    "0x5fa861e09db4cf29cd96c1e96addc70e53a8fe61": 4,
-    "0xac4c3b5d663ac1032bf4d72a79d8b452a639539a": 4,
-    "0xc2e230810c20914350bd9ab839ff264f80f93954": 4
+    "0xc490df2c774372d023ea2ce8bfc6f4450c7d61e6": 8,
+    "0xd2a64907d30e720a37b8abdba17bccda10ce9fd5": 7,
+    "0x5fa861e09db4cf29cd96c1e96addc70e53a8fe61": 7,
+    "0xac4c3b5d663ac1032bf4d72a79d8b452a639539a": 7,
+    "0xc2e230810c20914350bd9ab839ff264f80f93954": 7
   },
   "feeCursor": 0
 }
