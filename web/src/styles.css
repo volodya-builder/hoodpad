@@ -54,7 +54,7 @@ header {
 }
 .logo-word .dot { color: var(--gold); }
 /* Правый блок шапки отодвинут от края: вплотную он смотрелся зажатым. */
-.nav { display: flex; gap: 8px; align-items: center; margin-right: 28px; }
+.nav { display: flex; gap: 8px; align-items: center; margin-right: 90px; }
 .net-pill {
   font-size: 12px; font-weight: 700; color: var(--leaf);
   border: 1px solid #23472e; background: var(--leaf-dim);
