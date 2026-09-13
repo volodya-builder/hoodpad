@@ -42,6 +42,19 @@
 
 - **Голосование убрано из продукта (06.08.2026, решение владельца):** страницы Vote.jsx/VoteV2.jsx удалены, пункт меню и подвал вычищены, тикер и тексты на главной переписаны, `#/vote` ведёт в Казну. Контракты VotePower/BuybackVote остаются задеплоенными и в конфиге — интерфейса у них больше нет. Куда идут выкупы, решает казначей.
 
+## Сеть из песочницы Claude (13.09.2026)
+
+Домены открыты в Settings → Capabilities → Allow network egress →
+Additional allowed domains: RPC мейннета, Blockscout, Goldsky, `*.g.alchemy.com`,
+hoodandarrow.com, api.brightdata.com.
+
+**Готча:** `curl` ходит через прокси сам, а `fetch` в Node — нет, и падает
+с «Host not in allowlist» даже на разрешённом домене. Запускать так:
+
+```
+NODE_USE_ENV_PROXY=1 node scripts/probe-stock-pools.mjs
+```
+
 ## Инфраструктура
 
 - Фронтенд: React + Vite, статика на **GitHub Pages**, репозиторий `volodya-builder/hoodpad`, ветка `main`, домен hoodandarrow.com (CNAME).
