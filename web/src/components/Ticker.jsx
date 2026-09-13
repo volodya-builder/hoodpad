@@ -3,7 +3,6 @@ import { formatEther } from "viem";
 import { fmtEth } from "../lib/web3.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { useArena, grandArena } from "../lib/arena.js";
-import { FEATURES } from "../lib/config.js";
 import { useSupport } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 
@@ -23,11 +22,11 @@ export default function Ticker() {
   const items = [];
 
   // арена
-  if (FEATURES.arena && st.alive.length > 1 && st.nextCheckpoint) {
+  if (st.alive.length > 1 && st.nextCheckpoint) {
     const s = Math.max(0, Math.floor((st.nextCheckpoint - Date.now()) / 1000));
     items.push(<>⚔️ {t("Арена")}: {t("лидер")} <b>${st.alive[0].symbol}</b> · {t("выбывание через")} <b>{Math.floor(s / 3600)}{t("ч")} {Math.floor((s % 3600) / 60)}{t("м")}</b></>);
   }
-  if (FEATURES.arena && st.champion && st.alive.length === 1) {
+  if (st.champion && st.alive.length === 1) {
     items.push(<>👑 {t("Чемпион дня")}: <b>${st.champion.symbol}</b></>);
   }
 
@@ -48,12 +47,10 @@ export default function Ticker() {
   }
 
   // казна
-  if (FEATURES.treasury) {
-    items.push(<>🏦 {t("Накоплено на выкупы")}: <b>{D(support.totalEth || treasuryFromTrades(st))}</b></>);
-  }
+  items.push(<>🏦 {t("Накоплено на выкупы")}: <b>{D(support.totalEth || treasuryFromTrades(st))}</b></>);
 
   // гранд-арена
-  const ga = FEATURES.arena ? grandArena(st.tokens, st.trades) : { table: [] };
+  const ga = grandArena(st.tokens, st.trades);
   if (ga.table.length) {
     items.push(<>👑 {t("Гранд-Арена")}: {t("лидер")} <b>${ga.table[0].token.symbol}</b> · {"⭐".repeat(Math.min(ga.table[0].wins, 5))}</>);
   }

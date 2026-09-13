@@ -6,7 +6,6 @@ import { timeAgo, loadTokens, useClock, useSupport } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 import { useFavs, toggleFav } from "../lib/favs.js";
 import { useArena } from "../lib/arena.js";
-import { FEATURES } from "../lib/config.js";
 
 
 function TokenCard({ t, fav, onFav, cushion = 0 }) {
@@ -108,7 +107,7 @@ export default function Home({ onSearch }) {
           {t("+ Создать")}
         </a>
       </div>
-      {FEATURES.arena && arena && arena.participants.length > 0 && (
+      {arena && arena.participants.length > 0 && (
         <a className="cushion-banner arena-banner" href="#/arena">
           ⚔️ {t("Арена")}: {arena.alive.length > 1 ? (
             <>
@@ -127,10 +126,10 @@ export default function Home({ onSearch }) {
           )} →
         </a>
       )}
-      {FEATURES.treasury && <a className="cushion-banner" href="#/treasury">
+      <a className="cushion-banner" href="#/treasury">
         🛡 {t("Казна вернула рынку")}: <b>{support.totalEth * rate >= 1000 ? usd(support.totalEth * rate) : "$" + (support.totalEth * rate).toFixed(2)}</b> <span className="dim">({fmtEth(support.totalEth)} ETH)</span>
         {support.totalEth === 0 && <span className="dim"> · {t("копится с каждой сделки — выкупы начнутся, когда наберётся сумма")}</span>} →
-      </a>}
+      </a>
       {error && <div className="error">{error}</div>}
       {!tokens && !error && <div className="center">{t("Загружаю токены из блокчейна…")}</div>}
 

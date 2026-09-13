@@ -46,7 +46,7 @@ header {
   position: sticky; top: 0; z-index: 10;
 }
 .header-inner { display: flex; align-items: center; gap: 20px; height: 72px; }
-.logo { display: flex; align-items: center; gap: 10px; cursor: pointer; margin-left: auto; }
+.logo { display: flex; align-items: center; gap: 10px; cursor: pointer; }
 .logo svg { flex: none; }
 .logo-word {
   font-family: var(--font-ui); font-weight: 600; font-size: 17px;
@@ -680,10 +680,7 @@ html[data-theme="light"] .tcard { background: #ffffff; }
 html[data-theme="light"] .grad-wrap { background: radial-gradient(700px 260px at 25% -40px, #4653c914, transparent 70%), var(--card); box-shadow: none; }
 
 /* ---------------- nav pills / header controls */
-/* Логотип и меню идут одной группой и стоят по центру свободного места:
-   auto слева у .logo и auto справа у .nav-pills делят пустоту поровну.
-   Прижать группу к левому краю — убрать `margin-left: auto` у .logo. */
-.nav-pills { display: flex; background: #111210; border: 1px solid var(--border); border-radius: 999px; padding: 3px; gap: 3px; margin: 0 auto 0 0; min-width: 0; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.nav-pills { display: flex; background: #111210; border: 1px solid var(--border); border-radius: 999px; padding: 3px; gap: 3px; margin: 0 auto; min-width: 0; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 .nav-pills::-webkit-scrollbar { display: none; }
 .nav-pill { padding: 7px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--text-dim); cursor: pointer; transition: all .15s; white-space: nowrap; flex: none; }
 .nav-pill.on { background: var(--bg-soft); color: var(--text); }
@@ -1617,7 +1614,7 @@ html[data-theme="light"] .tos-ico { background: #ffffff; }
 
   /* шапка обязана влезать: правый блок ужимается, кнопка кошелька обрезается */
   .header-inner { gap: 8px; }
-  .logo { flex: none; margin-left: 0; }
+  .logo { flex: none; }
   .nav { gap: 6px; flex: 1 1 auto !important; min-width: 0; justify-content: flex-end; }
   .icon-btn { width: 36px; height: 36px; border-radius: 10px; font-size: 15px; flex: none; }
   .nav .btn {
