@@ -365,33 +365,37 @@ export default function App() {
             <button className={`icon-btn burger ${menuOpen ? "on" : ""}`} onClick={() => setMenuOpen(!menuOpen)} title={t("Меню")} aria-label="menu">
               {menuOpen ? "✕" : "☰"}
             </button>
-            <button className="icon-btn nav-search" onClick={() => setSearchOpen(true)} title="Поиск (Ctrl+K)">⌕</button>
-            <div className="net-wrap">
-              <button className="icon-btn net-btn" onClick={(e) => { e.stopPropagation(); setNetMenu(!netMenu); }} title={t("Сеть")}>
-                <img className="net-ico" src="https://icons.llamao.fi/icons/chains/rsz_robinhood.jpg" alt=""
-                     onError={(e) => { e.currentTarget.style.display = "none"; }} /> Robinhood <span className="chev">▾</span>
-              </button>
-              {netMenu && (
-                <div className="net-menu" onClick={(e) => e.stopPropagation()}>
-                  {[
-                    { key: "robinhood", name: "Robinhood", ico: "rsz_robinhood", live: true },
-                    { key: "bsc", name: "BSC", ico: "rsz_binance", hint: t("Откроется после деплоя контрактов в BSC") },
-                    { key: "base", name: "Base", ico: "rsz_base", hint: "Base — вместе с Revenue β" },
-                    { key: "eth", name: "ETH", ico: "rsz_ethereum" },
-                    { key: "sol", name: "SOL", ico: "rsz_solana" },
-                  ].map((n) => (
-                    <div key={n.key} className={`net-item ${n.live ? "on" : "soon"}`} title={n.hint || ""}>
-                      <span className="net-badge">
-                        <img className="net-ico" src={`https://icons.llamao.fi/icons/chains/${n.ico}.jpg`} alt=""
-                             onError={(e) => { e.currentTarget.style.display = "none"; }} />
-                      </span>
-                      {n.name}
-                      {n.live ? <span className="net-check">✓</span> : <span className="net-soon">{t("скоро")}</span>}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            {FEATURES.headerSearch && (
+              <button className="icon-btn nav-search" onClick={() => setSearchOpen(true)} title="Поиск (Ctrl+K)">⌕</button>
+            )}
+            {FEATURES.netSwitch && (
+              <div className="net-wrap">
+                <button className="icon-btn net-btn" onClick={(e) => { e.stopPropagation(); setNetMenu(!netMenu); }} title={t("Сеть")}>
+                  <img className="net-ico" src="https://icons.llamao.fi/icons/chains/rsz_robinhood.jpg" alt=""
+                       onError={(e) => { e.currentTarget.style.display = "none"; }} /> Robinhood <span className="chev">▾</span>
+                </button>
+                {netMenu && (
+                  <div className="net-menu" onClick={(e) => e.stopPropagation()}>
+                    {[
+                      { key: "robinhood", name: "Robinhood", ico: "rsz_robinhood", live: true },
+                      { key: "bsc", name: "BSC", ico: "rsz_binance", hint: t("Откроется после деплоя контрактов в BSC") },
+                      { key: "base", name: "Base", ico: "rsz_base", hint: "Base — вместе с Revenue β" },
+                      { key: "eth", name: "ETH", ico: "rsz_ethereum" },
+                      { key: "sol", name: "SOL", ico: "rsz_solana" },
+                    ].map((n) => (
+                      <div key={n.key} className={`net-item ${n.live ? "on" : "soon"}`} title={n.hint || ""}>
+                        <span className="net-badge">
+                          <img className="net-ico" src={`https://icons.llamao.fi/icons/chains/${n.ico}.jpg`} alt=""
+                               onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                        </span>
+                        {n.name}
+                        {n.live ? <span className="net-check">✓</span> : <span className="net-soon">{t("скоро")}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <button className="icon-btn lang-btn" onClick={() => setLang(lang === "en" ? "ru" : "en")}
                     title="Язык / Language">
               <span className={lang !== "en" ? "on" : ""}>RU</span>

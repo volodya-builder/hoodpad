@@ -100,6 +100,8 @@ export const FEATURES = {
   vote: false,
   treasury: false,
   ticker: false,   // components/Ticker.jsx — бегущая строка под шапкой
+  headerSearch: false, // кнопка-лупа в шапке (поиск по Ctrl+K и поле на главной работают)
+  netSwitch: false,    // выбор сети в шапке (пока сеть одна — Robinhood Chain)
 };
 
 export const TREASURY_POLICY = { cats: 20, arena: 10, buyback: 70 };
