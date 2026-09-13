@@ -614,6 +614,11 @@ const EN = {
   "Казна потратила на выкуп этого токена": "Treasury spent buying back this token",
   "Выкуп казны": "Treasury buyback",
   "копится с каждой сделки — первые выкупы после голосования": "grows with every trade — first buybacks after the vote",
+  // — аналитика: сравнение с прошлым периодом —
+  "к прошлым суткам": "vs prior day",
+  "к прошлой неделе": "vs prior week",
+  "к прошлому месяцу": "vs prior month",
+  "впервые за период": "first activity in this period",
   // — рефералка —
   "Поиск: тикер, имя или адрес…": "Search: ticker, name or address…",
   "Приглашайте трейдеров — получайте {pct}% каждой их комиссии. Навсегда.": "Invite traders — earn {pct}% of every fee they pay. Forever.",

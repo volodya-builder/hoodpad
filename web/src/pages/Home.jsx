@@ -175,7 +175,7 @@ export default function Home({ onSearch }) {
           </div>
         </div>
         <div className="pill-group">
-          {[["new", t("Новые")], ["old", t("Старые")], ["raised", t("Недавние покупки")], ["mcap", t("Капитализация")], ["cushion", "🛡 " + t("Выкуп казны")], ["fav", "★ " + t("Избранное")]].map(([k, lbl]) => (
+          {[["new", t("Новые")], ["old", t("Старые")], ["raised", t("Недавние покупки")], ["mcap", t("Капитализация")], ...(FEATURES.treasury ? [["cushion", "🛡 " + t("Выкуп казны")]] : []), ["fav", "★ " + t("Избранное")]].map(([k, lbl]) => (
             <div key={k} className={`fpill ${sort === k ? "on" : ""}`} onClick={() => setSort(k)}>
               {lbl}
             </div>
