@@ -53,7 +53,8 @@ header {
   letter-spacing: 6px; margin-left: 2px;
 }
 .logo-word .dot { color: var(--gold); }
-.nav { display: flex; gap: 8px; align-items: center; }
+/* Правый блок шапки отодвинут от края: вплотную он смотрелся зажатым. */
+.nav { display: flex; gap: 8px; align-items: center; margin-right: 28px; }
 .net-pill {
   font-size: 12px; font-weight: 700; color: var(--leaf);
   border: 1px solid #23472e; background: var(--leaf-dim);
@@ -1681,7 +1682,7 @@ html[data-theme="light"] .tos-ico { background: #ffffff; }
   /* шапка обязана влезать: правый блок ужимается, кнопка кошелька обрезается */
   .header-inner { gap: 8px; }
   .logo { flex: none; margin-left: 0; }
-  .nav { gap: 6px; flex: 1 1 auto !important; min-width: 0; justify-content: flex-end; }
+  .nav { gap: 6px; flex: 1 1 auto !important; min-width: 0; justify-content: flex-end; margin-right: 0; }
   .icon-btn { width: 36px; height: 36px; border-radius: 10px; font-size: 15px; flex: none; }
   .nav .btn {
     padding: 9px 12px; font-size: 12.5px;
