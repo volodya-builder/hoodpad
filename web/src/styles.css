@@ -980,6 +980,34 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
 }
 .pos-row .pos-id { padding-right: 16px; }
 /* мини-графики аналитики: подсказка при наведении + ось времени */
+/* --- Аналитика: выбор диапазона одной кнопкой --- */
+.ana-range { position: relative; display: inline-block; margin: 18px 0 2px; }
+.ana-range-btn {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg-soft); border: 1px solid var(--border);
+  border-radius: 999px; padding: 9px 16px; cursor: pointer;
+  font-family: inherit; font-size: 13px; color: var(--text);
+  transition: border-color .15s, background .15s;
+}
+.ana-range-btn:hover { border-color: #3a3b33; background: var(--card-hover); }
+.ana-range-lbl { color: var(--text-dim); font-weight: 600; }
+.ana-range-btn b { font-weight: 700; }
+.ana-range-btn .chev { font-size: 9px; opacity: .7; margin-left: 2px; }
+.ana-range-menu {
+  position: absolute; top: calc(100% + 8px); left: 0; z-index: 60;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; padding: 8px; min-width: 190px;
+  box-shadow: 0 14px 40px -14px #000c;
+}
+.ana-range-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 10px;
+  font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer;
+}
+.ana-range-item:hover { background: var(--card-hover); }
+.ana-range-item.on { background: var(--gold-dim); font-weight: 700; }
+.ana-range-check { margin-left: auto; color: var(--gold); }
+
 /* --- Аналитика: сравнение с прошлым периодом и полноразмерные графики --- */
 /* Стрелка и подпись несут смысл сами по себе; цвет только усиливает. */
 .ana-delta {

@@ -102,6 +102,7 @@ export default function Analytics() {
   const [raw, setRaw] = useState(_anaRaw);
   const [error, setError] = useState("");
   const [period, setPeriod] = useState("all");
+  const [rangeOpen, setRangeOpen] = useState(false);
   const [lbOpen, setLbOpen] = useState(true); // лидеры раскрыты по умолчанию, сворачиваются кликом
 
   useEffect(() => {
@@ -167,6 +168,20 @@ export default function Analytics() {
     return () => { alive = false; };
   }, []);
 
+  // Закрытие выбора диапазона: клик мимо, Esc. Без этого меню
+  // остаётся висеть, когда человек уходит мышкой в сторону.
+  useEffect(() => {
+    if (!rangeOpen) return;
+    const close = () => setRangeOpen(false);
+    const onKey = (e) => { if (e.key === "Escape") setRangeOpen(false); };
+    document.addEventListener("click", close);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("click", close);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [rangeOpen]);
+
   const stats = useMemo(() => {
     if (!raw) return null;
     const secs = PERIODS.find(([k]) => k === period)[2];
@@ -226,12 +241,33 @@ export default function Analytics() {
       <div className="page-title">{t("Аналитика протокола")}</div>
       <div className="page-sub">{t("Все цифры читаются напрямую из контрактов hood в Robinhood Chain.")}</div>
 
-      <div className="pill-group ana-tabs">
-        {PERIODS.map(([k, lbl]) => (
-          <div key={k} className={`fpill ${period === k ? "on" : ""}`} onClick={() => setPeriod(k)}>
-            {t(lbl)}
+      <div className="ana-range" onClick={(e) => e.stopPropagation()}>
+        <button
+          className="ana-range-btn"
+          onClick={() => setRangeOpen(!rangeOpen)}
+          aria-haspopup="listbox"
+          aria-expanded={rangeOpen}
+        >
+          <span className="ana-range-lbl">{t("Период")}</span>
+          <b>{t(PERIODS.find(([k]) => k === period)[1])}</b>
+          <span className="chev">▾</span>
+        </button>
+        {rangeOpen && (
+          <div className="ana-range-menu" role="listbox">
+            {PERIODS.map(([k, lbl]) => (
+              <div
+                key={k}
+                role="option"
+                aria-selected={period === k}
+                className={`ana-range-item ${period === k ? "on" : ""}`}
+                onClick={() => { setPeriod(k); setRangeOpen(false); }}
+              >
+                {t(lbl)}
+                {period === k && <span className="ana-range-check">✓</span>}
+              </div>
+            ))}
           </div>
-        ))}
+        )}
       </div>
 
       {error && <div className="error">{error}</div>}

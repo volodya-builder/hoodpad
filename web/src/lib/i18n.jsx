@@ -614,6 +614,7 @@ const EN = {
   "Казна потратила на выкуп этого токена": "Treasury spent buying back this token",
   "Выкуп казны": "Treasury buyback",
   "копится с каждой сделки — первые выкупы после голосования": "grows with every trade — first buybacks after the vote",
+  "Период": "Period",
   // — аналитика: сравнение с прошлым периодом —
   "к прошлым суткам": "vs prior day",
   "к прошлой неделе": "vs prior week",
