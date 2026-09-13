@@ -337,7 +337,7 @@ export default function App() {
         <div className="container header-inner">
           <a className="logo" href="#/" aria-label="hood">
             <img src="./logo-64.png" alt="" width="32" height="32"
-                 style={{ display: "block" }} />
+                 style={{ borderRadius: 9, display: "block" }} />
             <span className="logo-word">HOOD</span>
             <span className="logo-beta">beta</span>
           </a>
