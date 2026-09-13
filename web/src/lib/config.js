@@ -99,6 +99,7 @@ export const FEATURES = {
   cats: false,
   vote: false,
   treasury: false,
+  ticker: false,   // components/Ticker.jsx — бегущая строка под шапкой
 };
 
 export const TREASURY_POLICY = { cats: 20, arena: 10, buyback: 70 };

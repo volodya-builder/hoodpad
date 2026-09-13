@@ -443,7 +443,7 @@ export default function App() {
           </nav>
         </div>
       </header>
-      <Ticker />
+      {FEATURES.ticker && <Ticker />}
       <main className={`container ${route.startsWith("/token/") ? "container-wide" : ""}`}>
         {factoryMissing && (
           <div className="error" style={{ marginTop: 16 }}>

@@ -23,11 +23,11 @@ export default function Ticker() {
   const items = [];
 
   // арена
-  if (st.alive.length > 1 && st.nextCheckpoint) {
+  if (FEATURES.arena && st.alive.length > 1 && st.nextCheckpoint) {
     const s = Math.max(0, Math.floor((st.nextCheckpoint - Date.now()) / 1000));
     items.push(<>⚔️ {t("Арена")}: {t("лидер")} <b>${st.alive[0].symbol}</b> · {t("выбывание через")} <b>{Math.floor(s / 3600)}{t("ч")} {Math.floor((s % 3600) / 60)}{t("м")}</b></>);
   }
-  if (st.champion && st.alive.length === 1) {
+  if (FEATURES.arena && st.champion && st.alive.length === 1) {
     items.push(<>👑 {t("Чемпион дня")}: <b>${st.champion.symbol}</b></>);
   }
 
