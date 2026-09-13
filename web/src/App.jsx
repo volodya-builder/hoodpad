@@ -15,7 +15,7 @@ import { Privacy, Terms } from "./pages/Legal.jsx";
 import Revenue from "./pages/Revenue.jsx";
 import Cats from "./pages/Cats.jsx";
 import { connectWallet, reconnectWallet, hasWallet, short, fmt, fmtEth, publicClient } from "./lib/web3.js";
-import { CHAIN, FACTORY_ADDRESS, TREASURY_ADDRESS, CHAT_DB_URL } from "./lib/config.js";
+import { CHAIN, FACTORY_ADDRESS, TREASURY_ADDRESS, CHAT_DB_URL, FEATURES } from "./lib/config.js";
 import { treasuryAbi } from "./lib/abi.js";
 import { loadTokens } from "./lib/data.js";
 import { useEthUsd, usd } from "./lib/price.js";
@@ -304,20 +304,20 @@ export default function App() {
     page = <Analytics />;
   } else if (route === "/leaderboard") {
     page = <Analytics />; // лидеры теперь живут внутри аналитики
-  } else if (route === "/arena") {
+  } else if (route === "/arena" && FEATURES.arena) {
     page = <Arena />;
   } else if (route.startsWith("/trader/")) {
     page = <Trader address={route.split("/trader/")[1]} />;
-  } else if (route === "/vote") {
+  } else if (route === "/vote" && FEATURES.treasury) {
     // голосование убрано из продукта: старые ссылки ведут в казну
     page = <Treasury wallet={wallet} onConnect={connect} />;
-  } else if (route === "/treasury") {
+  } else if (route === "/treasury" && FEATURES.treasury) {
     page = <Treasury />;
   } else if (route === "/admin") {
     page = <Admin wallet={wallet} onConnect={connect} />;
   } else if (route === "/revenue") {
     page = <Revenue />;
-  } else if (route === "/cats") {
+  } else if (route === "/cats" && FEATURES.cats) {
     page = <Cats wallet={wallet} />;
   } else if (route === "/about") {
     page = <About />;
@@ -339,7 +339,6 @@ export default function App() {
             <img src="./logo-64.png" alt="" width="32" height="32"
                  style={{ borderRadius: 9, display: "block" }} />
             <span className="logo-word">HOOD</span>
-            <span className="logo-beta">beta</span>
           </a>
           {import.meta.env.BASE_URL !== "/" && (
             <span className="staging-badge" title="Тестовая версия — данные и вид могут отличаться от боевого сайта">
@@ -348,45 +347,57 @@ export default function App() {
           )}
           <div className={`nav-pills ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(false)}>
             <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/leaderboard") && !route.startsWith("/profile") && !route.startsWith("/treasury") && !route.startsWith("/about") && !route.startsWith("/arena") ? "on" : ""}`} href="#/">{t("Обзор")}</a>
-            <a className={`nav-pill nav-hot ${route.startsWith("/arena") ? "on" : ""}`} href="#/arena">
-              ⚔️ {t("Арена")} <span className="hot-flame">🔥</span>
-            </a>
-            <a className={`nav-pill ${route.startsWith("/cats") ? "on" : ""}`} href="#/cats">🐱 {t("Коты")} <span className="rev-nav-beta">β</span></a>
-            <a className={`nav-pill ${route.startsWith("/treasury") ? "on" : ""}`} href="#/treasury">{t("Казна")}</a>
+            {FEATURES.arena && (
+              <a className={`nav-pill nav-hot ${route.startsWith("/arena") ? "on" : ""}`} href="#/arena">
+                ⚔️ {t("Арена")} <span className="hot-flame">🔥</span>
+              </a>
+            )}
+            {FEATURES.cats && (
+              <a className={`nav-pill ${route.startsWith("/cats") ? "on" : ""}`} href="#/cats">🐱 {t("Коты")} <span className="rev-nav-beta">β</span></a>
+            )}
+            {FEATURES.treasury && (
+              <a className={`nav-pill ${route.startsWith("/treasury") ? "on" : ""}`} href="#/treasury">{t("Казна")}</a>
+            )}
             <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>
-            <a className={`nav-pill ${route.startsWith("/about") ? "on" : ""}`} href="#/about">{t("О нас")}</a>
+            {FEATURES.about && (
+              <a className={`nav-pill ${route.startsWith("/about") ? "on" : ""}`} href="#/about">{t("О нас")}</a>
+            )}
           </div>
           <nav className="nav">
             <button className={`icon-btn burger ${menuOpen ? "on" : ""}`} onClick={() => setMenuOpen(!menuOpen)} title={t("Меню")} aria-label="menu">
               {menuOpen ? "✕" : "☰"}
             </button>
-            <button className="icon-btn nav-search" onClick={() => setSearchOpen(true)} title="Поиск (Ctrl+K)">⌕</button>
-            <div className="net-wrap">
-              <button className="icon-btn net-btn" onClick={(e) => { e.stopPropagation(); setNetMenu(!netMenu); }} title={t("Сеть")}>
-                <img className="net-ico" src="https://icons.llamao.fi/icons/chains/rsz_robinhood.jpg" alt=""
-                     onError={(e) => { e.currentTarget.style.display = "none"; }} /> Robinhood <span className="chev">▾</span>
-              </button>
-              {netMenu && (
-                <div className="net-menu" onClick={(e) => e.stopPropagation()}>
-                  {[
-                    { key: "robinhood", name: "Robinhood", ico: "rsz_robinhood", live: true },
-                    { key: "bsc", name: "BSC", ico: "rsz_binance", hint: t("Откроется после деплоя контрактов в BSC") },
-                    { key: "base", name: "Base", ico: "rsz_base", hint: "Base — вместе с Revenue β" },
-                    { key: "eth", name: "ETH", ico: "rsz_ethereum" },
-                    { key: "sol", name: "SOL", ico: "rsz_solana" },
-                  ].map((n) => (
-                    <div key={n.key} className={`net-item ${n.live ? "on" : "soon"}`} title={n.hint || ""}>
-                      <span className="net-badge">
-                        <img className="net-ico" src={`https://icons.llamao.fi/icons/chains/${n.ico}.jpg`} alt=""
-                             onError={(e) => { e.currentTarget.style.display = "none"; }} />
-                      </span>
-                      {n.name}
-                      {n.live ? <span className="net-check">✓</span> : <span className="net-soon">{t("скоро")}</span>}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            {FEATURES.headerSearch && (
+              <button className="icon-btn nav-search" onClick={() => setSearchOpen(true)} title="Поиск (Ctrl+K)">⌕</button>
+            )}
+            {FEATURES.netSwitch && (
+              <div className="net-wrap">
+                <button className="icon-btn net-btn" onClick={(e) => { e.stopPropagation(); setNetMenu(!netMenu); }} title={t("Сеть")}>
+                  <img className="net-ico" src="https://icons.llamao.fi/icons/chains/rsz_robinhood.jpg" alt=""
+                       onError={(e) => { e.currentTarget.style.display = "none"; }} /> Robinhood <span className="chev">▾</span>
+                </button>
+                {netMenu && (
+                  <div className="net-menu" onClick={(e) => e.stopPropagation()}>
+                    {[
+                      { key: "robinhood", name: "Robinhood", ico: "rsz_robinhood", live: true },
+                      { key: "bsc", name: "BSC", ico: "rsz_binance", hint: t("Откроется после деплоя контрактов в BSC") },
+                      { key: "base", name: "Base", ico: "rsz_base", hint: "Base — вместе с Revenue β" },
+                      { key: "eth", name: "ETH", ico: "rsz_ethereum" },
+                      { key: "sol", name: "SOL", ico: "rsz_solana" },
+                    ].map((n) => (
+                      <div key={n.key} className={`net-item ${n.live ? "on" : "soon"}`} title={n.hint || ""}>
+                        <span className="net-badge">
+                          <img className="net-ico" src={`https://icons.llamao.fi/icons/chains/${n.ico}.jpg`} alt=""
+                               onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                        </span>
+                        {n.name}
+                        {n.live ? <span className="net-check">✓</span> : <span className="net-soon">{t("скоро")}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <button className="icon-btn lang-btn" onClick={() => setLang(lang === "en" ? "ru" : "en")}
                     title="Язык / Language">
               <span className={lang !== "en" ? "on" : ""}>RU</span>
@@ -437,7 +448,7 @@ export default function App() {
           </nav>
         </div>
       </header>
-      <Ticker />
+      {FEATURES.ticker && <Ticker />}
       <main className={`container ${route.startsWith("/token/") ? "container-wide" : ""}`}>
         {factoryMissing && (
           <div className="error" style={{ marginTop: 16 }}>
@@ -456,8 +467,8 @@ export default function App() {
             </div>
             <div className="fcol">
               <h4>{t("Продукт")}</h4>
-              <a href="#/arena">⚔️ {t("Арена")} 🔥</a>
-              <a href="#/treasury">{t("Казна")}</a>
+              {FEATURES.arena && <a href="#/arena">⚔️ {t("Арена")} 🔥</a>}
+              {FEATURES.treasury && <a href="#/treasury">{t("Казна")}</a>}
               <a href="#/analytics">{t("Аналитика")}</a>
             </div>
             <div className="fcol">

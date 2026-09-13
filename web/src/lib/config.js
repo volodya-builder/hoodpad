@@ -87,6 +87,24 @@ export const isTeam = (addr) => !!addr && addr.toLowerCase() === TEAM_ADDRESS;
 // Это параметры политики, а не контракта: их исполняет ИИ-казначей, и
 // поменять их можно без передеплоя. Проценты считаются от баланса казны
 // на момент траты, поэтому у разных ритмов они не складываются в 100.
+// ——— Скрытые фичи (разворот концепции 13.09.2026, см. CONCEPT-V3.md) ———
+// Код НЕ удалён. Чтобы вернуть вкладку — поставить true и пересобрать.
+//   arena    — lib/arena.js, lib/arena-core.js, lib/fairvol.js, pages/Arena.jsx
+//   cats     — pages/Cats.jsx, pages/CatsGuide.jsx, lib/catstate.js, lib/clicker.js,
+//              contracts/BrokerCats.sol, CatBox.sol, CatMarket.sol, CatStockVault.sol, CatRenderer.sol
+//   vote     — contracts/VotePower.sol, BuybackVote.sol (интерфейса нет с 06.08.2026)
+//   treasury — pages/Treasury.jsx, contracts/BuybackTreasuryV2.sol
+export const FEATURES = {
+  arena: false,
+  cats: false,
+  vote: false,
+  treasury: false,
+  ticker: false,   // components/Ticker.jsx — бегущая строка под шапкой
+  headerSearch: false, // кнопка-лупа в шапке (поиск по Ctrl+K и поле на главной работают)
+  netSwitch: false,    // выбор сети в шапке (пока сеть одна — Robinhood Chain)
+  about: false,        // пункт «О нас» в шапке (страница pages/About.jsx остаётся)
+};
+
 export const TREASURY_POLICY = { cats: 20, arena: 10, buyback: 70 };
 
 // ——— Коты-брокеры (NFT + награды акциями) ———
