@@ -3,6 +3,7 @@ import { formatEther } from "viem";
 import { fmtEth } from "../lib/web3.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { useArena, grandArena } from "../lib/arena.js";
+import { FEATURES } from "../lib/config.js";
 import { useSupport } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 
@@ -47,10 +48,12 @@ export default function Ticker() {
   }
 
   // казна
-  items.push(<>🏦 {t("Накоплено на выкупы")}: <b>{D(support.totalEth || treasuryFromTrades(st))}</b></>);
+  if (FEATURES.treasury) {
+    items.push(<>🏦 {t("Накоплено на выкупы")}: <b>{D(support.totalEth || treasuryFromTrades(st))}</b></>);
+  }
 
   // гранд-арена
-  const ga = grandArena(st.tokens, st.trades);
+  const ga = FEATURES.arena ? grandArena(st.tokens, st.trades) : { table: [] };
   if (ga.table.length) {
     items.push(<>👑 {t("Гранд-Арена")}: {t("лидер")} <b>${ga.table[0].token.symbol}</b> · {"⭐".repeat(Math.min(ga.table[0].wins, 5))}</>);
   }

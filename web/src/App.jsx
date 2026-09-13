@@ -15,7 +15,7 @@ import { Privacy, Terms } from "./pages/Legal.jsx";
 import Revenue from "./pages/Revenue.jsx";
 import Cats from "./pages/Cats.jsx";
 import { connectWallet, reconnectWallet, hasWallet, short, fmt, fmtEth, publicClient } from "./lib/web3.js";
-import { CHAIN, FACTORY_ADDRESS, TREASURY_ADDRESS, CHAT_DB_URL } from "./lib/config.js";
+import { CHAIN, FACTORY_ADDRESS, TREASURY_ADDRESS, CHAT_DB_URL, FEATURES } from "./lib/config.js";
 import { treasuryAbi } from "./lib/abi.js";
 import { loadTokens } from "./lib/data.js";
 import { useEthUsd, usd } from "./lib/price.js";
@@ -304,20 +304,20 @@ export default function App() {
     page = <Analytics />;
   } else if (route === "/leaderboard") {
     page = <Analytics />; // лидеры теперь живут внутри аналитики
-  } else if (route === "/arena") {
+  } else if (route === "/arena" && FEATURES.arena) {
     page = <Arena />;
   } else if (route.startsWith("/trader/")) {
     page = <Trader address={route.split("/trader/")[1]} />;
-  } else if (route === "/vote") {
+  } else if (route === "/vote" && FEATURES.treasury) {
     // голосование убрано из продукта: старые ссылки ведут в казну
     page = <Treasury wallet={wallet} onConnect={connect} />;
-  } else if (route === "/treasury") {
+  } else if (route === "/treasury" && FEATURES.treasury) {
     page = <Treasury />;
   } else if (route === "/admin") {
     page = <Admin wallet={wallet} onConnect={connect} />;
   } else if (route === "/revenue") {
     page = <Revenue />;
-  } else if (route === "/cats") {
+  } else if (route === "/cats" && FEATURES.cats) {
     page = <Cats wallet={wallet} />;
   } else if (route === "/about") {
     page = <About />;
@@ -348,11 +348,17 @@ export default function App() {
           )}
           <div className={`nav-pills ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(false)}>
             <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/leaderboard") && !route.startsWith("/profile") && !route.startsWith("/treasury") && !route.startsWith("/about") && !route.startsWith("/arena") ? "on" : ""}`} href="#/">{t("Обзор")}</a>
-            <a className={`nav-pill nav-hot ${route.startsWith("/arena") ? "on" : ""}`} href="#/arena">
-              ⚔️ {t("Арена")} <span className="hot-flame">🔥</span>
-            </a>
-            <a className={`nav-pill ${route.startsWith("/cats") ? "on" : ""}`} href="#/cats">🐱 {t("Коты")} <span className="rev-nav-beta">β</span></a>
-            <a className={`nav-pill ${route.startsWith("/treasury") ? "on" : ""}`} href="#/treasury">{t("Казна")}</a>
+            {FEATURES.arena && (
+              <a className={`nav-pill nav-hot ${route.startsWith("/arena") ? "on" : ""}`} href="#/arena">
+                ⚔️ {t("Арена")} <span className="hot-flame">🔥</span>
+              </a>
+            )}
+            {FEATURES.cats && (
+              <a className={`nav-pill ${route.startsWith("/cats") ? "on" : ""}`} href="#/cats">🐱 {t("Коты")} <span className="rev-nav-beta">β</span></a>
+            )}
+            {FEATURES.treasury && (
+              <a className={`nav-pill ${route.startsWith("/treasury") ? "on" : ""}`} href="#/treasury">{t("Казна")}</a>
+            )}
             <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>
             <a className={`nav-pill ${route.startsWith("/about") ? "on" : ""}`} href="#/about">{t("О нас")}</a>
           </div>
@@ -456,8 +462,8 @@ export default function App() {
             </div>
             <div className="fcol">
               <h4>{t("Продукт")}</h4>
-              <a href="#/arena">⚔️ {t("Арена")} 🔥</a>
-              <a href="#/treasury">{t("Казна")}</a>
+              {FEATURES.arena && <a href="#/arena">⚔️ {t("Арена")} 🔥</a>}
+              {FEATURES.treasury && <a href="#/treasury">{t("Казна")}</a>}
               <a href="#/analytics">{t("Аналитика")}</a>
             </div>
             <div className="fcol">
