@@ -192,12 +192,14 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   useClock(5000);
   const { t } = useLang();
   const rate = useEthUsd();
-  // Курс валюты кривой в долларах — для монет за AAPL/USDG. У ETH-монет 0.
-  const quoteRate = useQuoteUsd(data?.q?.addr);
   const split = useSplit();
   const support = useSupport();
   const cushion = support.per[tokenAddress?.toLowerCase()]?.eth || 0;
   const [data, setData] = useState(null);
+  // Курс валюты кривой в долларах — для монет за AAPL/USDG. У ETH-монет 0.
+  // Строго ПОСЛЕ useState(data): обращение к data выше строки объявления
+  // роняло страницу («Cannot access before initialization»).
+  const quoteRate = useQuoteUsd(data?.q?.addr);
   // Единицы валюты курвы. ETH-монета: 18 знаков и подпись ETH. Quote-монета:
   // знаки и символ её валюты (у USDG 6). Всё, что ниже считает деньги
   // кривой, ходит через эти три функции, а не через parseEther напрямую.
