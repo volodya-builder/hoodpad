@@ -1341,7 +1341,7 @@ const EN = {
   "в": "in",
   "Вам начислено": "Credited to you",
   "Ваша доля": "Your share",
-  "Держите монету — с каждой покупки и продажи вам капает {q}. Продали — перестало. Сумма считается по вашему балансу, забрать можно в любой момент.": "Hold the coin — every buy and sell drips {q} to you. Sell and it stops. The amount follows your balance; claim any time.",
+  "Держите монету — с каждой покупки и продажи вам капает {q}. Продали — перестало. Накопленное раз в час само приходит на кошелёк; забрать вручную можно в любой момент.": "Hold the coin — every buy and sell drips {q} to you. Sell and it stops. What you have earned lands in your wallet automatically every hour; you can also claim it manually any time.",
   "Ждёт вас": "Waiting for you",
   "Забираю…": "Claiming…",
   "Пока нечего забирать": "Nothing to claim yet",

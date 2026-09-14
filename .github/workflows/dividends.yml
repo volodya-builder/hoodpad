@@ -1,0 +1,43 @@
+name: hood dividends
+
+# Автовыплата дивидендов холдерам монет за валюту + сбор протокольной доли
+# у их пулов в сплиттер. Раз в час. Ключ — любой кошелёк с ETH на газ
+# (у claimFor/claim нет прав), берём тот же секрет, что у казначея.
+on:
+  schedule:
+    - cron: "7 * * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry — только посмотреть; run — с транзакциями"
+        default: "run"
+        type: choice
+        options: [dry, run]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dividends
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm i viem@2 --no-audit --no-fund
+      - name: Pay dividends
+        env:
+          TREASURER_PRIVATE_KEY: ${{ secrets.TREASURER_PRIVATE_KEY }}
+          MIN_PAYOUT_USD: "0.05"
+          MIN_SWEEP_USD: "0.5"
+        run: |
+          if [ "${{ github.event.inputs.mode }}" = "dry" ]; then
+            node bot/dividends/dividends.mjs | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            node bot/dividends/dividends.mjs --run | tee -a "$GITHUB_STEP_SUMMARY"
+          fi

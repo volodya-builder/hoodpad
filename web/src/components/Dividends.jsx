@@ -91,7 +91,7 @@ export default function Dividends({ token, wallet, q, onConnect }) {
         </div>
       )}
       <div className="dv-note">
-        {t("Держите монету — с каждой покупки и продажи вам капает {q}. Продали — перестало. Сумма считается по вашему балансу, забрать можно в любой момент.").replace("{q}", q.sym)}
+        {t("Держите монету — с каждой покупки и продажи вам капает {q}. Продали — перестало. Накопленное раз в час само приходит на кошелёк; забрать вручную можно в любой момент.").replace("{q}", q.sym)}
       </div>
       {wallet && (
         <button className="btn btn-primary dv-btn" disabled={busy || st.mine === 0n} onClick={claim}>
