@@ -52,7 +52,7 @@ import { fileURLToPath } from "node:url";
 import { verifyMessage } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { decodeAbiParameters, toFunctionSelector } from "viem";
-import { AI_MODELS } from "../web/src/lib/models.mjs";
+import { loadModels, featured, PRICE_CAP } from "../web/src/lib/models.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, "..");
@@ -65,18 +65,6 @@ const RPC = "https://rpc.mainnet.chain.robinhood.com";
 // разогнавшийся промпт упирается в них раньше, чем в баланс.
 const MAX_TOKENS = 16000;
 const MAX_HTML_BYTES = 200 * 1024;
-
-// Порядок предпочтения. Берётся первая модель, которая реально есть в
-// каталоге OpenRouter на момент запуска, — идентификаторы там меняются,
-// и хардкодить один — надёжный способ однажды упасть.
-const PREFERRED = [
-  "anthropic/claude-sonnet-4.5",
-  "anthropic/claude-3.7-sonnet",
-  "openai/gpt-5.2",
-  "openai/gpt-4o",
-  "google/gemini-2.5-pro",
-  "deepseek/deepseek-chat",
-];
 
 const cfg = (() => {
   try { return JSON.parse(fs.readFileSync(path.join(HERE, "deploy-config.json"), "utf8")); }
@@ -201,25 +189,28 @@ async function wantedModel(token) {
     if (!m) return "";
     const meta = JSON.parse(Buffer.from(m[1], "base64").toString("utf8"));
     const id = String(meta?.ai || "").trim();
-    // Берём только то, что есть в общем списке: метадату пишет кто угодно,
-    // а платит за вызов владелец платформы.
-    return AI_MODELS.some((x) => x.id === id) ? id : "";
+    // Проверять id здесь не нужно: pickModel сверит его с живым списком
+    // годных моделей — там же стоит и потолок цены.
+    return id;
   } catch { return ""; }
 }
 
 async function pickModel(wanted = "") {
-  const r = await fetch(`${OR}/models`).then((x) => x.json()).catch(() => null);
-  const ids = new Set((r?.data || []).map((m) => m.id));
-  // Выбор создателя — первый в очереди. Если модели в каталоге больше нет,
-  // подменяем, но возвращаем asked: журнал скажет об этом вслух.
+  // Тот же отбор, что видит создатель монеты в форме: текст на выходе, цена
+  // в пределах потолка, отсортировано по рейтингу «делает веб-страницу».
+  const list = await loadModels();
+  const ids = new Set(list.map((m) => m.id));
+
+  // Выбор создателя — первый в очереди. Если модели в списке больше нет
+  // (сняли с обслуживания или вылетела за потолок цены), подменяем, но
+  // возвращаем asked: журнал скажет об этом вслух, а не промолчит.
   if (wanted && ids.has(wanted)) return { model: wanted, asked: "" };
-  const fallback = () => {
-    if (!ids.size) return cfg.agentModel || PREFERRED[0];
-    if (cfg.agentModel && ids.has(cfg.agentModel)) return cfg.agentModel;
-    for (const m of PREFERRED) if (ids.has(m)) return m;
-    return [...ids][0];
-  };
-  return { model: fallback(), asked: wanted };
+  if (cfg.agentModel && ids.has(cfg.agentModel)) return { model: cfg.agentModel, asked: wanted };
+  if (list.length) return { model: list[0].id, asked: wanted };
+
+  // Каталог не ответил. Строить наугад нельзя: любая выдумка — это либо
+  // ошибка вызова, либо счёт за модель, которую никто не выбирал.
+  return { model: "", asked: wanted };
 }
 
 const PROMPT = (task, symbol) => `Ты — ИИ-агент мем-монеты $${symbol} на платформе hood.
@@ -293,21 +284,22 @@ async function main() {
   }
 
   if (args.includes("--models")) {
-    const r = await fetch(`${OR}/models`).then((x) => x.json());
-    const list = (r?.data || []).map((m) => m.id).sort();
-    console.log(`Моделей доступно: ${list.length}\n`);
-    console.log("Запасной ряд агента:");
-    for (const m of PREFERRED) console.log(list.includes(m) ? `  есть  ${m}` : `  нет   ${m}`);
-    // Список из формы запуска. Если тут «нет» — значит, создателю монеты
-    // предлагают то, чего агент не сможет вызвать. Это надо чинить сразу.
-    console.log("\nСписок в форме запуска (web/src/lib/models.mjs):");
-    let miss = 0;
-    for (const m of AI_MODELS) {
-      const ok = list.includes(m.id);
-      if (!ok) miss += 1;
-      console.log(`  ${ok ? "есть " : "НЕТ  "} ${m.id.padEnd(34)} ${m.name}`);
+    // Ровно тот список, который увидит создатель монеты в форме запуска:
+    // одна функция на двоих, поэтому расхождению взяться неоткуда.
+    const all = await fetch(`${OR}/models`).then((x) => x.json()).catch(() => null);
+    const list = await loadModels();
+    console.log(`В каталоге OpenRouter: ${(all?.data || []).length}`);
+    console.log(`Годных агенту (текст на выходе, до $${PRICE_CAP} за миллион, есть рейтинг): ${list.length}\n`);
+    if (!list.length) {
+      console.log("Пусто. Либо каталог не ответил, либо потолок цены слишком низкий.");
+      return;
     }
-    console.log(miss ? `\nНедоступно ${miss} — убери их из формы.` : "\nВся форма доступна.");
+    console.log("Витрина формы запуска — по одной лучшей модели от разработчика:");
+    for (const m of featured(list)) {
+      console.log(`  ${String(m.by).padEnd(12)} ${m.name.padEnd(26)} elo ${String(m.elo).padStart(4)}  $${m.price}`);
+    }
+    console.log("\nПервые десять по рейтингу «делает веб-страницу»:");
+    for (const m of list.slice(0, 10)) console.log(`  ${String(m.elo).padStart(4)}  ${m.id}`);
     return;
   }
 
@@ -344,6 +336,10 @@ async function main() {
   }
 
   const { model, asked } = await pickModel(await wantedModel(work.token));
+  if (!model) {
+    console.error("Каталог моделей недоступен — строить не на чем. Останавливаюсь.");
+    process.exit(1);
+  }
   console.log(`Модель:  ${model}`);
   if (asked) console.log(`Создатель просил ${asked} — её нет в каталоге, строю на доступной.`);
   console.log("");

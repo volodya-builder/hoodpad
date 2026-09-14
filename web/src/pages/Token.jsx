@@ -13,7 +13,7 @@ import Journal from "../components/Journal.jsx";
 import AgentBudget from "../components/AgentBudget.jsx";
 import { useSplit, loadCreationTimes, timeAgo, useClock, useSupport } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
-import { modelById, modelLogo } from "../lib/models.mjs";
+import { modelLogo, makerOf } from "../lib/models.mjs";
 import CandleChart from "../components/CandleChart.jsx";
 import TokenSidebar from "../components/TokenSidebar.jsx";
 import { useFavs, toggleFav } from "../lib/favs.js";
@@ -738,14 +738,19 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   );
 
   // Модель, на которой работает ИИ монеты: её выбрал создатель при запуске,
-  // и она лежит в метадате токена. Показываем только известную нам модель —
-  // произвольная строка из метадаты на страницу монеты не попадает.
-  const aiModel = modelById(String(meta.ai || "").trim());
-  const aiChip = aiModel ? (
-    <a className="badge tk-ai" href="#/ai" title={t("ИИ этой монеты работает на этой модели")}>
-      <img className="q-logo" src={modelLogo(aiModel.site)} alt="" loading="lazy"
+  // и она лежит в метадате токена вместе с человеческим названием. В каталог
+  // за этим не ходим — метадата и есть источник.
+  //
+  // Метадату пишет кто угодно, поэтому показываем, только если разработчик
+  // модели нам известен, а имя обрезаем: чужая строка не должна расползаться
+  // по шапке монеты.
+  const aiId = String(meta.ai || "").trim();
+  const aiMaker = makerOf(aiId);
+  const aiChip = aiMaker ? (
+    <a className="badge tk-ai" href="#/ai" title={`${t("ИИ этой монеты работает на этой модели")}: ${aiId.slice(0, 80)}`}>
+      <img className="q-logo" src={modelLogo(aiId)} alt="" loading="lazy"
            onError={(e) => { e.currentTarget.style.display = "none"; }} />
-      {aiModel.name}
+      {String(meta.aiName || aiId.split("/")[1] || aiId).slice(0, 28)}
     </a>
   ) : null;
 
