@@ -19,6 +19,28 @@ const PERIOD_LABEL = {
   "24h": "за 24 часа", week: "за неделю", month: "за месяц", all: "за всё время",
 };
 
+/** Сравнение с предыдущим периодом такой же длины.
+ *  Стрелка и подпись несут смысл сами по себе — цвет только усиливает,
+ *  поэтому дальтоник прочитает карточку так же, как все. */
+function Delta({ now, was, period }) {
+  const { t } = useLang();
+  const LBL = { "24h": "к прошлым суткам", week: "к прошлой неделе", month: "к прошлому месяцу" };
+  if (was == null || !LBL[period]) return null;
+  if (was === 0) {
+    return now > 0
+      ? <div className="ana-delta up">▲ {t("впервые за период")}</div>
+      : null;
+  }
+  const pct = ((now - was) / was) * 100;
+  if (!isFinite(pct)) return null;
+  const flat = Math.abs(pct) < 0.5;
+  return (
+    <div className={`ana-delta ${flat ? "flat" : pct > 0 ? "up" : "down"}`}>
+      {flat ? "■" : pct > 0 ? "▲" : "▼"} {Math.abs(pct).toFixed(1)}% {t(LBL[period])}
+    </div>
+  );
+}
+
 /** Мини-гистограмма как на карточках аналитики.
  *  bins: [{ v, from, to }] — значение и границы корзины по времени. */
 function Bars({ data, bins, fmtVal, axis }) {
@@ -41,7 +63,7 @@ function Bars({ data, bins, fmtVal, axis }) {
       {data.map((v, i) => (
         <div
           key={i}
-          className={`ana-bar ${v > 0 ? "on" : ""} ${hover === i ? "hl" : ""}`}
+          className={`ana-bar ${v > 0 ? "on" : ""} ${hover === i ? "hl" : ""} ${i === data.length - 1 ? "last" : ""}`}
           onMouseEnter={() => setHover(i)}
           title={bins && bins[i] ? `${fmtVal ? fmtVal(v) : v} · ${tf(bins[i].from)} — ${tf(bins[i].to)}` : ""}
           style={{ height: max > 0 && v > 0 ? `${Math.max(6, (v / max) * 100)}%` : "3px" }}
@@ -80,6 +102,7 @@ export default function Analytics() {
   const [raw, setRaw] = useState(_anaRaw);
   const [error, setError] = useState("");
   const [period, setPeriod] = useState("all");
+  const [rangeOpen, setRangeOpen] = useState(false);
   const [lbOpen, setLbOpen] = useState(true); // лидеры раскрыты по умолчанию, сворачиваются кликом
 
   useEffect(() => {
@@ -145,6 +168,20 @@ export default function Analytics() {
     return () => { alive = false; };
   }, []);
 
+  // Закрытие выбора диапазона: клик мимо, Esc. Без этого меню
+  // остаётся висеть, когда человек уходит мышкой в сторону.
+  useEffect(() => {
+    if (!rangeOpen) return;
+    const close = () => setRangeOpen(false);
+    const onKey = (e) => { if (e.key === "Escape") setRangeOpen(false); };
+    document.addEventListener("click", close);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("click", close);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [rangeOpen]);
+
   const stats = useMemo(() => {
     if (!raw) return null;
     const secs = PERIODS.find(([k]) => k === period)[2];
@@ -168,7 +205,20 @@ export default function Analytics() {
       volBars[i] += tr.eth + tr.fee;
       cntBars[i] += 1;
     }
-    return { volume, creatorPaid, count: filtered.length, volBars, cntBars, bins, t0, tEnd: raw.now };
+    // Предыдущий период той же длины — чтобы показать, куда двинулось.
+    // Для «всё время» сравнивать не с чем.
+    let prev = null;
+    if (secs > 0) {
+      const from = cutoff - secs * 1000;
+      const p = raw.trades.filter((tr) => (tr.ts ?? 0) >= from && (tr.ts ?? 0) < cutoff);
+      prev = {
+        volume: p.reduce((s2, tr) => s2 + tr.eth + tr.fee, 0),
+        count: p.length,
+        creatorPaid: p.reduce((s2, tr) => s2 + tr.fee * (tr.shareBps / 10000), 0),
+      };
+    }
+
+    return { volume, creatorPaid, count: filtered.length, volBars, cntBars, bins, t0, tEnd: raw.now, prev };
   }, [raw, period]);
 
   // подписи оси времени под мини-графиками
@@ -191,32 +241,52 @@ export default function Analytics() {
       <div className="page-title">{t("Аналитика протокола")}</div>
       <div className="page-sub">{t("Все цифры читаются напрямую из контрактов hood в Robinhood Chain.")}</div>
 
-      <div className="pill-group ana-tabs">
-        {PERIODS.map(([k, lbl]) => (
-          <div key={k} className={`fpill ${period === k ? "on" : ""}`} onClick={() => setPeriod(k)}>
-            {t(lbl)}
+      <div className="ana-range" onClick={(e) => e.stopPropagation()}>
+        <button
+          className="ana-range-btn"
+          onClick={() => setRangeOpen(!rangeOpen)}
+          aria-haspopup="listbox"
+          aria-expanded={rangeOpen}
+        >
+          <span className="ana-range-lbl">{t("Период")}</span>
+          <b>{t(PERIODS.find(([k]) => k === period)[1])}</b>
+          <span className="chev">▾</span>
+        </button>
+        {rangeOpen && (
+          <div className="ana-range-menu" role="listbox">
+            {PERIODS.map(([k, lbl]) => (
+              <div
+                key={k}
+                role="option"
+                aria-selected={period === k}
+                className={`ana-range-item ${period === k ? "on" : ""}`}
+                onClick={() => { setPeriod(k); setRangeOpen(false); }}
+              >
+                {t(lbl)}
+                {period === k && <span className="ana-range-check">✓</span>}
+              </div>
+            ))}
           </div>
-        ))}
+        )}
       </div>
 
       {error && <div className="error">{error}</div>}
       {!stats && !error && <div className="center">{t("Читаю блокчейн…")}</div>}
 
       {stats && raw && (
+        <>
         <div className="ana-grid">
           <div className="ana-card">
             <div className="k">{t("Объём торгов")}</div>
             <div className="pf-usd">{D(stats.volume)}</div>
-            <div className="s">{fmtEth(stats.volume)} ETH · {stats.count} {t("сделок")} · {t(PERIOD_LABEL[period])}</div>
-            <Bars data={stats.volBars} bins={stats.bins} fmtVal={(v) => `${D(v)} · ${fmtEth(v)} ETH`}
-                  axis={axisLabels} />
+            <div className="s">{fmtEth(stats.volume)} ETH · {t(PERIOD_LABEL[period])}</div>
+            <Delta now={stats.volume} was={stats.prev && stats.prev.volume} period={period} />
           </div>
           <div className="ana-card">
             <div className="k">{t("Сделки")}</div>
             <div className="v">{stats.count}</div>
             <div className="s">{t(PERIOD_LABEL[period])}</div>
-            <Bars data={stats.cntBars} bins={stats.bins}
-                  fmtVal={(v) => `${v} ${t("сделок")}`} axis={axisLabels} />
+            <Delta now={stats.count} was={stats.prev && stats.prev.count} period={period} />
           </div>
           <div className="ana-card">
             <div className="k">{t("Запуски токенов")}</div>
@@ -231,31 +301,31 @@ export default function Analytics() {
             <div className="s">
               {fmtEth(stats.creatorPaid)} ETH · {split.creator}% {t("всех комиссий — с первого трейда")}
             </div>
+            <Delta now={stats.creatorPaid} was={stats.prev && stats.prev.creatorPaid} period={period} />
           </div>
-          {(() => {
-            const bal = Number(formatEther(raw.treBal));
-            const rec = Number(formatEther(raw.received));
-            const spent = Number(formatEther(raw.spent));
-            return (<>
-              <div className="ana-card">
-                <div className="k">{t("Казна выкупа")}</div>
-                <div className="pf-usd" style={{ color: "var(--gold)" }}>{D(bal)}</div>
-                <div className="s">
-                  {fmtEth(bal)} ETH
-                  {" · "}
-                  <a href={`${EXPLORER}/address/${TREASURY_ADDRESS}`} target="_blank" rel="noreferrer" style={{ color: "var(--gold)" }}>
-                    {t("контракт")}
-                  </a>
-                </div>
-              </div>
-              <div className="ana-card">
-                <div className="k">{t("Выкуплено и сожжено")}</div>
-                <div className="pf-usd">{D(spent)}</div>
-                <div className="s">{fmtEth(spent)} ETH</div>
-              </div>
-            </>);
-          })()}
         </div>
+
+        {/* Графикам дана своя ширина: в углу карточки со статистикой
+            они были нечитаемы. Последняя корзина подсвечена. */}
+        <div className="ana-charts">
+          <div className="ana-card ana-chart">
+            <div className="ana-chart-head">
+              <div className="k">{t("Объём торгов")}</div>
+              <div className="ana-chart-val">{D(stats.volume)}</div>
+            </div>
+            <Bars data={stats.volBars} bins={stats.bins}
+                  fmtVal={(v) => `${D(v)} · ${fmtEth(v)} ETH`} axis={axisLabels} />
+          </div>
+          <div className="ana-card ana-chart">
+            <div className="ana-chart-head">
+              <div className="k">{t("Сделки")}</div>
+              <div className="ana-chart-val">{stats.count}</div>
+            </div>
+            <Bars data={stats.cntBars} bins={stats.bins}
+                  fmtVal={(v) => `${v} ${t("сделок")}`} axis={axisLabels} />
+          </div>
+        </div>
+        </>
       )}
 
       {/* Лидеры — раскрывающаяся панель внутри аналитики */}

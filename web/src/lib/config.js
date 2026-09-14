@@ -77,6 +77,18 @@ export const TEAM_ADDRESS =
   (import.meta.env.VITE_TEAM_ADDRESS ?? "0xD3d14c10020ad9C582404669a2Fa11AfF2386255").toLowerCase();
 export const isTeam = (addr) => !!addr && addr.toLowerCase() === TEAM_ADDRESS;
 
+// AgentTreasury — покошельковые бюджеты агентов. Пусто = контракт не
+// развёрнут, и счётчик бюджета на странице монеты не показывается вовсе.
+// Пустой счётчик с нулями выглядит как работающая система, которой нет.
+export const AGENT_TREASURY_ADDRESS = import.meta.env.VITE_AGENT_TREASURY ?? "";
+
+// Кошелёк, чьей подписью заверяются записи журнала агента (lib/journal.js).
+// Пока это кошелёк команды: записи заполняются руками из админ-формы на
+// вкладке «Мастерская». Когда появится агент, сюда встанет ЕГО адрес —
+// отдельный, а не командный, чтобы по подписи было видно, кто написал.
+export const AGENT_OPERATOR =
+  (import.meta.env.VITE_AGENT_OPERATOR ?? TEAM_ADDRESS).toLowerCase();
+
 // ——— Политика трат казны (решение владельца 06.08.2026) ———
 // Комиссия сделки (1%) делится контрактами: 50% создателю / 20% команде /
 // 30% в казну. Дальше уже казна распределяется по направлениям:
@@ -103,6 +115,7 @@ export const FEATURES = {
   headerSearch: false, // кнопка-лупа в шапке (поиск по Ctrl+K и поле на главной работают)
   netSwitch: false,    // выбор сети в шапке (пока сеть одна — Robinhood Chain)
   about: false,        // пункт «О нас» в шапке (страница pages/About.jsx остаётся)
+  ai: true,            // вкладка «Мастерская» — всё про ИИ-агентов монет
 };
 
 export const TREASURY_POLICY = { cats: 20, arena: 10, buyback: 70 };
