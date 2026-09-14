@@ -3279,3 +3279,96 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .box-main { display: flex; flex-direction: column; gap: 12px; }
 .box-odds-card { margin: 0; }
 @media (max-width: 760px) { .cats-head p { flex-basis: 100%; } }
+
+/* ---------------- Журнал агента --------------------------------------- */
+/* Витрина: что заказали, что построено, сколько стоило. Провалы стоят в
+   той же ленте и тем же размером — красная полоска слева, не мелкий шрифт
+   внизу. Лента из одних успехов читается как реклама. */
+
+.jr { margin-top: 16px; }
+
+.jr-sum {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+  background: var(--border); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden; margin-bottom: 16px;
+}
+.jr-sum > div { background: var(--card); padding: 16px 18px; }
+.jr-sum b {
+  display: block; font-size: 26px; font-weight: 800; letter-spacing: -.5px;
+  font-variant-numeric: tabular-nums;
+}
+.jr-sum b.ok { color: var(--leaf); }
+.jr-sum b.no { color: var(--red); }
+.jr-sum span {
+  display: block; font-size: 11.5px; color: var(--text-dim);
+  font-weight: 700; text-transform: uppercase; letter-spacing: .4px; margin-top: 4px;
+}
+
+.jr-list { display: flex; flex-direction: column; gap: 10px; }
+.jr-item {
+  border: 1px solid var(--border); border-left: 3px solid var(--border);
+  border-radius: var(--radius); padding: 16px 18px; background: var(--card);
+}
+.jr-item.done { border-left-color: var(--leaf); }
+.jr-item.failed { border-left-color: var(--red); }
+.jr-item.build { border-left-color: var(--gold); }
+
+.jr-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.jr-st {
+  margin-left: auto; font-size: 11.5px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .4px;
+  padding: 3px 9px; border-radius: 7px; border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+.jr-st.done { color: var(--leaf); border-color: #23472e; background: var(--leaf-dim); }
+.jr-st.failed { color: var(--red); border-color: #5c2626; background: #e05c5c1a; }
+.jr-st.build { color: var(--gold); border-color: var(--border-gold); background: var(--gold-dim); }
+
+.jr-task { font-size: 15px; line-height: 1.55; margin-top: 11px; font-weight: 600; }
+.jr-plan { font-size: 13.5px; line-height: 1.6; color: var(--text-dim); margin-top: 8px; }
+.jr-why {
+  font-size: 13.5px; line-height: 1.6; margin-top: 10px;
+  padding: 10px 13px; border-radius: 10px;
+  background: #e05c5c12; border: 1px solid #5c262699;
+}
+.jr-why b { color: var(--red); }
+
+.jr-meta {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  margin-top: 12px; font-size: 12.5px; font-variant-numeric: tabular-nums;
+}
+.jr-link { color: var(--gold); font-weight: 700; }
+.jr-link:hover { text-decoration: underline; }
+
+/* Форма владельца: видна только кошельку команды. */
+.jr-add {
+  margin-top: 14px; padding: 9px 15px; font-size: 13px; font-weight: 700;
+  color: var(--text-dim); background: none; cursor: pointer;
+  border: 1px dashed var(--border); border-radius: 10px;
+}
+.jr-add:hover { color: var(--text); border-color: var(--border-gold); }
+
+.jr-form {
+  margin-top: 14px; padding: 16px; border-radius: var(--radius);
+  border: 1px solid var(--border-gold); background: var(--card);
+}
+.jr-form-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.jr-form-row.end { justify-content: flex-end; margin-bottom: 0; margin-top: 12px; }
+.jr-in {
+  flex: 1; min-width: 120px; padding: 9px 12px; font: inherit; font-size: 13.5px;
+  color: var(--text); background: var(--bg); resize: vertical;
+  border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px;
+}
+.jr-in:focus { outline: none; border-color: var(--border-gold); }
+.jr-in.num { flex: none; width: 120px; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 620px) {
+  .jr-sum { grid-template-columns: repeat(2, 1fr); }
+  .jr-meta { flex-direction: column; align-items: flex-start; gap: 5px; }
+}
+
+/* Подзаголовок внутри боковой колонки монеты (журнал под голосованием). */
+.sec-h3 {
+  font-size: 14px; font-weight: 800; letter-spacing: -.2px;
+  padding-bottom: 10px; border-bottom: 1px solid var(--border);
+}

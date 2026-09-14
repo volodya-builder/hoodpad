@@ -9,6 +9,7 @@ import { honestVolume } from "../lib/fairvol.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import Chat from "./Chat.jsx";
 import Workshop from "../components/Workshop.jsx";
+import Journal from "../components/Journal.jsx";
 import { useSplit, loadCreationTimes, timeAgo, useClock, useSupport } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 import CandleChart from "../components/CandleChart.jsx";
@@ -1462,6 +1463,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           {sideTab === "wsh" ? (
             <div className="side-wsh">
               <Workshop token={tokenAddress} wallet={wallet} onConnect={onConnect} embedded />
+              <div className="sec-h3" style={{ marginTop: 26 }}>{t("Журнал")}</div>
+              <Journal token={tokenAddress} wallet={wallet} />
             </div>
           ) : sideTab === "chat" ? (
             <Chat tokenAddress={tokenAddress} wallet={wallet} onConnect={onConnect} embedded />

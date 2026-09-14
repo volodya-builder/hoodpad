@@ -2,6 +2,7 @@ import React from "react";
 import { useLang } from "../lib/i18n.jsx";
 import Workshop from "../components/Workshop.jsx";
 import Queue from "../components/Queue.jsx";
+import Journal from "../components/Journal.jsx";
 
 /** Вкладка «ИИ» — дом для всего, что мы строим в этом направлении.
  *
@@ -37,7 +38,7 @@ export default function AI({ wallet, onConnect }) {
 
   const status = [
     ["live", t("Чат монеты"), t("Работает. Агент поселится здесь первым.")],
-    ["work", t("Открытый журнал агента"), t("В работе.")],
+    ["live", t("Открытый журнал агента"), t("Работает. Пока пуст — записей не будет, пока не будет работы.")],
     ["live", t("Голосование холдеров за направление"), t("Работает. Раунды идут еженедельно.")],
     ["plan", t("Автономная стройка и выкатка"), t("Следующим шагом.")],
     ["plan", t("Соцсети монеты"), t("Следующим шагом.")],
@@ -104,6 +105,12 @@ export default function AI({ wallet, onConnect }) {
           </div>
         ))}
       </div>
+
+      <h2 className="sec-h2" style={{ marginTop: 56 }}>{t("Журнал агента")}</h2>
+      <div className="s" style={{ marginTop: 6, marginBottom: 4, lineHeight: 1.6, maxWidth: 680 }}>
+        {t("Каждое взятое задание: план, ссылка на результат и сколько ушло на модели. Неудачи стоят здесь же и с причиной — иначе по журналу нельзя судить, а он затем и нужен.")}
+      </div>
+      <Journal wallet={wallet} />
 
       <h2 className="sec-h2" style={{ marginTop: 56 }}>{t("Голосование холдеров")}</h2>
       <div className="s" style={{ marginTop: 6, marginBottom: 4, lineHeight: 1.6, maxWidth: 680 }}>
