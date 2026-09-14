@@ -47,7 +47,7 @@ function smoothPath(xs, ys) {
   return d;
 }
 
-function MiniChart({ points, rate, marks }) {
+function MiniChart({ points, rate, marks, base = 1.625 }) {
   const [hover, setHover] = React.useState(null);
   const W = 680, H = 300, PADB = 30, PADT = 14, PADL = 8, PADR = 62;
   let en = false;
@@ -56,7 +56,7 @@ function MiniChart({ points, rate, marks }) {
 
   const pts = (points && points.length >= 2)
     ? points
-    : [{ i: 0, mcap: 1.625, ts: null }, { i: 1, mcap: 1.625, ts: null }];
+    : [{ i: 0, mcap: base, ts: null }, { i: 1, mcap: base, ts: null }];
   const empty = !(points && points.length >= 2);
 
   let mn = Infinity, mx = -Infinity;
@@ -200,6 +200,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   // Строго ПОСЛЕ useState(data): обращение к data выше строки объявления
   // роняло страницу («Cannot access before initialization»).
   const quoteRate = useQuoteUsd(data?.q?.addr);
+  // Курс валюты кривой к доллару: ETH-монета — курс ETH, монета за AAPL — курс AAPL.
+  const curRate = data?.q ? quoteRate : rate;
   // Единицы валюты курвы. ETH-монета: 18 знаков и подпись ETH. Quote-монета:
   // знаки и символ её валюты (у USDG 6). Всё, что ниже считает деньги
   // кривой, ходит через эти три функции, а не через parseEther напрямую.
@@ -317,7 +319,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
 
   // ETH → доллары мелким шрифтом
   const dollars = (e) => {
-    const v = e * rate, a = Math.abs(v);
+    const v = e * curRate, a = Math.abs(v);
     if (a > 0 && a < 0.01) return "<$0.01";
     return (v < 0 ? "-" : "") + (a >= 1e3 ? usd(a) : "$" + a.toFixed(2));
   };
@@ -479,7 +481,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           publicClient.readContract({ address: addr, abi: erc20Abi, functionName: "symbol" }).catch(() => "?"),
           publicClient.readContract({ address: addr, abi: erc20Abi, functionName: "decimals" }).catch(() => 18),
         ]);
-        q = { addr, sym: String(sym), dec: Number(dec) };
+        const virt = await publicClient.readContract({ address: pool, abi: quotePoolAbi, functionName: "virtualQuote" }).catch(() => 0n);
+        q = { addr, sym: String(sym), dec: Number(dec), virt: Number(formatUnits(virt, Number(dec))) };
       }
     }
     const divBps = q
@@ -533,7 +536,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const loadExtras = useCallback(async () => {
     if (!data?.pool) return;
     const [h, creatorFees, treasuryOwner, treasuryHeld, burned, createdMap] = await Promise.all([
-      poolTrades(data.pool),
+      poolTrades(data.pool, data.q ? { dec: data.q.dec, virt: data.q.virt } : null),
       publicClient.readContract({ address: data.pool, abi: poolExtraAbi, functionName: "creatorFeesAccrued" }),
       publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "owner" }).catch(() => null),
       publicClient.readContract({ address: tokenAddress, abi: tokenAbi, functionName: "balanceOf", args: [TREASURY_ADDRESS] }).catch(() => 0n),
@@ -1026,7 +1029,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <div className="stat-card">
               <div className="k">{t("Комиссии создателя")}</div>
               <div className="v" style={{ color: "var(--gold)" }}>
-                {fmtEth(formatEther(extra.creatorFees ?? 0n))} ETH
+                {fmtEth(fc(extra.creatorFees ?? 0n))} {CSYM}
               </div>
             </div>
             {cushion > 0 && (
@@ -1142,17 +1145,17 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <div className="tk-cells">
               <div className="tk-cell"><span>{t("Цена")}</span><b>{fmtEth(fc(data.price))} {CSYM}</b></div>
               <div className="tk-cell"><span>{t("Собрано")}</span><b>{fmtEth(fc(data.reserve))} {CSYM}</b></div>
-              <div className="tk-cell"><span>{t("Объём 24ч")}</span><b>{tokStats ? fmtEth(tokStats.vol24) : "0"} ETH</b></div>
-              <div className="tk-cell"><span>ATH</span><b>{tokStats ? usd(tokStats.ath * rate) : "—"}</b></div>
+              <div className="tk-cell"><span>{t("Объём 24ч")}</span><b>{tokStats ? fmtEth(tokStats.vol24) : "0"} {CSYM}</b></div>
+              <div className="tk-cell"><span>ATH</span><b>{tokStats && curRate > 0 ? usd(tokStats.ath * curRate) : "—"}</b></div>
               {!data.graduated && (
                 <div className="tk-cell"><span>{t("До градации")}</span><b>{fmt(progress, 1)}%</b></div>
               )}
             </div>
           </div>
           {history && history.points && history.points.filter((p) => p.ts).length >= 2 ? (
-            <CandleChart points={history.points} trades={history.trades} rate={rate} marks={marks} />
+            <CandleChart points={history.points} trades={history.trades} rate={curRate} marks={marks} />
           ) : (
-            <MiniChart points={chartPoints} rate={rate} marks={marks} />
+            <MiniChart points={chartPoints} rate={curRate} marks={marks} base={data.q ? data.q.virt : 1.625} />
           )}
         </div>
         </div>
@@ -1195,7 +1198,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               const isMine = wallet && tr.addr.toLowerCase() === wallet.account.toLowerCase();
               const buy = tr.side === "buy";
               const heat = Math.max(5, Math.round((tr.eth / maxEth) * 100));
-              const priceUsd = tr.tokens > 0 ? (tr.eth / tr.tokens) * rate : 0;
+              const priceUsd = tr.tokens > 0 ? (tr.eth / tr.tokens) * curRate : 0;
               return (
                 <div className="arow arow-hov" key={i} {...rowHover(tr.addr)}>
                   <span className={buy ? "side-buy" : "side-sell"} style={{
@@ -1361,7 +1364,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 </span>
                 <a href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer"
                    style={{ color: "inherit" }} title={t("Открыть транзакцию")}>
-                  {fmtEth(tr.eth)} ETH <span className="usd-sub">({dollars(tr.eth)})</span>
+                  {fmtEth(tr.eth)} {CSYM} <span className="usd-sub">({dollars(tr.eth)})</span>
                 </a>
                 <span>{fmt(tr.tokens, 0)}</span>
                 <a className="mono" href={`${EXPLORER}/address/${tr.addr}`} target="_blank" rel="noreferrer"
@@ -1737,7 +1740,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             </div>
             <div className="tp-cell"><span>{t("Время удержания")}</span><b>{holdStr2}</b></div>
             <div className="tp-cell"><span>{t("Ср. покупка / продажа")}</span>
-              <b>${fmtEth(avgB * rate)} / {sTok > 0 ? `$${fmtEth(avgS * rate)}` : "—"}</b>
+              <b>${fmtEth(avgB * curRate)} / {sTok > 0 ? `$${fmtEth(avgS * curRate)}` : "—"}</b>
             </div>
             <div className="tp-cell"><span>{t("Всего куплено")}</span>
               <b className="side-buy">{dollars(bEth)} · {buys.length} TXs</b>
@@ -1760,7 +1763,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           {sortTradesBy(trs, tpSort).slice(0, 40).map((x, i) => (
             <div className="tp-row" key={i}>
               <span className={`tp-type ${x.side}`}>{t(x.side === "buy" ? "Покупка" : "Продажа")}</span>
-              <span className="dim">${fmtEth(x.tokens > 0 ? (x.eth / x.tokens) * rate : 0)}</span>
+              <span className="dim">${fmtEth(x.tokens > 0 ? (x.eth / x.tokens) * curRate : 0)}</span>
               <span>{compactN(x.tokens)}</span>
               <span className={x.side === "buy" ? "side-buy" : "side-sell"}>{dollars(x.eth)}</span>
               <a className="dim" href={`${EXPLORER}/tx/${x.tx}`} target="_blank" rel="noreferrer"

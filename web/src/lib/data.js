@@ -378,12 +378,15 @@ export function invalidateTrades(pool) {
   _trades.delete(pool);
 }
 
-export async function poolTrades(pool) {
+// cur — валюта кривой для монет за ERC20 (quote-фабрика): { dec, virt }.
+// Без cur — ETH-пул (18 знаков, виртуал 1.625 ETH). Сабграф индексирует
+// только ETH-фабрику, поэтому монеты за валюту читаем прямо из логов.
+export async function poolTrades(pool, cur = null) {
   const c = _trades.get(pool);
   if (c?.v) {
     // мгновенный ответ + тихое обновление в фоне
     if (Date.now() - c.t > 10_000 && !c.p) {
-      const p = _poolTradesFresh(pool)
+      const p = _poolTradesFresh(pool, cur)
         .then((v) => { _trades.set(pool, { v, t: Date.now(), p: null }); return v; })
         .catch(() => { _trades.set(pool, { ...c, p: null }); return c.v; });
       _trades.set(pool, { ...c, p });
@@ -391,7 +394,7 @@ export async function poolTrades(pool) {
     return c.v;
   }
   if (c?.p) return c.p;
-  const p = _poolTradesFresh(pool)
+  const p = _poolTradesFresh(pool, cur)
     .then((v) => { _trades.set(pool, { v, t: Date.now(), p: null }); return v; })
     .catch((e) => { _trades.set(pool, { p: null }); throw e; });
   _trades.set(pool, { p });
@@ -427,27 +430,32 @@ async function _poolTradesSubgraph(pool) {
   return res;
 }
 
-async function _poolTradesFresh(pool) {
+async function _poolTradesFresh(pool, cur = null) {
+  if (cur) return _poolTradesRpc(pool, cur);
   try { return await _poolTradesSubgraph(pool); }
   catch (e) { return _poolTradesRpc(pool); }
 }
 
-async function _poolTradesRpc(pool) {
+// События Buy/Sell у quote-пула имеют ту же сигнатуру, что у ETH-пула
+// (имена полей другие — quoteIn/quoteOut, но топик тот же), поэтому
+// декодер общий; отличаются только знаки валюты и виртуальный резерв.
+async function _poolTradesRpc(pool, cur = null) {
   const logs = await publicClient.getLogs({
     address: pool, events: tradeEvents, fromBlock: await recentFromBlock(), toBlock: "latest",
   });
   logs.sort((a, b) => (a.blockNumber === b.blockNumber
     ? Number(a.logIndex - b.logIndex) : Number(a.blockNumber - b.blockNumber)));
 
-  const VIRT = 1.625, TOTAL = 1e9;
+  const VIRT = cur?.virt || 1.625, TOTAL = 1e9;
+  const D = 10 ** (cur?.dec ?? 18);
   let eth = 0, sold = 0;
   const trades = [];
   const points = [{ i: 0, mcap: (VIRT / TOTAL) * TOTAL }];
   for (const l of logs) {
     const isBuy = l.eventName === "Buy";
-    const ethAmt = Number(isBuy ? l.args.ethIn : l.args.ethOut) / 1e18;
+    const ethAmt = Number(isBuy ? l.args.ethIn : l.args.ethOut) / D;
     const tokAmt = Number(isBuy ? l.args.tokensOut : l.args.tokensIn) / 1e18;
-    const fee = Number(l.args.fee) / 1e18;
+    const fee = Number(l.args.fee) / D;
     if (isBuy) { eth += ethAmt; sold += tokAmt; }
     else { eth -= ethAmt + fee; sold -= tokAmt; }
     const price = (VIRT + eth) / (TOTAL - sold);
