@@ -1,73 +1,144 @@
 // Модели, на которых может работать ИИ монеты.
 //
-// Один список на двоих: его показывает форма запуска (web/src/pages/Create.jsx)
-// и его же читает агент (scripts/agent-run.mjs). Это не красота, а защита от
-// вранья: предложить создателю модель, которую агент не умеет вызвать, — это
-// обещание, которое некому выполнить. Пока файл один, такое расхождение
-// невозможно физически.
+// ПОЧЕМУ СПИСОК НЕ ВБИТ РУКАМИ. Первая версия этого файла была списком из
+// четырнадцати моделей, набранных по памяти. На момент, когда её собрали,
+// в каталоге OpenRouter не было НИ ОДНОЙ из них: версии сменились. Вбитый
+// список — это обещание, которое протухает молча, и человек узнаёт об этом
+// в тот день, когда его монета не собралась.
 //
-// Выбор создателя уезжает в метадату токена (поле ai) тем же data-URI, что и
-// картинка, — то есть в сам контракт, навсегда. Ни базы, ни ещё одного ключа.
+// Поэтому список берётся живым, прямо из каталога OpenRouter, тем же адресом,
+// которым пользуется агент. Ключ для этого не нужен: /models открыт.
 //
-// Если выбранной модели в каталоге OpenRouter в момент сборки не окажется
-// (модели снимают с обслуживания), агент возьмёт ближайшую из своего списка
-// и НАПИШЕТ В ЖУРНАЛЕ, на чём собрал на самом деле. Молча подменять нельзя:
-// на витрине тогда будет не отчёт, а реклама.
+// ЧЕМ МЕРЯЕМ. В каталоге у моделей есть рейтинг design_arena по категориям.
+// Нас интересует ровно одна — website: «насколько хорошо модель делает
+// веб-страницу». Агент делает ровно это. Брать «самую дорогую» нельзя (самой
+// дорогой у OpenAI оказывается старая o1-pro за $600 за миллион), «самую
+// новую» — тоже (у Meta самой новой оказывается Llama Guard, классификатор,
+// который вообще не для того). Рейтинг именно по нужной работе честнее обоих.
+//
+// ПОТОЛОК ЦЕНЫ. За вызов платит платформа, а модель выбирает создатель монеты.
+// Поэтому всё дороже потолка в список не попадает — ни в форму, ни агенту.
+//
+// Один файл на двоих: его читает форма запуска (web/src/pages/Create.jsx) и
+// он же лежит в основе выбора агента (scripts/agent-run.mjs). Предложить
+// человеку модель, которую агент не сможет вызвать, неоткуда.
 
-export const AI_MODELS = [
-  { id: "anthropic/claude-sonnet-4.5",        name: "Claude Sonnet 4.5", by: "Anthropic", site: "claude.ai" },
-  { id: "anthropic/claude-opus-4.1",          name: "Claude Opus 4.1",   by: "Anthropic", site: "claude.ai" },
-  { id: "openai/gpt-5.2",                     name: "GPT-5.2",           by: "OpenAI",    site: "openai.com" },
-  { id: "openai/gpt-4o",                      name: "GPT-4o",            by: "OpenAI",    site: "openai.com" },
-  { id: "google/gemini-2.5-pro",              name: "Gemini 2.5 Pro",    by: "Google",    site: "gemini.google.com" },
-  { id: "google/gemini-2.5-flash",            name: "Gemini 2.5 Flash",  by: "Google",    site: "gemini.google.com" },
-  { id: "deepseek/deepseek-chat",             name: "DeepSeek V3",       by: "DeepSeek",  site: "deepseek.com" },
-  { id: "deepseek/deepseek-r1",               name: "DeepSeek R1",       by: "DeepSeek",  site: "deepseek.com" },
-  { id: "x-ai/grok-4",                        name: "Grok 4",            by: "xAI",       site: "x.ai" },
-  { id: "meta-llama/llama-3.3-70b-instruct",  name: "Llama 3.3 70B",     by: "Meta",      site: "llama.com" },
-  { id: "mistralai/mistral-large",            name: "Mistral Large",     by: "Mistral",   site: "mistral.ai" },
-  { id: "qwen/qwen3-235b-a22b",               name: "Qwen3 235B",        by: "Qwen",      site: "qwen.ai" },
-  { id: "moonshotai/kimi-k2",                 name: "Kimi K2",           by: "Moonshot",  site: "kimi.com" },
-  { id: "z-ai/glm-4.6",                       name: "GLM-4.6",           by: "Z.ai",      site: "z.ai" },
-];
+export const OR_MODELS = "https://openrouter.ai/api/v1/models";
 
-// Показываются в форме до поиска — как популярные тикеры у акций.
-export const AI_POPULAR = [
-  "anthropic/claude-sonnet-4.5",
-  "openai/gpt-5.2",
-  "google/gemini-2.5-pro",
-  "deepseek/deepseek-chat",
-  "x-ai/grok-4",
-  "meta-llama/llama-3.3-70b-instruct",
-  "openai/gpt-4o",
-  "anthropic/claude-opus-4.1",
-  "qwen/qwen3-235b-a22b",
-  "mistralai/mistral-large",
-  "moonshotai/kimi-k2",
-  "z-ai/glm-4.6",
-];
+/** Долларов за миллион выходных токенов. Дороже — не предлагаем и не берём. */
+export const PRICE_CAP = 20;
 
-// Пустая строка = «пусть решает агент»: он возьмёт лучшую доступную.
-// Это же значение стоит по умолчанию, чтобы выбор был правом, а не оброком:
-// человек пришёл запустить монету, а не выбирать модель.
-export const AI_AUTO = "";
+/**
+ * Разработчики моделей: приставка в id → как называть и с какого сайта брать
+ * значок. Приставки живут годами, а названия моделей меняются каждый месяц —
+ * поэтому руками записано только это.
+ */
+export const MAKERS = {
+  anthropic:        { name: "Anthropic", site: "claude.ai" },
+  openai:           { name: "OpenAI",    site: "openai.com" },
+  google:           { name: "Google",    site: "gemini.google.com" },
+  "meta-llama":     { name: "Meta",      site: "llama.com" },
+  meta:             { name: "Meta",      site: "meta.ai" },
+  deepseek:         { name: "DeepSeek",  site: "deepseek.com" },
+  "x-ai":           { name: "xAI",       site: "x.ai" },
+  qwen:             { name: "Qwen",      site: "qwen.ai" },
+  mistralai:        { name: "Mistral",   site: "mistral.ai" },
+  moonshotai:       { name: "Moonshot",  site: "kimi.com" },
+  "z-ai":           { name: "Z.ai",      site: "z.ai" },
+  minimax:          { name: "MiniMax",   site: "minimax.io" },
+  nvidia:           { name: "NVIDIA",    site: "nvidia.com" },
+  amazon:           { name: "Amazon",    site: "aws.amazon.com" },
+  microsoft:        { name: "Microsoft", site: "microsoft.com" },
+  cohere:           { name: "Cohere",    site: "cohere.com" },
+  perplexity:       { name: "Perplexity", site: "perplexity.ai" },
+  tencent:          { name: "Tencent",   site: "tencent.com" },
+  "bytedance-seed": { name: "ByteDance", site: "bytedance.com" },
+  ai21:             { name: "AI21",      site: "ai21.com" },
+  inception:        { name: "Inception", site: "inceptionlabs.ai" },
+  xiaomi:           { name: "Xiaomi",    site: "xiaomi.com" },
+  thinkingmachines: { name: "Thinking Machines", site: "thinkingmachines.ai" },
+  stepfun:          { name: "StepFun",   site: "stepfun.com" },
+  upstage:          { name: "Upstage",   site: "upstage.ai" },
+  "arcee-ai":       { name: "Arcee AI",  site: "arcee.ai" },
+};
 
-export const modelById = (id) => AI_MODELS.find((m) => m.id === id) || null;
+export const makerKey = (id) => String(id || "").split("/")[0];
+export const makerOf = (id) => MAKERS[makerKey(id)] || null;
 
-// Значки берём фавиконками с сайтов самих разработчиков моделей — по той же
-// логике, что логотипы акций тянутся с логотип-CDN: это опознавательный знак
-// рядом с названием, а не наша картинка. Не отдалось — картинка прячется
-// (см. Logo в Create.jsx), название остаётся, чип работает.
-export const modelLogo = (site) =>
-  `https://www.google.com/s2/favicons?domain=${site}&sz=64`;
+/** «Anthropic: Claude Sonnet 5» → «Claude Sonnet 5». */
+export const prettyName = (m) =>
+  String(m?.name || m?.id || "").replace(/^[^:]+:\s*/, "") || String(m?.id || "");
 
-/** Поиск по чипам: тикером здесь служит и название, и разработчик, и id. */
+/** Значок разработчика — фавиконкой с его же сайта, как логотипы акций с CDN. */
+export const modelLogo = (id) => {
+  const site = makerOf(id)?.site;
+  return site ? `https://www.google.com/s2/favicons?domain=${site}&sz=64` : "";
+};
+
+const outPrice = (m) => Number(m?.pricing?.completion || 0) * 1e6;
+
+/** Рейтинг «делает веб-страницу» — то, чем агент занимается. */
+function websiteElo(m) {
+  const rows = m?.benchmarks?.design_arena;
+  if (!Array.isArray(rows)) return 0;
+  const site = rows.find((r) => r.category === "website");
+  if (site?.elo) return site.elo;
+  // Нет именно website — берём среднее по остальным категориям.
+  const all = rows.map((r) => Number(r.elo) || 0).filter(Boolean);
+  return all.length ? Math.round(all.reduce((a, b) => a + b, 0) / all.length) : 0;
+}
+
+/** Годится ли модель агенту: текст на выходе, по карману, и умеет то, что надо. */
+function usable(m) {
+  if (!m?.id || m.id.includes(":") || m.id.startsWith("~")) return false; // batch-копии и алиасы
+  if (makerKey(m.id) === "openrouter") return false;                       // роутеры, а не модели
+  const outs = m.architecture?.output_modalities;
+  if (Array.isArray(outs) && (outs.length !== 1 || outs[0] !== "text")) return false;
+  const p = outPrice(m);
+  if (!(p > 0) || p > PRICE_CAP) return false;
+  return websiteElo(m) > 0;
+}
+
+/** Нормализованная модель — то, чем оперируют форма и агент. */
+const shape = (m) => ({
+  id: m.id,
+  name: prettyName(m),
+  by: makerOf(m.id)?.name || makerKey(m.id),
+  elo: websiteElo(m),
+  price: Number(outPrice(m).toFixed(2)),
+});
+
+/**
+ * Живой список моделей, годных для агента, — от лучших к худшим.
+ * Не достали каталог (нет сети, лежит OpenRouter) — вернём пустой список,
+ * и тогда выбор просто не предлагаем: лучше без выбора, чем выбор из вранья.
+ */
+export async function loadModels() {
+  try {
+    const r = await fetch(OR_MODELS, { cache: "no-store" });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return (j?.data || []).filter(usable).map(shape).sort((a, b) => b.elo - a.elo);
+  } catch { return []; }
+}
+
+/**
+ * Что показать до поиска: по одной лучшей модели от каждого разработчика,
+ * разработчики — в порядке силы их лучшей модели. Двенадцать чипов, как у
+ * акций; остальное достаётся поиском.
+ */
+export function featured(models, limit = 12) {
+  const best = new Map();
+  for (const m of models) if (!best.has(m.by)) best.set(m.by, m);
+  return [...best.values()].slice(0, limit);
+}
+
+/** Поиск по чипам: ищем и по названию, и по разработчику, и по id. */
 export const matchModel = (m, q) => {
   const s = String(q || "").trim().toLowerCase();
   if (!s) return true;
-  return (
-    m.name.toLowerCase().includes(s) ||
-    m.by.toLowerCase().includes(s) ||
-    m.id.toLowerCase().includes(s)
-  );
+  return `${m.name} ${m.by} ${m.id}`.toLowerCase().includes(s);
 };
+
+/** Пусто = «решит агент»: возьмёт лучшую доступную. */
+export const AI_AUTO = "";

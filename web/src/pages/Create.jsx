@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { parseEther, formatEther, decodeEventLog } from "viem";
 import { publicClient } from "../lib/web3.js";
 import { factoryAbi } from "../lib/abi.js";
@@ -6,7 +6,7 @@ import { FACTORY_ADDRESS } from "../lib/config.js";
 import { useSplit, injectNewToken } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 import { RWA_TOKENS, RWA_POPULAR, stockLogo, CHAIN_LOGOS } from "../lib/rwa.js";
-import { AI_MODELS, AI_POPULAR, AI_AUTO, modelLogo, modelById, matchModel } from "../lib/models.mjs";
+import { loadModels, featured, matchModel, modelLogo, AI_AUTO } from "../lib/models.mjs";
 
 // Логотип с фолбэком: если CDN не знает тикер — просто прячем картинку
 const Logo = ({ src, cls }) => (
@@ -117,6 +117,11 @@ export default function Create({ wallet, onConnect }) {
   // ai — то есть в контракт, навсегда, как и картинка.
   const [ai, setAi] = useState(AI_AUTO);
   const [aiSearch, setAiSearch] = useState("");
+  // Список живой: берём каталог OpenRouter при открытии формы. null — ещё
+  // читаем, пустой — не достали, и тогда выбор не показываем вовсе.
+  const [models, setModels] = useState(null);
+  useEffect(() => { let on = true; loadModels().then((x) => on && setModels(x)); return () => { on = false; }; }, []);
+  const aiPick = (models || []).find((m) => m.id === ai) || null;
   const [tax, setTax] = useState({ buy: 3, sell: 3, mkt: 40, burn: 20, div: 30, lp: 10, minShare: 0, divToken: "self" });
   const taxTotal = tax.mkt + tax.burn + tax.div + tax.lp;
   const ALLOC_KEYS = ["mkt", "burn", "div", "lp"];
@@ -187,8 +192,9 @@ export default function Create({ wallet, onConnect }) {
         github: form.github.trim(),
         youtube: form.youtube.trim(),
         // Модель ИИ монеты. Пишем только когда выбрали: пустое поле — лишние
-        // байты в calldata, за которые платит создатель.
-        ...(ai ? { ai } : {}),
+        // байты в calldata, за которые платит создатель. Имя кладём рядом,
+        // чтобы страница монеты показывала его, не ходя в каталог.
+        ...(ai ? { ai, aiName: aiPick?.name || ai } : {}),
       };
       const uri =
         "data:application/json;base64," +
@@ -293,29 +299,34 @@ export default function Create({ wallet, onConnect }) {
           </>
         )}
 
-        <label>{t("Модель ИИ монеты")}</label>
-        <input className="quote-search" value={aiSearch} onChange={(e) => setAiSearch(e.target.value)}
-               placeholder={t("Поиск: Claude, GPT, Gemini…")} />
-        <div className="quote-grid">
-          <button type="button" className={`quote-chip ${ai === AI_AUTO ? "on" : ""}`}
-                  onClick={() => setAi(AI_AUTO)}>
-            <SparkIcon /> {t("Решит агент")}
-          </button>
-          {(aiSearch
-            ? AI_MODELS.filter((m) => matchModel(m, aiSearch)).slice(0, 18)
-            : AI_MODELS.filter((m) => AI_POPULAR.includes(m.id))
-          ).map((m) => (
-            <button type="button" key={m.id} className={`quote-chip ${ai === m.id ? "on" : ""}`}
-                    onClick={() => setAi(m.id)} title={m.id}>
-              <Logo cls="q-logo" src={modelLogo(m.site)} />{m.name}
-            </button>
-          ))}
-        </div>
-        <div className="hint">
-          {ai
-            ? t("ИИ монеты будет работать на {m}. Выбор записывается в саму монету и виден всем. Если модель снимут с обслуживания, агент возьмёт ближайшую и честно напишет об этом в журнале.").replace("{m}", modelById(ai)?.name || ai)
-            : t("Можно не выбирать — агент возьмёт лучшую доступную модель. Выбор записывается в саму монету, поменять его потом нельзя.")}
-        </div>
+        {models !== null && models.length > 0 && (
+          <>
+            <label>{t("Модель ИИ монеты")}</label>
+            <input className="quote-search" value={aiSearch} onChange={(e) => setAiSearch(e.target.value)}
+                   placeholder={t("Поиск: Claude, GPT, Gemini…")} />
+            <div className="quote-grid">
+              <button type="button" className={`quote-chip ${ai === AI_AUTO ? "on" : ""}`}
+                      onClick={() => setAi(AI_AUTO)}>
+                <SparkIcon /> {t("Решит агент")}
+              </button>
+              {(aiSearch
+                ? models.filter((m) => matchModel(m, aiSearch)).slice(0, 18)
+                : featured(models)
+              ).map((m) => (
+                <button type="button" key={m.id} className={`quote-chip ${ai === m.id ? "on" : ""}`}
+                        onClick={() => setAi(m.id)} title={`${m.id} · $${m.price} ${t("за миллион токенов")}`}>
+                  <Logo cls="q-logo" src={modelLogo(m.id)} />{m.name}
+                </button>
+              ))}
+            </div>
+            <div className="hint">
+              {aiPick
+                ? t("ИИ монеты будет работать на {m} — это модель {by}. Выбор записывается в саму монету и виден всем. Если её снимут с обслуживания, агент возьмёт другую и честно напишет об этом в журнале.")
+                    .replace("{m}", aiPick.name).replace("{by}", aiPick.by)
+                : t("Можно не выбирать — агент возьмёт лучшую доступную. Список живой: модели отсортированы по тому, насколько хорошо они делают веб-страницы, а это и есть работа агента.")}
+            </div>
+          </>
+        )}
 
         <div className="field-row">
           <div>
