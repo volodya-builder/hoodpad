@@ -918,7 +918,14 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
 
   return (
     <>
-    <a className="btn back-float" href="#/">‹ {t("Назад")}</a>
+    {/* «Назад» — как у Pons: над блоками, у левого края контента, в потоке
+        страницы. Раньше висела у края экрана и не двигалась при прокрутке. */}
+    <div className="token-top">
+      <a className="btn back-pill" href="#/">
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        {t("Назад")}
+      </a>
+    </div>
     <div className="token-flex">
       <TokenSidebar current={tokenAddress} />
       <div className="token-grid-wrap">
