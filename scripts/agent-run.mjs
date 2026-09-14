@@ -69,6 +69,16 @@ const cfg = (() => {
 const orKey = process.env.OPENROUTER_KEY || cfg.openrouterKey || "";
 const opKey = process.env.JOURNAL_OPERATOR_KEY || cfg.journalOperatorKey || "";
 
+// Чтобы ПРОВЕРИТЬ подпись задания, хватает публичного адреса — приватный
+// ключ нужен только чтобы дописать в журнал итог. Поэтому в CI достаточно
+// одного секрета (ключа OpenRouter): агент построит страницу, а журнал
+// допишется позже с машины владельца. Меньше секретов — меньше поводов
+// их потерять.
+const OPERATOR_ADDRESS = (
+  process.env.AGENT_OPERATOR || cfg.agentOperator ||
+  "0xD3d14c10020ad9C582404669a2Fa11AfF2386255"
+);
+
 const get = (p) => fetch(`${DB}/${p}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
 
 const entryMessage = (token, round, e) => [
@@ -212,14 +222,10 @@ async function main() {
     return;
   }
 
-  if (!opKey) {
-    console.error("Нет ключа оператора журнала (journalOperatorKey).");
-    console.error("Создать: node scripts/journal-operator.mjs --newkey");
-    process.exit(1);
-  }
-  const operator = privateKeyToAccount(opKey.startsWith("0x") ? opKey : `0x${opKey}`);
+  const operator = opKey ? privateKeyToAccount(opKey.startsWith("0x") ? opKey : `0x${opKey}`) : null;
+  const operatorAddress = operator ? operator.address : OPERATOR_ADDRESS;
 
-  const work = await findWork(operator.address);
+  const work = await findWork(operatorAddress);
   if (!work) {
     console.log("Работы нет: в журнале нет записей со статусом «строит».");
     console.log("Они появляются из победителей раундов (scripts/journal-operator.mjs --write)");
@@ -292,6 +298,13 @@ async function main() {
   console.log(`\nСохранено: web/public/agents/${symbol.toLowerCase()}/index.html`);
 
   // Журнал: та же запись, но теперь «готово», со ссылкой и реальной ценой.
+  if (!operator) {
+    console.log("\nЖурнал не тронут: ключа подписи здесь нет.");
+    console.log("Страница построена — запись о ней допишется с машины владельца.");
+    console.log("\nДальше человек: посмотреть страницу, закоммитить, запушить.");
+    return;
+  }
+
   const entry = {
     status: "done",
     task: work.task,

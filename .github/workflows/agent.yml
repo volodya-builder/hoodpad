@@ -1,0 +1,74 @@
+name: Агент строит
+
+# Дом агента. Запускается на серверах GitHub, а не на машине владельца:
+# OpenRouter недоступен ни из песочницы Claude, ни из линуксовой части
+# рабочего стола — проверено обе. У раннера GitHub интернет открыт.
+#
+# Что делает: берёт из журнала задание со статусом «строит», просит модель
+# написать страницу, проверяет её и коммитит в staging. Дальше владелец
+# смотрит тестовый сайт и решает, пускать ли в бой — тем же порядком, что
+# и любые другие изменения.
+#
+# Почему в staging, а не в main: агент пишет код, который окажется на домене
+# владельца. Человек между «построил» и «увидели люди» остаётся.
+#
+# Нужен один секрет: OPENROUTER_KEY.
+#   Settings → Secrets and variables → Actions → New repository secret
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Понедельник, 09:00 UTC — сразу после закрытия недельного раунда.
+    - cron: '0 9 * * 1'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: agent-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: staging
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Поставить viem
+        run: npm install viem --no-save --silent
+
+      - name: Проверить ключ и баланс
+        env:
+          OPENROUTER_KEY: ${{ secrets.OPENROUTER_KEY }}
+        run: node scripts/agent-run.mjs --check
+
+      - name: Показать задание
+        run: node scripts/agent-run.mjs
+
+      - name: Построить
+        env:
+          OPENROUTER_KEY: ${{ secrets.OPENROUTER_KEY }}
+        run: node scripts/agent-run.mjs --run
+
+      - name: Закоммитить, если что-то построено
+        run: |
+          if [ -z "$(git status --porcelain web/public/agents)" ]; then
+            echo "Агент ничего не построил — коммитить нечего."
+            exit 0
+          fi
+          git config user.name "hood agent"
+          git config user.email "noreply@github.com"
+          git add web/public/agents
+          git commit -m "агент построил страницу по заданию холдеров
+
+          Собрано на серверах GitHub, результат прошёл проверку на внешние
+          скрипты, формы, сетевые запросы и размер. Смотреть на тестовом
+          сайте, в бой — обычным порядком."
+          git push origin staging
+          echo "Готово. Смотри hoodandarrow.com/staging/agents/"
