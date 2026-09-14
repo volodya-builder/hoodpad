@@ -15,8 +15,8 @@
 //    честно: «можно» и «пока нельзя», а не одно вместо другого.
 
 import { publicClient } from "./web3.js";
-import { quoteFactoryAbi, erc20Abi } from "./abi.js";
-import { EXPLORER, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE } from "./config.js";
+import { quoteFactoryAbi, erc20Abi, zapAbi } from "./abi.js";
+import { EXPLORER, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, WETH_ADDRESS } from "./config.js";
 
 const isStock = (t) => /Robinhood Token/i.test(t?.name || "");
 const num = (x) => Number(x || 0);
@@ -135,3 +135,23 @@ export const matchQuote = (q, s) => {
 };
 
 export const short = (a) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "");
+
+/**
+ * Какие валюты из белого списка можно купить за ETH через zap. Монета, которую
+ * нельзя купить за ETH, — мёртвая монета: у покупателя на кошельке ETH, а не
+ * TAO. Поэтому форма запуска предлагает только эти валюты. WETH — всегда.
+ * Zap не задеплоен — считаем, что умеет всё (ограничивать нечем).
+ */
+export async function loadZapQuotes(allowed) {
+  const list = [...(allowed || [])];
+  if (!ZAP_LIVE) return new Set(list);
+  const ok = new Set();
+  await Promise.all(list.map(async (q) => {
+    if (q === WETH_ADDRESS.toLowerCase()) { ok.add(q); return; }
+    try {
+      const has = await publicClient.readContract({ address: ZAP_ADDRESS, abi: zapAbi, functionName: "hasRoute", args: [q] });
+      if (has) ok.add(q);
+    } catch { /* нет ответа — не показываем */ }
+  }));
+  return ok;
+}

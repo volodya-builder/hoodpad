@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { parseEther, formatEther, parseUnits, decodeEventLog } from "viem";
 import { publicClient } from "../lib/web3.js";
-import { factoryAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi } from "../lib/abi.js";
-import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, FEATURES } from "../lib/config.js";
+import { factoryAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi, zapAbi } from "../lib/abi.js";
+import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, FEATURES } from "../lib/config.js";
 import { useSplit, injectNewToken } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 import { RWA_TOKENS, RWA_POPULAR, stockLogo, CHAIN_LOGOS } from "../lib/rwa.js";
-import { loadCryptoQuotes, loadAllowedQuotes, lookupQuote, matchQuote, featuredQuotes, short as shortAddr } from "../lib/quotes.js";
+import { loadCryptoQuotes, loadAllowedQuotes, loadZapQuotes, lookupQuote, matchQuote, featuredQuotes, short as shortAddr } from "../lib/quotes.js";
 import { loadModels, featured, matchModel, modelLogo, costLabel, AI_AUTO } from "../lib/models.mjs";
 
 // Логотип с фолбэком: если CDN не знает тикер — просто прячем картинку
@@ -134,7 +134,12 @@ export default function Create({ wallet, onConnect }) {
   useEffect(() => {
     let on = true;
     loadCryptoQuotes(60, (part) => on && setCrypto(part)).then((x) => on && setCrypto(x));
-    loadAllowedQuotes().then((x) => on && setAllowed(x));
+    loadAllowedQuotes().then(async (x) => {
+      // Показываем только то, что можно купить за ETH: у покупателя на
+      // кошельке ETH, а не TAO. Валюта без маршрута — мёртвая монета.
+      const zapOk = await loadZapQuotes(x);
+      if (on) setAllowed(zapOk);
+    });
     return () => { on = false; };
   }, []);
   const pickQuote = (q) => { setQuote(q.sym); setQuoteAddr(q.addr); setQuoteDec(q.dec); };
@@ -279,10 +284,17 @@ export default function Create({ wallet, onConnect }) {
         })
         .find((ev) => ev && ev.eventName === "TokenCreated");
 
-      if (byQuote && buyValue > 0) {
-        // Первая покупка создателя в валюте: approve на пул, затем buy.
-        // Кап создателя проверяет сам пул — перебор откатится с ошибкой,
-        // а монета к этому моменту уже запущена.
+      if (byQuote && buyValue > 0 && ZAP_LIVE) {
+        // Первая покупка создателя — за ETH через zap: он сам меняет ETH на
+        // валюту и покупает на кривой. Кап создателя проверяет пул.
+        const deadline = BigInt(Math.floor(Date.now() / 1000) + 600);
+        const b = await wallet.walletClient.writeContract({
+          address: ZAP_ADDRESS, abi: zapAbi, functionName: "buyWithEth",
+          args: [created.args.token, 0n, deadline], value: parseEther(form.initialBuy),
+        });
+        await publicClient.waitForTransactionReceipt({ hash: b });
+      } else if (byQuote && buyValue > 0) {
+        // Без zap — в самой валюте: approve на пул, затем buy.
         const amount = parseUnits(form.initialBuy, quoteDec);
         const pool = created.args.pool;
         const a = await wallet.walletClient.writeContract({
@@ -323,7 +335,7 @@ export default function Create({ wallet, onConnect }) {
     : !form.name.trim() || !form.symbol.trim()
     ? t("Укажите название и тикер")
     : buyValue > 0
-    ? t("Запустить токен и купить на {eth} {q}").replace("{eth}", form.initialBuy).replace("{q}", quote)
+    ? t("Запустить токен и купить на {eth} {q}").replace("{eth}", form.initialBuy).replace("{q}", ZAP_LIVE ? "ETH" : quote)
     : t("Запустить токен");
 
   return (
@@ -399,7 +411,7 @@ export default function Create({ wallet, onConnect }) {
                 : !QUOTE_LIVE
                   ? t("Запуск за {sym} откроется с деплоем ERC20-пула курвы — контракты готовы и проверены. Выбор сохранится в черновике.").replace("{sym}", quote)
                   : quoteAllowed
-                    ? t("Токен будет торговаться за {sym}. Градация — когда кривая соберёт порог в этой валюте.").replace("{sym}", quote)
+                    ? t("Токен торгуется за {sym}, дивиденды холдерам — в {sym}. Покупать можно и за ETH: обмен делается по дороге, одной транзакцией.").replace(/\{sym\}/g, quote)
                     : t("{sym} пока не в белом списке фабрики. Валюты с комиссией на перевод или ребейзом ломают кривую, поэтому каждую проверяем перед добавлением. Выбор сохранится в черновике.").replace("{sym}", quote)}
             </div>
           </>
@@ -428,7 +440,7 @@ export default function Create({ wallet, onConnect }) {
               {!QUOTE_LIVE
                 ? t("Токен будет торговаться за акцию Robinhood (канонические Stock Tokens, {n} шт.). Запуск с RWA-валютой откроется с деплоем ERC20-пула курвы — выбор сохранится в черновике.").replace("{n}", String(RWA_TOKENS.length))
                 : quoteAllowed && quote !== "ETH"
-                  ? t("Токен будет торговаться за {sym}. Градация — когда кривая соберёт порог в этой акции.").replace("{sym}", quote)
+                  ? t("Токен торгуется за {sym}, дивиденды холдерам — в {sym}. Покупать можно и за ETH: обмен делается по дороге, одной транзакцией.").replace(/\{sym\}/g, quote)
                   : t("Акции Robinhood, за которые можно запустить монету. Нужна другая — напишите нам, добавим.")}
             </div>
           </>
@@ -633,7 +645,7 @@ export default function Create({ wallet, onConnect }) {
         <label>{t("Покупка создателя")}</label>
         <div className="suffix-input">
           <input value={form.initialBuy} onChange={set("initialBuy")} placeholder="0.00" inputMode="decimal" />
-          <b>{quote}</b>
+          <b>{ZAP_LIVE ? "ETH" : quote}</b>
         </div>
         <div className={`hint ${buyOk ? "" : "bad"}`}>
           {(buyOk
@@ -701,7 +713,7 @@ export default function Create({ wallet, onConnect }) {
           )}
           <div className="row"><span className="k">{t("Ликвидность")}</span><span className="v">{t("Заперта навсегда")}</span></div>
           {buyValue > 0 && (
-            <div className="row"><span className="k">{t("Ваша покупка")}</span><span className="v">{form.initialBuy} {quote}</span></div>
+            <div className="row"><span className="k">{t("Ваша покупка")}</span><span className="v">{form.initialBuy} {ZAP_LIVE ? "ETH" : quote}</span></div>
           )}
         </div>
       </aside>
