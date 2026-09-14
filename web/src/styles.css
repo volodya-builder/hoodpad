@@ -274,7 +274,6 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 .preview-stats .v.goldc { color: var(--gold); }
 .preview-stats .row.sub { padding: 7px 0 7px 10px; font-size: 12.5px; border-bottom: 1px dashed #2a2a28; }
 .preview-stats .row.sub .k { color: var(--text-dim); }
-.pv-example { font-size: 12px; color: var(--text-dim); padding: 9px 0 2px; border-bottom: 1px solid #2a2a28; }
 
 /* token page */
 .token-layout { display: grid; grid-template-columns: 1fr 390px; gap: 22px; padding: 34px 0 72px; }

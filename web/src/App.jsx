@@ -428,7 +428,7 @@ export default function App() {
     page = <Cats wallet={wallet} />;
   } else if (route === "/ai" && FEATURES.ai) {
     page = <AI wallet={wallet} onConnect={connect} />;
-  } else if (route === "/about") {
+  } else if (route === "/about" && FEATURES.about) {
     page = <About />;
   } else if (route === "/privacy") {
     page = <Privacy />;
