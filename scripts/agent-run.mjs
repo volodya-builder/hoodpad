@@ -51,7 +51,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { verifyMessage } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { decodeAbiParameters, toFunctionSelector } from "viem";
+import { decodeAbiParameters, toFunctionSelector, createPublicClient, http, parseAbi, formatUnits } from "viem";
 import { loadModels, featured, costLabel, COST_CAP, MAX_OUT_TOKENS } from "../web/src/lib/models.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -115,6 +115,142 @@ function repoTasks() {
       .filter((x) => x && x.token && x.task)
       .map((x) => ({ token: String(x.token).toLowerCase(), round: Number(x.round), task: x.task, at: x.at || 0, from: "репозиторий" }));
   } catch { return []; }
+}
+
+// ---------------------------------------------------------------- доска идей
+// Живая доска (web/src/lib/board.js): холдеры пишут идеи и голосуют, агент
+// каждые 5 минут забирает верхнюю. Здесь та же проверка подписей и те же
+// веса (баланс монеты), что на сайте — расхождению взяться неоткуда.
+const ETH_FACTORY = "0x08a887196fc31b89305ae03aa991917f6b1d23ec";
+const QUOTE_FACTORY = "0xd7299e03c5e7d4f9f4c62f305a0b619359cf9a4f";
+const AGENT_TREASURY = process.env.AGENT_TREASURY || "0xe39e61c2e2897a59dde71d75b7b84f42ed09fd0c";
+const FREE_BUILDS = Number(process.env.FREE_BUILDS || 3);      // столько сборок у монеты за счёт hood
+const BUILD_USD = Number(process.env.BUILD_USD || 0.5);        // ориентир стоимости одной сборки
+const BUILDING_STALE_MS = 15 * 60_000;                          // маркер «строит» старше — считаем упавшим
+
+const chain = { id: 4663, name: "Robinhood Chain", nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 }, rpcUrls: { default: { http: [RPC] } } };
+const pub = createPublicClient({ chain, transport: http(RPC) });
+const ethFactoryAbi = parseAbi(["function tokenCount() view returns (uint256)", "function allTokens(uint256) view returns (address)"]);
+const quoteFactoryAbi = parseAbi(["function tokenCount() view returns (uint256)", "function tokens(uint256,uint256) view returns (address[])", "function poolOf(address) view returns (address)"]);
+const poolQAbi = parseAbi(["function quote() view returns (address)"]);
+const erc20Abi = parseAbi(["function balanceOf(address) view returns (uint256)", "function decimals() view returns (uint8)", "function symbol() view returns (string)"]);
+const treasuryAbi = parseAbi(["function budget(address) view returns (uint256)", "function budgetErc20(address,address) view returns (uint256)"]);
+
+const boardProposalMessage = (token, pid, text) => `hood board proposal\ntoken: ${token.toLowerCase()}\npid: ${pid}\ntext: ${text}`;
+const boardVoteMessage = (token, pid) => `hood board vote\ntoken: ${token.toLowerCase()}\nproposal: ${pid}`;
+
+async function allTokens() {
+  const out = [];
+  try {
+    const n = await pub.readContract({ address: ETH_FACTORY, abi: ethFactoryAbi, functionName: "tokenCount" });
+    for (let i = 0n; i < n; i++) out.push({ token: (await pub.readContract({ address: ETH_FACTORY, abi: ethFactoryAbi, functionName: "allTokens", args: [i] })).toLowerCase(), q: null });
+  } catch (e) { console.log("ETH-фабрика не прочиталась:", (e.shortMessage || e.message).slice(0, 80)); }
+  try {
+    const n = await pub.readContract({ address: QUOTE_FACTORY, abi: quoteFactoryAbi, functionName: "tokenCount" });
+    if (n > 0n) {
+      const toks = await pub.readContract({ address: QUOTE_FACTORY, abi: quoteFactoryAbi, functionName: "tokens", args: [0n, n] });
+      for (const t of toks) {
+        const pool = await pub.readContract({ address: QUOTE_FACTORY, abi: quoteFactoryAbi, functionName: "poolOf", args: [t] });
+        const quote = await pub.readContract({ address: pool, abi: poolQAbi, functionName: "quote" });
+        const dec = await pub.readContract({ address: quote, abi: erc20Abi, functionName: "decimals" });
+        out.push({ token: t.toLowerCase(), q: { addr: quote, dec: Number(dec) } });
+      }
+    }
+  } catch (e) { console.log("quote-фабрика не прочиталась:", (e.shortMessage || e.message).slice(0, 80)); }
+  return out;
+}
+
+/** Курс в долларах: ETH — с Binance/Coingecko, ERC20 — с обозревателя. null — не знаем. */
+async function usdRate(asset) {
+  try {
+    if (!asset) {
+      const b = await fetch("https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT").then((r) => r.json());
+      const v = Number(b?.price); if (v > 0) return v;
+      const c = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd").then((r) => r.json());
+      return Number(c?.ethereum?.usd) || null;
+    }
+    const j = await fetch(`https://robinhoodchain.blockscout.com/api/v2/tokens/${asset}`, { headers: { accept: "application/json" } }).then((r) => (r.ok ? r.json() : null));
+    const v = Number(j?.exchange_rate); return v > 0 ? v : null;
+  } catch { return null; }
+}
+
+/** Подсчёт доски одной монеты: верхняя идея с честным весом или null. */
+async function boardTop(token, built) {
+  const b = await get(`workshop/board/${token}`);
+  if (!b || !b.proposals) return null;
+  const props = [];
+  for (const [pid, p] of Object.entries(b.proposals)) {
+    if (!p || !p.text || !p.by || !p.sig || built.has(pid)) continue;
+    let real = false;
+    try { real = await verifyMessage({ address: p.by, message: boardProposalMessage(token, pid, p.text), signature: p.sig }); } catch { real = false; }
+    if (real) props.push({ pid, ...p });
+  }
+  if (!props.length) return null;
+  const byPid = new Set(props.map((p) => p.pid));
+  const weight = {};
+  for (const [addr, v] of Object.entries(b.votes || {})) {
+    if (!v || !v.sig || !v.pid || !byPid.has(v.pid)) continue;
+    let real = false;
+    try { real = await verifyMessage({ address: addr, message: boardVoteMessage(token, v.pid), signature: v.sig }); } catch { real = false; }
+    if (!real) continue;
+    let w = 0n;
+    try { w = await pub.readContract({ address: token, abi: erc20Abi, functionName: "balanceOf", args: [addr] }); } catch { w = 0n; }
+    if (w > 0n) weight[v.pid] = (weight[v.pid] || 0n) + w;
+  }
+  props.sort((a, c) => ((weight[a.pid] || 0n) === (weight[c.pid] || 0n) ? (a.at || 0) - (c.at || 0) : (weight[a.pid] || 0n) > (weight[c.pid] || 0n) ? -1 : 1));
+  const top = props[0];
+  if (!(weight[top.pid] > 0n)) return null;
+  const building = b.building && b.building.pid && Date.now() - (b.building.at || 0) < BUILDING_STALE_MS ? b.building : null;
+  return { pid: top.pid, text: top.text, by: top.by, at: top.at, weight: weight[top.pid], building };
+}
+
+/** Хватает ли денег: первые FREE_BUILDS сборок — за счёт hood, дальше бюджет монеты. */
+async function budgetOk(tk, buildsOfToken) {
+  if (buildsOfToken < FREE_BUILDS) return { ok: true, why: `бесплатная сборка ${buildsOfToken + 1} из ${FREE_BUILDS}` };
+  try {
+    const v = tk.q
+      ? await pub.readContract({ address: AGENT_TREASURY, abi: treasuryAbi, functionName: "budgetErc20", args: [tk.token, tk.q.addr] })
+      : await pub.readContract({ address: AGENT_TREASURY, abi: treasuryAbi, functionName: "budget", args: [tk.token] });
+    const amount = Number(formatUnits(v, tk.q ? tk.q.dec : 18));
+    if (amount <= 0) return { ok: false, why: "бюджет агента пуст — торгуйте монетой, 10% комиссии его пополняют" };
+    const rate = await usdRate(tk.q ? tk.q.addr : null);
+    if (rate === null) return { ok: true, why: `бюджет ${amount} (курс неизвестен, строим)` };
+    const usd = amount * rate;
+    return usd >= BUILD_USD
+      ? { ok: true, why: `бюджет $${usd.toFixed(2)} ≥ $${BUILD_USD}` }
+      : { ok: false, why: `бюджет $${usd.toFixed(2)} < $${BUILD_USD} за сборку` };
+  } catch (e) { return { ok: false, why: "бюджет не прочитался: " + (e.shortMessage || e.message).slice(0, 60) }; }
+}
+
+/** Работа с доски: монета, чью доску дольше всех не обслуживали, и её верхняя идея. */
+async function findBoardWork() {
+  let builds = [];
+  try { builds = JSON.parse(fs.readFileSync(path.join(ROOT, "web", "public", "agents", "builds.json"), "utf8")) || []; } catch {}
+  const builtPids = new Set(builds.map((b) => b.pid).filter(Boolean));
+  const tokens = await allTokens();
+  const cands = [];
+  for (const tk of tokens) {
+    if (!(await aiEnabled(tk.token))) continue;
+    const top = await boardTop(tk.token, builtPids);
+    if (!top) continue;
+    if (top.building && top.building.pid === top.pid) { console.log(`  ${tk.token.slice(0, 10)}… идея уже в работе (маркер), пропускаю`); continue; }
+    const mine = builds.filter((b) => String(b.token).toLowerCase() === tk.token);
+    const gate = await budgetOk(tk, mine.length);
+    console.log(`  ${tk.token.slice(0, 10)}… верхняя идея «${top.text.slice(0, 50)}» · ${gate.why}`);
+    if (!gate.ok) continue;
+    const lastBuilt = mine.reduce((m, b) => Math.max(m, b.at || 0), 0);
+    cands.push({ tk, top, lastBuilt });
+  }
+  if (!cands.length) return null;
+  cands.sort((a, b) => a.lastBuilt - b.lastBuilt); // кого дольше не обслуживали — тот первый
+  const c = cands[0];
+  return { token: c.tk.token, round: 0, pid: c.top.pid, task: c.top.text, at: c.top.at, by: c.top.by, from: "доска", q: c.tk.q };
+}
+
+async function markBuilding(token, pid) {
+  try {
+    await fetch(`${DB}/workshop/board/${token}/building.json`, { method: pid ? "PUT" : "DELETE", body: pid ? JSON.stringify({ pid, at: Date.now() }) : undefined });
+  } catch { /* маркер — только для статуса на сайте */ }
 }
 
 /** Найти работу: самое старое невыполненное задание из обоих источников. */
@@ -184,7 +320,7 @@ async function symbolOf(token) {
  * не действует (старая экономика).
  */
 async function aiEnabled(token) {
-  const splitter = process.env.FEE_SPLITTER || cfg.feeSplitter || "";
+  const splitter = process.env.FEE_SPLITTER || cfg.feeSplitter || "0x4b4ca78517a48876a4341cbbfbd96e15c9d99491";
   if (!splitter) return true;
   try {
     const data = toFunctionSelector("function aiOf(address) view returns (bool)")
@@ -330,18 +466,20 @@ async function main() {
   const operator = opKey ? privateKeyToAccount(opKey.startsWith("0x") ? opKey : `0x${opKey}`) : null;
   const operatorAddress = operator ? operator.address : OPERATOR_ADDRESS;
 
-  const work = await findWork(operatorAddress);
+  console.log("Смотрю доски идей…");
+  const work = (await findBoardWork()) || (await findWork(operatorAddress));
   if (!work) {
-    console.log("Работы нет: в журнале нет записей со статусом «строит».");
-    console.log("Они появляются из победителей раундов (scripts/journal-operator.mjs --write)");
-    console.log("или заводятся вручную из админ-формы на вкладке ИИ.");
+    console.log("Работы нет: на досках нет идей с голосами (или у монет нет бюджета), в журнале нет записей «строит».");
     return;
   }
 
   const symbol = (await symbolOf(work.token)) || "COIN";
-  const outDir = path.join(ROOT, "web", "public", "agents", symbol.toLowerCase());
+  // Идея с доски — своя папка на pid, чтобы сборки не затирали друг друга;
+  // agents/<символ>/index.html всегда = последняя сборка монеты.
+  const sub = work.pid ? `${symbol.toLowerCase()}/${work.pid}` : symbol.toLowerCase();
+  const outDir = path.join(ROOT, "web", "public", "agents", sub);
   const outFile = path.join(outDir, "index.html");
-  const url = `${SITE}/agents/${symbol.toLowerCase()}/`;
+  const url = `${SITE}/agents/${sub}/`;
 
   console.log(`Монета:  $${symbol}  ${work.token}`);
   console.log(`Раунд:   ${work.round}  (источник: ${work.from || "журнал"})`);
@@ -372,6 +510,7 @@ async function main() {
   if (asked) console.log(`Создатель просил ${asked} — её нет в каталоге, строю на доступной.`);
   console.log("");
 
+  if (work.pid) await markBuilding(work.token, work.pid);
   const res = await fetch(`${OR}/chat/completions`, {
     method: "POST",
     headers: {
@@ -405,12 +544,30 @@ async function main() {
     for (const p of problems) console.error("  — " + p);
     console.error("\nДеньги за вызов потрачены, результат отброшен. Это нормально:");
     console.error("страница едет на твой домен, и чужие скрипты на нём не появятся.");
+    if (work.pid) {
+      // Идею с доски закрываем как «не вышло» — иначе она останется верхней
+      // и агент будет платить за неё каждые 5 минут. Провал виден на сайте.
+      await markBuilding(work.token, null);
+      const bf = path.join(ROOT, "web", "public", "agents", "builds.json");
+      let bl = []; try { bl = JSON.parse(fs.readFileSync(bf, "utf8")) || []; } catch {}
+      bl.unshift({ token: work.token.toLowerCase(), round: 0, pid: work.pid, symbol, task: work.task, model, spent: cost || 0, tokens, at: Date.now(), failed: true, note: problems.join("; ") });
+      fs.writeFileSync(bf, JSON.stringify(bl.slice(0, 200), null, 2) + "\n");
+      console.error("Записано в builds.json как «не вышло», идея снята с доски.");
+      return;
+    }
     process.exit(1);
   }
 
   fs.mkdirSync(outDir, { recursive: true });
   fs.writeFileSync(outFile, html);
-  console.log(`\nСохранено: web/public/agents/${symbol.toLowerCase()}/index.html`);
+  console.log(`\nСохранено: web/public/agents/${sub}/index.html`);
+  if (work.pid) {
+    // последняя сборка монеты — ещё и по короткому адресу agents/<символ>/
+    const rootDir = path.join(ROOT, "web", "public", "agents", symbol.toLowerCase());
+    fs.mkdirSync(rootDir, { recursive: true });
+    fs.writeFileSync(path.join(rootDir, "index.html"), html);
+    await markBuilding(work.token, null);
+  }
 
   // Отчёт рядом со страницей. Перезапись по (монета, раунд): повторная
   // сборка того же задания заменяет старую строку, а не плодит дубли.
@@ -418,10 +575,11 @@ async function main() {
   let builds = [];
   try { builds = JSON.parse(fs.readFileSync(buildsFile, "utf8")); } catch {}
   if (!Array.isArray(builds)) builds = [];
-  const key = (b) => `${String(b.token).toLowerCase()}:${b.round}`;
+  const key = (b) => (b.pid ? `pid:${b.pid}` : `${String(b.token).toLowerCase()}:${b.round}`);
   const report = {
     token: work.token.toLowerCase(),
     round: work.round,
+    ...(work.pid ? { pid: work.pid, by: work.by || "" } : {}),
     symbol,
     task: work.task,
     // Непусто только когда просили одну модель, а собрали на другой.
@@ -429,7 +587,7 @@ async function main() {
     // Путь относительно сайта. Абсолютный url оставляем для сведения, но
     // ссылку журнал строит из path: на тестовом сайте страница живёт под
     // /staging/, и жёсткая ссылка на боевой домен там ведёт в 404.
-    path: `agents/${symbol.toLowerCase()}/`,
+    path: `agents/${sub}/`,
     url,
     model,
     spent: cost || 0,
