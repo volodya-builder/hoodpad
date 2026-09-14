@@ -2619,6 +2619,11 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .quote-custom-found { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
 .quote-custom-found .q-logo { margin-right: 0; }
 
+/* Модель ИИ на карточке монеты — как на странице монеты, только компактнее */
+.tai { display: flex; align-items: center; gap: 6px; margin: 8px 0 2px; padding: 6px 9px; border: 1px solid var(--border); border-radius: 9px; background: var(--card); font-size: 12px; font-weight: 600; color: var(--text); }
+.tai .q-logo { width: 16px; height: 16px; margin: 0; }
+.tai span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* Метка валюты на карточке монеты за валюту: «USDG · 2%» */
 .tmc .tq { font-style: normal; font-size: 10.5px; color: var(--gold); margin-left: 6px; font-weight: 600; }
 

@@ -7,6 +7,7 @@ import { useLang } from "../lib/i18n.jsx";
 import { useFavs, toggleFav } from "../lib/favs.js";
 import { useArena } from "../lib/arena.js";
 import { FEATURES } from "../lib/config.js";
+import { modelLogo, makerOf } from "../lib/models.mjs";
 
 
 function TokenCard({ t, fav, onFav, cushion = 0 }) {
@@ -50,6 +51,15 @@ function TokenCard({ t, fav, onFav, cushion = 0 }) {
           : usd(mcapEth * rate)}<span>MC</span>
         {q && <em className="tq" title={t.divBps ? `${t.divBps / 100}% дивиденды холдерам в ${q.sym}` : q.sym}>{q.sym}{t.divBps ? ` · ${t.divBps / 100}%` : ""}</em>}
       </div>
+      {/* Модель ИИ монеты — выбор создателя, лежит в метадате. Показываем
+          только известного разработчика: чужая строка на карточку не попадает. */}
+      {t.meta?.ai && makerOf(String(t.meta.ai)) && (
+        <div className="tai" title={String(t.meta.ai)}>
+          <img className="q-logo" src={modelLogo(String(t.meta.ai))} alt="" loading="lazy"
+               onError={(e) => { e.currentTarget.style.display = "none"; }} />
+          <span>{String(t.meta.aiName || String(t.meta.ai).split("/")[1] || t.meta.ai).slice(0, 28)}</span>
+        </div>
+      )}
       <div className="prow">
         <div className="pbar">
           <div style={{ width: `${Math.min(progress, 100)}%` }} />
