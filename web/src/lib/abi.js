@@ -133,3 +133,47 @@ export const catMarketAbi = parseAbi([
   "event Listed(uint256 indexed catId, address indexed seller, uint256 price)",
   "event Bought(uint256 indexed catId, address indexed buyer, address indexed seller, uint256 price, uint256 fee)",
 ]);
+
+// Фабрика и пул с ERC20-валютой курвы (акции, USDG, WETH — что в белом
+// списке). Отличие от ETH-версии: валюта приходит через transferFrom,
+// поэтому перед покупкой нужен approve; продажа и клеймы платят в валюте.
+export const quoteFactoryAbi = parseAbi([
+  "function createToken(string name, string symbol, string metadataURI, address quote, address creatorWallet) returns (address token, address pool)",
+  "function tokenCount() view returns (uint256)",
+  "function tokens(uint256 offset, uint256 limit) view returns (address[])",
+  "function poolOf(address token) view returns (address)",
+  "function quoteOf(address token) view returns (address)",
+  "function allowedQuotesCount() view returns (uint256)",
+  "function allowedQuotes(uint256 i) view returns (address)",
+  "function quoteConfig(address quote) view returns (bool allowed, uint256 virtualQuote, uint256 creatorBuyCap)",
+  "event TokenCreated(address indexed token, address indexed pool, address indexed creator, string name, string symbol, string metadataURI)",
+]);
+
+export const quotePoolAbi = parseAbi([
+  "function buy(uint256 quoteInGross, uint256 minTokensOut, address recipient) returns (uint256)",
+  "function sell(uint256 tokensIn, uint256 minQuoteOut) returns (uint256)",
+  "function quoteBuy(uint256 quoteInGross) view returns (uint256)",
+  "function quoteSell(uint256 tokensIn) view returns (uint256)",
+  "function spotPrice() view returns (uint256)",
+  "function quote() view returns (address)",
+  "function quoteReserve() view returns (uint256)",
+  "function tokensSold() view returns (uint256)",
+  "function saleCap() view returns (uint256)",
+  "function totalSupply() view returns (uint256)",
+  "function graduated() view returns (bool)",
+  "function migrated() view returns (bool)",
+  "function migrate()",
+  "function creator() view returns (address)",
+  "function creatorBuyCap() view returns (uint256)",
+  "function creatorFeesAccrued() view returns (uint256)",
+  "function claimCreatorFees(address to)",
+]);
+
+export const erc20Abi = parseAbi([
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+  "function balanceOf(address) view returns (uint256)",
+  "function allowance(address owner, address spender) view returns (uint256)",
+  "function approve(address spender, uint256 amount) returns (bool)",
+]);

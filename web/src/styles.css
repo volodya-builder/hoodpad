@@ -2610,6 +2610,15 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .quote-chip .q-logo { margin-right: 6px; }
 .net-ico { width: 16px; height: 16px; border-radius: 50%; object-fit: cover; }
 
+/* Валюта не в белом списке фабрики: видна, но приглушена — честнее, чем прятать */
+.quote-chip.q-off { opacity: .55; border-style: dashed; }
+.quote-chip.q-off.on { opacity: .85; }
+/* Свой адрес контракта под сеткой валют */
+.quote-custom { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 6px; }
+.quote-custom .quote-search { flex: 1 1 260px; margin: 0; font-family: var(--mono, monospace); }
+.quote-custom-found { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.quote-custom-found .q-logo { margin-right: 0; }
+
 /* Чип «на какой модели работает ИИ монеты» — в шапке монеты, рядом с бейджами */
 .tk-ai { display: inline-flex; align-items: center; text-decoration: none; }
 .tk-ai .q-logo { width: 14px; height: 14px; margin-right: 5px; }
