@@ -468,7 +468,7 @@ export default function App() {
               <a className={`nav-pill ${route.startsWith("/treasury") ? "on" : ""}`} href="#/treasury">{t("Казна")}</a>
             )}
             {FEATURES.ai && (
-              <a className={`nav-pill ${route.startsWith("/ai") ? "on" : ""}`} href="#/ai">{t("Мастерская")}</a>
+              <a className={`nav-pill ${route.startsWith("/ai") ? "on" : ""}`} href="#/ai">{t("ИИ")}</a>
             )}
             <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>
             {FEATURES.about && (

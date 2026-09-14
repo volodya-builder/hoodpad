@@ -47,7 +47,7 @@ export default function AI({ wallet, onConnect }) {
 
   return (
     <div className="about-page ai-page">
-      <div className="page-title">{t("Мастерская")}</div>
+      <div className="page-title">{t("ИИ монет")}</div>
       <div className="page-sub" style={{ maxWidth: 680 }}>
         {t("У каждой монеты на hood будет свой ИИ. Холдеры решают, что он строит следующим. Он строит и выкатывает — публично, каждую неделю.")}
       </div>

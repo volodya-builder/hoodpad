@@ -1458,7 +1458,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               {t("Чат")}
             </div>
             <div className={`bt-tab ${sideTab === "wsh" ? "on" : ""}`} onClick={() => setSideTab("wsh")}>
-              {t("Мастерская")}
+              {t("ИИ")}
             </div>
           </div>
           {sideTab === "wsh" ? (

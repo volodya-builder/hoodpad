@@ -658,7 +658,8 @@ const EN = {
   "Пока ни одного. Первый поселится в чате монеты — здесь появится список, что каждый построил.": "None yet. The first will move into a coin's chat — this is where you'll see what each has built.",
   "Работает. Раунды идут еженедельно.": "Live. Rounds run weekly.",
   // — вкладка «Мастерская» (ИИ-агенты монет) —
-  "Мастерская": "Workshop",
+  "ИИ": "AI",
+  "ИИ монет": "Coin AI",
   "У каждой монеты на hood будет свой ИИ. Холдеры решают, что он строит следующим. Он строит и выкатывает — публично, каждую неделю.": "Every coin on hood gets its own AI. Holders decide what it builds next. It builds and ships — in the open, every week.",
   "Ничего из этого ещё не запущено. Ниже честно помечено, что уже работает, а что в работе.": "None of this is live yet. Below is an honest breakdown of what works and what is still being built.",
   "Почему так, а не «ИИ ведёт вам соцсети»": "Why this, and not “AI runs your socials”",
