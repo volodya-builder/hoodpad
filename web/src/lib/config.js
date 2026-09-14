@@ -77,6 +77,11 @@ export const TEAM_ADDRESS =
   (import.meta.env.VITE_TEAM_ADDRESS ?? "0xD3d14c10020ad9C582404669a2Fa11AfF2386255").toLowerCase();
 export const isTeam = (addr) => !!addr && addr.toLowerCase() === TEAM_ADDRESS;
 
+// AgentTreasury — покошельковые бюджеты агентов. Пусто = контракт не
+// развёрнут, и счётчик бюджета на странице монеты не показывается вовсе.
+// Пустой счётчик с нулями выглядит как работающая система, которой нет.
+export const AGENT_TREASURY_ADDRESS = import.meta.env.VITE_AGENT_TREASURY ?? "";
+
 // Кошелёк, чьей подписью заверяются записи журнала агента (lib/journal.js).
 // Пока это кошелёк команды: записи заполняются руками из админ-формы на
 // вкладке «Мастерская». Когда появится агент, сюда встанет ЕГО адрес —

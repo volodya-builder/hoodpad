@@ -3372,3 +3372,28 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
   font-size: 14px; font-weight: 800; letter-spacing: -.2px;
   padding-bottom: 10px; border-bottom: 1px solid var(--border);
 }
+
+/* ---------------- Бюджет агента монеты -------------------------------- */
+/* Читается из контракта, а не из нашей базы: «агент окупает себя» — это
+   утверждение, которое обязано проверяться чужими глазами. */
+
+.abg {
+  margin-top: 18px; padding: 15px 16px; border-radius: var(--radius);
+  border: 1px solid var(--border); background: var(--card);
+}
+.abg-head { display: flex; align-items: center; gap: 10px; }
+.abg-t { font-size: 13px; font-weight: 800; letter-spacing: -.2px; }
+.abg-off {
+  font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px;
+  color: var(--red); border: 1px solid #5c2626; background: #e05c5c1a;
+  padding: 2px 7px; border-radius: 6px;
+}
+.abg-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+.abg-row b {
+  display: block; font-size: 19px; font-weight: 800; letter-spacing: -.4px;
+  font-variant-numeric: tabular-nums;
+}
+.abg-row span { display: block; font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.abg-usd { margin-top: 8px; font-size: 12.5px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.abg-note { margin-top: 11px; font-size: 12px; line-height: 1.55; color: var(--text-dim); }
+.abg-note a { color: var(--gold); font-weight: 700; }
