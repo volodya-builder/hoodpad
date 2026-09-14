@@ -411,14 +411,20 @@ export default function Create({ wallet, onConnect }) {
                 ? RWA_TOKENS.filter((x) => x.sym.includes(rwaSearch)).slice(0, 18)
                 : RWA_TOKENS.filter((x) => RWA_POPULAR.includes(x.sym))
               ).map((x) => (
-                <button type="button" key={x.sym} className={`quote-chip ${quote === x.sym ? "on" : ""}`}
-                        onClick={() => pickQuote({ sym: x.sym, addr: x.addr.toLowerCase(), dec: 18 })} title={x.addr}>
+                <button type="button" key={x.sym}
+                        className={`quote-chip ${quote === x.sym ? "on" : ""} ${!QUOTE_LIVE || allowed.has(x.addr.toLowerCase()) ? "" : "q-off"}`}
+                        onClick={() => pickQuote({ sym: x.sym, addr: x.addr.toLowerCase(), dec: 18 })}
+                        title={`${x.addr}${QUOTE_LIVE && !allowed.has(x.addr.toLowerCase()) ? " · " + t("пока не в белом списке") : ""}`}>
                   <Logo cls="q-logo" src={stockLogo(x.sym)} />{x.sym}
                 </button>
               ))}
             </div>
             <div className="hint">
-              {t("Токен будет торговаться за акцию Robinhood (канонические Stock Tokens, {n} шт.). Запуск с RWA-валютой откроется с деплоем ERC20-пула курвы — выбор сохранится в черновике.").replace("{n}", String(RWA_TOKENS.length))}
+              {!QUOTE_LIVE
+                ? t("Токен будет торговаться за акцию Robinhood (канонические Stock Tokens, {n} шт.). Запуск с RWA-валютой откроется с деплоем ERC20-пула курвы — выбор сохранится в черновике.").replace("{n}", String(RWA_TOKENS.length))
+                : quoteAllowed && quote !== "ETH"
+                  ? t("Токен будет торговаться за {sym}. Градация — когда кривая соберёт порог в этой акции.").replace("{sym}", quote)
+                  : t("Акции Robinhood — {n} шт. Пунктиром — те, что пока не в белом списке фабрики: выбор сохранится в черновике, акцию проверим и добавим.").replace("{n}", String(RWA_TOKENS.length))}
             </div>
           </>
         )}
