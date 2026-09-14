@@ -67,12 +67,15 @@ const QUOTES = [
 const ART = (n) => JSON.parse(fs.readFileSync(
   path.join(__dirname, "..", "artifacts", `${n}.json`), "utf8"));
 
-function loadCfg() {
+function loadCfg(dry) {
   let cfg = {};
   try { cfg = JSON.parse(fs.readFileSync(path.join(__dirname, "deploy-config.json"), "utf8")); } catch (e) {}
   const rpc = process.env.RPC_URL || cfg.rpcUrl || "https://rpc.mainnet.chain.robinhood.com";
   const team = process.env.TEAM_WALLET || cfg.teamWallet;
   let pk = process.env.PRIVATE_KEY || cfg.privateKey;
+  // Сухой прогон только читает цепь — ключ ему не нужен. Требовать ключ ради
+  // проверки списка — значит приучать доставать его без надобности.
+  if (dry && !pk) pk = "0x" + "1".repeat(64);
   if (!pk || !team) { console.error("Нужны PRIVATE_KEY и TEAM_WALLET."); process.exit(1); }
   pk = String(pk).replace(/["'\s]/g, "");
   if (!pk.startsWith("0x")) pk = "0x" + pk;
@@ -84,7 +87,7 @@ async function main() {
   const dry = process.argv.includes("--dry-run");
   const { createPublicClient, createWalletClient, http, defineChain, parseUnits, formatUnits } = require("viem");
   const { privateKeyToAccount } = require("viem/accounts");
-  const { rpc, pk, team } = loadCfg();
+  const { rpc, pk, team } = loadCfg(dry);
 
   const chain = defineChain({
     id: 4663, name: "Robinhood Chain",
@@ -95,7 +98,7 @@ async function main() {
   const pub = createPublicClient({ chain, transport: http(rpc) });
   const wallet = createWalletClient({ account, chain, transport: http(rpc) });
 
-  console.log("Кошелёк:", account.address, "· казна комиссий:", team);
+  console.log(dry ? "Сухой прогон (ключ не нужен)" : `Кошелёк: ${account.address}`, "· казна комиссий:", team);
 
   // Знаки читаются с самой цепи, а не берутся из головы: порог в 6 знаках,
   // посчитанный как 18, — это порог в миллион раз выше, и монета не
