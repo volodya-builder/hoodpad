@@ -789,6 +789,13 @@ export default function Create({ wallet, onConnect }) {
           {!sp.live && sp.buyback > 0 && (
             <div className="row sub"><span className="k">↳ {t("в казну выкупа")}</span><span className="v">{sp.buyback}%</span></div>
           )}
+          {sp.pending && sp.pending.readyAt > Date.now() && (
+            <div className="pv-pending">
+              {t("С {d} для новых монет: вам {n}% (с агентом {c}%), команде {tm}%. Монета, запущенная раньше, останется на нынешних долях.")
+                .replace("{d}", new Date(sp.pending.readyAt).toLocaleString("ru", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }))
+                .replace("{n}", String(sp.pending.creatorNoAi)).replace("{c}", String(sp.pending.creator)).replace("{tm}", String(sp.pending.team))}
+            </div>
+          )}
           <div className="row"><span className="k">{t("ИИ-агент монеты")}</span><span className="v">{aiPick ? aiPick.name : t("нет")}</span></div>
           <div className="row"><span className="k">{t("Валюта курвы")}</span><span className="v">
             {quote === "ETH" ? "ETH" : <><Logo cls="pv-qlogo" src={quoteIcon} />{quote}</>}

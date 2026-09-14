@@ -150,6 +150,7 @@ export const quoteFactoryAbi = parseAbi([
   "function creatorFeeShareBps() view returns (uint16)",
   "function feeBps() view returns (uint16)",
   "function treasury() view returns (address)",
+  "function pendingConfig() view returns (address treasury, address migrator, uint16 feeBps, uint16 creatorFeeShareBps, uint256 readyAt)",
 ]);
 
 export const quotePoolAbi = parseAbi([

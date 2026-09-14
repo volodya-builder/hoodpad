@@ -496,11 +496,7 @@ let splitCache = null;
 // на team / agent, и без ИИ доля агента возвращается создателю
 // (creatorNoAi). Старая схема (ETH-фабрика со сплиттером выкупа):
 // creator / team / buyback, агента нет, creatorNoAi = creator.
-async function splitOf(factory, fAbi) {
-  const [shareBps, treasury] = await Promise.all([
-    publicClient.readContract({ address: factory, abi: fAbi, functionName: "creatorFeeShareBps" }),
-    publicClient.readContract({ address: factory, abi: fAbi, functionName: "treasury" }),
-  ]);
+async function splitFor(shareBps, treasury) {
   const creator = Number(shareBps) / 100;
   const rest = 100 - creator;
   if (SPLITTER_LIVE && treasury.toLowerCase() === FEE_SPLITTER_ADDRESS.toLowerCase()) {
@@ -519,6 +515,21 @@ async function splitOf(factory, fAbi) {
     team = rest;
   }
   return { creator, team: Math.round(team), agent: 0, buyback: Math.round(rest - team), creatorNoAi: creator, live: false };
+}
+
+async function splitOf(factory, fAbi) {
+  const [shareBps, treasury] = await Promise.all([
+    publicClient.readContract({ address: factory, abi: fAbi, functionName: "creatorFeeShareBps" }),
+    publicClient.readContract({ address: factory, abi: fAbi, functionName: "treasury" }),
+  ]);
+  const cur = await splitFor(shareBps, treasury);
+  // У фабрики с таймлоком может висеть заявка на новые доли: показываем,
+  // что будет и когда, — но монета, созданная до этого, остаётся на текущих.
+  try {
+    const p = await publicClient.readContract({ address: factory, abi: fAbi, functionName: "pendingConfig" });
+    if (p && p[4] > 0n) cur.pending = { ...(await splitFor(p[3], p[0])), readyAt: Number(p[4]) * 1000 };
+  } catch (e) { /* без таймлока — заявки нет */ }
+  return cur;
 }
 
 export async function loadSplit() {
