@@ -6,7 +6,7 @@ import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE } from "../lib/confi
 import { useSplit, injectNewToken } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 import { RWA_TOKENS, RWA_POPULAR, stockLogo, CHAIN_LOGOS } from "../lib/rwa.js";
-import { loadCryptoQuotes, loadAllowedQuotes, lookupQuote, matchQuote, short as shortAddr } from "../lib/quotes.js";
+import { loadCryptoQuotes, loadAllowedQuotes, lookupQuote, matchQuote, featuredQuotes, short as shortAddr } from "../lib/quotes.js";
 import { loadModels, featured, matchModel, modelLogo, costLabel, AI_AUTO } from "../lib/models.mjs";
 
 // Логотип с фолбэком: если CDN не знает тикер — просто прячем картинку
@@ -129,7 +129,7 @@ export default function Create({ wallet, onConnect }) {
   const [customBusy, setCustomBusy] = useState(false);
   useEffect(() => {
     let on = true;
-    loadCryptoQuotes().then((x) => on && setCrypto(x));
+    loadCryptoQuotes(60, (part) => on && setCrypto(part)).then((x) => on && setCrypto(x));
     loadAllowedQuotes().then((x) => on && setAllowed(x));
     return () => { on = false; };
   }, []);
@@ -353,10 +353,10 @@ export default function Create({ wallet, onConnect }) {
               <button type="button" className={`quote-chip ${quote === "ETH" ? "on" : ""}`} onClick={pickEth}>
                 <Logo cls="q-logo" src={CHAIN_LOGOS.ethereum} />ETH
               </button>
-              {(crypto || [])
-                .filter((q) => matchQuote(q, cryptoSearch))
-                .slice(0, cryptoSearch ? 18 : 11)
-                .map((q) => {
+              {(cryptoSearch
+                ? (crypto || []).filter((q) => matchQuote(q, cryptoSearch)).slice(0, 18)
+                : featuredQuotes(crypto, allowed)
+              ).map((q) => {
                   const ok = !QUOTE_LIVE || allowed.has(q.addr);
                   return (
                     <button type="button" key={q.addr}
