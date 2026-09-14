@@ -5,6 +5,7 @@ import { isTeam } from "../lib/config.js";
 import { roundId, roundStart, roundEnd } from "../lib/workshop.js";
 import {
   loadJournal, loadTokenJournal, saveEntry, entryMessage,
+  loadBuilds, mergeBuilds,
   summarize, money, STATUS, STATUS_LABEL,
 } from "../lib/journal.js";
 
@@ -35,14 +36,18 @@ export default function Journal({ wallet, token: fixed }) {
 
   const refresh = React.useCallback(async () => {
     try {
+      const builds = await loadBuilds();
       if (fixed) {
         const r = await loadTokenJournal(fixed);
-        setRows(r.rows); setRejected(r.rejected);
+        const mine = builds.filter((b) => String(b.token).toLowerCase() === String(fixed).toLowerCase());
+        setRows(mergeBuilds(r.rows, mine)); setRejected(r.rejected);
       } else {
         const list = await loadTokens();
         setTokens(list || []);
         const r = await loadJournal(list);
-        setRows(r.rows); setRejected(r.rejected);
+        const withTk = mergeBuilds(r.rows, builds).map((x) =>
+          x.tk ? x : { ...x, tk: (list || []).find((t) => t.token.toLowerCase() === String(x.token).toLowerCase()) || null });
+        setRows(withTk); setRejected(r.rejected);
       }
     } catch { setRows([]); }
   }, [fixed]);
@@ -95,6 +100,7 @@ export default function Journal({ wallet, token: fixed }) {
                 ? <a className="jr-link" href={r.url} target="_blank" rel="noreferrer noopener">{t("Открыть результат")} →</a>
                 : <span className="dim">{t("результата пока нет")}</span>}
               <span className="dim">
+                {r.model && <>{r.model} · </>}
                 {Number(r.opens) > 0 && <>{Number(r.opens).toLocaleString("ru")} {t("открытий")} · </>}
                 {t("потрачено")} {money(r.spent)}
               </span>

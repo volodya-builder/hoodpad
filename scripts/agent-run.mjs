@@ -3,14 +3,28 @@
  * Агент монеты: берёт задание из журнала и строит по нему страницу.
  *
  * ЧТО ОН ДЕЛАЕТ
- *   1. Находит в журнале запись со статусом «строит» (её заводит
- *      scripts/journal-operator.mjs из победителя раунда — или владелец
- *      руками из админ-формы на сайте).
+ *   1. Находит задание. Два источника, оба равноправны:
+ *      — подписанная запись «строит» в журнале (форма на сайте или
+ *        scripts/journal-operator.mjs из победителя раунда);
+ *      — файл web/public/agents/tasks.json в самом репозитории.
+ *      Второй источник нужен, чтобы задание можно было поставить коммитом,
+ *      не открывая сайт и не подписывая кошельком. Писать в репозиторий
+ *      может только тот, у кого есть доступ, — этого достаточно.
+ *      Задания, по которым отчёт уже есть в builds.json, пропускаются.
  *   2. Просит модель написать ОДНУ самодостаточную HTML-страницу.
  *   3. Проверяет результат и кладёт в web/public/agents/<символ>/index.html —
  *      после сборки страница живёт на hoodandarrow.com/agents/<символ>/.
- *   4. Обновляет запись журнала: статус «готово», ссылка и реальная
- *      стоимость вызова из ответа модели.
+ *   4. Дописывает отчёт в web/public/agents/builds.json — тем же коммитом,
+ *      что и саму страницу. Сайт читает этот файл и показывает задание
+ *      выполненным: ссылка, модель, реальная цена вызова.
+ *
+ * ПОЧЕМУ ОТЧЁТ В РЕПОЗИТОРИИ, А НЕ В БАЗЕ
+ * База открыта на запись, поэтому запись в ней надо подписывать, а подпись
+ * требует ещё одного секретного ключа в CI. В репозиторий же может писать
+ * только тот, у кого есть доступ на запись — то есть владелец и его
+ * workflow. Это и проверяется само собой, и секретов не добавляет, и отчёт
+ * приезжает тем же коммитом, что и страница: подделать одно без другого
+ * нельзя.
  *
  * ЧЕГО ОН НЕ ДЕЛАЕТ — и это зашито здесь, а не в обещаниях:
  *   — не придумывает себе задания: нет записи «строит» — нет работы;
@@ -91,7 +105,25 @@ const entryMessage = (token, round, e) => [
   `spent: ${e.spent ?? ""}`,
 ].join("\n");
 
-/** Найти работу: самая старая запись «строит» среди всех монет. */
+/** Что уже построено — по отчётам в репозитории. */
+function builtKeys() {
+  try {
+    const list = JSON.parse(fs.readFileSync(path.join(ROOT, "web", "public", "agents", "builds.json"), "utf8"));
+    return new Set((list || []).map((b) => `${String(b.token).toLowerCase()}:${b.round}`));
+  } catch { return new Set(); }
+}
+
+/** Задания, поставленные коммитом. Подпись не нужна: доступ к репозиторию и есть подпись. */
+function repoTasks() {
+  try {
+    const list = JSON.parse(fs.readFileSync(path.join(ROOT, "web", "public", "agents", "tasks.json"), "utf8"));
+    return (list || [])
+      .filter((x) => x && x.token && x.task)
+      .map((x) => ({ token: String(x.token).toLowerCase(), round: Number(x.round), task: x.task, at: x.at || 0, from: "репозиторий" }));
+  } catch { return []; }
+}
+
+/** Найти работу: самое старое невыполненное задание из обоих источников. */
 async function findWork(operatorAddress) {
   const all = (await get("workshop/journal")) || {};
   const out = [];
@@ -109,11 +141,19 @@ async function findWork(operatorAddress) {
         });
       } catch { real = false; }
       if (!real) continue;
-      out.push({ token, round: Number(round), ...e });
+      out.push({ token, round: Number(round), ...e, from: "журнал" });
     }
   }
-  out.sort((a, b) => (a.at || 0) - (b.at || 0));
-  return out[0] || null;
+
+  for (const t of repoTasks()) {
+    if (out.some((x) => x.token.toLowerCase() === t.token && x.round === t.round)) continue;
+    out.push(t);
+  }
+
+  const done = builtKeys();
+  const left = out.filter((x) => !done.has(`${String(x.token).toLowerCase()}:${x.round}`));
+  left.sort((a, b) => (a.at || 0) - (b.at || 0));
+  return left[0] || null;
 }
 
 async function symbolOf(token) {
@@ -239,7 +279,7 @@ async function main() {
   const url = `${SITE}/agents/${symbol.toLowerCase()}/`;
 
   console.log(`Монета:  $${symbol}  ${work.token}`);
-  console.log(`Раунд:   ${work.round}`);
+  console.log(`Раунд:   ${work.round}  (источник: ${work.from || "журнал"})`);
   console.log(`Задание: ${work.task}`);
   console.log(`Выйдет:  ${url}`);
 
@@ -297,11 +337,35 @@ async function main() {
   fs.writeFileSync(outFile, html);
   console.log(`\nСохранено: web/public/agents/${symbol.toLowerCase()}/index.html`);
 
-  // Журнал: та же запись, но теперь «готово», со ссылкой и реальной ценой.
+  // Отчёт рядом со страницей. Перезапись по (монета, раунд): повторная
+  // сборка того же задания заменяет старую строку, а не плодит дубли.
+  const buildsFile = path.join(ROOT, "web", "public", "agents", "builds.json");
+  let builds = [];
+  try { builds = JSON.parse(fs.readFileSync(buildsFile, "utf8")); } catch {}
+  if (!Array.isArray(builds)) builds = [];
+  const key = (b) => `${String(b.token).toLowerCase()}:${b.round}`;
+  const report = {
+    token: work.token.toLowerCase(),
+    round: work.round,
+    symbol,
+    task: work.task,
+    url,
+    model,
+    spent: cost || 0,
+    tokens,
+    at: Date.now(),
+  };
+  builds = builds.filter((b) => key(b) !== key(report));
+  builds.unshift(report);
+  builds = builds.slice(0, 200);
+  fs.writeFileSync(buildsFile, JSON.stringify(builds, null, 2) + "\n");
+  console.log(`Отчёт записан: web/public/agents/builds.json (${builds.length} всего)`);
+
+  // Запись в базе — необязательная добавка: сайт и так покажет задание
+  // выполненным по builds.json. Делаем её, только если ключ подписи есть
+  // (обычно на машине владельца), чтобы состояние в базе не расходилось.
   if (!operator) {
-    console.log("\nЖурнал не тронут: ключа подписи здесь нет.");
-    console.log("Страница построена — запись о ней допишется с машины владельца.");
-    console.log("\nДальше человек: посмотреть страницу, закоммитить, запушить.");
+    console.log("\nОтчёт в репозитории — этого достаточно: сайт покажет «готово» по нему.");
     return;
   }
 
