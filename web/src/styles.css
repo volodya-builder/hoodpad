@@ -3397,3 +3397,18 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .abg-usd { margin-top: 8px; font-size: 12.5px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
 .abg-note { margin-top: 11px; font-size: 12px; line-height: 1.55; color: var(--text-dim); }
 .abg-note a { color: var(--gold); font-weight: 700; }
+
+/* Границы агента — компактная полоса внизу вкладки «ИИ». Раньше это был
+   двухколоночный блок на пол-экрана: обязательство важное, но оно вытесняло
+   вниз всё, ради чего на страницу заходят. */
+.ai-limits {
+  margin-top: 52px; padding-top: 18px; border-top: 1px solid var(--border);
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px;
+  font-size: 12.5px; color: var(--text-dim);
+}
+.ai-limits-h { font-weight: 800; color: var(--text); }
+.ai-limit { position: relative; padding-left: 14px; }
+.ai-limit::before {
+  content: "×"; position: absolute; left: 0; color: var(--red); font-weight: 800;
+}
+.ai-limits-note { margin-top: 10px; font-size: 12px; line-height: 1.55; color: var(--text-dim); max-width: 620px; }
