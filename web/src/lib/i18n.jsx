@@ -1432,6 +1432,11 @@ const EN = {
   "Одна подпись — и агент начнёт работать на эту монету. 10% комиссии пойдут в его бюджет вместо вас. Включение необратимо.": "One signature and the agent starts working on this coin. 10% of the fee goes to its budget instead of you. This cannot be undone.",
   "Включить ИИ": "Enable AI",
   "ИИ-агенту монеты (без ИИ — создателю, итого {n}%)": "the coin's AI agent (no AI — to the creator, {n}% in total)",
+  "Комиссия с каждой сделки": "Fee on every trade",
+  "вам, создателю монеты": "to you, the coin's creator",
+  "команде hood": "to the hood team",
+  "ИИ этой монеты": "to this coin's AI",
+  "Пример: наторговали на {b} {q} — вам {n} {q}.": "Example: {b} {q} traded — you get {n} {q}.",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

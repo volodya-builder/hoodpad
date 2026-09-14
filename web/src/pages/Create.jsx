@@ -778,15 +778,26 @@ export default function Create({ wallet, onConnect }) {
         <div className="preview-ticker">{form.symbol ? `$${form.symbol}` : t("тикер")}</div>
         <div className="preview-stats">
           <div className="row"><span className="k">{t("Комиссия запуска")}</span><span className="v green">0 ETH</span></div>
-          <div className="row"><span className="k">{t("Вам с каждого трейда")}</span><span className="v green" title={t("Комиссия площадки 1% с каждой сделки; ваша доля — из фабрики")}>
-            {t("{v}% объёма ({p}% комиссии 1%)").replace("{v}", String(+(creatorPct / 100).toFixed(2))).replace("{p}", String(creatorPct))}
-          </span></div>
-          {sp.live && (
-            <div className="row"><span className="k">{t("Остальное")}</span><span className="v">
-              {ai ? t("{team}% команде · {agent}% ИИ монеты").replace("{team}", String(sp.team)).replace("{agent}", String(sp.agent))
-                  : t("{team}% команде").replace("{team}", String(sp.team))}
-            </span></div>
+          {/* Комиссия — простыми словами: одна строка «сколько берётся» и
+              кому уходит, без bps и долей от долей. Цифры — с цепи. */}
+          <div className="row"><span className="k">{t("Комиссия с каждой сделки")}</span><span className="v">1%</span></div>
+          <div className="row sub"><span className="k">↳ {t("вам, создателю монеты")}</span><span className="v green">{creatorPct}%</span></div>
+          <div className="row sub"><span className="k">↳ {t("команде hood")}</span><span className="v">{sp.team}%</span></div>
+          {sp.live && ai && (
+            <div className="row sub"><span className="k">↳ {t("ИИ этой монеты")}</span><span className="v">{sp.agent}%</span></div>
           )}
+          {!sp.live && sp.buyback > 0 && (
+            <div className="row sub"><span className="k">↳ {t("в казну выкупа")}</span><span className="v">{sp.buyback}%</span></div>
+          )}
+          <div className="pv-example">
+            {(() => {
+              // Пример в понятных цифрах: для ETH/BTC — 1, для акций — 10, для стейблов — 1 000.
+              const base = ["ETH", "WETH", "CBBTC"].includes(quote) ? 1 : quoteTab === "rwa" ? 10 : 1000;
+              const mine = +(base * 0.01 * creatorPct / 100).toFixed(4);
+              return t("Пример: наторговали на {b} {q} — вам {n} {q}.")
+                .replace(/\{q\}/g, quote).replace("{b}", base.toLocaleString("ru")).replace("{n}", String(mine));
+            })()}
+          </div>
           <div className="row"><span className="k">{t("Валюта курвы")}</span><span className="v">
             {quote === "ETH" ? "ETH" : <><Logo cls="pv-qlogo" src={quoteIcon} />{quote}</>}
           </span></div>
