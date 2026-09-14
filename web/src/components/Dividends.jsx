@@ -50,7 +50,7 @@ export default function Dividends({ token, wallet, q, onConnect }) {
   const f = (v) => {
     const n = Number(formatUnits(v, q.dec));
     if (n === 0) return "0";
-    if (n < 0.01) return n.toFixed(4);
+    if (n < 0.01) return String(+n.toPrecision(2)); // 0.00014, а не «0.0000»
     return n.toLocaleString("ru", { maximumFractionDigits: 2 });
   };
 
@@ -85,6 +85,11 @@ export default function Dividends({ token, wallet, q, onConnect }) {
           <div><span>{t("Ваша доля")}</span><b className="dim">{t("подключите кошелёк")}</b></div>
         )}
       </div>
+      {st.pot > 0n && (
+        <div className="dv-pot">
+          {t("В копилке")} <b>{f(st.pot)} {q.sym}</b> — {t("раздастся холдерам со следующей сделкой")}
+        </div>
+      )}
       <div className="dv-note">
         {t("Держите монету — с каждой покупки и продажи вам капает {q}. Продали — перестало. Сумма считается по вашему балансу, забрать можно в любой момент.").replace("{q}", q.sym)}
       </div>
