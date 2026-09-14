@@ -126,3 +126,33 @@ export async function balanceOf(token, address) {
     });
   } catch { return 0n; }
 }
+
+/**
+ * Итоги завершённых раундов — очередь задач для агента.
+ *
+ * Итог считается на лету, а не хранится: сохранённый результат пришлось бы
+ * кому-то записывать, а запись в открытую базу подделывается. Пересчёт
+ * из подписанных голосов проверяем кем угодно и подделать нельзя.
+ * Цена честности: веса берутся по текущим балансам, а не по тем, что были
+ * в момент раунда. Это v1, и на странице так и написано.
+ */
+export async function loadHistory(token, count = 6) {
+  const cur = roundId();
+  const ids = [];
+  for (let i = 1; i <= count; i++) ids.push(cur - i);
+  const out = [];
+  for (const id of ids) {
+    const r = await loadRound(token, id);
+    if (!r.proposals.length) continue;
+    const res = await tally(token, id, r.votes);
+    let win = null, best = -1n;
+    for (const p of r.proposals) {
+      const w = res.byProp[p.pid] ?? 0n;
+      if (w > best) { best = w; win = p; }
+    }
+    if (!win || best <= 0n) continue;
+    const pct = res.total > 0n ? Number((best * 1000n) / res.total) / 10 : 0;
+    out.push({ id, winner: win, weight: best, pct, voters: res.voters });
+  }
+  return out;
+}

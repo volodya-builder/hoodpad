@@ -8,6 +8,7 @@ import { computeTrust } from "../lib/trust.js";
 import { honestVolume } from "../lib/fairvol.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import Chat from "./Chat.jsx";
+import Workshop from "../components/Workshop.jsx";
 import { useSplit, loadCreationTimes, timeAgo, useClock, useSupport } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 import CandleChart from "../components/CandleChart.jsx";
@@ -1454,8 +1455,15 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <div className={`bt-tab ${sideTab === "chat" ? "on" : ""}`} onClick={() => setSideTab("chat")}>
               {t("Чат")}
             </div>
+            <div className={`bt-tab ${sideTab === "wsh" ? "on" : ""}`} onClick={() => setSideTab("wsh")}>
+              {t("Мастерская")}
+            </div>
           </div>
-          {sideTab === "chat" ? (
+          {sideTab === "wsh" ? (
+            <div className="side-wsh">
+              <Workshop token={tokenAddress} wallet={wallet} onConnect={onConnect} embedded />
+            </div>
+          ) : sideTab === "chat" ? (
             <Chat tokenAddress={tokenAddress} wallet={wallet} onConnect={onConnect} embedded />
           ) : (
             <div className="side-act">

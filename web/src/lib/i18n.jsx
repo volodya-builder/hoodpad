@@ -622,6 +622,13 @@ const EN = {
   "Выкуп казны": "Treasury buyback",
   "копится с каждой сделки — первые выкупы после голосования": "grows with every trade — first buybacks after the vote",
   "Период": "Period",
+  "Очередь задач": "Task queue",
+  "Победители завершённых раундов. Это то, что агент возьмёт в работу первым, когда появится.": "Winners of finished rounds. This is what the agent picks up first once it arrives.",
+  "Считаю итоги раундов…": "Tallying finished rounds…",
+  "Очередь пуста: ни один раунд ещё не завершился победителем. Первый появится здесь, как только неделя закроется с голосами.": "The queue is empty: no round has closed with a winner yet. The first shows up here as soon as a week ends with votes in it.",
+  "ждёт агента": "awaiting agent",
+  "голосов": "of the vote",
+  "участников": "voters",
   // — Мастерская: голосование холдеров —
   "Голосование холдеров": "Holder voting",
   "Работает уже сейчас. Агентов ещё нет, но решения копятся с первого дня — к моменту, когда агент появится, у монеты уже будет очередь задач от её холдеров.": "Live already. There are no agents yet, but decisions start stacking up from day one — by the time an agent arrives, its coin already has a queue of tasks from its holders.",

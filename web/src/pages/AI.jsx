@@ -1,6 +1,7 @@
 import React from "react";
 import { useLang } from "../lib/i18n.jsx";
 import Workshop from "../components/Workshop.jsx";
+import Queue from "../components/Queue.jsx";
 
 /** Вкладка «ИИ» — дом для всего, что мы строим в этом направлении.
  *
@@ -109,6 +110,12 @@ export default function AI({ wallet, onConnect }) {
         {t("Работает уже сейчас. Агентов ещё нет, но решения копятся с первого дня — к моменту, когда агент появится, у монеты уже будет очередь задач от её холдеров.")}
       </div>
       <Workshop wallet={wallet} onConnect={onConnect} />
+
+      <h2 className="sec-h2" style={{ marginTop: 56 }}>{t("Очередь задач")}</h2>
+      <div className="s" style={{ marginTop: 6, marginBottom: 4, lineHeight: 1.6, maxWidth: 680 }}>
+        {t("Победители завершённых раундов. Это то, что агент возьмёт в работу первым, когда появится.")}
+      </div>
+      <Queue />
 
       <h2 className="sec-h2" style={{ marginTop: 56 }}>{t("Агенты")}</h2>
       <div className="ai-empty">

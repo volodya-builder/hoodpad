@@ -1011,6 +1011,31 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
 }
 .pos-row .pos-id { padding-right: 16px; }
 /* мини-графики аналитики: подсказка при наведении + ось времени */
+/* --- Мастерская: очередь задач --- */
+.q-list { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+.q-item {
+  background: linear-gradient(180deg, #1a1a19 0%, #151514 100%);
+  border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px;
+}
+.q-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.q-tk { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 13.5px; }
+.q-tk img { width: 22px; height: 22px; border-radius: 6px; }
+.q-when { font-size: 12px; color: var(--text-dim); }
+.q-wait {
+  margin-left: auto; font-size: 11px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: .4px; color: var(--gold); background: var(--gold-dim);
+  border: 1px solid var(--border-gold); border-radius: 999px; padding: 3px 10px;
+}
+.q-text { font-size: 14.5px; line-height: 1.55; margin-top: 10px; }
+.q-meta { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; font-size: 12px; font-variant-numeric: tabular-nums; }
+
+/* Мастерская внутри боковой панели токена: те же правила, меньше воздуха. */
+.side-wsh { padding: 12px 14px 16px; max-height: 560px; overflow-y: auto; }
+.wsh-emb { margin-top: 0; }
+.wsh-emb .wsh-item { padding: 12px 14px; }
+.wsh-emb .wsh-text { font-size: 13.5px; }
+.wsh-emb .wsh-left { margin-left: 0; width: 100%; }
+
 /* --- Мастерская: голосование холдеров --- */
 .wsh { margin-top: 16px; }
 .wsh-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }

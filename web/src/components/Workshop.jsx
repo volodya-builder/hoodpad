@@ -16,7 +16,7 @@ function left(ms) {
   return h >= 24 ? `${Math.floor(h / 24)}д ${h % 24}ч` : `${h}ч`;
 }
 
-export default function Workshop({ wallet, onConnect }) {
+export default function Workshop({ wallet, onConnect, token: fixed, embedded }) {
   const { t } = useLang();
   const [tokens, setTokens] = useState(null);
   const [sel, setSel] = useState("");
@@ -33,11 +33,12 @@ export default function Workshop({ wallet, onConnect }) {
 
   useEffect(() => { const i = setInterval(() => setNow(Date.now()), 60000); return () => clearInterval(i); }, []);
   useEffect(() => {
+    if (fixed) { setSel(fixed); setTokens([]); return; }
     loadTokens().then((list) => {
       setTokens(list);
       if (list && list.length && !sel) setSel(list[0].token);
     }).catch(() => setTokens([]));
-  }, []); // eslint-disable-line
+  }, [fixed]); // eslint-disable-line
 
   const refresh = React.useCallback(async () => {
     if (!sel) return;
@@ -83,19 +84,21 @@ export default function Workshop({ wallet, onConnect }) {
     finally { setBusy(false); }
   };
 
-  if (tokens === null) return <div className="ai-empty">{t("Загружаю…")}</div>;
-  if (!tokens.length) return <div className="ai-empty">{t("Пока нет ни одной монеты.")}</div>;
+  if (!fixed && tokens === null) return <div className="ai-empty">{t("Загружаю…")}</div>;
+  if (!fixed && !tokens.length) return <div className="ai-empty">{t("Пока нет ни одной монеты.")}</div>;
 
   const total = res?.total ?? 0n;
 
   return (
-    <div className="wsh">
+    <div className={`wsh ${embedded ? "wsh-emb" : ""}`}>
       <div className="wsh-head">
-        <select className="wsh-sel" value={sel} onChange={(e) => setSel(e.target.value)}>
-          {tokens.map((x) => (
-            <option key={x.token} value={x.token}>{x.name} · ${x.symbol}</option>
-          ))}
-        </select>
+        {!fixed && (
+          <select className="wsh-sel" value={sel} onChange={(e) => setSel(e.target.value)}>
+            {(tokens || []).map((x) => (
+              <option key={x.token} value={x.token}>{x.name} · ${x.symbol}</option>
+            ))}
+          </select>
+        )}
         <span className={`wsh-phase ${phase}`}>{t(PHASE_LBL[phase])}</span>
         <span className="wsh-left">
           {t("раунд")} #{id} · {t("до конца")} {left(roundEnd(id) - now)}
@@ -109,9 +112,9 @@ export default function Workshop({ wallet, onConnect }) {
         </div>
       )}
 
-      {wallet && token && (
+      {wallet && (
         <div className="wsh-you">
-          {t("У вас")} <b>{fmt(Number(formatEther(bal)), 0)}</b> ${token.symbol}
+          {t("У вас")} <b>{fmt(Number(formatEther(bal)), 0)}</b>{token ? ` $${token.symbol}` : ""}
           {" · "}
           {canPropose
             ? <span className="wsh-ok">{t("можно предлагать и голосовать")}</span>
