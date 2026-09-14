@@ -480,7 +480,7 @@ export default function App() {
               {menuOpen ? "✕" : "☰"}
             </button>
             {FEATURES.headerSearch && (
-              <button className="icon-btn nav-search" onClick={() => setSearchOpen(true)} title="Поиск (Ctrl+K)">⌕</button>
+              <button className="icon-btn nav-search" onClick={() => setSearchOpen(true)} title={t("Поиск (Ctrl+K)")}>⌕</button>
             )}
             {FEATURES.netSwitch && (
               <div className="net-wrap">

@@ -1117,7 +1117,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                   {data.name} <span className="ticker">${data.symbol}</span>
-                  {data.graduated && <span className="badge">🎯 В яблочке</span>}
+                  {data.graduated && <span className="badge">🎯 {t("В яблочке")}</span>}
                   {aiChip}
                   {socials}
                 </div>
