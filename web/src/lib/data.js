@@ -212,13 +212,16 @@ try {
 // Держим в этом списке, пока токен не появится в «свежих» данных.
 const _pending = new Map(); // tokenLower -> row
 
-export function injectNewToken({ token, pool, name, symbol, uri, creator }) {
+export function injectNewToken({ token, pool, name, symbol, uri, creator, quote, quoteSym, quoteDec }) {
   const key = token.toLowerCase();
   const row = {
     token, pool, name, symbol,
     price: (VIRT_WEI * 10n ** 18n) / TOTAL_WEI,
     sold: 0n, cap: CAP_WEI, reserve: 0n, graduated: false,
     meta: parseMeta(uri), createdAt: Date.now(), creator,
+    // Монета за ERC20-валюту: карточка и страница должны знать, в чём
+    // считать цену. Для ETH-монет полей нет — как и раньше.
+    ...(quote ? { quote, quoteSym, quoteDec } : {}),
   };
   _pending.set(key, row);
   const cur = _tok.v ?? [];

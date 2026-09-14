@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import { parseEther, formatEther, decodeEventLog } from "viem";
+import { parseEther, formatEther, parseUnits, decodeEventLog } from "viem";
 import { publicClient } from "../lib/web3.js";
-import { factoryAbi } from "../lib/abi.js";
-import { FACTORY_ADDRESS } from "../lib/config.js";
+import { factoryAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi } from "../lib/abi.js";
+import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE } from "../lib/config.js";
 import { useSplit, injectNewToken } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 import { RWA_TOKENS, RWA_POPULAR, stockLogo, CHAIN_LOGOS } from "../lib/rwa.js";
+import { loadCryptoQuotes, loadAllowedQuotes, lookupQuote, matchQuote, short as shortAddr } from "../lib/quotes.js";
 import { loadModels, featured, matchModel, modelLogo, costLabel, AI_AUTO } from "../lib/models.mjs";
 
 // Логотип с фолбэком: если CDN не знает тикер — просто прячем картинку
@@ -111,8 +112,44 @@ export default function Create({ wallet, onConnect }) {
   // Валюта курвы: ETH (работает сейчас) | RWA — токенизированная акция Robinhood
   // (канонический реестр в lib/rwa.js; запуск откроется с ERC20-quote пулом)
   const [quoteTab, setQuoteTab] = useState("crypto");
-  const [quote, setQuote] = useState("ETH"); // "ETH" | символ акции
+  const [quote, setQuote] = useState("ETH"); // "ETH" | символ валюты
+  // Адрес и знаки выбранной валюты (для ETH пусто). Нужны запуску через
+  // quote-фабрику и первой покупке создателя: у USDG 6 знаков, у CBBTC 8.
+  const [quoteAddr, setQuoteAddr] = useState("");
+  const [quoteDec, setQuoteDec] = useState(18);
   const [rwaSearch, setRwaSearch] = useState("");
+  const [cryptoSearch, setCryptoSearch] = useState("");
+  // Крипто-валюты сети — живой список от обозревателя. null — читаем.
+  const [crypto, setCrypto] = useState(null);
+  // Белый список фабрики: за что запуск реально пройдёт. Пуст, пока
+  // quote-фабрика не задеплоена, — и форма говорит об этом прямо.
+  const [allowed, setAllowed] = useState(new Set());
+  const [customAddr, setCustomAddr] = useState("");
+  const [custom, setCustom] = useState(null); // валюта по своему адресу
+  const [customBusy, setCustomBusy] = useState(false);
+  useEffect(() => {
+    let on = true;
+    loadCryptoQuotes().then((x) => on && setCrypto(x));
+    loadAllowedQuotes().then((x) => on && setAllowed(x));
+    return () => { on = false; };
+  }, []);
+  const pickQuote = (q) => { setQuote(q.sym); setQuoteAddr(q.addr); setQuoteDec(q.dec); };
+  const pickEth = () => { setQuote("ETH"); setQuoteAddr(""); setQuoteDec(18); };
+  const quoteAllowed = quote === "ETH" || (QUOTE_LIVE && allowed.has(quoteAddr));
+  const quoteIcon = quoteTab === "rwa"
+    ? stockLogo(quote)
+    : ((crypto || []).find((q) => q.addr === quoteAddr)?.icon || custom?.icon || "");
+
+  // Свой адрес: ищем валюту у обозревателя, а нет — спрашиваем контракт.
+  useEffect(() => {
+    const a = customAddr.trim();
+    if (!/^0x[0-9a-fA-F]{40}$/.test(a)) { setCustom(null); return; }
+    let on = true;
+    setCustomBusy(true);
+    lookupQuote(a).then((q) => { if (!on) return; setCustom(q); if (q) pickQuote(q); })
+      .finally(() => on && setCustomBusy(false));
+    return () => { on = false; };
+  }, [customAddr]);
   // Модель ИИ монеты. Пусто = «решит агент». Уезжает в метадату токена полем
   // ai — то есть в контракт, навсегда, как и картинка.
   const [ai, setAi] = useState(AI_AUTO);
@@ -165,9 +202,14 @@ export default function Create({ wallet, onConnect }) {
   async function submit(e) {
     e.preventDefault();
     setError("");
-    if (quote !== "ETH") {
-      try { localStorage.setItem("hood_rwa_draft", JSON.stringify({ form, ai, quote, savedAt: Date.now() })); } catch (e) { /* ignore */ }
-      return setError(t("Запуск с валютой-акцией откроется с деплоем ERC20-пула курвы. Черновик с выбором {sym} сохранён.").replace("{sym}", quote));
+    if (quote !== "ETH" && !quoteAllowed) {
+      // Валюта выбрана, но запустить за неё пока нельзя: либо quote-фабрика
+      // ещё не задеплоена, либо валюты нет в её белом списке. Черновик
+      // сохраняем — это и есть спрос, по которому список пополняется.
+      try { localStorage.setItem("hood_quote_draft", JSON.stringify({ form, ai, quote, quoteAddr, quoteDec, savedAt: Date.now() })); } catch (e) { /* ignore */ }
+      return setError(!QUOTE_LIVE
+        ? t("Запуск за {sym} откроется с деплоем ERC20-пула курвы. Черновик сохранён.").replace("{sym}", quote)
+        : t("{sym} пока не в белом списке фабрики. Черновик сохранён — валюту проверим и добавим.").replace("{sym}", quote));
     }
     if (ttype === "tax") {
       if (taxTotal !== 100) return setError(t("Аллокация налога должна давать ровно 100%."));
@@ -178,7 +220,7 @@ export default function Create({ wallet, onConnect }) {
     if (!image) return setError(t("Добавьте картинку токена."));
     if (!form.name.trim() || !form.symbol.trim()) return setError(t("Нужны название и тикер."));
     if (!symbolOk) return setError(t("Тикер: только буквы и цифры."));
-    if (!buyOk) return setError(t("Покупка создателя ограничена {max} ETH (5% сапплая).").replace("{max}", MAX_DEV_BUY_ETH.toFixed(4)));
+    if (quote === "ETH" && !buyOk) return setError(t("Покупка создателя ограничена {max} ETH (5% сапплая).").replace("{max}", MAX_DEV_BUY_ETH.toFixed(4)));
     if (!walletOk) return setError(t("Кошелёк создателя: неверный адрес (нужен 0x… из 42 символов)."));
 
     setBusy(true);
@@ -200,24 +242,54 @@ export default function Create({ wallet, onConnect }) {
         "data:application/json;base64," +
         btoa(unescape(encodeURIComponent(JSON.stringify(metadata))));
 
-      const value = buyValue > 0 ? parseEther(form.initialBuy) : 0n;
-      const hash = await wallet.walletClient.writeContract({
-        address: FACTORY_ADDRESS,
-        abi: factoryAbi,
-        functionName: "createToken",
-        args: [form.name.trim(), form.symbol.trim(), uri, form.creatorWallet.trim() || ZERO],
-        value,
-      });
+      const byQuote = quote !== "ETH";
+      let hash;
+      if (byQuote) {
+        // ERC20-валюта не может прийти вместе с деплоем, как ETH: сначала
+        // запуск, потом (если просили) approve + первая покупка отдельно.
+        hash = await wallet.walletClient.writeContract({
+          address: QUOTE_FACTORY_ADDRESS,
+          abi: quoteFactoryAbi,
+          functionName: "createToken",
+          args: [form.name.trim(), form.symbol.trim(), uri, quoteAddr, form.creatorWallet.trim() || ZERO],
+        });
+      } else {
+        const value = buyValue > 0 ? parseEther(form.initialBuy) : 0n;
+        hash = await wallet.walletClient.writeContract({
+          address: FACTORY_ADDRESS,
+          abi: factoryAbi,
+          functionName: "createToken",
+          args: [form.name.trim(), form.symbol.trim(), uri, form.creatorWallet.trim() || ZERO],
+          value,
+        });
+      }
       const rcpt = await publicClient.waitForTransactionReceipt({ hash });
+      const evAbi = byQuote ? quoteFactoryAbi : factoryAbi;
       const created = rcpt.logs
         .map((l) => {
           try {
-            return decodeEventLog({ abi: factoryAbi, data: l.data, topics: l.topics });
+            return decodeEventLog({ abi: evAbi, data: l.data, topics: l.topics });
           } catch {
             return null;
           }
         })
         .find((ev) => ev && ev.eventName === "TokenCreated");
+
+      if (byQuote && buyValue > 0) {
+        // Первая покупка создателя в валюте: approve на пул, затем buy.
+        // Кап создателя проверяет сам пул — перебор откатится с ошибкой,
+        // а монета к этому моменту уже запущена.
+        const amount = parseUnits(form.initialBuy, quoteDec);
+        const pool = created.args.pool;
+        const a = await wallet.walletClient.writeContract({
+          address: quoteAddr, abi: erc20Abi, functionName: "approve", args: [pool, amount],
+        });
+        await publicClient.waitForTransactionReceipt({ hash: a });
+        const b = await wallet.walletClient.writeContract({
+          address: pool, abi: quotePoolAbi, functionName: "buy", args: [amount, 0n, wallet.account],
+        });
+        await publicClient.waitForTransactionReceipt({ hash: b });
+      }
       // мгновенно кладём токен в кэш — карточка видна сразу, без ожидания индексатора
       injectNewToken({
         token: created.args.token,
@@ -226,6 +298,7 @@ export default function Create({ wallet, onConnect }) {
         symbol: form.symbol.trim(),
         uri,
         creator: wallet.account,
+        ...(byQuote ? { quote: quoteAddr, quoteSym: quote, quoteDec } : {}),
       });
       window.location.hash = `#/token/${created.args.token}`;
     } catch (err) {
@@ -246,7 +319,7 @@ export default function Create({ wallet, onConnect }) {
     : !form.name.trim() || !form.symbol.trim()
     ? t("Укажите название и тикер")
     : buyValue > 0
-    ? t("Запустить токен и купить на {eth} ETH").replace("{eth}", form.initialBuy)
+    ? t("Запустить токен и купить на {eth} {q}").replace("{eth}", form.initialBuy).replace("{q}", quote)
     : t("Запустить токен");
 
   return (
@@ -268,16 +341,63 @@ export default function Create({ wallet, onConnect }) {
         <label>{t("Валюта курвы")}</label>
         <div className="quote-tabs">
           <button type="button" className={`quote-tab ${quoteTab === "crypto" ? "on" : ""}`}
-                  onClick={() => { setQuoteTab("crypto"); setQuote("ETH"); }}>{t("Крипта")}</button>
+                  onClick={() => { setQuoteTab("crypto"); pickEth(); }}>{t("Крипта")}</button>
           <button type="button" className={`quote-tab ${quoteTab === "rwa" ? "on" : ""}`}
                   onClick={() => setQuoteTab("rwa")}><TrendIcon /> {t("Акции (RWA)")} <em className="ttype-beta">β</em></button>
         </div>
         {quoteTab === "crypto" ? (
-          <div className="quote-grid">
-            <button type="button" className={`quote-chip ${quote === "ETH" ? "on" : ""}`} onClick={() => setQuote("ETH")}>
-              <Logo cls="q-logo" src={CHAIN_LOGOS.ethereum} />ETH
-            </button>
-          </div>
+          <>
+            <input className="quote-search" value={cryptoSearch} onChange={(e) => setCryptoSearch(e.target.value)}
+                   placeholder={t("Поиск: USDG, WETH, LINK…")} />
+            <div className="quote-grid">
+              <button type="button" className={`quote-chip ${quote === "ETH" ? "on" : ""}`} onClick={pickEth}>
+                <Logo cls="q-logo" src={CHAIN_LOGOS.ethereum} />ETH
+              </button>
+              {(crypto || [])
+                .filter((q) => matchQuote(q, cryptoSearch))
+                .slice(0, cryptoSearch ? 18 : 11)
+                .map((q) => {
+                  const ok = !QUOTE_LIVE || allowed.has(q.addr);
+                  return (
+                    <button type="button" key={q.addr}
+                            className={`quote-chip ${quote === q.sym && quoteAddr === q.addr ? "on" : ""} ${ok ? "" : "q-off"}`}
+                            onClick={() => pickQuote(q)}
+                            title={`${q.name} · ${shortAddr(q.addr)}${ok ? "" : " · " + t("пока не в белом списке")}`}>
+                      <Logo cls="q-logo" src={q.icon} />{q.sym}
+                    </button>
+                  );
+                })}
+              {crypto === null && <span className="dim" style={{ padding: "8px 4px", fontSize: 13 }}>{t("Читаю валюты сети…")}</span>}
+            </div>
+
+            {/* Свой адрес — как на flap: любой ERC20 сети. Но решает белый
+                список фабрики, и это сказано рядом, а не спрятано. */}
+            <div className="quote-custom">
+              <input className="quote-search" value={customAddr} onChange={(e) => setCustomAddr(e.target.value.trim())}
+                     placeholder={t("Свой контракт: 0x…")} spellCheck={false} />
+              {customBusy && <span className="dim">{t("смотрю…")}</span>}
+              {custom && (
+                <span className="quote-custom-found">
+                  <Logo cls="q-logo" src={custom.icon} />
+                  <b>{custom.sym}</b> {custom.name} · {t("знаков")}: {custom.dec}
+                  {custom.stock && <> · {t("это акция")}</>}
+                </span>
+              )}
+              {!custom && !customBusy && /^0x[0-9a-fA-F]{40}$/.test(customAddr) && (
+                <span className="dim">{t("По этому адресу нет ERC20-токена.")}</span>
+              )}
+            </div>
+
+            <div className="hint">
+              {quote === "ETH"
+                ? t("Токен торгуется за ETH — работает сейчас.")
+                : !QUOTE_LIVE
+                  ? t("Запуск за {sym} откроется с деплоем ERC20-пула курвы — контракты готовы и проверены. Выбор сохранится в черновике.").replace("{sym}", quote)
+                  : quoteAllowed
+                    ? t("Токен будет торговаться за {sym}. Градация — когда кривая соберёт порог в этой валюте.").replace("{sym}", quote)
+                    : t("{sym} пока не в белом списке фабрики. Валюты с комиссией на перевод или ребейзом ломают кривую, поэтому каждую проверяем перед добавлением. Выбор сохранится в черновике.").replace("{sym}", quote)}
+            </div>
+          </>
         ) : (
           <>
             <input className="quote-search" value={rwaSearch} onChange={(e) => setRwaSearch(e.target.value.toUpperCase())}
@@ -288,7 +408,7 @@ export default function Create({ wallet, onConnect }) {
                 : RWA_TOKENS.filter((x) => RWA_POPULAR.includes(x.sym))
               ).map((x) => (
                 <button type="button" key={x.sym} className={`quote-chip ${quote === x.sym ? "on" : ""}`}
-                        onClick={() => setQuote(x.sym)} title={x.addr}>
+                        onClick={() => pickQuote({ sym: x.sym, addr: x.addr.toLowerCase(), dec: 18 })} title={x.addr}>
                   <Logo cls="q-logo" src={stockLogo(x.sym)} />{x.sym}
                 </button>
               ))}
@@ -478,7 +598,7 @@ export default function Create({ wallet, onConnect }) {
         <label>{t("Покупка создателя")}</label>
         <div className="suffix-input">
           <input value={form.initialBuy} onChange={set("initialBuy")} placeholder="0.00" inputMode="decimal" />
-          <b>ETH</b>
+          <b>{quote}</b>
         </div>
         <div className={`hint ${buyOk ? "" : "bad"}`}>
           {(buyOk
@@ -536,12 +656,14 @@ export default function Create({ wallet, onConnect }) {
           <div className="row"><span className="k">{t("Комиссия запуска")}</span><span className="v green">0 ETH</span></div>
           <div className="row"><span className="k">{t("Вам с каждого трейда")}</span><span className="v green">{t("{pct}% комиссии").replace("{pct}", split.creator)}</span></div>
           <div className="row"><span className="k">{t("Валюта курвы")}</span><span className="v">
-            {quote === "ETH" ? "ETH" : <><Logo cls="pv-qlogo" src={stockLogo(quote)} />{quote}</>}
+            {quote === "ETH" ? "ETH" : <><Logo cls="pv-qlogo" src={quoteIcon} />{quote}</>}
           </span></div>
-          <div className="row"><span className="k">{t("Градация")}</span><span className="v">6.5 ETH</span></div>
+          <div className="row"><span className="k">{t("Градация")}</span><span className="v">
+            {quote === "ETH" ? "6.5 ETH" : t("порог в {q}").replace("{q}", quote)}
+          </span></div>
           <div className="row"><span className="k">{t("Ликвидность")}</span><span className="v">{t("Заперта навсегда")}</span></div>
           {buyValue > 0 && (
-            <div className="row"><span className="k">{t("Ваша покупка")}</span><span className="v">{form.initialBuy} ETH</span></div>
+            <div className="row"><span className="k">{t("Ваша покупка")}</span><span className="v">{form.initialBuy} {quote}</span></div>
           )}
         </div>
       </aside>
