@@ -513,7 +513,11 @@ async function splitOf(factory, fAbi) {
   try {
     const teamBps = await publicClient.readContract({ address: treasury, abi: splitterAbi, functionName: "teamBps" });
     team = (rest * Number(teamBps)) / 10000;
-  } catch (e) { /* казна — не сплиттер: весь остаток одному адресу */ }
+  } catch (e) {
+    // Казна — не сплиттер, а обычный кошелёк (у фабрики за валюту до
+    // переезда это кошелёк команды): весь остаток — команде.
+    team = rest;
+  }
   return { creator, team: Math.round(team), agent: 0, buyback: Math.round(rest - team), creatorNoAi: creator, live: false };
 }
 
