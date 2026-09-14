@@ -96,9 +96,15 @@ export default function Journal({ wallet, token: fixed }) {
             )}
 
             <div className="jr-meta">
-              {r.url
-                ? <a className="jr-link" href={r.url} target="_blank" rel="noreferrer noopener">{t("Открыть результат")} →</a>
-                : <span className="dim">{t("результата пока нет")}</span>}
+              {(() => {
+                // Ссылка строится от текущего сайта: на тестовом это
+                // /staging/agents/…, на боевом — /agents/…. Жёсткий адрес
+                // боевого домена на тестовом вёл бы в 404.
+                const href = r.path ? `${import.meta.env.BASE_URL || "/"}${r.path}` : r.url;
+                return href
+                  ? <a className="jr-link" href={href} target="_blank" rel="noreferrer noopener">{t("Открыть результат")} →</a>
+                  : <span className="dim">{t("результата пока нет")}</span>;
+              })()}
               <span className="dim">
                 {r.model && <>{r.model} · </>}
                 {Number(r.opens) > 0 && <>{Number(r.opens).toLocaleString("ru")} {t("открытий")} · </>}
