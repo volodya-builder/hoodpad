@@ -3,9 +3,14 @@
  * Агент монеты: берёт задание из журнала и строит по нему страницу.
  *
  * ЧТО ОН ДЕЛАЕТ
- *   1. Находит в журнале запись со статусом «строит» (её заводит
- *      scripts/journal-operator.mjs из победителя раунда — или владелец
- *      руками из админ-формы на сайте).
+ *   1. Находит задание. Два источника, оба равноправны:
+ *      — подписанная запись «строит» в журнале (форма на сайте или
+ *        scripts/journal-operator.mjs из победителя раунда);
+ *      — файл web/public/agents/tasks.json в самом репозитории.
+ *      Второй источник нужен, чтобы задание можно было поставить коммитом,
+ *      не открывая сайт и не подписывая кошельком. Писать в репозиторий
+ *      может только тот, у кого есть доступ, — этого достаточно.
+ *      Задания, по которым отчёт уже есть в builds.json, пропускаются.
  *   2. Просит модель написать ОДНУ самодостаточную HTML-страницу.
  *   3. Проверяет результат и кладёт в web/public/agents/<символ>/index.html —
  *      после сборки страница живёт на hoodandarrow.com/agents/<символ>/.
@@ -100,7 +105,25 @@ const entryMessage = (token, round, e) => [
   `spent: ${e.spent ?? ""}`,
 ].join("\n");
 
-/** Найти работу: самая старая запись «строит» среди всех монет. */
+/** Что уже построено — по отчётам в репозитории. */
+function builtKeys() {
+  try {
+    const list = JSON.parse(fs.readFileSync(path.join(ROOT, "web", "public", "agents", "builds.json"), "utf8"));
+    return new Set((list || []).map((b) => `${String(b.token).toLowerCase()}:${b.round}`));
+  } catch { return new Set(); }
+}
+
+/** Задания, поставленные коммитом. Подпись не нужна: доступ к репозиторию и есть подпись. */
+function repoTasks() {
+  try {
+    const list = JSON.parse(fs.readFileSync(path.join(ROOT, "web", "public", "agents", "tasks.json"), "utf8"));
+    return (list || [])
+      .filter((x) => x && x.token && x.task)
+      .map((x) => ({ token: String(x.token).toLowerCase(), round: Number(x.round), task: x.task, at: x.at || 0, from: "репозиторий" }));
+  } catch { return []; }
+}
+
+/** Найти работу: самое старое невыполненное задание из обоих источников. */
 async function findWork(operatorAddress) {
   const all = (await get("workshop/journal")) || {};
   const out = [];
@@ -118,11 +141,19 @@ async function findWork(operatorAddress) {
         });
       } catch { real = false; }
       if (!real) continue;
-      out.push({ token, round: Number(round), ...e });
+      out.push({ token, round: Number(round), ...e, from: "журнал" });
     }
   }
-  out.sort((a, b) => (a.at || 0) - (b.at || 0));
-  return out[0] || null;
+
+  for (const t of repoTasks()) {
+    if (out.some((x) => x.token.toLowerCase() === t.token && x.round === t.round)) continue;
+    out.push(t);
+  }
+
+  const done = builtKeys();
+  const left = out.filter((x) => !done.has(`${String(x.token).toLowerCase()}:${x.round}`));
+  left.sort((a, b) => (a.at || 0) - (b.at || 0));
+  return left[0] || null;
 }
 
 async function symbolOf(token) {
@@ -248,7 +279,7 @@ async function main() {
   const url = `${SITE}/agents/${symbol.toLowerCase()}/`;
 
   console.log(`Монета:  $${symbol}  ${work.token}`);
-  console.log(`Раунд:   ${work.round}`);
+  console.log(`Раунд:   ${work.round}  (источник: ${work.from || "журнал"})`);
   console.log(`Задание: ${work.task}`);
   console.log(`Выйдет:  ${url}`);
 
