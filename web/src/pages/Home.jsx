@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { formatEther } from "viem";
+import { formatEther, formatUnits } from "viem";
 import { fmt, fmtEth } from "../lib/web3.js";
-import { useEthUsd, usd } from "../lib/price.js";
+import { useEthUsd, useQuoteUsd, usd } from "../lib/price.js";
 import { timeAgo, loadTokens, useClock, useSupport } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 import { useFavs, toggleFav } from "../lib/favs.js";
@@ -14,7 +14,13 @@ function TokenCard({ t, fav, onFav, cushion = 0 }) {
   const rate = useEthUsd();
   const [cp, setCp] = useState(false);
   const progress = Number((t.sold * 10000n) / t.cap) / 100;
-  const mcapEth = Number(formatEther(t.price)) * 1_000_000_000;
+  // Монета за валюту: цена в знаках валюты, капитализацию в долларах
+  // считаем через её курс, а не через ETH. Курса нет — покажем в валюте.
+  const q = t.q || null;
+  const qPrice = useQuoteUsd(q?.addr);
+  const priceUnits = q ? Number(formatUnits(t.price, q.dec)) : Number(formatEther(t.price));
+  const mcapEth = q ? 0 : priceUnits * 1_000_000_000;
+  const mcapQuote = q ? priceUnits * 1_000_000_000 : 0;
   const copyCA = (e) => {
     e.preventDefault(); e.stopPropagation();
     try { navigator.clipboard.writeText(t.token); } catch (err) { /* ignore */ }
@@ -39,7 +45,10 @@ function TokenCard({ t, fav, onFav, cushion = 0 }) {
       <div className="tname">{t.name}</div>
       <div className="ttick">${t.symbol}</div>
       <div className="tmc">
-        {usd(mcapEth * rate)}<span>MC</span>
+        {q
+          ? (qPrice > 0 ? usd(mcapQuote * qPrice) : `${fmt(mcapQuote, 0)} ${q.sym}`)
+          : usd(mcapEth * rate)}<span>MC</span>
+        {q && <em className="tq" title={t.divBps ? `${t.divBps / 100}% дивиденды холдерам в ${q.sym}` : q.sym}>{q.sym}{t.divBps ? ` · ${t.divBps / 100}%` : ""}</em>}
       </div>
       <div className="prow">
         <div className="pbar">
@@ -51,7 +60,7 @@ function TokenCard({ t, fav, onFav, cushion = 0 }) {
         <span className="mono addr-copy" title={tr("Скопировать адрес")} onClick={copyCA}>
           {t.token.slice(0, 6)}…{t.token.slice(-4)} {cp ? "✓" : "⧉"}
         </span>
-        <span>{t.createdAt ? timeAgo(t.createdAt) : `${fmtEth(Number(formatEther(t.reserve)))} / 6.5 ETH`}</span>
+        <span>{t.createdAt ? timeAgo(t.createdAt) : q ? `${fmt(Number(formatUnits(t.reserve, q.dec)), 2)} ${q.sym}` : `${fmtEth(Number(formatEther(t.reserve)))} / 6.5 ETH`}</span>
       </div>
     </a>
   );

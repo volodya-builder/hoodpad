@@ -79,3 +79,46 @@ export function usd(n) {
   if (a >= 1e3) return "$" + (n / 1e3).toFixed(1) + "k";
   return "$" + n.toFixed(2);
 }
+
+// ---------------------------------------------------------------- валюты курвы
+// Курс любого ERC20 сети в долларах — у обозревателя (Blockscout), он же
+// отдаёт каталог валют для формы запуска. Кэш на минуту, как у ETH.
+const QUOTE_LS = "hood_quoteusd_v1";
+let quoteCache = {};
+try { quoteCache = JSON.parse(localStorage.getItem(QUOTE_LS) || "{}") || {}; } catch (e) { /* ignore */ }
+const _qPending = new Map();
+
+export async function quoteUsd(addr) {
+  const a = String(addr || "").toLowerCase();
+  if (!/^0x[0-9a-f]{40}$/.test(a)) return 0;
+  const c = quoteCache[a];
+  if (c && Date.now() - c.t < 60_000) return c.v;
+  if (_qPending.has(a)) return _qPending.get(a);
+  const p = (async () => {
+    try {
+      const { EXPLORER } = await import("./config.js");
+      const j = await (await fetch(`${EXPLORER}/api/v2/tokens/${a}`, { signal: AbortSignal.timeout(5000) })).json();
+      const v = parseFloat(j?.exchange_rate);
+      if (v > 0) {
+        quoteCache[a] = { v, t: Date.now() };
+        try { localStorage.setItem(QUOTE_LS, JSON.stringify(quoteCache)); } catch (e) { /* ignore */ }
+        return v;
+      }
+    } catch (e) { /* нет курса — покажем в валюте */ }
+    return c?.v ?? 0;
+  })();
+  _qPending.set(a, p);
+  try { return await p; } finally { _qPending.delete(a); }
+}
+
+export function useQuoteUsd(addr) {
+  const a = String(addr || "").toLowerCase();
+  const [rate, setRate] = useState(quoteCache[a]?.v ?? 0);
+  useEffect(() => {
+    if (!a) return;
+    let alive = true;
+    quoteUsd(a).then((v) => alive && setRate(v));
+    return () => { alive = false; };
+  }, [a]);
+  return a ? rate : 0;
+}

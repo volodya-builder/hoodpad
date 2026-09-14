@@ -133,7 +133,11 @@ export const CATS_LIVE = Boolean(CATS_ADDRESS && CAT_BOX_ADDRESS);
 
 // ——— RWA-лончпад: запуск токенов за токенизированные акции ———
 // Пусто = форма запуска за акции сохраняет черновик вместо транзакции.
-export const QUOTE_FACTORY_ADDRESS = import.meta.env.VITE_QUOTE_FACTORY_ADDRESS ?? "";
+// Фабрика монет за ERC20-валюту (USDG, акции, WETH…) с дивидендами холдерам.
+// Задеплоена владельцем 14.09.2026, проверена на цепи: MAX_DIV_BPS=300,
+// 15 валют в белом списке, USDG в 6 знаках. Мигратор: 0xa487…1fd0.
+export const QUOTE_FACTORY_ADDRESS =
+  import.meta.env.VITE_QUOTE_FACTORY_ADDRESS ?? "0xd7299e03c5e7d4f9f4c62f305a0b619359cf9a4f";
 export const QUOTE_LIVE = Boolean(QUOTE_FACTORY_ADDRESS);
 
 // On-chain chat contract (messages are events; zero = not deployed yet)
