@@ -349,6 +349,10 @@ async function main() {
     round: work.round,
     symbol,
     task: work.task,
+    // Путь относительно сайта. Абсолютный url оставляем для сведения, но
+    // ссылку журнал строит из path: на тестовом сайте страница живёт под
+    // /staging/, и жёсткая ссылка на боевой домен там ведёт в 404.
+    path: `agents/${symbol.toLowerCase()}/`,
     url,
     model,
     spent: cost || 0,
