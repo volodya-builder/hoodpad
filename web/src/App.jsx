@@ -17,7 +17,7 @@ import Cats from "./pages/Cats.jsx";
 import { connectWallet, reconnectWallet, hasWallet, short, fmt, fmtEth, publicClient } from "./lib/web3.js";
 import { CHAIN, FACTORY_ADDRESS, TREASURY_ADDRESS, CHAT_DB_URL, FEATURES } from "./lib/config.js";
 import { treasuryAbi } from "./lib/abi.js";
-import { loadTokens } from "./lib/data.js";
+import { loadTokens, timeAgo } from "./lib/data.js";
 import { useEthUsd, usd } from "./lib/price.js";
 import { useLang } from "./lib/i18n.jsx";
 import { formatEther } from "viem";
@@ -33,21 +33,97 @@ function useHashRoute() {
 }
 
 
+/** Подсветка совпавшего куска — чтобы глазом было видно, почему строка нашлась. */
+function Mark({ text, q }) {
+  if (!q) return <>{text}</>;
+  const i = text.toLowerCase().indexOf(q.toLowerCase());
+  if (i < 0) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, i)}
+      <mark className="sr-mark">{text.slice(i, i + q.length)}</mark>
+      {text.slice(i + q.length)}
+    </>
+  );
+}
+
+const SR_SORTS = [
+  ["rel", "Релевантность"],
+  ["mcap", "Капитализация"],
+  ["new", "Новые"],
+  ["old", "Старые"],
+];
+
 function SearchModal({ open, onClose }) {
   const { t } = useLang();
   const rate = useEthUsd();
   const [q, setQ] = useState("");
+  const [sort, setSort] = useState("rel");
+  const [cur, setCur] = useState(0);
   const [tokens, setTokens] = useState(null);
+  const listRef = React.useRef(null);
+
   useEffect(() => {
     if (!open) return;
-    setQ("");
+    setQ(""); setSort("rel"); setCur(0);
     loadTokens().then(setTokens).catch(() => setTokens([]));
   }, [open]);
+
+  const mcapOf = React.useCallback(
+    (r) => Number(formatEther(r.price)) * 1e9 * (rate || 0), [rate]);
+
+  // Ранжирование: точное совпадение тикера важнее, чем случайная
+  // подстрока в середине названия. Иначе «app» находит «apple» позже,
+  // чем какой-нибудь «Grappling».
+  const res = React.useMemo(() => {
+    const all = tokens ?? [];
+    const s = q.trim().toLowerCase();
+    let list = all;
+    if (s) {
+      list = [];
+      for (const r of all) {
+        const sym = (r.symbol || "").toLowerCase();
+        const nm = (r.name || "").toLowerCase();
+        const addr = (r.token || "").toLowerCase();
+        let score = -1;
+        if (sym === s) score = 0;
+        else if (sym.startsWith(s)) score = 1;
+        else if (nm.startsWith(s)) score = 2;
+        else if (sym.includes(s)) score = 3;
+        else if (nm.includes(s)) score = 4;
+        else if (addr.includes(s)) score = 5;
+        if (score >= 0) list.push({ r, score });
+      }
+      list.sort((a, b) => a.score - b.score || mcapOf(b.r) - mcapOf(a.r));
+      list = list.map((x) => x.r);
+    }
+    const out = [...list];
+    if (sort === "mcap") out.sort((a, b) => mcapOf(b) - mcapOf(a));
+    else if (sort === "new") out.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    else if (sort === "old") out.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    else if (!s) out.sort((a, b) => mcapOf(b) - mcapOf(a));
+    return out.slice(0, 30);
+  }, [tokens, q, sort, mcapOf]);
+
+  useEffect(() => { setCur(0); }, [q, sort]);
+
+  // Держим выбранную строку в поле зрения при ходьбе стрелками.
+  useEffect(() => {
+    const el = listRef.current && listRef.current.children[cur];
+    if (el && el.scrollIntoView) el.scrollIntoView({ block: "nearest" });
+  }, [cur]);
+
   if (!open) return null;
-  const res = (tokens ?? []).filter(
-    (t) => !q || t.name.toLowerCase().includes(q.toLowerCase()) ||
-           t.symbol.toLowerCase().includes(q.toLowerCase())
-  ).slice(0, 8);
+
+  const go = (r) => { onClose(); window.location.hash = `#/token/${r.token}`; };
+
+  const onKey = (e) => {
+    if (e.key === "Escape") { onClose(); return; }
+    if (e.key === "ArrowDown") { e.preventDefault(); setCur((c) => Math.min(res.length - 1, c + 1)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setCur((c) => Math.max(0, c - 1)); }
+    else if (e.key === "Enter" && res[cur]) { go(res[cur]); }
+  };
+
   return (
     <div className="modal-back open" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="search-modal">
@@ -55,28 +131,58 @@ function SearchModal({ open, onClose }) {
           autoFocus
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder={t("Поиск токена по имени или тикеру…")}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") onClose();
-            if (e.key === "Enter" && res[0]) { onClose(); window.location.hash = `#/token/${res[0].token}`; }
-          }}
+          placeholder={t("Имя, тикер или адрес контракта…")}
+          onKeyDown={onKey}
         />
-        <div className="sr-list">
+
+        <div className="sr-sorts">
+          <span className="sr-sorts-lbl">{t("Сортировка")}</span>
+          {SR_SORTS.map(([k, lbl]) => (
+            <button
+              key={k}
+              className={`sr-sort ${sort === k ? "on" : ""}`}
+              onClick={() => setSort(k)}
+            >
+              {t(lbl)}
+            </button>
+          ))}
+        </div>
+
+        <div className="sr-list" ref={listRef}>
           {tokens === null && <div className="center" style={{ padding: "20px 0" }}>{t("Загружаю…")}</div>}
           {tokens !== null && res.length === 0 && (
             <div className="center" style={{ padding: "20px 0" }}>{t("Ничего не найдено")}</div>
           )}
-          {res.map((r) => (
-            <div className="sr-item" key={r.token}
-                 onClick={() => { onClose(); window.location.hash = `#/token/${r.token}`; }}>
-              {r.meta.image && <img src={r.meta.image} alt="" />}
-              <span className="n">{r.name} <span className="ticker">${r.symbol}</span></span>
+          {res.map((r, i) => (
+            <div
+              className={`sr-item ${i === cur ? "on" : ""}`}
+              key={r.token}
+              onMouseEnter={() => setCur(i)}
+              onClick={() => go(r)}
+            >
+              {r.meta && r.meta.image
+                ? <img src={r.meta.image} alt="" />
+                : <span className="sr-noimg" />}
+              <span className="n">
+                <Mark text={r.name} q={q} />{" "}
+                <span className="ticker">$<Mark text={r.symbol} q={q} /></span>
+              </span>
+              <span className="sr-age">{r.createdAt ? timeAgo(r.createdAt) : ""}</span>
               <span className="m">
-                {usd(Number(formatEther(r.price)) * 1e9 * rate)}{r.graduated ? " · 🎯" : ""}
+                {usd(mcapOf(r))}{r.graduated ? " · 🎯" : ""}
               </span>
             </div>
           ))}
         </div>
+
+        {tokens !== null && res.length > 0 && (
+          <div className="sr-hint">
+            <span>{res.length} {t("найдено")}</span>
+            <span className="sr-keys">
+              <kbd>↑</kbd><kbd>↓</kbd> {t("выбрать")} · <kbd>↵</kbd> {t("открыть")} · <kbd>Esc</kbd> {t("закрыть")}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
