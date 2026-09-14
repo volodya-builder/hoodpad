@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { formatEther } from "viem";
+import { formatEther, formatUnits } from "viem";
 import { loadTokens, subgraphStats24 } from "../lib/data.js";
-import { useEthUsd, usd } from "../lib/price.js";
+import { useEthUsd, usd, quoteUsd } from "../lib/price.js";
 import { fmtEth, fmt } from "../lib/web3.js";
 import { useLang } from "../lib/i18n.jsx";
 import { useFavs, toggleFav } from "../lib/favs.js";
@@ -32,7 +32,24 @@ export default function TokenSidebar({ current }) {
 
 
   const volOf = (tok) => st.vol[(tok.pool || "").toLowerCase()] || 0;
-  const mcapOf = (tok) => Number(formatEther(tok.price)) * 1e9;
+  // Курсы валют монет за акцию/крипту — чтобы капа в списке считалась в
+  // долларах через курс валюты, а не через ETH (иначе 10 AAPL → «$25k»).
+  const [qRates, setQRates] = useState({});
+  useEffect(() => {
+    const addrs = [...new Set((tokens || []).filter((x) => x.q).map((x) => x.q.addr))];
+    if (!addrs.length) return;
+    let alive = true;
+    Promise.all(addrs.map((a) => quoteUsd(a).then((v) => [a, v]))).then((rows) => {
+      if (alive) setQRates(Object.fromEntries(rows));
+    });
+    return () => { alive = false; };
+  }, [tokens]);
+  // Капа в долларах. Для ETH-монет — через курс ETH; для монет за валюту —
+  // через курс валюты, а нет курса — 0 (показываем прочерк, а не выдумку).
+  const mcapUsdOf = (tok) => tok.q
+    ? Number(formatUnits(tok.price, tok.q.dec)) * 1e9 * (qRates[tok.q.addr] || 0)
+    : Number(formatEther(tok.price)) * 1e9 * rate;
+  const mcapOf = (tok) => mcapUsdOf(tok);
   const chgOf = (tok) => {
     const p0 = st.first[(tok.pool || "").toLowerCase()];
     if (!p0) return null;
@@ -89,7 +106,7 @@ export default function TokenSidebar({ current }) {
                   {v > 0 ? (v * rate >= 1000 ? usd(v * rate) : "$" + (v * rate).toFixed(2)) : "—"}
                 </span>
               </span>
-              <span className="ts-price">{usd(mcapOf(x) * rate)}</span>
+              <span className="ts-price">{mcapUsdOf(x) > 0 ? usd(mcapUsdOf(x)) : "—"}</span>
               <span className={`ts-chg ${ch == null ? "dim" : ch >= 0 ? "side-buy" : "side-sell"}`}
                     title={t("Изменение цены за 24ч")}>
                 {ch == null ? "—" : `${ch >= 0 ? "+" : ""}${fmt(ch, 1)}%`}
