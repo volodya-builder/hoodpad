@@ -187,7 +187,22 @@ q:{…}}` по обеим фабрикам; «Создать» показыва�
 не строит монеты с `aiOf = false` (адрес — `FEE_SPLITTER` в окружении
 или `feeSplitter` в deploy-config.json).
 
-## Мастерская и журнал агента (13.09.2026)
+## Вкладка «ИИ» = живая доска идей (14.09.2026) — читать CONCEPT-AI-BOARD.md
+
+Недельные раунды выключены (`FEATURES.weeklyWorkshop: false`; Workshop/Queue/
+Journal остаются в коде). Работает доска: `web/src/lib/board.js` (RTDB
+`workshop/board/<token>/{proposals,votes,building}`, подписи как в weekly,
+поток EventSource + опрос 10 с), `components/Board.jsx` (вкладка «ИИ» и
+вкладка ИИ страницы монеты), агент `scripts/agent-run.mjs` → `findBoardWork()`
+(обе фабрики, только `aiOf = true`, верхняя идея с весом > 0, первые
+FREE_BUILDS=3 сборки бесплатно, дальше бюджет AgentTreasury ≥ BUILD_USD=0.5,
+round-robin по монетам, папка `agents/<символ>/<pid>/`, провал — тоже в
+builds.json с `failed: true`). Cron `agent.yml` — `*/5`. Результаты сайт
+читает из `hoodandarrow.com/staging/agents/builds.json` (агент коммитит в
+staging), ссылки ведут на staging. Известные дыры v1: открытая база (чужой
+голос можно удалить), балансы без снимка, on-chain списание бюджета не из CI.
+
+## Мастерская и журнал агента (13.09.2026) — устарело, см. выше
 
 Вкладка «Мастерская» (`web/src/pages/AI.jsx`) — всё про ИИ-агентов монет. Три живых блока:
 

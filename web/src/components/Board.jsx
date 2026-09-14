@@ -35,12 +35,23 @@ export default function Board({ token: fixed, wallet, onConnect, embedded = fals
 
   useEffect(() => { const i = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(i); }, []);
 
-  // монеты — для выбора и для картинок/символов
+  // монеты — для выбора и для картинок/символов. У кого ИИ включён — те
+  // первыми и с пометкой: агент работает только на них.
   useEffect(() => {
-    loadTokens().then((list) => {
-      setTokens(list || []);
-      if (!fixed && list && list.length && !sel) setSel(list[0].token);
-    }).catch(() => setTokens([]));
+    let alive = true;
+    loadTokens().then(async (list) => {
+      let arr = list || [];
+      if (SPLITTER_LIVE && arr.length) {
+        const flags = await Promise.all(arr.map((x) =>
+          publicClient.readContract({ address: FEE_SPLITTER_ADDRESS, abi: feeSplitterAbi, functionName: "aiOf", args: [x.token] }).catch(() => false)));
+        arr = arr.map((x, i) => ({ ...x, aiOn: Boolean(flags[i]) }));
+        arr = [...arr.filter((x) => x.aiOn), ...arr.filter((x) => !x.aiOn)];
+      }
+      if (!alive) return;
+      setTokens(arr);
+      if (!fixed && arr.length && !sel) setSel(arr[0].token);
+    }).catch(() => { if (alive) setTokens([]); });
+    return () => { alive = false; };
   }, [fixed]); // eslint-disable-line
 
   // доска: первая загрузка + живой поток + запасной опрос
@@ -163,7 +174,7 @@ export default function Board({ token: fixed, wallet, onConnect, embedded = fals
       <div className="board-head">
         {!fixed && (
           <select className="wsh-sel" value={sel} onChange={(e) => setSel(e.target.value)}>
-            {tokens.map((x) => <option key={x.token} value={x.token}>${x.symbol} — {x.name}</option>)}
+            {tokens.map((x) => <option key={x.token} value={x.token}>${x.symbol} — {x.name}{x.aiOn ? " · ИИ" : ""}</option>)}
           </select>
         )}
         <div className="board-agent">
@@ -186,6 +197,11 @@ export default function Board({ token: fixed, wallet, onConnect, embedded = fals
 
       <div className="board-cols">
         <div className="board-main">
+          {aiOff ? (
+            <div className="ai-empty">
+              {t("У этой монеты ИИ не включён: агент на неё не работает, идеи копить некуда. Включить может создатель одной подписью на странице монеты.")}
+            </div>
+          ) : (
           <div className="board-form">
             <textarea value={text} onChange={(e) => setText(e.target.value.slice(0, 280))} rows={2}
                       placeholder={t("Что построить? Например: игра-кликер с рекордами, страница-мем с генератором подписей, калькулятор…")} />
@@ -202,6 +218,7 @@ export default function Board({ token: fixed, wallet, onConnect, embedded = fals
               </button>
             </div>
           </div>
+          )}
           {err && <div className="error" style={{ marginTop: 10 }}>{err}</div>}
 
           <div className="board-list">

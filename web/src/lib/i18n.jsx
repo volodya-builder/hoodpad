@@ -1470,6 +1470,7 @@ const EN = {
   "Пока ничего. Победившая идея появится здесь ссылкой.": "Nothing yet. The winning idea will appear here as a link.",
   "Агент строит одну страницу за раз, не трогает деньги, не даёт финансовых советов и не выходит за свой поддомен.": "The agent builds one page at a time, never touches money, gives no financial advice and never leaves its own subdomain.",
   "Это зашито в код и не меняется голосованием": "This is hard-coded and cannot be changed by a vote",
+  "У этой монеты ИИ не включён: агент на неё не работает, идеи копить некуда. Включить может создатель одной подписью на странице монеты.": "This coin's AI is off: the agent does not work on it, so there is nowhere to collect ideas. The creator can enable it with one signature on the coin page.",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });
