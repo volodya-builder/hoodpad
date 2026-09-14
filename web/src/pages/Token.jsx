@@ -208,9 +208,12 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const Q = data?.q || null;
   // Платим ETH через zap (обмен по дороге, как терминал у Pons) или самой
   // валютой напрямую. По умолчанию — ETH, если zap умеет эту монету.
+  // Платят всегда ETH (решение владельца 14.09.2026): переключатель
+  // «ETH / валюта» спрятан за FEATURES.payInQuote, обмен делает зап.
+  // Валюта напрямую остаётся только там, где у запа нет маршрута.
   const [payEth, setPayEth] = useState(true);
   const zapOk = Boolean(Q && ZAP_LIVE && data?.zapOk);
-  const viaZap = zapOk && payEth;
+  const viaZap = zapOk && (payEth || !FEATURES.payInQuote);
   // В чём считаем деньги СДЕЛКИ: ETH (обычная монета или zap) или валюта.
   const PAY = Q && !viaZap ? Q : null;
   const QSYM = PAY ? PAY.sym : "ETH";
@@ -1490,7 +1493,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               </div>
             </div>
 
-            {zapOk && (
+            {zapOk && FEATURES.payInQuote && (
               <div className="pay-toggle">
                 <span className="dim">{tab === "buy" ? t("Платить") : t("Получить")}:</span>
                 <button type="button" className={`fpill ${payEth ? "on" : ""}`} onClick={() => setPayEth(true)}>ETH</button>

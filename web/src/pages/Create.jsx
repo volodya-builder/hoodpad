@@ -432,6 +432,7 @@ export default function Create({ wallet, onConnect }) {
 
             {/* Свой адрес — как на flap: любой ERC20 сети. Но решает белый
                 список фабрики, и это сказано рядом, а не спрятано. */}
+            {FEATURES.customQuote && (
             <div className="quote-custom">
               <input className="quote-search" value={customAddr} onChange={(e) => setCustomAddr(e.target.value.trim())}
                      placeholder={t("Свой контракт: 0x…")} spellCheck={false} />
@@ -447,16 +448,15 @@ export default function Create({ wallet, onConnect }) {
                 <span className="dim">{t("По этому адресу нет ERC20-токена.")}</span>
               )}
             </div>
+            )}
 
-            <div className="hint">
-              {quote === "ETH"
-                ? t("Токен торгуется за ETH — работает сейчас.")
-                : !QUOTE_LIVE
+            {quote !== "ETH" && <div className="hint">
+              {!QUOTE_LIVE
                   ? t("Запуск за {sym} откроется с деплоем ERC20-пула курвы — контракты готовы и проверены. Выбор сохранится в черновике.").replace("{sym}", quote)
                   : quoteAllowed
                     ? t("Токен торгуется за {sym}, дивиденды холдерам — в {sym}. Покупать можно и за ETH: обмен делается по дороге, одной транзакцией.").replace(/\{sym\}/g, quote)
                     : t("{sym} пока не в белом списке фабрики. Валюты с комиссией на перевод или ребейзом ломают кривую, поэтому каждую проверяем перед добавлением. Выбор сохранится в черновике.").replace("{sym}", quote)}
-            </div>
+            </div>}
           </>
         ) : (
           <>
