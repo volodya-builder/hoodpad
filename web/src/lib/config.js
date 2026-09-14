@@ -149,7 +149,10 @@ export const QUOTE_LIVE = Boolean(QUOTE_FACTORY_ADDRESS);
 // CurveZap — «купить/продать монету за валюту, платя ETH»: меняет ETH на
 // валюту монеты через Uniswap V3 и покупает на кривой одной транзакцией.
 // Как терминал GMGN для монет Pons. Пусто = покупка только за саму валюту.
-export const ZAP_ADDRESS = import.meta.env.VITE_ZAP_ADDRESS ?? "";
+// Задеплоен владельцем 14.09.2026, проверен на цепи: смотрит на quote-фабрику
+// 0xd729…9a4f, WETH и Uniswap V3 Factory сети; 12 маршрутов (LINK/PENDLE —
+// без пулов, маршрута нет). Владелец — кошелёк команды.
+export const ZAP_ADDRESS = import.meta.env.VITE_ZAP_ADDRESS ?? "0xab963a68f495097aa434fff8e183de5ab86d5099";
 export const ZAP_LIVE = Boolean(ZAP_ADDRESS);
 export const WETH_ADDRESS = "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73";
 
