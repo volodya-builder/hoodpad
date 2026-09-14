@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo, useRef } from "react"
 import { parseEther, formatEther, parseUnits, formatUnits } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi, zapAbi } from "../lib/abi.js";
-import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE } from "../lib/config.js";
+import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, FEATURES } from "../lib/config.js";
 import { poolTrades, invalidateTrades, loadTokens, allTrades, parseMeta } from "../lib/data.js";
 import { computeTrust } from "../lib/trust.js";
 import { honestVolume } from "../lib/fairvol.js";
@@ -958,8 +958,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             </>
           )}
 
-          {/* hood AI — судья платформы: Trust Score с объяснением */}
-          {history && history.trades && (() => {
+          {/* hood AI — судья платформы: Trust Score с объяснением.
+              За флагом FEATURES.trustScore — владелец счёл лишним. */}
+          {FEATURES.trustScore && history && history.trades && (() => {
             const tr = computeTrust({
               tokenAddr: tokenAddress,
               trades: history.trades,
