@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { parseEther, formatEther, parseUnits, decodeEventLog } from "viem";
 import { publicClient } from "../lib/web3.js";
 import { factoryAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi } from "../lib/abi.js";
-import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE } from "../lib/config.js";
+import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, FEATURES } from "../lib/config.js";
 import { useSplit, injectNewToken } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 import { RWA_TOKENS, RWA_POPULAR, stockLogo, CHAIN_LOGOS } from "../lib/rwa.js";
@@ -342,6 +342,7 @@ export default function Create({ wallet, onConnect }) {
           </div>
         </div>
 
+        {FEATURES.quoteLaunch && (<>
         <label>{t("Валюта курвы")}</label>
         <div className="quote-tabs">
           <button type="button" className={`quote-tab ${quoteTab === "crypto" ? "on" : ""}`}
@@ -428,6 +429,7 @@ export default function Create({ wallet, onConnect }) {
             </div>
           </>
         )}
+        </>)}
 
         {models !== null && models.length > 0 && (
           <>
@@ -458,7 +460,7 @@ export default function Create({ wallet, onConnect }) {
           </>
         )}
 
-        {quote !== "ETH" && (
+        {FEATURES.quoteLaunch && quote !== "ETH" && (
           <>
             <label>{t("Дивиденды холдерам")}</label>
             <div className="quote-grid">
