@@ -127,6 +127,10 @@ export default function Create({ wallet, onConnect }) {
   const [customAddr, setCustomAddr] = useState("");
   const [custom, setCustom] = useState(null); // валюта по своему адресу
   const [customBusy, setCustomBusy] = useState(false);
+  // Налог в пользу холдеров, bps: 0 / 100 / 200 / 300. Берётся с каждой
+  // сделки на кривой в валюте монеты и раздаётся по балансам. Только для
+  // монет за ERC20-валюту: у ETH-фабрики такого механизма нет.
+  const [divBps, setDivBps] = useState(0);
   useEffect(() => {
     let on = true;
     loadCryptoQuotes(60, (part) => on && setCrypto(part)).then((x) => on && setCrypto(x));
@@ -206,7 +210,7 @@ export default function Create({ wallet, onConnect }) {
       // Валюта выбрана, но запустить за неё пока нельзя: либо quote-фабрика
       // ещё не задеплоена, либо валюты нет в её белом списке. Черновик
       // сохраняем — это и есть спрос, по которому список пополняется.
-      try { localStorage.setItem("hood_quote_draft", JSON.stringify({ form, ai, quote, quoteAddr, quoteDec, savedAt: Date.now() })); } catch (e) { /* ignore */ }
+      try { localStorage.setItem("hood_quote_draft", JSON.stringify({ form, ai, quote, quoteAddr, quoteDec, divBps, savedAt: Date.now() })); } catch (e) { /* ignore */ }
       return setError(!QUOTE_LIVE
         ? t("Запуск за {sym} откроется с деплоем ERC20-пула курвы. Черновик сохранён.").replace("{sym}", quote)
         : t("{sym} пока не в белом списке фабрики. Черновик сохранён — валюту проверим и добавим.").replace("{sym}", quote));
@@ -251,7 +255,7 @@ export default function Create({ wallet, onConnect }) {
           address: QUOTE_FACTORY_ADDRESS,
           abi: quoteFactoryAbi,
           functionName: "createToken",
-          args: [form.name.trim(), form.symbol.trim(), uri, quoteAddr, form.creatorWallet.trim() || ZERO],
+          args: [form.name.trim(), form.symbol.trim(), uri, quoteAddr, form.creatorWallet.trim() || ZERO, divBps],
         });
       } else {
         const value = buyValue > 0 ? parseEther(form.initialBuy) : 0n;
@@ -444,6 +448,25 @@ export default function Create({ wallet, onConnect }) {
                 ? t("ИИ монеты будет работать на {m} — это модель {by}, одна страница на ней обходится примерно в {c}. Выбор записывается в саму монету и виден всем. Если её снимут с обслуживания, агент возьмёт другую и честно напишет об этом в журнале.")
                     .replace("{m}", aiPick.name).replace("{by}", aiPick.by).replace("{c}", costLabel(aiPick.cost))
                 : t("Можно не выбирать — агент возьмёт лучшую доступную. Список живой: модели отсортированы по тому, насколько хорошо они делают веб-страницы, а это и есть работа агента.")}
+            </div>
+          </>
+        )}
+
+        {quote !== "ETH" && (
+          <>
+            <label>{t("Дивиденды холдерам")}</label>
+            <div className="quote-grid">
+              {[0, 100, 200, 300].map((b) => (
+                <button type="button" key={b} className={`quote-chip ${divBps === b ? "on" : ""}`}
+                        onClick={() => setDivBps(b)}>
+                  {b === 0 ? t("без дивидендов") : `${b / 100}%`}
+                </button>
+              ))}
+            </div>
+            <div className="hint">
+              {divBps === 0
+                ? t("Можно включить налог 1–3% с каждой сделки: он берётся в {q} и раздаётся холдерам по балансу. Держишь — капает, продал — перестало.").replace("{q}", quote)
+                : t("С каждой покупки и продажи {p}% уходит холдерам — в {q}, а не в самой монете. Это сверх комиссии площадки; трейдер видит полную ставку до сделки. Ставка записывается в контракт и не меняется.").replace("{p}", String(divBps / 100)).replace("{q}", quote)}
             </div>
           </>
         )}
@@ -661,6 +684,9 @@ export default function Create({ wallet, onConnect }) {
           <div className="row"><span className="k">{t("Градация")}</span><span className="v">
             {quote === "ETH" ? "6.5 ETH" : t("порог в {q}").replace("{q}", quote)}
           </span></div>
+          {quote !== "ETH" && divBps > 0 && (
+            <div className="row"><span className="k">{t("Дивиденды холдерам")}</span><span className="v">{divBps / 100}% {t("в")} {quote}</span></div>
+          )}
           <div className="row"><span className="k">{t("Ликвидность")}</span><span className="v">{t("Заперта навсегда")}</span></div>
           {buyValue > 0 && (
             <div className="row"><span className="k">{t("Ваша покупка")}</span><span className="v">{form.initialBuy} {quote}</span></div>

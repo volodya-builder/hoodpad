@@ -183,7 +183,8 @@ async function main() {
   console.log("\nСохранено в quote-addresses.txt");
   console.log("\nДальше:");
   console.log("  1) вписать адрес фабрики во фронт — форма запуска за акции разблокируется");
-  console.log("  2) сабграф: добавить quote-фабрику, иначе RWA-токены не появятся в списках");
+  console.log("  2) сабграф: добавить quote-фабрику (событие TokenCreated теперь с полем divBps),");
+  console.log("     иначе монеты за валюту не появятся в списках");
   console.log("  3) верификация в Blockscout");
 }
 

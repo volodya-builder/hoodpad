@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {LaunchToken} from "./LaunchToken.sol";
+import {DividendToken} from "./DividendToken.sol";
 import {BondingCurvePoolQuote} from "./BondingCurvePoolQuote.sol";
 
 /// @title LaunchpadFactoryQuote
@@ -59,8 +59,12 @@ contract LaunchpadFactoryQuote is Ownable {
         address indexed token,
         address indexed pool,
         address indexed creator,
-        address quote
+        address quote,
+        uint16 divBps
     );
+
+    /// @notice Потолок налога в пользу холдеров. Выбирает создатель: 0–3%.
+    uint16 public constant MAX_DIV_BPS = 300;
     event QuoteSet(address indexed quote, bool allowed, uint256 virtualQuote, uint256 creatorBuyCap);
     event ConfigUpdated(address treasury, address migrator, uint16 feeBps, uint16 creatorFeeShareBps);
     event ConfigProposed(address treasury, address migrator, uint16 feeBps, uint16 creatorFeeShareBps, uint256 readyAt);
@@ -96,19 +100,24 @@ contract LaunchpadFactoryQuote is Ownable {
     /// @notice Запустить токен на кривой с валютой `quote`. Первая покупка
     ///         создателя — отдельным вызовом buy() с approve (ERC20 не может
     ///         прийти вместе с деплоем, как ETH).
+    /// @param divBps налог в пользу холдеров с каждой сделки кривой, bps
+    ///        (0, 100, 200 или 300 в форме; контракт допускает любое до 300).
+    ///        Берётся в валюте монеты и раздаётся по балансам. Неизменяем.
     function createToken(
         string calldata name,
         string calldata symbol,
         string calldata metadataURI,
         address quote,
-        address creatorWallet
+        address creatorWallet,
+        uint16 divBps
     ) external returns (address tokenAddr, address poolAddr) {
         require(bytes(name).length > 0 && bytes(name).length <= MAX_NAME_LEN, "name len");
         require(bytes(symbol).length > 0 && bytes(symbol).length <= MAX_SYMBOL_LEN, "symbol len");
         require(bytes(metadataURI).length <= MAX_URI_LEN, "uri len");
         require(quoteConfig[quote].allowed, "quote not allowed");
+        require(divBps <= MAX_DIV_BPS, "div>3%");
         address creator_ = creatorWallet == address(0) ? msg.sender : creatorWallet;
-        return _launch(name, symbol, metadataURI, quote, creator_);
+        return _launch(name, symbol, metadataURI, quote, creator_, divBps);
     }
 
     /// @dev Вся тяжёлая работа в одной внутренней функции — createToken держит
@@ -119,14 +128,25 @@ contract LaunchpadFactoryQuote is Ownable {
         string calldata symbol,
         string calldata metadataURI,
         address quote,
-        address creator_
+        address creator_,
+        uint16 divBps
     ) internal returns (address tokenAddr, address poolAddr) {
         QuoteConfig memory qc = quoteConfig[quote];
-        BondingCurvePoolQuote pool = new BondingCurvePoolQuote(
-            _predictTokenAddress(), quote, creator_,
-            TOTAL_SUPPLY, SALE_CAP, qc.virtualQuote, feeBps, creatorFeeShareBps, qc.creatorBuyCap
+        BondingCurvePoolQuote pool = new BondingCurvePoolQuote(BondingCurvePoolQuote.Params({
+            token: _predictTokenAddress(),
+            quote: quote,
+            creator: creator_,
+            totalSupply: TOTAL_SUPPLY,
+            saleCap: SALE_CAP,
+            virtualQuote: qc.virtualQuote,
+            feeBps: feeBps,
+            creatorFeeShareBps: creatorFeeShareBps,
+            creatorBuyCap: qc.creatorBuyCap,
+            divBps: divBps
+        }));
+        DividendToken token = new DividendToken(
+            name, symbol, metadataURI, address(pool), quote, divBps, TOTAL_SUPPLY
         );
-        LaunchToken token = new LaunchToken(name, symbol, metadataURI, address(pool), TOTAL_SUPPLY);
         require(address(token) == address(pool.token()), "addr mismatch");
 
         tokenAddr = address(token);
@@ -136,7 +156,7 @@ contract LaunchpadFactoryQuote is Ownable {
         isPool[poolAddr] = true;
         quoteOf[tokenAddr] = quote;
 
-        emit TokenCreated(tokenAddr, poolAddr, creator_, quote);
+        emit TokenCreated(tokenAddr, poolAddr, creator_, quote, divBps);
     }
 
     function _predictTokenAddress() internal view returns (address) {

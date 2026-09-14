@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { parseEther, formatEther } from "viem";
+import { parseEther, formatEther, parseUnits, formatUnits } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
-import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi } from "../lib/abi.js";
-import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
+import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi } from "../lib/abi.js";
+import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE } from "../lib/config.js";
 import { poolTrades, invalidateTrades, loadTokens, allTrades, parseMeta } from "../lib/data.js";
 import { computeTrust } from "../lib/trust.js";
 import { honestVolume } from "../lib/fairvol.js";
@@ -16,6 +16,7 @@ import { useLang } from "../lib/i18n.jsx";
 import { modelLogo, makerOf } from "../lib/models.mjs";
 import CandleChart from "../components/CandleChart.jsx";
 import TokenSidebar from "../components/TokenSidebar.jsx";
+import Dividends from "../components/Dividends.jsx";
 import { useFavs, toggleFav } from "../lib/favs.js";
 import { currentPosition } from "../lib/position.js";
 import RGL, { WidthProvider } from "react-grid-layout";
@@ -195,6 +196,15 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const support = useSupport();
   const cushion = support.per[tokenAddress?.toLowerCase()]?.eth || 0;
   const [data, setData] = useState(null);
+  // Единицы валюты курвы. ETH-монета: 18 знаков и подпись ETH. Quote-монета:
+  // знаки и символ её валюты (у USDG 6). Всё, что ниже считает деньги
+  // кривой, ходит через эти три функции, а не через parseEther напрямую.
+  const Q = data?.q || null;
+  const QSYM = Q ? Q.sym : "ETH";
+  const pq = (v) => (Q ? parseUnits(String(v), Q.dec) : parseEther(String(v)));
+  const fq = (v) => (Q ? formatUnits(v, Q.dec) : formatEther(v));
+  // Запас на газ нужен только когда платим нативным ETH.
+  const GAS_KEEP = Q ? 0 : 0.0003;
   const [meta, setMeta] = useState({});
   const [tab, setTab] = useState("buy");
   const [amount, setAmount] = useState("");
@@ -412,7 +422,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   // Прайс-импакт: насколько сделка сдвинет цену относительно спота
   const impact = useMemo(() => {
     if (!quote || !data || !amount || Number(amount) <= 0) return null;
-    const spot = Number(formatEther(data.price));
+    const spot = Number(fq(data.price));
     if (spot <= 0) return null;
     if (tab === "buy" && quote.kind === "tokens") {
       const tokens = Number(formatEther(quote.value));
@@ -421,7 +431,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       return (eff / spot - 1) * 100;
     }
     if (tab === "sell" && quote.kind === "eth") {
-      const eth = Number(formatEther(quote.value));
+      const eth = Number(fq(quote.value));
       const tokens = Number(amount);
       if (tokens <= 0) return null;
       const eff = eth / tokens;
@@ -431,27 +441,50 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   }, [quote, data, amount, tab]);
 
   const load = useCallback(async () => {
-    const pool = await publicClient.readContract({
+    const ZERO = "0x0000000000000000000000000000000000000000";
+    let pool = await publicClient.readContract({
       address: FACTORY_ADDRESS,
       abi: factoryAbi,
       functionName: "poolOf",
       args: [tokenAddress],
     });
+    // Монеты за ERC20-валюту (USDG, акции) живут в quote-фабрике. У них
+    // другая ABI пула и своя валюта; q — всё, что о ней нужно знать странице.
+    let q = null;
+    if (pool === ZERO && QUOTE_LIVE) {
+      pool = await publicClient.readContract({
+        address: QUOTE_FACTORY_ADDRESS, abi: quoteFactoryAbi, functionName: "poolOf", args: [tokenAddress],
+      });
+      if (pool !== ZERO) {
+        const addr = await publicClient.readContract({
+          address: QUOTE_FACTORY_ADDRESS, abi: quoteFactoryAbi, functionName: "quoteOf", args: [tokenAddress],
+        });
+        const [sym, dec] = await Promise.all([
+          publicClient.readContract({ address: addr, abi: erc20Abi, functionName: "symbol" }).catch(() => "?"),
+          publicClient.readContract({ address: addr, abi: erc20Abi, functionName: "decimals" }).catch(() => 18),
+        ]);
+        q = { addr, sym: String(sym), dec: Number(dec) };
+      }
+    }
+    const divBps = q
+      ? Number(await publicClient.readContract({ address: pool, abi: quotePoolAbi, functionName: "divBps" }).catch(() => 0))
+      : 0;
+    const pAbi = q ? quotePoolAbi : poolAbi;
     const [name, symbol, uri, price, sold, cap, reserve, graduated, migrated, creator] =
       await Promise.all([
         publicClient.readContract({ address: tokenAddress, abi: tokenAbi, functionName: "name" }),
         publicClient.readContract({ address: tokenAddress, abi: tokenAbi, functionName: "symbol" }),
         publicClient.readContract({ address: tokenAddress, abi: tokenAbi, functionName: "metadataURI" }),
-        publicClient.readContract({ address: pool, abi: poolAbi, functionName: "spotPrice" }),
-        publicClient.readContract({ address: pool, abi: poolAbi, functionName: "tokensSold" }),
-        publicClient.readContract({ address: pool, abi: poolAbi, functionName: "saleCap" }),
-        publicClient.readContract({ address: pool, abi: poolAbi, functionName: "ethReserve" }),
-        publicClient.readContract({ address: pool, abi: poolAbi, functionName: "graduated" }),
-        publicClient.readContract({ address: pool, abi: poolAbi, functionName: "migrated" }),
-        publicClient.readContract({ address: pool, abi: poolAbi, functionName: "creator" }),
+        publicClient.readContract({ address: pool, abi: pAbi, functionName: "spotPrice" }),
+        publicClient.readContract({ address: pool, abi: pAbi, functionName: "tokensSold" }),
+        publicClient.readContract({ address: pool, abi: pAbi, functionName: "saleCap" }),
+        publicClient.readContract({ address: pool, abi: pAbi, functionName: q ? "quoteReserve" : "ethReserve" }),
+        publicClient.readContract({ address: pool, abi: pAbi, functionName: "graduated" }),
+        publicClient.readContract({ address: pool, abi: pAbi, functionName: "migrated" }),
+        publicClient.readContract({ address: pool, abi: pAbi, functionName: "creator" }),
       ]);
     let balance = 0n;
-    let walletEth = 0n;
+    let walletEth = 0n; // для quote-монеты здесь баланс валюты, не ETH
     if (wallet) {
       [balance, walletEth] = await Promise.all([
         publicClient.readContract({
@@ -460,10 +493,12 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           functionName: "balanceOf",
           args: [wallet.account],
         }),
-        publicClient.getBalance({ address: wallet.account }).catch(() => 0n),
+        q
+          ? publicClient.readContract({ address: q.addr, abi: erc20Abi, functionName: "balanceOf", args: [wallet.account] }).catch(() => 0n)
+          : publicClient.getBalance({ address: wallet.account }).catch(() => 0n),
       ]);
     }
-    setData({ pool, name, symbol, uri, price, sold, cap, reserve, graduated, migrated, creator, balance, walletEth });
+    setData({ pool, name, symbol, uri, price, sold, cap, reserve, graduated, migrated, creator, balance, walletEth, q, divBps });
     setMeta(parseMeta(uri)); // нормализует мусор: null/массив/числа не роняют страницу
   }, [tokenAddress, wallet]);
 
@@ -535,18 +570,21 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     if (!data || !amount || Number(amount) <= 0) return setQuote(null);
     const t = setTimeout(async () => {
       try {
+        const pAbi = data.q ? quotePoolAbi : poolAbi;
         if (tab === "buy") {
           const out = await publicClient.readContract({
-            address: data.pool, abi: poolAbi, functionName: "quoteBuy",
-            args: [parseEther(amount)],
+            address: data.pool, abi: pAbi, functionName: "quoteBuy",
+            args: [pq(amount)],
           });
           setQuote({ kind: "tokens", value: out });
         } else {
           const gross = await publicClient.readContract({
-            address: data.pool, abi: poolAbi, functionName: "quoteSell",
+            address: data.pool, abi: pAbi, functionName: "quoteSell",
             args: [parseEther(amount)],
           });
-          const net = gross - (gross * 100n) / 10000n;
+          // Комиссия площадки 1% плюс, у quote-монет, налог холдерам.
+          const bps = 100n + (data.q ? BigInt(data.divBps || 0) : 0n);
+          const net = gross - (gross * bps) / 10000n;
           setQuote({ kind: "eth", value: net });
         }
       } catch { setQuote(null); }
@@ -563,7 +601,26 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       const slipPct = slip === "auto" ? 40 : Number(slip);
       const slipBps = BigInt(Math.round(slipPct * 100));
       let hash;
-      if (tab === "buy") {
+      if (tab === "buy" && data.q) {
+        // ERC20-валюта не приходит вместе с вызовом, как ETH: сначала
+        // разрешение пулу на сумму, потом сама покупка.
+        const gross = pq(amount);
+        const minOut = quote.value - (quote.value * slipBps) / 10000n;
+        const allowance = await publicClient.readContract({
+          address: data.q.addr, abi: erc20Abi, functionName: "allowance",
+          args: [wallet.account, data.pool],
+        });
+        if (allowance < gross) {
+          const a = await wallet.walletClient.writeContract({
+            address: data.q.addr, abi: erc20Abi, functionName: "approve", args: [data.pool, gross],
+          });
+          await publicClient.waitForTransactionReceipt({ hash: a });
+        }
+        hash = await wallet.walletClient.writeContract({
+          address: data.pool, abi: quotePoolAbi, functionName: "buy",
+          args: [gross, minOut, wallet.account],
+        });
+      } else if (tab === "buy") {
         const minOut = quote.value - (quote.value * slipBps) / 10000n;
         hash = await wallet.walletClient.writeContract({
           address: data.pool, abi: poolAbi, functionName: "buy",
@@ -585,7 +642,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         }
         const minOut = quote.value - (quote.value * slipBps) / 10000n;
         hash = await wallet.walletClient.writeContract({
-          address: data.pool, abi: poolAbi, functionName: "sell",
+          address: data.pool, abi: data.q ? quotePoolAbi : poolAbi, functionName: "sell",
           args: [tokensIn, minOut],
         });
       }
@@ -989,8 +1046,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               )}
             </div>
             <div className="tk-cells">
-              <div className="tk-cell"><span>{t("Цена")}</span><b>{fmtEth(formatEther(data.price))} ETH</b></div>
-              <div className="tk-cell"><span>{t("Собрано")}</span><b>{fmtEth(formatEther(data.reserve))} ETH</b></div>
+              <div className="tk-cell"><span>{t("Цена")}</span><b>{fmtEth(fq(data.price))} {QSYM}</b></div>
+              <div className="tk-cell"><span>{t("Собрано")}</span><b>{fmtEth(fq(data.reserve))} {QSYM}</b></div>
               <div className="tk-cell"><span>{t("Объём 24ч")}</span><b>{tokStats ? fmtEth(tokStats.vol24) : "0"} ETH</b></div>
               <div className="tk-cell"><span>ATH</span><b>{tokStats ? usd(tokStats.ath * rate) : "—"}</b></div>
               {!data.graduated && (
@@ -1319,14 +1376,14 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               </div>
             </div>
 
-            <label>{tab === "buy" ? t("Вы платите (ETH)") : `${t("Вы продаёте")} (${data.symbol})`}</label>
+            <label>{tab === "buy" ? `${t("Вы платите")} (${QSYM})` : `${t("Вы продаёте")} (${data.symbol})`}</label>
             <input
               value={amount}
               onChange={(e) => {
                 setAmount(e.target.value);
                 const n = Number(e.target.value);
                 if (tab === "buy") {
-                  const avail = Math.max(0, Number(formatEther(data.walletEth ?? 0n)) - 0.0003);
+                  const avail = Math.max(0, Number(fq(data.walletEth ?? 0n)) - GAS_KEEP);
                   setTradePct(avail > 0 && n > 0 ? Math.min(100, Math.round((n / avail) * 100)) : 0);
                 } else {
                   const bal = Number(formatEther(data.balance));
@@ -1341,7 +1398,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 <div className="slider-row" style={{ marginTop: 10 }}>
                   <span className="dim">
                     {tab === "buy"
-                      ? `${t("От баланса")} ${fmtEth(Number(formatEther(data.walletEth ?? 0n)))} ETH`
+                      ? `${t("От баланса")} ${fmtEth(Number(fq(data.walletEth ?? 0n)))} ${QSYM}`
                       : `${t("От баланса")} ${fmt(Number(formatEther(data.balance)), 0)} ${data.symbol}`}
                   </span>
                   <b style={{ color: tab === "buy" ? "var(--gold)" : "var(--red)" }}>{tradePct}%</b>
@@ -1352,7 +1409,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                          const v = Number(e.target.value);
                          setTradePct(v);
                          if (tab === "buy") {
-                           const avail = Math.max(0, Number(formatEther(data.walletEth ?? 0n)) - 0.0003);
+                           const avail = Math.max(0, Number(fq(data.walletEth ?? 0n)) - GAS_KEEP);
                            setAmount(v > 0 ? (avail * v / 100).toFixed(6) : "");
                          } else {
                            setAmount(v > 0 ? trimAmt(formatEther((data.balance * BigInt(v)) / 100n)) : "");
@@ -1386,7 +1443,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                        const v = Number(p2) || 0;
                        setTradePct(v);
                        if (tab === "buy") {
-                         const avail = Math.max(0, Number(formatEther(data.walletEth ?? 0n)) - 0.0003);
+                         const avail = Math.max(0, Number(fq(data.walletEth ?? 0n)) - GAS_KEEP);
                          setAmount(v > 0 ? (avail * v / 100).toFixed(6) : "");
                        } else {
                          setAmount(v > 0 ? trimAmt(formatEther((data.balance * BigInt(v)) / 100n)) : "");
@@ -1491,6 +1548,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <Chat tokenAddress={tokenAddress} wallet={wallet} onConnect={onConnect} embedded />
           ) : (
             <div className="side-act">
+              <Dividends token={tokenAddress} wallet={wallet} q={data.q} onConnect={onConnect} />
               {!history && <div className="dim" style={{ padding: 12 }}>{t("Читаю события…")}</div>}
               {history && history.trades.length === 0 && (
                 <div className="dim" style={{ padding: 12 }}>{t("Пока нет сделок.")}</div>
