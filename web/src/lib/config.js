@@ -77,16 +77,18 @@ export const TEAM_ADDRESS =
   (import.meta.env.VITE_TEAM_ADDRESS ?? "0xD3d14c10020ad9C582404669a2Fa11AfF2386255").toLowerCase();
 export const isTeam = (addr) => !!addr && addr.toLowerCase() === TEAM_ADDRESS;
 
-// AgentTreasury — покошельковые бюджеты агентов. Пусто = контракт не
-// развёрнут, и счётчик бюджета на странице монеты не показывается вовсе.
+// AgentTreasury — бюджеты агентов по монетам (ETH и валюта). Задеплоен
+// владельцем 14.09.2026, пополняется сплиттером. Пусто = счётчик бюджета
+// на странице монеты не показывается вовсе.
 // Пустой счётчик с нулями выглядит как работающая система, которой нет.
-export const AGENT_TREASURY_ADDRESS = import.meta.env.VITE_AGENT_TREASURY ?? "";
+export const AGENT_TREASURY_ADDRESS = import.meta.env.VITE_AGENT_TREASURY ?? "0xe39e61c2e2897a59dde71d75b7b84f42ed09fd0c";
 
 // FeeSplitterV4 — делит протокольную долю комиссии (команда / агент /
 // создатель) и хранит, включён ли у монеты ИИ (enableAi — решение
-// создателя, навсегда). Пусто = не развёрнут: сайт живёт по старой схеме
-// и вторую подпись при запуске не просит.
-export const FEE_SPLITTER_ADDRESS = import.meta.env.VITE_FEE_SPLITTER ?? "";
+// создателя, навсегда). Задеплоен владельцем 14.09.2026; ETH-фабрика
+// переключена на него сразу, фабрика за валюту — заявка, вступает
+// 16.09.2026 (applyConfig). Пусто = сайт живёт по старой схеме.
+export const FEE_SPLITTER_ADDRESS = import.meta.env.VITE_FEE_SPLITTER ?? "0x4b4ca78517a48876a4341cbbfbd96e15c9d99491";
 export const SPLITTER_LIVE = Boolean(FEE_SPLITTER_ADDRESS);
 
 // Кошелёк, чьей подписью заверяются записи журнала агента (lib/journal.js).
