@@ -51,12 +51,15 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { verifyMessage } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { decodeAbiParameters, toFunctionSelector } from "viem";
+import { AI_MODELS } from "../web/src/lib/models.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, "..");
 const DB = "https://hood-chat-4b664-default-rtdb.europe-west1.firebasedatabase.app";
 const OR = "https://openrouter.ai/api/v1";
 const SITE = "https://hoodandarrow.com";
+const RPC = "https://rpc.mainnet.chain.robinhood.com";
 
 // Потолки. Страница-одностраничник в них укладывается с запасом, а
 // разогнавшийся промпт упирается в них раньше, чем в баланс.
@@ -159,7 +162,7 @@ async function findWork(operatorAddress) {
 async function symbolOf(token) {
   // Символ нужен только для пути и заголовка. Не достали — не беда.
   try {
-    const r = await fetch("https://rpc.mainnet.chain.robinhood.com", {
+    const r = await fetch(RPC, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -175,13 +178,48 @@ async function symbolOf(token) {
   } catch { return null; }
 }
 
-async function pickModel() {
+/**
+ * Модель, которую выбрал создатель монеты. Лежит в метадате токена (поле ai),
+ * которую записали при запуске, — значит, в контракте, и подделать её нельзя.
+ *
+ * Метадата содержит ещё и картинку data-URI, поэтому ответ бывает на сотни
+ * килобайт. Читаем один раз за сборку, это не горячий путь.
+ */
+async function wantedModel(token) {
+  try {
+    const r = await fetch(RPC, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0", id: 1, method: "eth_call",
+        params: [{ to: token, data: toFunctionSelector("function metadataURI() view returns (string)") }, "latest"],
+      }),
+    }).then((x) => x.json());
+    if (!r?.result || r.result === "0x") return "";
+    const [uri] = decodeAbiParameters([{ type: "string" }], r.result);
+    const m = String(uri).match(/^data:application\/json;base64,(.*)$/s);
+    if (!m) return "";
+    const meta = JSON.parse(Buffer.from(m[1], "base64").toString("utf8"));
+    const id = String(meta?.ai || "").trim();
+    // Берём только то, что есть в общем списке: метадату пишет кто угодно,
+    // а платит за вызов владелец платформы.
+    return AI_MODELS.some((x) => x.id === id) ? id : "";
+  } catch { return ""; }
+}
+
+async function pickModel(wanted = "") {
   const r = await fetch(`${OR}/models`).then((x) => x.json()).catch(() => null);
   const ids = new Set((r?.data || []).map((m) => m.id));
-  if (!ids.size) return cfg.agentModel || PREFERRED[0];
-  if (cfg.agentModel && ids.has(cfg.agentModel)) return cfg.agentModel;
-  for (const m of PREFERRED) if (ids.has(m)) return m;
-  return [...ids][0];
+  // Выбор создателя — первый в очереди. Если модели в каталоге больше нет,
+  // подменяем, но возвращаем asked: журнал скажет об этом вслух.
+  if (wanted && ids.has(wanted)) return { model: wanted, asked: "" };
+  const fallback = () => {
+    if (!ids.size) return cfg.agentModel || PREFERRED[0];
+    if (cfg.agentModel && ids.has(cfg.agentModel)) return cfg.agentModel;
+    for (const m of PREFERRED) if (ids.has(m)) return m;
+    return [...ids][0];
+  };
+  return { model: fallback(), asked: wanted };
 }
 
 const PROMPT = (task, symbol) => `Ты — ИИ-агент мем-монеты $${symbol} на платформе hood.
@@ -258,7 +296,18 @@ async function main() {
     const r = await fetch(`${OR}/models`).then((x) => x.json());
     const list = (r?.data || []).map((m) => m.id).sort();
     console.log(`Моделей доступно: ${list.length}\n`);
+    console.log("Запасной ряд агента:");
     for (const m of PREFERRED) console.log(list.includes(m) ? `  есть  ${m}` : `  нет   ${m}`);
+    // Список из формы запуска. Если тут «нет» — значит, создателю монеты
+    // предлагают то, чего агент не сможет вызвать. Это надо чинить сразу.
+    console.log("\nСписок в форме запуска (web/src/lib/models.mjs):");
+    let miss = 0;
+    for (const m of AI_MODELS) {
+      const ok = list.includes(m.id);
+      if (!ok) miss += 1;
+      console.log(`  ${ok ? "есть " : "НЕТ  "} ${m.id.padEnd(34)} ${m.name}`);
+    }
+    console.log(miss ? `\nНедоступно ${miss} — убери их из формы.` : "\nВся форма доступна.");
     return;
   }
 
@@ -294,8 +343,10 @@ async function main() {
     process.exit(1);
   }
 
-  const model = await pickModel();
-  console.log(`Модель:  ${model}\n`);
+  const { model, asked } = await pickModel(await wantedModel(work.token));
+  console.log(`Модель:  ${model}`);
+  if (asked) console.log(`Создатель просил ${asked} — её нет в каталоге, строю на доступной.`);
+  console.log("");
 
   const res = await fetch(`${OR}/chat/completions`, {
     method: "POST",
@@ -349,6 +400,8 @@ async function main() {
     round: work.round,
     symbol,
     task: work.task,
+    // Непусто только когда просили одну модель, а собрали на другой.
+    ...(asked ? { asked } : {}),
     // Путь относительно сайта. Абсолютный url оставляем для сведения, но
     // ссылку журнал строит из path: на тестовом сайте страница живёт под
     // /staging/, и жёсткая ссылка на боевой домен там ведёт в 404.

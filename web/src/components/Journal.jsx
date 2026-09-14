@@ -106,7 +106,9 @@ export default function Journal({ wallet, token: fixed }) {
                   : <span className="dim">{t("результата пока нет")}</span>;
               })()}
               <span className="dim">
-                {r.model && <>{r.model} · </>}
+                {/* Просили одну модель, собрали на другой — говорим об этом
+                    здесь же, а не молчим: журнал тем и ценен. */}
+                {r.model && <>{r.model}{r.asked ? ` (${t("просили")} ${r.asked})` : ""} · </>}
                 {Number(r.opens) > 0 && <>{Number(r.opens).toLocaleString("ru")} {t("открытий")} · </>}
                 {t("потрачено")} {money(r.spent)}
               </span>

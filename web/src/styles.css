@@ -2609,6 +2609,11 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .quote-chip { display: inline-flex; align-items: center; }
 .quote-chip .q-logo { margin-right: 6px; }
 .net-ico { width: 16px; height: 16px; border-radius: 50%; object-fit: cover; }
+
+/* Чип «на какой модели работает ИИ монеты» — в шапке монеты, рядом с бейджами */
+.tk-ai { display: inline-flex; align-items: center; text-decoration: none; }
+.tk-ai .q-logo { width: 14px; height: 14px; margin-right: 5px; }
+.tk-ai:hover { border-color: var(--border-gold); }
 .pv-qlogo { width: 16px; height: 16px; border-radius: 50%; vertical-align: -3px; margin-right: 5px; background: #fff; object-fit: contain; }
 
 /* Иконка RWA-вкладки + малые чипы-переключатели вместо системного select */

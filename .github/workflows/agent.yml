@@ -17,6 +17,15 @@ name: Агент строит
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Что делать'
+        required: false
+        default: build
+        type: choice
+        options:
+          - build      # взять задание и построить страницу
+          - models     # только показать список моделей, ничего не тратя
   schedule:
     # Понедельник, 09:00 UTC — сразу после закрытия недельного раунда.
     - cron: '0 9 * * 1'
@@ -47,21 +56,32 @@ jobs:
       - name: Поставить viem
         run: npm install viem --no-save --silent
 
+      # Режим «models»: сверяем список из формы запуска с живым каталогом
+      # OpenRouter. Моделей не вызываем, денег не тратим — это не сборка,
+      # а проверка, что форма не обещает того, чего агент не может.
+      - name: Сверить список моделей
+        if: inputs.mode == 'models'
+        run: node scripts/agent-run.mjs --models
+
       - name: Проверить ключ и баланс
+        if: inputs.mode != 'models'
         env:
           OPENROUTER_KEY: ${{ secrets.OPENROUTER_KEY }}
         run: node scripts/agent-run.mjs --check
 
       - name: Показать задание
+        if: inputs.mode != 'models'
         run: node scripts/agent-run.mjs
 
       - name: Построить
+        if: inputs.mode != 'models'
         env:
           OPENROUTER_KEY: ${{ secrets.OPENROUTER_KEY }}
         run: node scripts/agent-run.mjs --run
 
       - name: Закоммитить, если что-то построено
         id: commit
+        if: inputs.mode != 'models'
         run: |
           if [ -z "$(git status --porcelain web/public/agents)" ]; then
             echo "Агент ничего не построил — коммитить нечего."
