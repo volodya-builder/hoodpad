@@ -1,8 +1,8 @@
 import { parseAbi, parseAbiItem } from "viem";
 import { useEffect, useState } from "react";
 import { publicClient } from "./web3.js";
-import { factoryAbi, poolAbi, tokenAbi } from "./abi.js";
-import { FACTORY_ADDRESS } from "./config.js";
+import { factoryAbi, poolAbi, tokenAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi } from "./abi.js";
+import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE } from "./config.js";
 
 // Метаданные приходят из блокчейна и полностью подконтрольны создателю токена.
 // Любой мусор здесь не должен ронять интерфейс: JSON.parse("null") исключения
@@ -262,14 +262,69 @@ export async function loadTokens() {
 export const dataSource = { v: "" }; // "subgraph" | "rpc" — что реально отвечает
 
 async function _loadTokensFresh() {
+  let eth;
   try {
-    const r = await _loadTokensSubgraph();
+    eth = await _loadTokensSubgraph();
     dataSource.v = "subgraph";
-    return r;
   } catch (e) {
     dataSource.v = "rpc";
-    return _loadTokensRpc();
+    eth = await _loadTokensRpc();
   }
+  // Монеты за валюту живут в другой фабрике, и сабграф её пока не
+  // индексирует. Читаем их с цепи напрямую: их немного, а один упавший
+  // запрос не должен ронять весь список.
+  const q = await _loadQuoteTokensRpc().catch(() => []);
+  return q.length ? [...q, ...eth] : eth;
+}
+
+/** Монеты quote-фабрики. Строка — как у ETH-монет, плюс q = {addr, sym, dec}:
+ *  цена и резерв здесь в знаках валюты, а не в ETH. */
+async function _loadQuoteTokensRpc() {
+  if (!QUOTE_LIVE) return [];
+  const count = await publicClient.readContract({
+    address: QUOTE_FACTORY_ADDRESS, abi: quoteFactoryAbi, functionName: "tokenCount",
+  });
+  if (count === 0n) return [];
+  const offset = count > PAGE ? count - PAGE : 0n;
+  const addrs = await publicClient.readContract({
+    address: QUOTE_FACTORY_ADDRESS, abi: quoteFactoryAbi, functionName: "tokens", args: [offset, PAGE],
+  });
+  const createdAt = await loadCreationTimes(addrs).catch(() => ({}));
+  const qcache = new Map(); // одна валюта — один запрос символа/знаков
+  const quoteInfo = async (addr) => {
+    const k = addr.toLowerCase();
+    if (!qcache.has(k)) {
+      qcache.set(k, Promise.all([
+        publicClient.readContract({ address: addr, abi: erc20Abi, functionName: "symbol" }).catch(() => "?"),
+        publicClient.readContract({ address: addr, abi: erc20Abi, functionName: "decimals" }).catch(() => 18),
+      ]).then(([sym, dec]) => ({ addr: k, sym: String(sym), dec: Number(dec) })));
+    }
+    return qcache.get(k);
+  };
+  const items = await Promise.all(
+    addrs.map(async (token) => {
+      const [pool, qaddr] = await Promise.all([
+        publicClient.readContract({ address: QUOTE_FACTORY_ADDRESS, abi: quoteFactoryAbi, functionName: "poolOf", args: [token] }),
+        publicClient.readContract({ address: QUOTE_FACTORY_ADDRESS, abi: quoteFactoryAbi, functionName: "quoteOf", args: [token] }),
+      ]);
+      const [name, symbol, uri, price, sold, cap, reserve, graduated, divBps, q] = await Promise.all([
+        publicClient.readContract({ address: token, abi: tokenAbi, functionName: "name" }),
+        publicClient.readContract({ address: token, abi: tokenAbi, functionName: "symbol" }),
+        publicClient.readContract({ address: token, abi: tokenAbi, functionName: "metadataURI" }),
+        publicClient.readContract({ address: pool, abi: quotePoolAbi, functionName: "spotPrice" }),
+        publicClient.readContract({ address: pool, abi: quotePoolAbi, functionName: "tokensSold" }),
+        publicClient.readContract({ address: pool, abi: quotePoolAbi, functionName: "saleCap" }),
+        publicClient.readContract({ address: pool, abi: quotePoolAbi, functionName: "quoteReserve" }),
+        publicClient.readContract({ address: pool, abi: quotePoolAbi, functionName: "graduated" }),
+        publicClient.readContract({ address: pool, abi: quotePoolAbi, functionName: "divBps" }).catch(() => 0),
+        quoteInfo(qaddr),
+      ]);
+      return { token, pool, name, symbol, price, sold, cap, reserve, graduated,
+               meta: parseMeta(uri), createdAt: createdAt[token.toLowerCase()],
+               q, divBps: Number(divBps) };
+    })
+  );
+  return items.reverse();
 }
 
 async function _loadTokensRpc() {
