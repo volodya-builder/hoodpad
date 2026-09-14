@@ -2,7 +2,7 @@ import { parseAbi, parseAbiItem } from "viem";
 import { useEffect, useState } from "react";
 import { publicClient } from "./web3.js";
 import { factoryAbi, poolAbi, tokenAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi } from "./abi.js";
-import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE } from "./config.js";
+import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS } from "./config.js";
 
 // Метаданные приходят из блокчейна и полностью подконтрольны создателю токена.
 // Любой мусор здесь не должен ронять интерфейс: JSON.parse("null") исключения
@@ -369,6 +369,11 @@ export const tradeEvents = parseAbi([
   "event Buy(address indexed buyer, uint256 ethIn, uint256 tokensOut, uint256 fee)",
   "event Sell(address indexed seller, uint256 tokensIn, uint256 ethOut, uint256 fee)",
 ]);
+// Продажа через зап (монету → ETH одной транзакцией): пул видит продавцом
+// сам зап, а настоящий продавец — в событии запа SoldForEth.
+const zapSoldEvent = parseAbi([
+  "event SoldForEth(address indexed token, address indexed seller, uint256 tokensIn, uint256 quoteOut, uint256 ethOut)",
+]);
 
 /** All trades of a pool, oldest first, replayed into price points. */
 const _trades = new Map(); // pool -> { v, t, p }
@@ -440,11 +445,22 @@ async function _poolTradesFresh(pool, cur = null) {
 // (имена полей другие — quoteIn/quoteOut, но топик тот же), поэтому
 // декодер общий; отличаются только знаки валюты и виртуальный резерв.
 async function _poolTradesRpc(pool, cur = null) {
+  const fromBlock = await recentFromBlock();
   const logs = await publicClient.getLogs({
-    address: pool, events: tradeEvents, fromBlock: await recentFromBlock(), toBlock: "latest",
+    address: pool, events: tradeEvents, fromBlock, toBlock: "latest",
   });
   logs.sort((a, b) => (a.blockNumber === b.blockNumber
     ? Number(a.logIndex - b.logIndex) : Number(a.blockNumber - b.blockNumber)));
+  // Кто на самом деле продавал через зап: tx → адрес продавца.
+  const zapSeller = new Map();
+  if (cur?.token && ZAP_ADDRESS) {
+    try {
+      const zl = await publicClient.getLogs({
+        address: ZAP_ADDRESS, events: zapSoldEvent, args: { token: cur.token }, fromBlock, toBlock: "latest",
+      });
+      for (const l of zl) zapSeller.set(l.transactionHash, l.args.seller);
+    } catch (e) { /* без запа — продавцом останется его адрес */ }
+  }
 
   const VIRT = cur?.virt || 1.625, TOTAL = 1e9;
   const D = 10 ** (cur?.dec ?? 18);
@@ -461,7 +477,7 @@ async function _poolTradesRpc(pool, cur = null) {
     const price = (VIRT + eth) / (TOTAL - sold);
     trades.push({
       side: isBuy ? "buy" : "sell",
-      addr: isBuy ? l.args.buyer : l.args.seller,
+      addr: isBuy ? l.args.buyer : (zapSeller.get(l.transactionHash) || l.args.seller),
       eth: ethAmt, tokens: tokAmt, fee,
       block: l.blockNumber, tx: l.transactionHash,
     });

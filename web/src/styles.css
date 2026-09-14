@@ -2658,6 +2658,8 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .dv-grid b { font-size: 14px; }
 .dv-grid b.ok { color: var(--gold); }
 .dv-note { font-size: 12px; color: var(--text-dim); line-height: 1.45; }
+.dv-pot { font-size: 12px; color: var(--text-dim); margin: 0 0 8px; }
+.dv-pot b { color: var(--gold); }
 .dv-btn { width: 100%; margin-top: 10px; }
 
 /* Чип «на какой модели работает ИИ монеты» — в шапке монеты, рядом с бейджами */

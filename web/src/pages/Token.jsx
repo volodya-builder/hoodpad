@@ -536,7 +536,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const loadExtras = useCallback(async () => {
     if (!data?.pool) return;
     const [h, creatorFees, treasuryOwner, treasuryHeld, burned, createdMap] = await Promise.all([
-      poolTrades(data.pool, data.q ? { dec: data.q.dec, virt: data.q.virt } : null),
+      poolTrades(data.pool, data.q ? { dec: data.q.dec, virt: data.q.virt, token: tokenAddress } : null),
       publicClient.readContract({ address: data.pool, abi: poolExtraAbi, functionName: "creatorFeesAccrued" }),
       publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "owner" }).catch(() => null),
       publicClient.readContract({ address: tokenAddress, abi: tokenAbi, functionName: "balanceOf", args: [TREASURY_ADDRESS] }).catch(() => 0n),
