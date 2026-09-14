@@ -47,7 +47,9 @@ header {
   backdrop-filter: blur(10px);
   position: sticky; top: 0; z-index: 10;
 }
-.header-inner { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 20px; height: 72px; }
+/* Логотип и меню идут парой слева, управление уходит вправо:
+   третья колонка 1fr съедает всё свободное место. */
+.header-inner { display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 20px; height: 72px; }
 .logo { display: flex; align-items: center; gap: 10px; cursor: pointer; justify-self: start; }
 .logo svg { flex: none; }
 .logo-word {
@@ -682,10 +684,8 @@ html[data-theme="light"] .tcard { background: #ffffff; }
 html[data-theme="light"] .grad-wrap { background: radial-gradient(700px 260px at 25% -40px, #4653c914, transparent 70%), var(--card); box-shadow: none; }
 
 /* ---------------- nav pills / header controls */
-/* Меню — ровно по центру страницы. Центрирование даёт грид шапки,
-   а не автоотступы: во флексе «auto с двух сторон» центрует по остатку
-   места, и меню уезжало влево. */
-.nav-pills { display: flex; background: #111210; border: 1px solid var(--border); border-radius: 999px; padding: 3px; gap: 3px; margin: 0; justify-self: center; min-width: 0; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+/* Меню стоит вплотную к логотипу — своей колонкой в гриде шапки. */
+.nav-pills { display: flex; background: #111210; border: 1px solid var(--border); border-radius: 999px; padding: 3px; gap: 3px; margin: 0; justify-self: start; min-width: 0; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 .nav-pills::-webkit-scrollbar { display: none; }
 .nav-pill { padding: 7px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--text-dim); cursor: pointer; transition: all .15s; white-space: nowrap; flex: none; }
 .nav-pill.on { background: var(--bg-soft); color: var(--text); }
