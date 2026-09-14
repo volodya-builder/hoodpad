@@ -1304,7 +1304,7 @@ const EN = {
   "продажа": "asks",
   "покупка": "bids",
   // — монеты за валюту, дивиденды, выбор модели ИИ —
-  "{pct}% комиссии (1%)": "{pct}% of the fee (1%)",
+  "{v}% объёма (½ комиссии 1%)": "{v}% of volume (½ of the 1% fee)",
   "{sym} пока не в белом списке фабрики. Валюты с комиссией на перевод или ребейзом ломают кривую, поэтому каждую проверяем перед добавлением. Выбор сохранится в черновике.": "{sym} isn't on the factory whitelist yet. Fee-on-transfer and rebasing tokens break the curve, so we check every one before adding it. Your choice is kept in the draft.",
   "{sym} пока не в белом списке фабрики. Черновик сохранён — валюту проверим и добавим.": "{sym} isn't on the factory whitelist yet. Draft saved — we'll check the asset and add it.",
   "Акции Robinhood, за которые можно запустить монету. Нужна другая — напишите нам, добавим.": "Robinhood stocks you can launch a coin against. Need another one — write to us and we'll add it.",

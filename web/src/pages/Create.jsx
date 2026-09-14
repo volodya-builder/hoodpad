@@ -746,7 +746,7 @@ export default function Create({ wallet, onConnect }) {
         <div className="preview-ticker">{form.symbol ? `$${form.symbol}` : t("тикер")}</div>
         <div className="preview-stats">
           <div className="row"><span className="k">{t("Комиссия запуска")}</span><span className="v green">0 ETH</span></div>
-          <div className="row"><span className="k">{t("Вам с каждого трейда")}</span><span className="v green" title={t("Комиссия площадки 1% с каждой сделки; половина — создателю")}>{t("{pct}% комиссии (1%)").replace("{pct}", split.creator)}</span></div>
+          <div className="row"><span className="k">{t("Вам с каждого трейда")}</span><span className="v green" title={t("Комиссия площадки 1% с каждой сделки; половина — создателю")}>{t("{v}% объёма (½ комиссии 1%)").replace("{v}", String(+(split.creator / 100).toFixed(2)))}</span></div>
           <div className="row"><span className="k">{t("Валюта курвы")}</span><span className="v">
             {quote === "ETH" ? "ETH" : <><Logo cls="pv-qlogo" src={quoteIcon} />{quote}</>}
           </span></div>
