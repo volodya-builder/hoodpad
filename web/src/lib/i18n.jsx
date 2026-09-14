@@ -1441,6 +1441,7 @@ const EN = {
   "Без агента вам достаётся {n}% комиссии; с агентом — {c}%, разница идёт в его бюджет.": "Without an agent you get {n}% of the fee; with one — {c}%, the difference funds its budget.",
   "ИИ-агент монеты": "The coin's AI agent",
   "нет": "none",
+  "С {d} для новых монет: вам {n}% (с агентом {c}%), команде {tm}%. Монета, запущенная раньше, останется на нынешних долях.": "From {d} for new coins: you get {n}% ({c}% with an agent), the team {tm}%. A coin launched before that keeps the current split.",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });
