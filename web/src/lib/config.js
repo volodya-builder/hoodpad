@@ -103,6 +103,7 @@ export const FEATURES = {
   headerSearch: false, // кнопка-лупа в шапке (поиск по Ctrl+K и поле на главной работают)
   netSwitch: false,    // выбор сети в шапке (пока сеть одна — Robinhood Chain)
   about: false,        // пункт «О нас» в шапке (страница pages/About.jsx остаётся)
+  ai: true,            // вкладка «Мастерская» — всё про ИИ-агентов монет
 };
 
 export const TREASURY_POLICY = { cats: 20, arena: 10, buyback: 70 };

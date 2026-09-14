@@ -9,6 +9,7 @@ import Trader from "./pages/Trader.jsx";
 import Ticker from "./components/Ticker.jsx";
 import Profile from "./pages/Profile.jsx";
 import About from "./pages/About.jsx";
+import AI from "./pages/AI.jsx";
 import Treasury from "./pages/Treasury.jsx";
 import Admin from "./pages/Admin.jsx";
 import { Privacy, Terms } from "./pages/Legal.jsx";
@@ -425,6 +426,8 @@ export default function App() {
     page = <Revenue />;
   } else if (route === "/cats" && FEATURES.cats) {
     page = <Cats wallet={wallet} />;
+  } else if (route === "/ai" && FEATURES.ai) {
+    page = <AI />;
   } else if (route === "/about") {
     page = <About />;
   } else if (route === "/privacy") {
@@ -463,6 +466,9 @@ export default function App() {
             )}
             {FEATURES.treasury && (
               <a className={`nav-pill ${route.startsWith("/treasury") ? "on" : ""}`} href="#/treasury">{t("Казна")}</a>
+            )}
+            {FEATURES.ai && (
+              <a className={`nav-pill ${route.startsWith("/ai") ? "on" : ""}`} href="#/ai">{t("Мастерская")}</a>
             )}
             <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>
             {FEATURES.about && (
