@@ -17,11 +17,16 @@
  * сплиттер поделит эти 50% как 33% команде и 17% агенту. Значения 70/20/10
  * получат только монеты, созданные ПОСЛЕ применения конфига.
  *
+ * КЛЮЧ. Берётся из scripts/deploy-config.json (поле privateKey) — того же
+ * файла, которым пользуются остальные деплой-скрипты проекта. Файл лежит в
+ * .gitignore и в репозиторий не попадает. Если файла нет, можно задать
+ * переменной окружения PRIVATE_KEY.
+ *
  * ЗАПУСК (боевой — только с машины владельца):
- *   PRIVATE_KEY=... node scripts/deploy-agent-economy.js            # сухой прогон
- *   PRIVATE_KEY=... node scripts/deploy-agent-economy.js --deploy   # деплой
- *   PRIVATE_KEY=... node scripts/deploy-agent-economy.js --apply    # через 48ч
- *   PRIVATE_KEY=... node scripts/deploy-agent-economy.js --cancel   # отозвать заявку
+ *   node scripts/deploy-agent-economy.js            # сухой прогон
+ *   node scripts/deploy-agent-economy.js --deploy   # деплой
+ *   node scripts/deploy-agent-economy.js --apply    # через 48ч (если есть таймлок)
+ *   node scripts/deploy-agent-economy.js --cancel   # отозвать заявку
  *
  * Без --deploy скрипт ничего не отправляет в сеть: печатает план, текущий
  * конфиг фабрики и во что он превратится.
@@ -29,7 +34,14 @@
 const fs = require("fs");
 const path = require("path");
 
-const RPC = process.env.RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
+/** Настройки деплоя: тот же файл, что у остальных скриптов проекта. */
+function deployConfig() {
+  try { return JSON.parse(fs.readFileSync(path.join(__dirname, "deploy-config.json"), "utf8")); }
+  catch (e) { return {}; }
+}
+const CFG = deployConfig();
+
+const RPC = process.env.RPC_URL || CFG.rpcUrl || "https://rpc.mainnet.chain.robinhood.com";
 const FACTORY = process.env.FACTORY || "0x08a887196fc31b89305ae03aa991917f6b1d23ec";
 
 // Из 30% протокольной доли: команде 20 п.п., агенту 10 п.п. => 6667 bps.
@@ -73,14 +85,19 @@ async function main() {
   const doApply = args.includes("--apply");
   const doCancel = args.includes("--cancel");
 
-  let pk = process.env.PRIVATE_KEY;
+  let pk = process.env.PRIVATE_KEY || CFG.privateKey;
   if (!pk) {
-    console.error("Нет PRIVATE_KEY. Скрипт запускается только на машине владельца.");
+    console.error("Ключ не найден: нет ни scripts/deploy-config.json с полем privateKey,");
+    console.error("ни переменной PRIVATE_KEY. Скрипт запускается только на машине владельца.");
     process.exit(1);
   }
   pk = String(pk).replace(/["'\s]/g, "");
   if (!pk.startsWith("0x")) pk = "0x" + pk;
-  if (!/^0x[0-9a-fA-F]{64}$/.test(pk)) { console.error("PRIVATE_KEY выглядит неправильно."); process.exit(1); }
+  if (!/^0x[0-9a-fA-F]{64}$/.test(pk)) {
+    // Сам ключ не печатаем никогда — ни целиком, ни куском.
+    console.error("Ключ не похож на приватный: нужны 64 шестнадцатеричных символа.");
+    process.exit(1);
+  }
 
   const chain = {
     id: 4663, name: "Robinhood Chain",
@@ -108,6 +125,7 @@ async function main() {
 
   console.log("\nФабрика      ", FACTORY);
   console.log("Владелец     ", owner);
+  console.log("Ключ взят из ", process.env.PRIVATE_KEY ? "переменной окружения" : "scripts/deploy-config.json");
   console.log("Кошелёк      ", account.address, account.address.toLowerCase() === owner.toLowerCase() ? "— он и есть владелец" : "⚠ НЕ ВЛАДЕЛЕЦ");
   console.log("Баланс       ", formatEther(await pub.getBalance({ address: account.address })), "ETH");
   console.log("\nСейчас: казна", treasury, "| комиссия", feeBps, "bps | создателю", creatorShare, "bps");
