@@ -83,8 +83,30 @@ function loadCfg(dry) {
   return { rpc, pk, team };
 }
 
+// Артефакты (artifacts/*.json) — это скомпилированные контракты, и они не
+// в git: у каждого свои, от последнего запуска compile.js. Забыл
+// пересобрать — задеплоишь то, что компилировал в прошлый раз, и узнаешь
+// об этом уже на мейннете. Поэтому проверяем, что фабрика в артефакте —
+// та, что в исходниках: у новой есть MAX_DIV_BPS и createToken с divBps.
+function assertFreshArtifacts() {
+  let abi;
+  try { abi = ART("LaunchpadFactoryQuote").abi; }
+  catch { console.error("Нет artifacts/LaunchpadFactoryQuote.json. Сначала: node scripts/compile.js"); process.exit(1); }
+  const hasDiv = abi.some((f) => f.name === "MAX_DIV_BPS");
+  const create = abi.find((f) => f.name === "createToken");
+  if (!hasDiv || !create || create.inputs.length !== 6) {
+    console.error("Артефакты СТАРЫЕ: в них фабрика без дивидендов.");
+    console.error("Сначала пересобери контракты:  node scripts/compile.js");
+    process.exit(1);
+  }
+  for (const n of ["UniswapV3MigratorQuote", "DividendToken", "BondingCurvePoolQuote"]) {
+    try { ART(n); } catch { console.error(`Нет artifacts/${n}.json. Сначала: node scripts/compile.js`); process.exit(1); }
+  }
+}
+
 async function main() {
   const dry = process.argv.includes("--dry-run");
+  assertFreshArtifacts();
   const { createPublicClient, createWalletClient, http, defineChain, parseUnits, formatUnits } = require("viem");
   const { privateKeyToAccount } = require("viem/accounts");
   const { rpc, pk, team } = loadCfg(dry);
