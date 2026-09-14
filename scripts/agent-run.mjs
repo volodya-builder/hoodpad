@@ -23,6 +23,7 @@
  *   node scripts/agent-run.mjs              — что бы он сделал (без вызова модели)
  *   node scripts/agent-run.mjs --run        — построить по-настоящему
  *   node scripts/agent-run.mjs --models     — какие модели доступны
+ *   node scripts/agent-run.mjs --check      — работает ли ключ и сколько денег
  *
  * По умолчанию модель НЕ вызывается и деньги не тратятся.
  *
@@ -172,6 +173,36 @@ function stripFence(s) {
 async function main() {
   const args = process.argv.slice(2);
   const run = args.includes("--run");
+
+  // Проверка ключа и баланса. Сам ключ не печатается никогда — ни целиком,
+  // ни куском: он уже один раз утёк в переписку, второго раза не надо.
+  if (args.includes("--check")) {
+    if (!orKey) {
+      console.error("Ключа нет: добавь openrouterKey в scripts/deploy-config.json");
+      process.exit(1);
+    }
+    const h = { Authorization: `Bearer ${orKey}` };
+    const key = await fetch(`${OR}/key`, { headers: h }).then((r) => r.json()).catch(() => null);
+    if (!key || key.error) {
+      console.error("Ключ не принят:", key?.error?.message || "нет ответа");
+      process.exit(1);
+    }
+    const d = key.data || {};
+    console.log("Ключ работает.");
+    if (d.label) console.log("  имя ключа:   ", d.label);
+    console.log("  потрачено:   ", `$${Number(d.usage ?? 0).toFixed(4)}`);
+    console.log("  лимит ключа: ", d.limit == null ? "без лимита" : `$${d.limit}`);
+    if (d.limit_remaining != null) console.log("  осталось:    ", `$${d.limit_remaining}`);
+
+    const cr = await fetch(`${OR}/credits`, { headers: h }).then((r) => r.json()).catch(() => null);
+    const c = cr?.data;
+    if (c) {
+      const left = Number(c.total_credits ?? 0) - Number(c.total_usage ?? 0);
+      console.log(`\nБаланс аккаунта: $${left.toFixed(2)} (куплено $${Number(c.total_credits ?? 0).toFixed(2)})`);
+      if (left <= 0) console.log("Денег на счету нет — вызовы моделей не пройдут.");
+    }
+    return;
+  }
 
   if (args.includes("--models")) {
     const r = await fetch(`${OR}/models`).then((x) => x.json());
