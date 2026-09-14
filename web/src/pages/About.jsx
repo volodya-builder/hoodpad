@@ -50,16 +50,33 @@ export default function About() {
       <div className="page-sub" style={{ margin: "7px 0 0" }}>
         {t("Каждая сделка на кривой платит комиссию 1%. Смарт-контракт делит её автоматически:")}
       </div>
-      <div className="split-bar">
-        <div className="seg creator" style={{ width: `${split.creator}%` }}>{split.creator}%</div>
-        <div className="seg buyback" style={{ width: `${split.buyback}%` }}>{split.buyback}%</div>
-        <div className="seg team" style={{ width: `${split.team}%` }}>{split.team}%</div>
-      </div>
-      <div className="split-legend">
-        <span><i className="dot creator" />{t("создателю токена")}</span>
-        <span><i className="dot buyback" />{t("в казну выкупа")}</span>
-        <span><i className="dot team" />{t("команде")}</span>
-      </div>
+      {split.live ? (
+        <>
+          <div className="split-bar">
+            <div className="seg creator" style={{ width: `${split.creator}%` }}>{split.creator}%</div>
+            <div className="seg buyback" style={{ width: `${split.agent}%` }}>{split.agent}%</div>
+            <div className="seg team" style={{ width: `${split.team}%` }}>{split.team}%</div>
+          </div>
+          <div className="split-legend">
+            <span><i className="dot creator" />{t("создателю токена")}</span>
+            <span><i className="dot buyback" />{t("ИИ-агенту монеты (без ИИ — создателю, итого {n}%)").replace("{n}", String(split.creatorNoAi))}</span>
+            <span><i className="dot team" />{t("команде")}</span>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="split-bar">
+            <div className="seg creator" style={{ width: `${split.creator}%` }}>{split.creator}%</div>
+            <div className="seg buyback" style={{ width: `${split.buyback}%` }}>{split.buyback}%</div>
+            <div className="seg team" style={{ width: `${split.team}%` }}>{split.team}%</div>
+          </div>
+          <div className="split-legend">
+            <span><i className="dot creator" />{t("создателю токена")}</span>
+            <span><i className="dot buyback" />{t("в казну выкупа")}</span>
+            <span><i className="dot team" />{t("команде")}</span>
+          </div>
+        </>
+      )}
 
       <h2 className="sec-h2" style={{ marginTop: 68 }}>{t("Казна, из которой нельзя вывести")}</h2>
       <div className="check-list">

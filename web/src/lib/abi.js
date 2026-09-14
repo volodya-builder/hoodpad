@@ -147,6 +147,9 @@ export const quoteFactoryAbi = parseAbi([
   "function allowedQuotes(uint256 i) view returns (address)",
   "function quoteConfig(address quote) view returns (bool allowed, uint256 virtualQuote, uint256 creatorBuyCap)",
   "event TokenCreated(address indexed token, address indexed pool, address indexed creator, address quote, uint16 divBps)",
+  "function creatorFeeShareBps() view returns (uint16)",
+  "function feeBps() view returns (uint16)",
+  "function treasury() view returns (address)",
 ]);
 
 export const quotePoolAbi = parseAbi([
@@ -205,4 +208,18 @@ export const zapAbi = parseAbi([
   "function supported(address token) view returns (bool)",
   "function hasRoute(address quote) view returns (bool)",
   "function routeOf(address quote) view returns (address mid, uint24 fee1, uint24 fee2)",
+]);
+
+// FeeSplitterV4 — казна обеих фабрик: делёж и реестр «ИИ включён».
+export const feeSplitterAbi = parseAbi([
+  "function aiOf(address token) view returns (bool)",
+  "function enableAi(address token)",
+  "function poolOf(address token) view returns (address)",
+  "function teamShareBps() view returns (uint256)",
+  "function claim(address pool)",
+  "function pendingEth(address) view returns (uint256)",
+  "function pendingErc20(address, address) view returns (uint256)",
+  "function withdrawEth()",
+  "function withdrawErc20(address asset)",
+  "event AiEnabled(address indexed token, address indexed creator)",
 ]);

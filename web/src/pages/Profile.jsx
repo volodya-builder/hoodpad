@@ -219,7 +219,9 @@ export default function Profile({ wallet, onConnect }) {
   return (
     <>
       <div className="pf-head">
-        <div className="pf-ava">🏹</div>
+        <div className="pf-ava" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="30" height="30"><circle cx="12" cy="8.5" r="3.6" fill="none" stroke="currentColor" strokeWidth="1.6"/><path d="M4.8 20c.9-3.6 3.6-5.6 7.2-5.6s6.3 2 7.2 5.6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
+        </div>
         <div>
           <div className="page-title" style={{ margin: 0 }}>{t("Профиль")}</div>
           <div className="dim mono" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>

@@ -1348,7 +1348,7 @@ const EN = {
   "Роздано всего": "Distributed in total",
   "подключите кошелёк": "connect a wallet",
   "с каждой сделки": "of every trade",
-  "Создать монету": "Create a coin",
+  "Запустить монету": "Launch a coin",
   "В копилке": "In the pot",
   "раздастся холдерам со следующей сделкой": "will be shared with holders on the next trade",
   "У монеты за ETH дивидендов нет — их платит только монета за валюту. Хотите дивиденды в эфире — выберите WETH: покупатели так же платят ETH, одной транзакцией.": "A coin launched against plain ETH pays no dividends — only coins launched against an asset do. Want dividends in ether — pick WETH: buyers still pay ETH, in one transaction.",
@@ -1417,6 +1417,21 @@ const EN = {
   "Градуировало": "Graduated",
   "В яблочке": "Bullseye",
   "Поиск (Ctrl+K)": "Search (Ctrl+K)",
+  // — сплиттер комиссий, включение ИИ —
+  "Комиссия площадки 1% с каждой сделки; ваша доля — из фабрики": "Platform fee is 1% of every trade; your share comes from the factory",
+  "{v}% объёма ({p}% комиссии 1%)": "{v}% of volume ({p}% of the 1% fee)",
+  "Остальное": "The rest",
+  "{team}% команде · {agent}% ИИ монеты": "{team}% team · {agent}% the coin's AI",
+  "{team}% команде": "{team}% team",
+  "Агент живёт на комиссиях монеты: {agent}% комиссии идут в его бюджет, вам — {c}% вместо {n}%. После запуска будет вторая подпись — «включить ИИ», это навсегда.": "The agent lives on the coin's fees: {agent}% of the fee goes to its budget, you get {c}% instead of {n}%. After launch there is a second signature — “enable AI” — and it is permanent.",
+  "Без ИИ вам достаётся {n}% комиссии; с ИИ — {c}%, разница идёт в бюджет агента.": "Without AI you get {n}% of the fee; with AI — {c}%, the difference funds the agent.",
+  "Включаю ИИ — подпишите в кошельке…": "Enabling AI — sign in your wallet…",
+  "ИИ не включён: создатель не подписал включение. Агент на монету не работает.": "AI is off: the creator has not signed the enable step. The agent does not work on this coin.",
+  "не включён": "off",
+  "ИИ монеты не включён": "The coin's AI is off",
+  "Одна подпись — и агент начнёт работать на эту монету. 10% комиссии пойдут в его бюджет вместо вас. Включение необратимо.": "One signature and the agent starts working on this coin. 10% of the fee goes to its budget instead of you. This cannot be undone.",
+  "Включить ИИ": "Enable AI",
+  "ИИ-агенту монеты (без ИИ — создателю, итого {n}%)": "the coin's AI agent (no AI — to the creator, {n}% in total)",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

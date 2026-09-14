@@ -2,7 +2,7 @@ import { parseAbi, parseAbiItem } from "viem";
 import { useEffect, useState } from "react";
 import { publicClient } from "./web3.js";
 import { factoryAbi, poolAbi, tokenAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi } from "./abi.js";
-import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS } from "./config.js";
+import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE } from "./config.js";
 
 // Метаданные приходят из блокчейна и полностью подконтрольны создателю токена.
 // Любой мусор здесь не должен ронять интерфейс: JSON.parse("null") исключения
@@ -488,36 +488,50 @@ async function _poolTradesRpc(pool, cur = null) {
 
 
 // ---------------------------------------------------------------- fee split
-import { splitterAbi } from "./abi.js";
+import { splitterAbi, feeSplitterAbi } from "./abi.js";
 
 let splitCache = null;
+// Куда идёт комиссия 1% — по обеим фабрикам. Для каждой: creator — доля
+// создателя в пуле; если казна фабрики — FeeSplitterV4, остаток делится
+// на team / agent, и без ИИ доля агента возвращается создателю
+// (creatorNoAi). Старая схема (ETH-фабрика со сплиттером выкупа):
+// creator / team / buyback, агента нет, creatorNoAi = creator.
+async function splitOf(factory, fAbi) {
+  const [shareBps, treasury] = await Promise.all([
+    publicClient.readContract({ address: factory, abi: fAbi, functionName: "creatorFeeShareBps" }),
+    publicClient.readContract({ address: factory, abi: fAbi, functionName: "treasury" }),
+  ]);
+  const creator = Number(shareBps) / 100;
+  const rest = 100 - creator;
+  if (SPLITTER_LIVE && treasury.toLowerCase() === FEE_SPLITTER_ADDRESS.toLowerCase()) {
+    const teamBps = await publicClient.readContract({ address: FEE_SPLITTER_ADDRESS, abi: feeSplitterAbi, functionName: "teamShareBps" });
+    const team = (rest * Number(teamBps)) / 10000;
+    const agent = rest - team;
+    return { creator, team: +team.toFixed(1), agent: +agent.toFixed(1), buyback: 0, creatorNoAi: +(creator + agent).toFixed(1), live: true };
+  }
+  let team = 0;
+  try {
+    const teamBps = await publicClient.readContract({ address: treasury, abi: splitterAbi, functionName: "teamBps" });
+    team = (rest * Number(teamBps)) / 10000;
+  } catch (e) { /* казна — не сплиттер: весь остаток одному адресу */ }
+  return { creator, team: Math.round(team), agent: 0, buyback: Math.round(rest - team), creatorNoAi: creator, live: false };
+}
+
 export async function loadSplit() {
   if (splitCache) return splitCache;
-  try {
-    const [shareBps, treasury] = await Promise.all([
-      publicClient.readContract({ address: FACTORY_ADDRESS, abi: factoryAbi, functionName: "creatorFeeShareBps" }),
-      publicClient.readContract({ address: FACTORY_ADDRESS, abi: factoryAbi, functionName: "treasury" }),
-    ]);
-    const creator = Number(shareBps) / 100;
-    let team = 0;
-    try {
-      const teamBps = await publicClient.readContract({
-        address: treasury, abi: splitterAbi, functionName: "teamBps",
-      });
-      team = ((100 - creator) * Number(teamBps)) / 10000;
-    } catch (e) { /* treasury is not a splitter -> everything goes to buyback */ }
-    const buyback = 100 - creator - team;
-    splitCache = {
-      creator: Math.round(creator), team: Math.round(team), buyback: Math.round(buyback),
-    };
-  } catch (e) {
-    splitCache = { creator: 50, team: 20, buyback: 30 };
+  const fallback = { creator: 50, team: 20, buyback: 30, agent: 0, creatorNoAi: 50, live: false };
+  let eth = fallback, q = null;
+  try { eth = await splitOf(FACTORY_ADDRESS, factoryAbi); } catch (e) { /* оставляем запасные цифры */ }
+  if (QUOTE_LIVE) {
+    try { q = await splitOf(QUOTE_FACTORY_ADDRESS, quoteFactoryAbi); } catch (e) { q = { ...fallback, buyback: 50, team: 0 }; }
   }
+  splitCache = { ...eth, q: q || eth };
   return splitCache;
 }
 
 export function useSplit() {
-  const [split, setSplit] = useState({ creator: 50, team: 20, buyback: 30 });
+  const [split, setSplit] = useState({ creator: 50, team: 20, buyback: 30, agent: 0, creatorNoAi: 50, live: false,
+    q: { creator: 50, team: 0, buyback: 50, agent: 0, creatorNoAi: 50, live: false } });
   useEffect(() => { loadSplit().then(setSplit).catch(() => {}); }, []);
   return split;
 }
