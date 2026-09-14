@@ -17,7 +17,8 @@
 // который вообще не для того). Рейтинг именно по нужной работе честнее обоих.
 //
 // ПОТОЛОК ЦЕНЫ. За вызов платит платформа, а модель выбирает создатель монеты.
-// Поэтому всё дороже потолка в список не попадает — ни в форму, ни агенту.
+// Считаем в том, за что платим, — в стоимости одной построенной страницы.
+// Всё дороже доллара за страницу в список не попадает: ни в форму, ни агенту.
 //
 // Один файл на двоих: его читает форма запуска (web/src/pages/Create.jsx) и
 // он же лежит в основе выбора агента (scripts/agent-run.mjs). Предложить
@@ -25,8 +26,37 @@
 
 export const OR_MODELS = "https://openrouter.ai/api/v1/models";
 
-/** Долларов за миллион выходных токенов. Дороже — не предлагаем и не берём. */
-export const PRICE_CAP = 20;
+// Сколько токенов агент тратит на одну страницу. Отсюда же берёт свой
+// потолок scripts/agent-run.mjs — чтобы цена в форме считалась ровно по
+// тому, что агент делает на самом деле, а не по выдуманным цифрам.
+export const MAX_OUT_TOKENS = 16000;
+export const MAX_IN_TOKENS = 4000;
+
+/**
+ * Потолок — доллар за одну построенную страницу.
+ *
+ * Сначала я поставил потолок «$20 за миллион выходных токенов». Цифра
+ * красивая и ничего не значащая: она молча выкинула весь верхний ряд у
+ * каждого разработчика — Claude Fable и Opus, старшие GPT, — хотя страница
+ * на Fable стоит 84 цента. Мерить надо то, за что платишь: одну сборку.
+ *
+ * Заодно этот же потолок отсекает то, ради чего он и нужен: o1-pro за $600
+ * за миллион — это $10 за страницу, десятикратный перебор.
+ */
+export const COST_CAP = 1.0;
+
+/** Во что обойдётся одна страница на этой модели, в долларах. */
+export const buildCost = (m) =>
+  Number(m?.pricing?.completion || 0) * MAX_OUT_TOKENS +
+  Number(m?.pricing?.prompt || 0) * MAX_IN_TOKENS;
+
+/** Цена для человека: центы не прячем, но и нулями не врём. */
+export const costLabel = (c) => {
+  const n = Number(c);
+  if (!Number.isFinite(n) || n <= 0) return "—";
+  if (n < 0.01) return "меньше цента";
+  return `$${n.toFixed(2)}`;
+};
 
 /**
  * Разработчики моделей: приставка в id → как называть и с какого сайта брать
@@ -75,8 +105,6 @@ export const modelLogo = (id) => {
   return site ? `https://www.google.com/s2/favicons?domain=${site}&sz=64` : "";
 };
 
-const outPrice = (m) => Number(m?.pricing?.completion || 0) * 1e6;
-
 /** Рейтинг «делает веб-страницу» — то, чем агент занимается. */
 function websiteElo(m) {
   const rows = m?.benchmarks?.design_arena;
@@ -94,8 +122,8 @@ function usable(m) {
   if (makerKey(m.id) === "openrouter") return false;                       // роутеры, а не модели
   const outs = m.architecture?.output_modalities;
   if (Array.isArray(outs) && (outs.length !== 1 || outs[0] !== "text")) return false;
-  const p = outPrice(m);
-  if (!(p > 0) || p > PRICE_CAP) return false;
+  const c = buildCost(m);
+  if (!(c > 0) || c > COST_CAP) return false;
   return websiteElo(m) > 0;
 }
 
@@ -105,7 +133,7 @@ const shape = (m) => ({
   name: prettyName(m),
   by: makerOf(m.id)?.name || makerKey(m.id),
   elo: websiteElo(m),
-  price: Number(outPrice(m).toFixed(2)),
+  cost: buildCost(m),
 });
 
 /**

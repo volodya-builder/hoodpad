@@ -6,7 +6,7 @@ import { FACTORY_ADDRESS } from "../lib/config.js";
 import { useSplit, injectNewToken } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 import { RWA_TOKENS, RWA_POPULAR, stockLogo, CHAIN_LOGOS } from "../lib/rwa.js";
-import { loadModels, featured, matchModel, modelLogo, AI_AUTO } from "../lib/models.mjs";
+import { loadModels, featured, matchModel, modelLogo, costLabel, AI_AUTO } from "../lib/models.mjs";
 
 // Логотип с фолбэком: если CDN не знает тикер — просто прячем картинку
 const Logo = ({ src, cls }) => (
@@ -314,15 +314,15 @@ export default function Create({ wallet, onConnect }) {
                 : featured(models)
               ).map((m) => (
                 <button type="button" key={m.id} className={`quote-chip ${ai === m.id ? "on" : ""}`}
-                        onClick={() => setAi(m.id)} title={`${m.id} · $${m.price} ${t("за миллион токенов")}`}>
+                        onClick={() => setAi(m.id)} title={`${m.id} · ${costLabel(m.cost)} ${t("за страницу")}`}>
                   <Logo cls="q-logo" src={modelLogo(m.id)} />{m.name}
                 </button>
               ))}
             </div>
             <div className="hint">
               {aiPick
-                ? t("ИИ монеты будет работать на {m} — это модель {by}. Выбор записывается в саму монету и виден всем. Если её снимут с обслуживания, агент возьмёт другую и честно напишет об этом в журнале.")
-                    .replace("{m}", aiPick.name).replace("{by}", aiPick.by)
+                ? t("ИИ монеты будет работать на {m} — это модель {by}, одна страница на ней обходится примерно в {c}. Выбор записывается в саму монету и виден всем. Если её снимут с обслуживания, агент возьмёт другую и честно напишет об этом в журнале.")
+                    .replace("{m}", aiPick.name).replace("{by}", aiPick.by).replace("{c}", costLabel(aiPick.cost))
                 : t("Можно не выбирать — агент возьмёт лучшую доступную. Список живой: модели отсортированы по тому, насколько хорошо они делают веб-страницы, а это и есть работа агента.")}
             </div>
           </>
