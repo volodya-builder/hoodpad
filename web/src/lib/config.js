@@ -82,6 +82,13 @@ export const isTeam = (addr) => !!addr && addr.toLowerCase() === TEAM_ADDRESS;
 // Пустой счётчик с нулями выглядит как работающая система, которой нет.
 export const AGENT_TREASURY_ADDRESS = import.meta.env.VITE_AGENT_TREASURY ?? "";
 
+// FeeSplitterV4 — делит протокольную долю комиссии (команда / агент /
+// создатель) и хранит, включён ли у монеты ИИ (enableAi — решение
+// создателя, навсегда). Пусто = не развёрнут: сайт живёт по старой схеме
+// и вторую подпись при запуске не просит.
+export const FEE_SPLITTER_ADDRESS = import.meta.env.VITE_FEE_SPLITTER ?? "";
+export const SPLITTER_LIVE = Boolean(FEE_SPLITTER_ADDRESS);
+
 // Кошелёк, чьей подписью заверяются записи журнала агента (lib/journal.js).
 // Пока это кошелёк команды: записи заполняются руками из админ-формы на
 // вкладке «Мастерская». Когда появится агент, сюда встанет ЕГО адрес —

@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { parseEther, formatEther, parseUnits, decodeEventLog } from "viem";
 import { publicClient } from "../lib/web3.js";
-import { factoryAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi, zapAbi } from "../lib/abi.js";
-import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, FEATURES } from "../lib/config.js";
+import { factoryAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi, zapAbi, feeSplitterAbi } from "../lib/abi.js";
+import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, FEATURES, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE } from "../lib/config.js";
 import { useSplit, injectNewToken } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 import { RWA_TOKENS, RWA_POPULAR, stockLogo, CHAIN_LOGOS } from "../lib/rwa.js";
@@ -186,6 +186,11 @@ export default function Create({ wallet, onConnect }) {
   const [models, setModels] = useState(null);
   useEffect(() => { let on = true; loadModels().then((x) => on && setModels(x)); return () => { on = false; }; }, []);
   const aiPick = (models || []).find((m) => m.id === ai) || null;
+  // Доля создателя зависит от фабрики (ETH / за валюту) и от выбора ИИ:
+  // с ИИ 10% комиссии идёт в бюджет агента монеты, без ИИ — создателю.
+  // Строго ниже useState(ai) и useState(quote) — иначе TDZ-падение.
+  const sp = quote === "ETH" ? split : (split.q || split);
+  const creatorPct = sp.live && !ai ? sp.creatorNoAi : sp.creator;
   const [tax, setTax] = useState({ buy: 3, sell: 3, mkt: 40, burn: 20, div: 30, lp: 10, minShare: 0, divToken: "self" });
   const taxTotal = tax.mkt + tax.burn + tax.div + tax.lp;
   const ALLOC_KEYS = ["mkt", "burn", "div", "lp"];
@@ -203,6 +208,8 @@ export default function Create({ wallet, onConnect }) {
   const [advOpen, setAdvOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // Что после запуска: вторая подпись «включить ИИ» (сплиттер), её итог.
+  const [aiStep, setAiStep] = useState(""); // "" | "sign" | "skipped"
   const fileRef = useRef(null);
 
   const ZERO = "0x0000000000000000000000000000000000000000";
@@ -324,6 +331,24 @@ export default function Create({ wallet, onConnect }) {
         });
         await publicClient.waitForTransactionReceipt({ hash: b });
       }
+      // Выбрали модель — включаем ИИ монете в сплиттере (навсегда). Это
+      // подпись создателя: только его кошелёк может это сделать. Отказ —
+      // не ошибка: монета живёт без ИИ, включить можно со страницы монеты.
+      if (ai && SPLITTER_LIVE) {
+        const creatorW = (form.creatorWallet.trim() || wallet.account).toLowerCase();
+        if (creatorW === wallet.account.toLowerCase()) {
+          setAiStep("sign");
+          try {
+            const e = await wallet.walletClient.writeContract({
+              address: FEE_SPLITTER_ADDRESS, abi: feeSplitterAbi, functionName: "enableAi", args: [created.args.token],
+            });
+            await publicClient.waitForTransactionReceipt({ hash: e });
+            setAiStep("");
+          } catch (e2) { setAiStep("skipped"); }
+        } else {
+          setAiStep("skipped");
+        }
+      }
       // мгновенно кладём токен в кэш — карточка видна сразу, без ожидания индексатора
       injectNewToken({
         token: created.args.token,
@@ -343,7 +368,7 @@ export default function Create({ wallet, onConnect }) {
   }
 
   const ctaLabel = busy
-    ? t("Запускаем…")
+    ? (aiStep === "sign" ? t("Включаю ИИ — подпишите в кошельке…") : t("Запускаем…"))
     : ttype === "tax"
     ? t("Сохранить черновик tax-токена")
     : !wallet
@@ -490,6 +515,13 @@ export default function Create({ wallet, onConnect }) {
                 ? t("ИИ монеты будет работать на {m} — это модель {by}, одна страница на ней обходится примерно в {c}. Выбор записывается в саму монету и виден всем. Если её снимут с обслуживания, агент возьмёт другую и честно напишет об этом в журнале.")
                     .replace("{m}", aiPick.name).replace("{by}", aiPick.by).replace("{c}", costLabel(aiPick.cost))
                 : t("Можно не выбирать — агент возьмёт лучшую доступную. Список живой: модели отсортированы по тому, насколько хорошо они делают веб-страницы, а это и есть работа агента.")}
+              {sp.live && (
+                <> {ai
+                  ? t("Агент живёт на комиссиях монеты: {agent}% комиссии идут в его бюджет, вам — {c}% вместо {n}%. После запуска будет вторая подпись — «включить ИИ», это навсегда.")
+                      .replace("{agent}", String(sp.agent)).replace("{c}", String(sp.creator)).replace("{n}", String(sp.creatorNoAi))
+                  : t("Без ИИ вам достаётся {n}% комиссии; с ИИ — {c}%, разница идёт в бюджет агента.")
+                      .replace("{n}", String(sp.creatorNoAi)).replace("{c}", String(sp.creator))}</>
+              )}
             </div>
           </>
         )}
@@ -563,7 +595,7 @@ export default function Create({ wallet, onConnect }) {
           className={`upload-box ${image ? "ready" : ""} ${consent ? "" : "disabled"}`}
           onClick={() => consent && fileRef.current?.click()}
         >
-          <div className="upload-thumb">{image ? <img src={image} alt="" /> : "🖼️"}</div>
+          <div className="upload-thumb">{image ? <img src={image} alt="" /> : <svg className="img-ph" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="3" fill="none" stroke="currentColor" strokeWidth="1.6"/><circle cx="9" cy="9.5" r="1.6" fill="currentColor"/><path d="M4.5 17.5l4.6-4.6a1.2 1.2 0 0 1 1.7 0l2.4 2.4 2.1-2.1a1.2 1.2 0 0 1 1.7 0l3.5 3.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}</div>
           <span>
             {image
               ? t("Картинка загружена — нажмите, чтобы заменить")
@@ -741,12 +773,20 @@ export default function Create({ wallet, onConnect }) {
       </form>
 
       <aside className="preview-card">
-        <div className="preview-img">{image ? <img src={image} alt="" /> : "🖼️"}</div>
+        <div className="preview-img">{image ? <img src={image} alt="" /> : <svg className="img-ph" viewBox="0 0 24 24" width="34" height="34" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="3" fill="none" stroke="currentColor" strokeWidth="1.6"/><circle cx="9" cy="9.5" r="1.6" fill="currentColor"/><path d="M4.5 17.5l4.6-4.6a1.2 1.2 0 0 1 1.7 0l2.4 2.4 2.1-2.1a1.2 1.2 0 0 1 1.7 0l3.5 3.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}</div>
         <div className="preview-name">{form.name.trim() || t("Ваш токен")}</div>
         <div className="preview-ticker">{form.symbol ? `$${form.symbol}` : t("тикер")}</div>
         <div className="preview-stats">
           <div className="row"><span className="k">{t("Комиссия запуска")}</span><span className="v green">0 ETH</span></div>
-          <div className="row"><span className="k">{t("Вам с каждого трейда")}</span><span className="v green" title={t("Комиссия площадки 1% с каждой сделки; половина — создателю")}>{t("{v}% объёма (½ комиссии 1%)").replace("{v}", String(+(split.creator / 100).toFixed(2)))}</span></div>
+          <div className="row"><span className="k">{t("Вам с каждого трейда")}</span><span className="v green" title={t("Комиссия площадки 1% с каждой сделки; ваша доля — из фабрики")}>
+            {t("{v}% объёма ({p}% комиссии 1%)").replace("{v}", String(+(creatorPct / 100).toFixed(2))).replace("{p}", String(creatorPct))}
+          </span></div>
+          {sp.live && (
+            <div className="row"><span className="k">{t("Остальное")}</span><span className="v">
+              {ai ? t("{team}% команде · {agent}% ИИ монеты").replace("{team}", String(sp.team)).replace("{agent}", String(sp.agent))
+                  : t("{team}% команде").replace("{team}", String(sp.team))}
+            </span></div>
+          )}
           <div className="row"><span className="k">{t("Валюта курвы")}</span><span className="v">
             {quote === "ETH" ? "ETH" : <><Logo cls="pv-qlogo" src={quoteIcon} />{quote}</>}
           </span></div>

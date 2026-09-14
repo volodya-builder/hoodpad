@@ -176,6 +176,27 @@ async function symbolOf(token) {
  * Метадата содержит ещё и картинку data-URI, поэтому ответ бывает на сотни
  * килобайт. Читаем один раз за сборку, это не горячий путь.
  */
+/**
+ * Включён ли у монеты ИИ в цепи. Сплиттер (FeeSplitterV4) хранит решение
+ * создателя: без его подписи агент на монету не работает — бюджет ей не
+ * капает, а строить «в долг» нельзя. Адрес — FEE_SPLITTER в окружении
+ * или feeSplitter в deploy-config.json; пусто = сплиттера нет, правило
+ * не действует (старая экономика).
+ */
+async function aiEnabled(token) {
+  const splitter = process.env.FEE_SPLITTER || cfg.feeSplitter || "";
+  if (!splitter) return true;
+  try {
+    const data = toFunctionSelector("function aiOf(address) view returns (bool)")
+      + token.toLowerCase().replace(/^0x/, "").padStart(64, "0");
+    const r = await fetch(RPC, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to: splitter, data }, "latest"] }),
+    }).then((x) => x.json());
+    return /1$/.test(String(r?.result || "0x0"));
+  } catch { return false; }
+}
+
 async function wantedModel(token) {
   try {
     const r = await fetch(RPC, {
@@ -338,6 +359,10 @@ async function main() {
     process.exit(1);
   }
 
+  if (!(await aiEnabled(work.token))) {
+    console.error("У этой монеты ИИ не включён создателем (сплиттер: aiOf = false) — бюджета ей не капает, строить не на что.");
+    process.exit(1);
+  }
   const { model, asked } = await pickModel(await wantedModel(work.token));
   if (!model) {
     console.error("Каталог моделей недоступен — строить не на чем. Останавливаюсь.");

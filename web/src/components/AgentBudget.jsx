@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { formatEther, parseAbi } from "viem";
+import { formatEther, formatUnits, parseAbi } from "viem";
 import { useLang } from "../lib/i18n.jsx";
 import { publicClient } from "../lib/web3.js";
 import { AGENT_TREASURY_ADDRESS, EXPLORER, NATIVE_SYMBOL } from "../lib/config.js";
-import { useEthUsd, usd as fmtUsd } from "../lib/price.js";
+import { useEthUsd, useQuoteUsd, usd as fmtUsd } from "../lib/price.js";
 
 /** Бюджет агента монеты: собрано, потрачено, осталось.
  *
@@ -20,17 +20,17 @@ const agentTreasuryAbi = parseAbi([
   "function funded(address) view returns (uint256)",
   "function spent(address) view returns (uint256)",
   "function disabled(address) view returns (bool)",
+  "function budgetErc20(address, address) view returns (uint256)",
+  "function fundedErc20(address, address) view returns (uint256)",
+  "function spentErc20(address, address) view returns (uint256)",
 ]);
 
-const eth = (v) => {
-  const n = Number(formatEther(v ?? 0n));
-  if (n === 0) return "0";
-  return n < 0.001 ? "<0.001" : n.toFixed(n < 1 ? 4 : 3);
-};
-
-export default function AgentBudget({ token }) {
+/** quote — валюта кривой у монет за валюту ({ addr, sym, dec }): их агент
+ *  получает бюджет в ней, а не в ETH. Для ETH-монет — null. */
+export default function AgentBudget({ token, quote = null }) {
   const { t } = useLang();
   const ethUsdRate = useEthUsd();
+  const quoteRate = useQuoteUsd(quote?.addr);
   const [d, setD] = useState(null);
 
   useEffect(() => {
@@ -38,23 +38,33 @@ export default function AgentBudget({ token }) {
     let alive = true;
     (async () => {
       try {
-        const call = (fn) => publicClient.readContract({
-          address: AGENT_TREASURY_ADDRESS, abi: agentTreasuryAbi, functionName: fn, args: [token],
+        const call = (fn, args) => publicClient.readContract({
+          address: AGENT_TREASURY_ADDRESS, abi: agentTreasuryAbi, functionName: fn, args,
         });
-        const [budget, funded, spent, disabled] = await Promise.all([
-          call("budget"), call("funded"), call("spent"), call("disabled"),
-        ]);
+        const [budget, funded, spent, disabled] = quote
+          ? await Promise.all([
+              call("budgetErc20", [token, quote.addr]), call("fundedErc20", [token, quote.addr]),
+              call("spentErc20", [token, quote.addr]), call("disabled", [token]),
+            ])
+          : await Promise.all([
+              call("budget", [token]), call("funded", [token]), call("spent", [token]), call("disabled", [token]),
+            ]);
         if (alive) setD({ budget, funded, spent, disabled });
       } catch { if (alive) setD(null); }
     })();
     return () => { alive = false; };
-  }, [token]);
+  }, [token, quote?.addr]);
 
   if (!AGENT_TREASURY_ADDRESS || !d) return null;
 
+  // Суммы — в валюте бюджета: ETH у ETH-монет, USDG/AAPL у монет за валюту.
+  const num = (v) => Number(quote ? formatUnits(v ?? 0n, quote.dec) : formatEther(v ?? 0n));
+  const show = (v) => { const n = num(v); return n === 0 ? "0" : n < 0.001 ? "<0.001" : n.toFixed(n < 1 ? 4 : 3); };
+  const SYM = quote ? quote.sym : NATIVE_SYMBOL;
   // Счета за модели приходят в долларах, поэтому остаток полезнее видеть
   // в них же. Курс может не прийти — тогда строки просто не будет.
-  const usdLeft = ethUsdRate ? Number(formatEther(d.budget)) * ethUsdRate : null;
+  const rate = quote ? quoteRate : ethUsdRate;
+  const usdLeft = rate ? num(d.budget) * rate : null;
 
   return (
     <div className="abg">
@@ -65,15 +75,15 @@ export default function AgentBudget({ token }) {
 
       <div className="abg-row">
         <div>
-          <b>{eth(d.budget)}</b>
-          <span>{t("осталось")}{NATIVE_SYMBOL ? `, ${NATIVE_SYMBOL}` : ""}</span>
+          <b>{show(d.budget)}</b>
+          <span>{t("осталось")}{SYM ? `, ${SYM}` : ""}</span>
         </div>
         <div>
-          <b>{eth(d.funded)}</b>
+          <b>{show(d.funded)}</b>
           <span>{t("собрано всего")}</span>
         </div>
         <div>
-          <b>{eth(d.spent)}</b>
+          <b>{show(d.spent)}</b>
           <span>{t("потрачено")}</span>
         </div>
       </div>

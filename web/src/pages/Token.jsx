@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { parseEther, formatEther, parseUnits, formatUnits } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
-import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi, zapAbi } from "../lib/abi.js";
-import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, FEATURES } from "../lib/config.js";
+import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi, zapAbi, feeSplitterAbi } from "../lib/abi.js";
+import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, FEATURES, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE } from "../lib/config.js";
 import { poolTrades, invalidateTrades, loadTokens, allTrades, parseMeta } from "../lib/data.js";
 import { computeTrust } from "../lib/trust.js";
 import { honestVolume } from "../lib/fairvol.js";
@@ -578,6 +578,18 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     wallet && data?.creator &&
     wallet.account.toLowerCase() === data.creator.toLowerCase();
 
+  // Включён ли ИИ монеты в цепи (реестр сплиттера). null — сплиттера нет
+  // или ещё читаем: тогда судим только по метадате, как раньше.
+  const [aiOn, setAiOn] = useState(null);
+  const loadAiOn = useCallback(async () => {
+    if (!SPLITTER_LIVE || !tokenAddress) { setAiOn(null); return; }
+    try {
+      const v = await publicClient.readContract({ address: FEE_SPLITTER_ADDRESS, abi: feeSplitterAbi, functionName: "aiOf", args: [tokenAddress] });
+      setAiOn(Boolean(v));
+    } catch (e) { setAiOn(null); }
+  }, [tokenAddress]);
+  useEffect(() => { loadAiOn(); }, [loadAiOn]);
+
   async function sendTx(address, abi, functionName, args = [], value) {
     setError(""); setBusy(true);
     try {
@@ -892,11 +904,16 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   // по шапке монеты.
   const aiId = String(meta.ai || "").trim();
   const aiMaker = makerOf(aiId);
+  // aiOn === false при живом сплиттере: модель в метадате есть, но создатель
+  // не подписал «включить ИИ» — агент на монету не работает, чип гасим.
+  const aiOff = SPLITTER_LIVE && aiOn === false;
   const aiChip = aiMaker ? (
-    <a className="badge tk-ai" href="#/ai" title={`${t("ИИ этой монеты работает на этой модели")}: ${aiId.slice(0, 80)}`}>
+    <a className={`badge tk-ai ${aiOff ? "off" : ""}`} href="#/ai"
+       title={aiOff ? t("ИИ не включён: создатель не подписал включение. Агент на монету не работает.") : `${t("ИИ этой монеты работает на этой модели")}: ${aiId.slice(0, 80)}`}>
       <img className="q-logo" src={modelLogo(aiId)} alt="" loading="lazy"
            onError={(e) => { e.currentTarget.style.display = "none"; }} />
       {String(meta.aiName || aiId.split("/")[1] || aiId).slice(0, 28)}
+      {aiOff && <span className="dim">{" · "}{t("не включён")}</span>}
     </a>
   ) : null;
 
@@ -1645,7 +1662,19 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           </div>
           {sideTab === "wsh" ? (
             <div className="side-wsh">
-              <AgentBudget token={tokenAddress} />
+              {SPLITTER_LIVE && aiOn === false && isCreator && (
+                <div className="ai-enable">
+                  <b>{t("ИИ монеты не включён")}</b>
+                  <div className="dim" style={{ marginTop: 4 }}>
+                    {t("Одна подпись — и агент начнёт работать на эту монету. 10% комиссии пойдут в его бюджет вместо вас. Включение необратимо.")}
+                  </div>
+                  <button className="btn btn-primary" style={{ marginTop: 10 }} disabled={busy}
+                          onClick={async () => { await sendTx(FEE_SPLITTER_ADDRESS, feeSplitterAbi, "enableAi", [tokenAddress]); await loadAiOn(); }}>
+                    {busy ? t("Подпишите в кошельке…") : t("Включить ИИ")}
+                  </button>
+                </div>
+              )}
+              <AgentBudget token={tokenAddress} quote={data.q || null} />
               <Workshop token={tokenAddress} wallet={wallet} onConnect={onConnect} embedded />
               <div className="sec-h3" style={{ marginTop: 26 }}>{t("Журнал")}</div>
               <Journal token={tokenAddress} wallet={wallet} />
