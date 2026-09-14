@@ -15,8 +15,14 @@
 // проверяет подпись и молча выбрасывает всё, что не сошлось. Число
 // выброшенных показывается — врать про их отсутствие не будем.
 //
-// Записи пока кладёт владелец руками (scripts/journal-write.mjs). Когда
-// появится агент, писать будет он — формат не изменится.
+// ДВА ИСТОЧНИКА, и это не дублирование.
+// Задание («что заказали») кладёт человек — в базу, с подписью кошелька.
+// Отчёт («что вышло») кладёт агент — в сам репозиторий, файлом
+// web/public/agents/builds.json, тем же коммитом, что и построенную
+// страницу. В репозиторий может писать только тот, у кого есть доступ,
+// поэтому отчёт не нужно подписывать: подделать его, не подделав сайт,
+// нельзя. Заодно агенту в CI не нужен ни один секретный ключ сверх
+// ключа модели.
 
 import { verifyMessage } from "viem";
 import { CHAT_DB_URL, AGENT_OPERATOR } from "./config.js";
@@ -134,6 +140,46 @@ export function summarize(rows) {
     if (Number.isFinite(v)) s.spent += v;
   }
   return s;
+}
+
+/**
+ * Отчёты агента лежат в самом сайте: web/public/agents/builds.json, кладёт
+ * их агент тем же коммитом, что и построенную страницу.
+ *
+ * Почему не в базе: база открыта на запись, и любую строку там надо
+ * подписывать. В репозиторий пишет только тот, у кого есть доступ, —
+ * проверка встроена в сам факт, что файл лежит на сайте.
+ */
+export async function loadBuilds() {
+  try {
+    const base = import.meta.env.BASE_URL || "/";
+    const r = await fetch(`${base}agents/builds.json`, { cache: "no-store" });
+    if (!r.ok) return [];
+    const list = await r.json();
+    return Array.isArray(list) ? list : [];
+  } catch { return []; }
+}
+
+/** Наложить отчёты на записи журнала: задание «строит» становится «готово». */
+export function mergeBuilds(rows, builds) {
+  const key = (t, r) => `${String(t).toLowerCase()}:${r}`;
+  const byKey = new Map((builds || []).map((b) => [key(b.token, b.round), b]));
+  const used = new Set();
+  const out = (rows || []).map((r) => {
+    const b = byKey.get(key(r.token, r.round));
+    if (!b) return r;
+    used.add(key(r.token, r.round));
+    // Провал остаётся провалом: если владелец написал «не вышло», отчёт
+    // о сборке этого не отменяет.
+    if (r.status === "failed") return r;
+    return { ...r, status: "done", url: b.url || r.url, spent: b.spent ?? r.spent, model: b.model };
+  });
+  // Сборки, которых нет в базе (её могли почистить) — показываем всё равно.
+  for (const b of builds || []) {
+    if (used.has(key(b.token, b.round))) continue;
+    out.push({ ...b, status: "done", tk: null });
+  }
+  return out;
 }
 
 /** Деньги показываем так же, как их считает OpenRouter, — в долларах. */
