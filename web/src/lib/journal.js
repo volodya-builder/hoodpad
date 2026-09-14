@@ -172,7 +172,7 @@ export function mergeBuilds(rows, builds) {
     // Провал остаётся провалом: если владелец написал «не вышло», отчёт
     // о сборке этого не отменяет.
     if (r.status === "failed") return r;
-    return { ...r, status: "done", url: b.url || r.url, path: b.path, spent: b.spent ?? r.spent, model: b.model };
+    return { ...r, status: "done", url: b.url || r.url, path: b.path, spent: b.spent ?? r.spent, model: b.model, asked: b.asked };
   });
   // Сборки, которых нет в базе (её могли почистить) — показываем всё равно.
   for (const b of builds || []) {

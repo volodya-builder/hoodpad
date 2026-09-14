@@ -13,6 +13,7 @@ import Journal from "../components/Journal.jsx";
 import AgentBudget from "../components/AgentBudget.jsx";
 import { useSplit, loadCreationTimes, timeAgo, useClock, useSupport } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
+import { modelById, modelLogo } from "../lib/models.mjs";
 import CandleChart from "../components/CandleChart.jsx";
 import TokenSidebar from "../components/TokenSidebar.jsx";
 import { useFavs, toggleFav } from "../lib/favs.js";
@@ -736,6 +737,18 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     </div>
   );
 
+  // Модель, на которой работает ИИ монеты: её выбрал создатель при запуске,
+  // и она лежит в метадате токена. Показываем только известную нам модель —
+  // произвольная строка из метадаты на страницу монеты не попадает.
+  const aiModel = modelById(String(meta.ai || "").trim());
+  const aiChip = aiModel ? (
+    <a className="badge tk-ai" href="#/ai" title={t("ИИ этой монеты работает на этой модели")}>
+      <img className="q-logo" src={modelLogo(aiModel.site)} alt="" loading="lazy"
+           onError={(e) => { e.currentTarget.style.display = "none"; }} />
+      {aiModel.name}
+    </a>
+  ) : null;
+
   const socials = (meta.x || meta.telegram || meta.website) ? (
     <div className="soc-row" style={{ margin: 0 }}>
       {meta.x && (
@@ -946,6 +959,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                   {data.name} <span className="ticker">${data.symbol}</span>
                   {data.graduated && <span className="badge">🎯 В яблочке</span>}
+                  {aiChip}
                   {socials}
                 </div>
                 <div className="mono th-addr" onClick={() => copyCA("head")} title={t("Скопировать адрес")}>

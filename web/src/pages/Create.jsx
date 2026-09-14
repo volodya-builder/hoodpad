@@ -6,6 +6,7 @@ import { FACTORY_ADDRESS } from "../lib/config.js";
 import { useSplit, injectNewToken } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 import { RWA_TOKENS, RWA_POPULAR, stockLogo, CHAIN_LOGOS } from "../lib/rwa.js";
+import { AI_MODELS, AI_POPULAR, AI_AUTO, modelLogo, modelById, matchModel } from "../lib/models.mjs";
 
 // Логотип с фолбэком: если CDN не знает тикер — просто прячем картинку
 const Logo = ({ src, cls }) => (
@@ -21,6 +22,15 @@ const TrendIcon = () => (
           strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     <path d="M11 5 H14.5 V8.5" fill="none" stroke="currentColor"
           strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+// Искра для чипа «решит агент» — тот же приём, что TrendIcon: свой вектор,
+// а не эмодзи, чтобы выглядело одинаково на всех платформах
+const SparkIcon = () => (
+  <svg className="rwa-ico q-logo-slot" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+    <path d="M8 1.5 L9.5 6.5 L14.5 8 L9.5 9.5 L8 14.5 L6.5 9.5 L1.5 8 L6.5 6.5 Z"
+          fill="currentColor" />
   </svg>
 );
 
@@ -103,6 +113,10 @@ export default function Create({ wallet, onConnect }) {
   const [quoteTab, setQuoteTab] = useState("crypto");
   const [quote, setQuote] = useState("ETH"); // "ETH" | символ акции
   const [rwaSearch, setRwaSearch] = useState("");
+  // Модель ИИ монеты. Пусто = «решит агент». Уезжает в метадату токена полем
+  // ai — то есть в контракт, навсегда, как и картинка.
+  const [ai, setAi] = useState(AI_AUTO);
+  const [aiSearch, setAiSearch] = useState("");
   const [tax, setTax] = useState({ buy: 3, sell: 3, mkt: 40, burn: 20, div: 30, lp: 10, minShare: 0, divToken: "self" });
   const taxTotal = tax.mkt + tax.burn + tax.div + tax.lp;
   const ALLOC_KEYS = ["mkt", "burn", "div", "lp"];
@@ -147,12 +161,12 @@ export default function Create({ wallet, onConnect }) {
     e.preventDefault();
     setError("");
     if (quote !== "ETH") {
-      try { localStorage.setItem("hood_rwa_draft", JSON.stringify({ form, quote, savedAt: Date.now() })); } catch (e) { /* ignore */ }
+      try { localStorage.setItem("hood_rwa_draft", JSON.stringify({ form, ai, quote, savedAt: Date.now() })); } catch (e) { /* ignore */ }
       return setError(t("Запуск с валютой-акцией откроется с деплоем ERC20-пула курвы. Черновик с выбором {sym} сохранён.").replace("{sym}", quote));
     }
     if (ttype === "tax") {
       if (taxTotal !== 100) return setError(t("Аллокация налога должна давать ровно 100%."));
-      try { localStorage.setItem("hood_tax_draft", JSON.stringify({ form, tax, savedAt: Date.now() })); } catch (e) { /* ignore */ }
+      try { localStorage.setItem("hood_tax_draft", JSON.stringify({ form, ai, tax, savedAt: Date.now() })); } catch (e) { /* ignore */ }
       return setError(t("Tax-токены (v3) на подходе: контракты в разработке. Черновик с твоими параметрами сохранён — запуск откроется в один клик."));
     }
     if (!wallet) return onConnect();
@@ -172,6 +186,9 @@ export default function Create({ wallet, onConnect }) {
         website: form.website.trim(),
         github: form.github.trim(),
         youtube: form.youtube.trim(),
+        // Модель ИИ монеты. Пишем только когда выбрали: пустое поле — лишние
+        // байты в calldata, за которые платит создатель.
+        ...(ai ? { ai } : {}),
       };
       const uri =
         "data:application/json;base64," +
@@ -275,6 +292,30 @@ export default function Create({ wallet, onConnect }) {
             </div>
           </>
         )}
+
+        <label>{t("Модель ИИ монеты")}</label>
+        <input className="quote-search" value={aiSearch} onChange={(e) => setAiSearch(e.target.value)}
+               placeholder={t("Поиск: Claude, GPT, Gemini…")} />
+        <div className="quote-grid">
+          <button type="button" className={`quote-chip ${ai === AI_AUTO ? "on" : ""}`}
+                  onClick={() => setAi(AI_AUTO)}>
+            <SparkIcon /> {t("Решит агент")}
+          </button>
+          {(aiSearch
+            ? AI_MODELS.filter((m) => matchModel(m, aiSearch)).slice(0, 18)
+            : AI_MODELS.filter((m) => AI_POPULAR.includes(m.id))
+          ).map((m) => (
+            <button type="button" key={m.id} className={`quote-chip ${ai === m.id ? "on" : ""}`}
+                    onClick={() => setAi(m.id)} title={m.id}>
+              <Logo cls="q-logo" src={modelLogo(m.site)} />{m.name}
+            </button>
+          ))}
+        </div>
+        <div className="hint">
+          {ai
+            ? t("ИИ монеты будет работать на {m}. Выбор записывается в саму монету и виден всем. Если модель снимут с обслуживания, агент возьмёт ближайшую и честно напишет об этом в журнале.").replace("{m}", modelById(ai)?.name || ai)
+            : t("Можно не выбирать — агент возьмёт лучшую доступную модель. Выбор записывается в саму монету, поменять его потом нельзя.")}
+        </div>
 
         <div className="field-row">
           <div>

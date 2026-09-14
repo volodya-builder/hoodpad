@@ -9,3 +9,6 @@ bot/activity/state.json
 deploy-config.json
 mainnet-v2-addresses.txt
 Claude outputs/
+
+# помощник входа на GitHub — локальный, в репозиторий не нужен
+scripts/git-credential-hood.sh
