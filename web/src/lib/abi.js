@@ -196,3 +196,12 @@ export const erc20Abi = parseAbi([
   "function allowance(address owner, address spender) view returns (uint256)",
   "function approve(address spender, uint256 amount) returns (bool)",
 ]);
+
+// CurveZap: ETH → валюта монеты → монета, в одной транзакции (и обратно).
+export const zapAbi = parseAbi([
+  "function buyWithEth(address token, uint256 minTokensOut, uint256 deadline) payable returns (uint256 tokensOut)",
+  "function sellForEth(address token, uint256 tokensIn, uint256 minEthOut, uint256 deadline) returns (uint256 ethOut)",
+  "function supported(address token) view returns (bool)",
+  "function hasRoute(address quote) view returns (bool)",
+  "function routeOf(address quote) view returns (address mid, uint24 fee1, uint24 fee2)",
+]);

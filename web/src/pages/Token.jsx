@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { parseEther, formatEther, parseUnits, formatUnits } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
-import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi } from "../lib/abi.js";
-import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE } from "../lib/config.js";
+import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi, zapAbi } from "../lib/abi.js";
+import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE } from "../lib/config.js";
 import { poolTrades, invalidateTrades, loadTokens, allTrades, parseMeta } from "../lib/data.js";
 import { computeTrust } from "../lib/trust.js";
 import { honestVolume } from "../lib/fairvol.js";
@@ -200,11 +200,22 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   // знаки и символ её валюты (у USDG 6). Всё, что ниже считает деньги
   // кривой, ходит через эти три функции, а не через parseEther напрямую.
   const Q = data?.q || null;
-  const QSYM = Q ? Q.sym : "ETH";
-  const pq = (v) => (Q ? parseUnits(String(v), Q.dec) : parseEther(String(v)));
-  const fq = (v) => (Q ? formatUnits(v, Q.dec) : formatEther(v));
+  // Платим ETH через zap (обмен по дороге, как терминал у Pons) или самой
+  // валютой напрямую. По умолчанию — ETH, если zap умеет эту монету.
+  const [payEth, setPayEth] = useState(true);
+  const zapOk = Boolean(Q && ZAP_LIVE && data?.zapOk);
+  const viaZap = zapOk && payEth;
+  // В чём считаем деньги СДЕЛКИ: ETH (обычная монета или zap) или валюта.
+  const PAY = Q && !viaZap ? Q : null;
+  const QSYM = PAY ? PAY.sym : "ETH";
+  const pq = (v) => (PAY ? parseUnits(String(v), PAY.dec) : parseEther(String(v)));
+  const fq = (v) => (PAY ? formatUnits(v, PAY.dec) : formatEther(v));
+  // В чём считает цену и резерв САМА кривая (у quote-монеты — всегда валюта).
+  const CSYM = Q ? Q.sym : "ETH";
+  const fc = (v) => (Q ? formatUnits(v, Q.dec) : formatEther(v));
   // Запас на газ нужен только когда платим нативным ETH.
-  const GAS_KEEP = Q ? 0 : 0.0003;
+  const GAS_KEEP = PAY ? 0 : 0.0003;
+  const payBal = PAY ? (data?.walletQuote ?? 0n) : (data?.walletEth ?? 0n);
   const [meta, setMeta] = useState({});
   const [tab, setTab] = useState("buy");
   const [amount, setAmount] = useState("");
@@ -422,6 +433,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   // Прайс-импакт: насколько сделка сдвинет цену относительно спота
   const impact = useMemo(() => {
     if (!quote || !data || !amount || Number(amount) <= 0) return null;
+    if (viaZap) return null; // ETH против цены в валюте — несравнимо, честнее промолчать
     const spot = Number(fq(data.price));
     if (spot <= 0) return null;
     if (tab === "buy" && quote.kind === "tokens") {
@@ -438,7 +450,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       return (1 - eff / spot) * 100;
     }
     return null;
-  }, [quote, data, amount, tab]);
+  }, [quote, data, amount, tab, viaZap]);
 
   const load = useCallback(async () => {
     const ZERO = "0x0000000000000000000000000000000000000000";
@@ -484,21 +496,26 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         publicClient.readContract({ address: pool, abi: pAbi, functionName: "creator" }),
       ]);
     let balance = 0n;
-    let walletEth = 0n; // для quote-монеты здесь баланс валюты, не ETH
+    let walletEth = 0n;
+    let walletQuote = 0n;
     if (wallet) {
-      [balance, walletEth] = await Promise.all([
+      [balance, walletEth, walletQuote] = await Promise.all([
         publicClient.readContract({
           address: tokenAddress,
           abi: tokenAbi,
           functionName: "balanceOf",
           args: [wallet.account],
         }),
+        publicClient.getBalance({ address: wallet.account }).catch(() => 0n),
         q
           ? publicClient.readContract({ address: q.addr, abi: erc20Abi, functionName: "balanceOf", args: [wallet.account] }).catch(() => 0n)
-          : publicClient.getBalance({ address: wallet.account }).catch(() => 0n),
+          : Promise.resolve(0n),
       ]);
     }
-    setData({ pool, name, symbol, uri, price, sold, cap, reserve, graduated, migrated, creator, balance, walletEth, q, divBps });
+    const zapOk = q && ZAP_LIVE
+      ? await publicClient.readContract({ address: ZAP_ADDRESS, abi: zapAbi, functionName: "supported", args: [tokenAddress] }).catch(() => false)
+      : false;
+    setData({ pool, name, symbol, uri, price, sold, cap, reserve, graduated, migrated, creator, balance, walletEth, walletQuote, q, divBps, zapOk });
     setMeta(parseMeta(uri)); // нормализует мусор: null/массив/числа не роняют страницу
   }, [tokenAddress, wallet]);
 
@@ -571,7 +588,37 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     const t = setTimeout(async () => {
       try {
         const pAbi = data.q ? quotePoolAbi : poolAbi;
-        if (tab === "buy") {
+        if (viaZap) {
+          // Оценка — симуляция того же вызова, что уйдёт в сеть: она учитывает
+          // и обмен на Uniswap, и кривую, и налог холдерам. Точнее не бывает.
+          const deadline = BigInt(Math.floor(Date.now() / 1000) + 600);
+          const acct = wallet?.account || "0x0000000000000000000000000000000000000001";
+          if (tab === "buy") {
+            const { result } = await publicClient.simulateContract({
+              account: acct, address: ZAP_ADDRESS, abi: zapAbi, functionName: "buyWithEth",
+              args: [tokenAddress, 0n, deadline], value: parseEther(amount),
+            });
+            setQuote({ kind: "tokens", value: result });
+          } else {
+            // Продажу без approve симулировать нельзя (transferFrom упадёт) —
+            // считаем через кривую и обмен приблизительно нельзя тоже; поэтому
+            // оценка продажи через zap = quoteSell в валюте, а ETH покажем
+            // после approve. Проще: сначала кривая, потом — сколько это в ETH
+            // по симуляции продажи с уже выданным approve.
+            const gross = await publicClient.readContract({ address: data.pool, abi: pAbi, functionName: "quoteSell", args: [parseEther(amount)] });
+            const bps = 100n + BigInt(data.divBps || 0);
+            const net = gross - (gross * bps) / 10000n;
+            let eth = null;
+            try {
+              const { result } = await publicClient.simulateContract({
+                account: acct, address: ZAP_ADDRESS, abi: zapAbi, functionName: "sellForEth",
+                args: [tokenAddress, parseEther(amount), 0n, deadline],
+              });
+              eth = result;
+            } catch { /* нет approve — покажем в валюте */ }
+            setQuote(eth !== null ? { kind: "eth", value: eth } : { kind: "quote", value: net });
+          }
+        } else if (tab === "buy") {
           const out = await publicClient.readContract({
             address: data.pool, abi: pAbi, functionName: "quoteBuy",
             args: [pq(amount)],
@@ -590,7 +637,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       } catch { setQuote(null); }
     }, 250);
     return () => clearTimeout(t);
-  }, [amount, tab, data]);
+  }, [amount, tab, data, viaZap]);
 
   async function trade() {
     setError("");
@@ -601,7 +648,35 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       const slipPct = slip === "auto" ? 40 : Number(slip);
       const slipBps = BigInt(Math.round(slipPct * 100));
       let hash;
-      if (tab === "buy" && data.q) {
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 600);
+      if (viaZap && tab === "buy") {
+        const minOut = quote.value - (quote.value * slipBps) / 10000n;
+        hash = await wallet.walletClient.writeContract({
+          address: ZAP_ADDRESS, abi: zapAbi, functionName: "buyWithEth",
+          args: [tokenAddress, minOut, deadline], value: parseEther(amount),
+        });
+      } else if (viaZap) {
+        const tokensIn = parseEther(amount);
+        const allowance = await publicClient.readContract({
+          address: tokenAddress, abi: tokenAbi, functionName: "allowance", args: [wallet.account, ZAP_ADDRESS],
+        });
+        if (allowance < tokensIn) {
+          const a = await wallet.walletClient.writeContract({
+            address: tokenAddress, abi: tokenAbi, functionName: "approve", args: [ZAP_ADDRESS, tokensIn],
+          });
+          await publicClient.waitForTransactionReceipt({ hash: a });
+        }
+        // Точная оценка в ETH — теперь approve есть, симуляция пройдёт.
+        const { result: ethOut } = await publicClient.simulateContract({
+          account: wallet.account, address: ZAP_ADDRESS, abi: zapAbi, functionName: "sellForEth",
+          args: [tokenAddress, tokensIn, 0n, deadline],
+        });
+        const minEth = ethOut - (ethOut * slipBps) / 10000n;
+        hash = await wallet.walletClient.writeContract({
+          address: ZAP_ADDRESS, abi: zapAbi, functionName: "sellForEth",
+          args: [tokenAddress, tokensIn, minEth, deadline],
+        });
+      } else if (tab === "buy" && data.q) {
         // ERC20-валюта не приходит вместе с вызовом, как ETH: сначала
         // разрешение пулу на сумму, потом сама покупка.
         const gross = pq(amount);
@@ -1046,8 +1121,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               )}
             </div>
             <div className="tk-cells">
-              <div className="tk-cell"><span>{t("Цена")}</span><b>{fmtEth(fq(data.price))} {QSYM}</b></div>
-              <div className="tk-cell"><span>{t("Собрано")}</span><b>{fmtEth(fq(data.reserve))} {QSYM}</b></div>
+              <div className="tk-cell"><span>{t("Цена")}</span><b>{fmtEth(fc(data.price))} {CSYM}</b></div>
+              <div className="tk-cell"><span>{t("Собрано")}</span><b>{fmtEth(fc(data.reserve))} {CSYM}</b></div>
               <div className="tk-cell"><span>{t("Объём 24ч")}</span><b>{tokStats ? fmtEth(tokStats.vol24) : "0"} ETH</b></div>
               <div className="tk-cell"><span>ATH</span><b>{tokStats ? usd(tokStats.ath * rate) : "—"}</b></div>
               {!data.graduated && (
@@ -1376,6 +1451,13 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               </div>
             </div>
 
+            {zapOk && (
+              <div className="pay-toggle">
+                <span className="dim">{tab === "buy" ? t("Платить") : t("Получить")}:</span>
+                <button type="button" className={`fpill ${payEth ? "on" : ""}`} onClick={() => setPayEth(true)}>ETH</button>
+                <button type="button" className={`fpill ${!payEth ? "on" : ""}`} onClick={() => setPayEth(false)}>{Q.sym}</button>
+              </div>
+            )}
             <label>{tab === "buy" ? `${t("Вы платите")} (${QSYM})` : `${t("Вы продаёте")} (${data.symbol})`}</label>
             <input
               value={amount}
@@ -1383,7 +1465,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 setAmount(e.target.value);
                 const n = Number(e.target.value);
                 if (tab === "buy") {
-                  const avail = Math.max(0, Number(fq(data.walletEth ?? 0n)) - GAS_KEEP);
+                  const avail = Math.max(0, Number(fq(payBal)) - GAS_KEEP);
                   setTradePct(avail > 0 && n > 0 ? Math.min(100, Math.round((n / avail) * 100)) : 0);
                 } else {
                   const bal = Number(formatEther(data.balance));
@@ -1398,7 +1480,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 <div className="slider-row" style={{ marginTop: 10 }}>
                   <span className="dim">
                     {tab === "buy"
-                      ? `${t("От баланса")} ${fmtEth(Number(fq(data.walletEth ?? 0n)))} ${QSYM}`
+                      ? `${t("От баланса")} ${fmtEth(Number(fq(payBal)))} ${QSYM}`
                       : `${t("От баланса")} ${fmt(Number(formatEther(data.balance)), 0)} ${data.symbol}`}
                   </span>
                   <b style={{ color: tab === "buy" ? "var(--gold)" : "var(--red)" }}>{tradePct}%</b>
@@ -1409,7 +1491,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                          const v = Number(e.target.value);
                          setTradePct(v);
                          if (tab === "buy") {
-                           const avail = Math.max(0, Number(fq(data.walletEth ?? 0n)) - GAS_KEEP);
+                           const avail = Math.max(0, Number(fq(payBal)) - GAS_KEEP);
                            setAmount(v > 0 ? (avail * v / 100).toFixed(6) : "");
                          } else {
                            setAmount(v > 0 ? trimAmt(formatEther((data.balance * BigInt(v)) / 100n)) : "");
@@ -1443,7 +1525,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                        const v = Number(p2) || 0;
                        setTradePct(v);
                        if (tab === "buy") {
-                         const avail = Math.max(0, Number(fq(data.walletEth ?? 0n)) - GAS_KEEP);
+                         const avail = Math.max(0, Number(fq(payBal)) - GAS_KEEP);
                          setAmount(v > 0 ? (avail * v / 100).toFixed(6) : "");
                        } else {
                          setAmount(v > 0 ? trimAmt(formatEther((data.balance * BigInt(v)) / 100n)) : "");
@@ -1494,7 +1576,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 <b>
                   {tab === "buy"
                     ? `${fmt(formatEther(quote.value), 2)} ${data.symbol}`
-                    : `${fmtEth(formatEther(quote.value))} ETH`}
+                    : quote.kind === "quote"
+                      ? `${fmtEth(fc(quote.value))} ${CSYM} (${t("в ETH — после разрешения")})`
+                      : `${fmtEth(fq(quote.value))} ${QSYM}`}
                 </b>
               </div>
             )}

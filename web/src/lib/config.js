@@ -146,6 +146,13 @@ export const QUOTE_FACTORY_ADDRESS =
   import.meta.env.VITE_QUOTE_FACTORY_ADDRESS ?? "0xd7299e03c5e7d4f9f4c62f305a0b619359cf9a4f";
 export const QUOTE_LIVE = Boolean(QUOTE_FACTORY_ADDRESS);
 
+// CurveZap — «купить/продать монету за валюту, платя ETH»: меняет ETH на
+// валюту монеты через Uniswap V3 и покупает на кривой одной транзакцией.
+// Как терминал GMGN для монет Pons. Пусто = покупка только за саму валюту.
+export const ZAP_ADDRESS = import.meta.env.VITE_ZAP_ADDRESS ?? "";
+export const ZAP_LIVE = Boolean(ZAP_ADDRESS);
+export const WETH_ADDRESS = "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73";
+
 // On-chain chat contract (messages are events; zero = not deployed yet)
 export const CHAT_ADDRESS =
   import.meta.env.VITE_CHAT_ADDRESS ?? "0xbaf4de9b8f35c384058d31e2730a3146c0d1af3c";

@@ -2627,6 +2627,10 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 /* Метка валюты на карточке монеты за валюту: «USDG · 2%» */
 .tmc .tq { font-style: normal; font-size: 10.5px; color: var(--gold); margin-left: 6px; font-weight: 600; }
 
+/* Переключатель «платить ETH / валютой» над полем суммы у монет за валюту */
+.pay-toggle { display: flex; align-items: center; gap: 6px; margin: 6px 0 4px; font-size: 12px; }
+.pay-toggle .fpill { padding: 4px 10px; }
+
 /* Дивиденды холдерам — блок в правой колонке страницы монеты */
 .dv { border: 1px solid var(--border-gold); background: var(--gold-dim); border-radius: 12px; padding: 12px 14px; margin: 8px 8px 12px; }
 .dv-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
