@@ -41,11 +41,15 @@ const shape = (t) => ({
  * тем, что люди реально держат и меняют, иначе цена монеты будет
  * привязана к пустоте.
  */
-export async function loadCryptoQuotes(limit = 40) {
+export async function loadCryptoQuotes(limit = 60, onProgress) {
   if (!EXPLORER) return [];
   const out = [];
   let url = `${EXPLORER}/api/v2/tokens?type=ERC-20`;
+  const snapshot = () => [...out].sort((a, b) => b.volume - a.volume).slice(0, limit);
   try {
+    // Страницы у обозревателя курсорные, читать можно только по очереди.
+    // Поэтому отдаём результат по мере чтения: первая страница — это уже
+    // WETH, USDG и прочие крупные, и ждать остальные пять незачем.
     for (let page = 0; page < 6 && url; page++) {
       const j = await fetch(url).then((r) => (r.ok ? r.json() : null));
       if (!j) break;
@@ -53,12 +57,32 @@ export async function loadCryptoQuotes(limit = 40) {
         if (isStock(t) || t.reputation !== "ok" || !(num(t.exchange_rate) > 0)) continue;
         out.push(shape(t));
       }
+      if (onProgress) onProgress(snapshot());
       if (!j.next_page_params) break;
       url = `${EXPLORER}/api/v2/tokens?type=ERC-20&${new URLSearchParams(j.next_page_params)}`;
     }
   } catch { /* обозреватель лёг — вернём что успели */ }
-  out.sort((a, b) => b.volume - a.volume);
-  return out.slice(0, limit);
+  return snapshot();
+}
+
+/**
+ * Что показать до поиска. Когда фабрика живая — её белый список, и только
+ * он: витрина обещает ровно то, за что можно запустить. Пока фабрики нет —
+ * те же валюты, что пойдут в белый список (scripts/deploy-quote.js), чтобы
+ * витрина не менялась в день деплоя; следом — остальное по обороту.
+ *
+ * PLANNED дублирует список из скрипта деплоя, и это осознанно: после
+ * деплоя источник правды — сама фабрика, а этот список станет запасным.
+ */
+export const PLANNED = ["WETH", "USDG", "USDE", "CBBTC", "LINK", "TAO", "PENDLE", "VIRTUAL"];
+
+export function featuredQuotes(list, allowed, limit = 11) {
+  const rows = list || [];
+  if (allowed && allowed.size) {
+    return rows.filter((q) => allowed.has(q.addr)).slice(0, limit);
+  }
+  const rank = (q) => { const i = PLANNED.indexOf(q.sym); return i < 0 ? 99 : i; };
+  return [...rows].sort((a, b) => rank(a) - rank(b) || b.volume - a.volume).slice(0, limit);
 }
 
 /** Одна валюта по адресу — для поля «свой контракт». */
