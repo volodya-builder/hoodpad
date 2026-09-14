@@ -1011,6 +1011,56 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
 }
 .pos-row .pos-id { padding-right: 16px; }
 /* мини-графики аналитики: подсказка при наведении + ось времени */
+/* --- Мастерская: голосование холдеров --- */
+.wsh { margin-top: 16px; }
+.wsh-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.wsh-sel {
+  font-family: inherit; font-size: 13.5px; font-weight: 700; color: var(--text);
+  background: var(--bg-soft); border: 1px solid var(--border); border-radius: 10px;
+  padding: 9px 12px; cursor: pointer; max-width: 280px;
+}
+.wsh-phase {
+  font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px;
+  border-radius: 999px; padding: 5px 11px; border: 1px solid var(--border);
+}
+.wsh-phase.propose { color: var(--gold); border-color: var(--border-gold); background: var(--gold-dim); }
+.wsh-phase.vote { color: var(--leaf); border-color: #23472e; background: var(--leaf-dim); }
+.wsh-phase.done { color: var(--text-dim); }
+.wsh-left { font-size: 12.5px; color: var(--text-dim); margin-left: auto; }
+
+.wsh-connect, .wsh-you {
+  margin-top: 12px; font-size: 13.5px; display: flex; align-items: center;
+  gap: 10px; flex-wrap: wrap;
+}
+.wsh-you { color: var(--text-dim); }
+.wsh-ok { color: var(--leaf); }
+.wsh-dim { color: var(--text-dim); }
+
+.wsh-form { margin-top: 14px; }
+.wsh-form textarea {
+  width: 100%; min-height: 84px; resize: vertical; font-family: inherit; font-size: 14px;
+  line-height: 1.55; color: var(--text); background: var(--bg-soft);
+  border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px;
+}
+.wsh-form textarea:focus { outline: none; border-color: var(--border-gold); }
+.wsh-form-row { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+
+.wsh-list { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+.wsh-item {
+  background: linear-gradient(180deg, #1a1a19 0%, #151514 100%);
+  border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px;
+}
+.wsh-item.mine { border-color: var(--border-gold); }
+.wsh-item-top { display: flex; align-items: flex-start; gap: 14px; }
+.wsh-text { font-size: 14.5px; line-height: 1.55; flex: 1; }
+/* Полоса — доля голосов. Число рядом обязательно: цвет один, длина читается. */
+.wsh-bar { height: 6px; border-radius: 4px; background: var(--border); margin-top: 12px; overflow: hidden; }
+.wsh-bar span { display: block; height: 100%; border-radius: 4px; background: var(--gold); transition: width .3s; }
+.wsh-meta { display: flex; justify-content: space-between; margin-top: 7px; font-size: 12px; font-variant-numeric: tabular-nums; }
+
+.wsh-note { margin-top: 16px; font-size: 12.5px; color: var(--text-dim); }
+@media (max-width: 560px) { .wsh-left { margin-left: 0; width: 100%; } }
+
 /* ---------------- Вкладка «Мастерская»: всё про ИИ-агентов монет ------- */
 
 /* Плашка честности. Пока агентов нет, страница обязана говорить это прямо,
