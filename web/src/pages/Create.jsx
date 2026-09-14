@@ -359,7 +359,7 @@ export default function Create({ wallet, onConnect }) {
                 <Logo cls="q-logo" src={CHAIN_LOGOS.ethereum} />ETH
               </button>
               {(cryptoSearch
-                ? (crypto || []).filter((q) => matchQuote(q, cryptoSearch)).slice(0, 18)
+                ? (crypto || []).filter((q) => (!QUOTE_LIVE || allowed.has(q.addr)) && matchQuote(q, cryptoSearch)).slice(0, 18)
                 : featuredQuotes(crypto, allowed)
               ).map((q) => {
                   const ok = !QUOTE_LIVE || allowed.has(q.addr);
@@ -408,14 +408,18 @@ export default function Create({ wallet, onConnect }) {
             <input className="quote-search" value={rwaSearch} onChange={(e) => setRwaSearch(e.target.value.toUpperCase())}
                    placeholder={t("Поиск тикера: NVDA, AAPL, TSLA…")} />
             <div className="quote-grid">
-              {(rwaSearch
-                ? RWA_TOKENS.filter((x) => x.sym.includes(rwaSearch)).slice(0, 18)
-                : RWA_TOKENS.filter((x) => RWA_POPULAR.includes(x.sym))
-              ).map((x) => (
+              {(() => {
+                // Только акции из белого списка фабрики: за остальные запуск
+                // невозможен, и показывать их — обещать то, чего нет.
+                const listed = QUOTE_LIVE
+                  ? RWA_TOKENS.filter((x) => allowed.has(x.addr.toLowerCase()))
+                  : RWA_TOKENS.filter((x) => RWA_POPULAR.includes(x.sym));
+                return rwaSearch ? listed.filter((x) => x.sym.includes(rwaSearch)).slice(0, 18) : listed;
+              })().map((x) => (
                 <button type="button" key={x.sym}
-                        className={`quote-chip ${quote === x.sym ? "on" : ""} ${!QUOTE_LIVE || allowed.has(x.addr.toLowerCase()) ? "" : "q-off"}`}
+                        className={`quote-chip ${quote === x.sym ? "on" : ""}`}
                         onClick={() => pickQuote({ sym: x.sym, addr: x.addr.toLowerCase(), dec: 18 })}
-                        title={`${x.addr}${QUOTE_LIVE && !allowed.has(x.addr.toLowerCase()) ? " · " + t("пока не в белом списке") : ""}`}>
+                        title={x.addr}>
                   <Logo cls="q-logo" src={stockLogo(x.sym)} />{x.sym}
                 </button>
               ))}
@@ -425,7 +429,7 @@ export default function Create({ wallet, onConnect }) {
                 ? t("Токен будет торговаться за акцию Robinhood (канонические Stock Tokens, {n} шт.). Запуск с RWA-валютой откроется с деплоем ERC20-пула курвы — выбор сохранится в черновике.").replace("{n}", String(RWA_TOKENS.length))
                 : quoteAllowed && quote !== "ETH"
                   ? t("Токен будет торговаться за {sym}. Градация — когда кривая соберёт порог в этой акции.").replace("{sym}", quote)
-                  : t("Акции Robinhood — {n} шт. Пунктиром — те, что пока не в белом списке фабрики: выбор сохранится в черновике, акцию проверим и добавим.").replace("{n}", String(RWA_TOKENS.length))}
+                  : t("Акции Robinhood, за которые можно запустить монету. Нужна другая — напишите нам, добавим.")}
             </div>
           </>
         )}
