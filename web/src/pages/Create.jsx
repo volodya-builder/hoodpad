@@ -498,7 +498,7 @@ export default function Create({ wallet, onConnect }) {
             <div className="quote-grid">
               <button type="button" className={`quote-chip ${ai === AI_AUTO ? "on" : ""}`}
                       onClick={() => setAi(AI_AUTO)}>
-                <SparkIcon /> {t("Решит агент")}
+✕ {t("Без агента")}
               </button>
               {(aiSearch
                 ? models.filter((m) => matchModel(m, aiSearch)).slice(0, 18)
@@ -514,12 +514,12 @@ export default function Create({ wallet, onConnect }) {
               {aiPick
                 ? t("ИИ монеты будет работать на {m} — это модель {by}, одна страница на ней обходится примерно в {c}. Выбор записывается в саму монету и виден всем. Если её снимут с обслуживания, агент возьмёт другую и честно напишет об этом в журнале.")
                     .replace("{m}", aiPick.name).replace("{by}", aiPick.by).replace("{c}", costLabel(aiPick.cost))
-                : t("Можно не выбирать — агент возьмёт лучшую доступную. Список живой: модели отсортированы по тому, насколько хорошо они делают веб-страницы, а это и есть работа агента.")}
+                : t("Без агента — обычная монета без ИИ. Выберите модель — у монеты появится свой агент: холдеры голосуют, что строить, он строит и выкатывает. Список живой: модели отсортированы по тому, насколько хорошо они делают веб-страницы.")}
               {sp.live && (
                 <> {ai
                   ? t("Агент живёт на комиссиях монеты: {agent}% комиссии идут в его бюджет, вам — {c}% вместо {n}%. После запуска будет вторая подпись — «включить ИИ», это навсегда.")
                       .replace("{agent}", String(sp.agent)).replace("{c}", String(sp.creator)).replace("{n}", String(sp.creatorNoAi))
-                  : t("Без ИИ вам достаётся {n}% комиссии; с ИИ — {c}%, разница идёт в бюджет агента.")
+                  : t("Без агента вам достаётся {n}% комиссии; с агентом — {c}%, разница идёт в его бюджет.")
                       .replace("{n}", String(sp.creatorNoAi)).replace("{c}", String(sp.creator))}</>
               )}
             </div>
@@ -789,15 +789,7 @@ export default function Create({ wallet, onConnect }) {
           {!sp.live && sp.buyback > 0 && (
             <div className="row sub"><span className="k">↳ {t("в казну выкупа")}</span><span className="v">{sp.buyback}%</span></div>
           )}
-          <div className="pv-example">
-            {(() => {
-              // Пример в понятных цифрах: для ETH/BTC — 1, для акций — 10, для стейблов — 1 000.
-              const base = ["ETH", "WETH", "CBBTC"].includes(quote) ? 1 : quoteTab === "rwa" ? 10 : 1000;
-              const mine = +(base * 0.01 * creatorPct / 100).toFixed(4);
-              return t("Пример: наторговали на {b} {q} — вам {n} {q}.")
-                .replace(/\{q\}/g, quote).replace("{b}", base.toLocaleString("ru")).replace("{n}", String(mine));
-            })()}
-          </div>
+          <div className="row"><span className="k">{t("ИИ-агент монеты")}</span><span className="v">{aiPick ? aiPick.name : t("нет")}</span></div>
           <div className="row"><span className="k">{t("Валюта курвы")}</span><span className="v">
             {quote === "ETH" ? "ETH" : <><Logo cls="pv-qlogo" src={quoteIcon} />{quote}</>}
           </span></div>

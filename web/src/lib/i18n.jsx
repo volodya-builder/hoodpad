@@ -1436,7 +1436,11 @@ const EN = {
   "вам, создателю монеты": "to you, the coin's creator",
   "команде hood": "to the hood team",
   "ИИ этой монеты": "to this coin's AI",
-  "Пример: наторговали на {b} {q} — вам {n} {q}.": "Example: {b} {q} traded — you get {n} {q}.",
+  "Без агента": "No agent",
+  "Без агента — обычная монета без ИИ. Выберите модель — у монеты появится свой агент: холдеры голосуют, что строить, он строит и выкатывает. Список живой: модели отсортированы по тому, насколько хорошо они делают веб-страницы.": "No agent — a regular coin without AI. Pick a model and the coin gets its own agent: holders vote on what to build, it builds and ships. The list is live: models are ranked by how well they build web pages.",
+  "Без агента вам достаётся {n}% комиссии; с агентом — {c}%, разница идёт в его бюджет.": "Without an agent you get {n}% of the fee; with one — {c}%, the difference funds its budget.",
+  "ИИ-агент монеты": "The coin's AI agent",
+  "нет": "none",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });
