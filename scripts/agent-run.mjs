@@ -52,7 +52,7 @@ import { fileURLToPath } from "node:url";
 import { verifyMessage } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { decodeAbiParameters, toFunctionSelector } from "viem";
-import { loadModels, featured, PRICE_CAP } from "../web/src/lib/models.mjs";
+import { loadModels, featured, costLabel, COST_CAP, MAX_OUT_TOKENS } from "../web/src/lib/models.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, "..");
@@ -63,7 +63,10 @@ const RPC = "https://rpc.mainnet.chain.robinhood.com";
 
 // Потолки. Страница-одностраничник в них укладывается с запасом, а
 // разогнавшийся промпт упирается в них раньше, чем в баланс.
-const MAX_TOKENS = 16000;
+// Столько же, сколько заложено в расчёт цены в форме запуска: цифра одна,
+// лежит в models.mjs, поэтому «сколько стоит страница» и «сколько агент
+// реально тратит» не могут разойтись.
+const MAX_TOKENS = MAX_OUT_TOKENS;
 const MAX_HTML_BYTES = 200 * 1024;
 
 const cfg = (() => {
@@ -289,14 +292,14 @@ async function main() {
     const all = await fetch(`${OR}/models`).then((x) => x.json()).catch(() => null);
     const list = await loadModels();
     console.log(`В каталоге OpenRouter: ${(all?.data || []).length}`);
-    console.log(`Годных агенту (текст на выходе, до $${PRICE_CAP} за миллион, есть рейтинг): ${list.length}\n`);
+    console.log(`Годных агенту (текст на выходе, до $${COST_CAP} за страницу, есть рейтинг): ${list.length}\n`);
     if (!list.length) {
       console.log("Пусто. Либо каталог не ответил, либо потолок цены слишком низкий.");
       return;
     }
     console.log("Витрина формы запуска — по одной лучшей модели от разработчика:");
     for (const m of featured(list)) {
-      console.log(`  ${String(m.by).padEnd(12)} ${m.name.padEnd(26)} elo ${String(m.elo).padStart(4)}  $${m.price}`);
+      console.log(`  ${String(m.by).padEnd(12)} ${m.name.padEnd(26)} elo ${String(m.elo).padStart(4)}  ${costLabel(m.cost)} за страницу`);
     }
     console.log("\nПервые десять по рейтингу «делает веб-страницу»:");
     for (const m of list.slice(0, 10)) console.log(`  ${String(m.elo).padStart(4)}  ${m.id}`);
