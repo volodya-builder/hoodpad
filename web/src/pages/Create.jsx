@@ -143,6 +143,24 @@ export default function Create({ wallet, onConnect }) {
     return () => { on = false; };
   }, []);
   const pickQuote = (q) => { setQuote(q.sym); setQuoteAddr(q.addr); setQuoteDec(q.dec); };
+  // Порог градации и кап создателя для выбранной валюты — из самой фабрики
+  // (quoteConfig), а не из текста: цифры на превью должны быть теми, что
+  // проверит контракт. virtualQuote × 4 = сколько соберёт кривая.
+  const [qcfg, setQcfg] = useState(null); // { threshold, cap } в единицах валюты
+  useEffect(() => {
+    if (!QUOTE_LIVE || !quoteAddr) { setQcfg(null); return; }
+    let on = true;
+    publicClient.readContract({ address: QUOTE_FACTORY_ADDRESS, abi: quoteFactoryAbi, functionName: "quoteConfig", args: [quoteAddr] })
+      .then(([allowedQ, virt, cap]) => {
+        if (!on) return;
+        if (!allowedQ) { setQcfg(null); return; }
+        const d = 10 ** quoteDec;
+        setQcfg({ threshold: Number(virt * 4n) / d, cap: Number(cap) / d });
+      })
+      .catch(() => on && setQcfg(null));
+    return () => { on = false; };
+  }, [quoteAddr, quoteDec]);
+  const fmtQ = (n) => (n >= 100 ? Math.round(n).toLocaleString("ru") : String(+n.toFixed(4)));
   const pickEth = () => { setQuote("ETH"); setQuoteAddr(""); setQuoteDec(18); };
   const quoteAllowed = quote === "ETH" || (QUOTE_LIVE && allowed.has(quoteAddr));
   const quoteIcon = quoteTab === "rwa"
@@ -647,11 +665,17 @@ export default function Create({ wallet, onConnect }) {
           <input value={form.initialBuy} onChange={set("initialBuy")} placeholder="0.00" inputMode="decimal" />
           <b>{ZAP_LIVE ? "ETH" : quote}</b>
         </div>
-        <div className={`hint ${buyOk ? "" : "bad"}`}>
-          {(buyOk
-            ? t("Макс {max} ETH · 5% сапплая. Исполняется в той же транзакции — защита от снайперов.")
-            : t("Больше лимита: максимум {max} ETH (5% сапплая).")
-          ).replace("{max}", MAX_DEV_BUY_ETH.toFixed(4))}
+        <div className={`hint ${quote === "ETH" && !buyOk ? "bad" : ""}`}>
+          {quote !== "ETH"
+            ? (qcfg
+                ? t("Кап создателя — {cap} {q} за всё время кривой (10% порога). {how} Перебор откатит контракт.")
+                    .replace("{cap}", fmtQ(qcfg.cap)).replace("{q}", quote)
+                    .replace("{how}", ZAP_LIVE ? t("Платите ETH — обмен на {q} сделается по дороге.").replace("{q}", quote) : t("Нужен {q} на кошельке и разрешение пулу.").replace("{q}", quote))
+                : t("Кап создателя задаёт фабрика для каждой валюты. Перебор откатит контракт."))
+            : (buyOk
+                ? t("Макс {max} ETH · 5% сапплая. Исполняется в той же транзакции — защита от снайперов.")
+                : t("Больше лимита: максимум {max} ETH (5% сапплая).")
+              ).replace("{max}", MAX_DEV_BUY_ETH.toFixed(4))}
         </div>
 
         <div
@@ -701,13 +725,16 @@ export default function Create({ wallet, onConnect }) {
         <div className="preview-ticker">{form.symbol ? `$${form.symbol}` : t("тикер")}</div>
         <div className="preview-stats">
           <div className="row"><span className="k">{t("Комиссия запуска")}</span><span className="v green">0 ETH</span></div>
-          <div className="row"><span className="k">{t("Вам с каждого трейда")}</span><span className="v green">{t("{pct}% комиссии").replace("{pct}", split.creator)}</span></div>
+          <div className="row"><span className="k">{t("Вам с каждого трейда")}</span><span className="v green" title={t("Комиссия площадки 1% с каждой сделки; половина — создателю")}>{t("{pct}% комиссии (1%)").replace("{pct}", split.creator)}</span></div>
           <div className="row"><span className="k">{t("Валюта курвы")}</span><span className="v">
             {quote === "ETH" ? "ETH" : <><Logo cls="pv-qlogo" src={quoteIcon} />{quote}</>}
           </span></div>
           <div className="row"><span className="k">{t("Градация")}</span><span className="v">
-            {quote === "ETH" ? "6.5 ETH" : t("порог в {q}").replace("{q}", quote)}
+            {quote === "ETH" ? "6.5 ETH" : qcfg ? `${fmtQ(qcfg.threshold)} ${quote}` : t("порог в {q}").replace("{q}", quote)}
           </span></div>
+          {quote !== "ETH" && qcfg && (
+            <div className="row"><span className="k">{t("Кап создателя")}</span><span className="v">{fmtQ(qcfg.cap)} {quote}</span></div>
+          )}
           {quote !== "ETH" && divBps > 0 && (
             <div className="row"><span className="k">{t("Дивиденды холдерам")}</span><span className="v">{divBps / 100}% {t("в")} {quote}</span></div>
           )}

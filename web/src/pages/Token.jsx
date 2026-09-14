@@ -6,7 +6,7 @@ import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER, QUOTE_FACTORY_ADDRESS, QUO
 import { poolTrades, invalidateTrades, loadTokens, allTrades, parseMeta } from "../lib/data.js";
 import { computeTrust } from "../lib/trust.js";
 import { honestVolume } from "../lib/fairvol.js";
-import { useEthUsd, usd } from "../lib/price.js";
+import { useEthUsd, useQuoteUsd, usd } from "../lib/price.js";
 import Chat from "./Chat.jsx";
 import Workshop from "../components/Workshop.jsx";
 import Journal from "../components/Journal.jsx";
@@ -192,6 +192,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   useClock(5000);
   const { t } = useLang();
   const rate = useEthUsd();
+  // Курс валюты кривой в долларах — для монет за AAPL/USDG. У ETH-монет 0.
+  const quoteRate = useQuoteUsd(data?.q?.addr);
   const split = useSplit();
   const support = useSupport();
   const cushion = support.per[tokenAddress?.toLowerCase()]?.eth || 0;
@@ -801,8 +803,15 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   if (!data) return <div className="center">{error || t("Загружаю…")}</div>;
 
   const progress = Number((data.sold * 10000n) / data.cap) / 100;
-  const mcapEth = Number(formatEther(data.price)) * 1_000_000_000;
-  const mcapUsd = usd(mcapEth * rate);
+  // Капитализация = цена × 1 млрд. У монеты за валюту цена — в валюте
+  // (AAPL, USDG), и умножать её на курс ETH нельзя: получалось «$25k» у
+  // монеты, стоящей 10 AAPL. Считаем через курс самой валюты; курса нет —
+  // показываем в валюте, а не выдуманные доллары.
+  const mcapEth = data.q ? 0 : Number(formatEther(data.price)) * 1_000_000_000;
+  const mcapQuote = data.q ? Number(formatUnits(data.price, data.q.dec)) * 1_000_000_000 : 0;
+  const mcapUsd = data.q
+    ? (quoteRate > 0 ? usd(mcapQuote * quoteRate) : `${fmt(mcapQuote, 2)} ${data.q.sym}`)
+    : usd(mcapEth * rate);
 
   // сортировка таблиц сделок по клику на заголовок колонки
   const sortTradesBy = (arr, { key, dir }) => {
