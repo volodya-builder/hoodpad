@@ -386,6 +386,9 @@ export default function Create({ wallet, onConnect }) {
       <form className="panel" onSubmit={submit}>
         <h2>{t("Запустить токен")}</h2>
 
+        {/* Выбор типа токена скрыт, пока tax-токен не построен (FEATURES.taxToken):
+            без второго варианта одна карточка «Обычный токен» — лишний шум. */}
+        {FEATURES.taxToken && (
         <div className="ttype-row">
           <div className={`ttype-card ${ttype === "standard" ? "on" : ""}`} onClick={() => setTtype("standard")}>
             <b>{t("Обычный токен")}</b>
@@ -396,6 +399,7 @@ export default function Create({ wallet, onConnect }) {
             <span>{t("налог с трейдов: кошелёк, сжигание, награды, ликвидность")}</span>
           </div>
         </div>
+        )}
 
         {FEATURES.quoteLaunch && (<>
         <label>{t("Валюта курвы")}</label>
