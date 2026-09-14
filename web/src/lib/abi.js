@@ -157,6 +157,7 @@ export const quotePoolAbi = parseAbi([
   "function spotPrice() view returns (uint256)",
   "function quote() view returns (address)",
   "function quoteReserve() view returns (uint256)",
+  "function virtualQuote() view returns (uint256)",
   "function tokensSold() view returns (uint256)",
   "function saleCap() view returns (uint256)",
   "function totalSupply() view returns (uint256)",
