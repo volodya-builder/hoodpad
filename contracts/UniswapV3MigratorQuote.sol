@@ -119,6 +119,7 @@ contract UniswapV3MigratorQuote is ILiquidityMigratorQuote, Ownable {
     function migrateQuote(address token, address quote, uint256 tokenAmount, uint256 quoteAmount)
         external
         override
+        returns (address v3Pool)
     {
         require(tokenAmount > 0 && quoteAmount > 0, "empty migration");
         require(token != quote, "token==quote");
@@ -134,7 +135,7 @@ contract UniswapV3MigratorQuote is ILiquidityMigratorQuote, Ownable {
 
         uint160 sqrtPriceX96 = uint160(Math.sqrt(Math.mulDiv(amount1, 1 << 192, amount0)));
 
-        address v3Pool = positionManager.createAndInitializePoolIfNecessary(
+        v3Pool = positionManager.createAndInitializePoolIfNecessary(
             token0, token1, POOL_FEE, sqrtPriceX96
         );
 

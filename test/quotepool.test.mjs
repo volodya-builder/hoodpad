@@ -64,7 +64,7 @@ before(async () => {
 
 test("quote вне whitelist — createToken реверт", async () => {
   await assert.rejects(
-    call(creator, factory, "LaunchpadFactoryQuote", "createToken", ["Tok", "TOK", "ipfs://x", stock, creator.address])
+    call(creator, factory, "LaunchpadFactoryQuote", "createToken", ["Tok", "TOK", "ipfs://x", stock, creator.address, 0])
   );
 });
 
@@ -72,21 +72,21 @@ let token, pool;
 test("whitelist quote и запуск токена", async () => {
   await call(owner, factory, "LaunchpadFactoryQuote", "setQuote", [stock, true, VIRTUAL, CREATOR_CAP]);
   const rc = await call(creator, factory, "LaunchpadFactoryQuote", "createToken",
-    ["MyStock Token", "MST", "ipfs://meta", stock, creator.address]);
+    ["MyStock Token", "MST", "ipfs://meta", stock, creator.address, 0]);
   token = await read(factory, "LaunchpadFactoryQuote", "poolOf", [await read(factory, "LaunchpadFactoryQuote", "allTokens", [0])]);
   const tokenAddr = await read(factory, "LaunchpadFactoryQuote", "allTokens", [0]);
   pool = await read(factory, "LaunchpadFactoryQuote", "poolOf", [tokenAddr]);
   token = tokenAddr;
   assert.equal((await read(factory, "LaunchpadFactoryQuote", "quoteOf", [token])).toLowerCase(), stock.toLowerCase());
-  assert.equal(await read(token, "LaunchToken", "balanceOf", [pool]), E(1_000_000_000));
-  assert.equal(await read(token, "LaunchToken", "totalSupply"), E(1_000_000_000));
+  assert.equal(await read(token, "DividendToken", "balanceOf", [pool]), E(1_000_000_000));
+  assert.equal(await read(token, "DividendToken", "totalSupply"), E(1_000_000_000));
 });
 
 test("покупка за quote: токены получены, комиссия 50/50", async () => {
   // покупаем 1 акцию (< порога градации 6.5) — вся сумма идёт в кривую
   await call(alice, stock, "MockStock", "approve", [pool, E(1)]);
   await call(alice, pool, "BondingCurvePoolQuote", "buy", [E(1), 0n, alice.address]);
-  const bal = await read(token, "LaunchToken", "balanceOf", [alice.address]);
+  const bal = await read(token, "DividendToken", "balanceOf", [alice.address]);
   assert.ok(bal > 0n, "токены не получены");
   const fee = E(1) * 100n / 10_000n; // 1% от 1 акции = 0.01
   assert.equal(await read(pool, "BondingCurvePoolQuote", "creatorFeesAccrued"), fee / 2n);
@@ -95,9 +95,9 @@ test("покупка за quote: токены получены, комиссия
 });
 
 test("продажа: quote возвращается за вычетом комиссии", async () => {
-  const bal = await read(token, "LaunchToken", "balanceOf", [alice.address]);
+  const bal = await read(token, "DividendToken", "balanceOf", [alice.address]);
   const half = bal / 2n;
-  await call(alice, token, "LaunchToken", "approve", [pool, half]);
+  await call(alice, token, "DividendToken", "approve", [pool, half]);
   const before = await read(stock, "MockStock", "balanceOf", [alice.address]);
   await call(alice, pool, "BondingCurvePoolQuote", "sell", [half, 0n]);
   const after = await read(stock, "MockStock", "balanceOf", [alice.address]);
@@ -134,7 +134,7 @@ test("градация: докупаем до SALE_CAP, migrate зовёт ми�
   // отдельный свежий запуск, чтобы докупить кривую целиком
   await call(owner, stock, "MockStock", "mint", [alice.address, E(20)]);
   const rc = await call(alice, factory, "LaunchpadFactoryQuote", "createToken",
-    ["Grad", "GRAD", "ipfs://g", stock, creator.address]);
+    ["Grad", "GRAD", "ipfs://g", stock, creator.address, 0]);
   const tk = await read(factory, "LaunchpadFactoryQuote", "allTokens", [
     (await read(factory, "LaunchpadFactoryQuote", "tokenCount")) - 1n,
   ]);

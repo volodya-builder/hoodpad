@@ -17,6 +17,11 @@ import {ILiquidityMigratorQuote} from "./interfaces/ILiquidityMigratorQuote.sol"
 ///         корпоративные действия у них меняют оракульную цену, а не балансы).
 ///         Фабрика допускает только whitelisted quote — токены с fee-on-transfer
 ///         туда не попадают.
+///
+///         ДИВИДЕНДЫ. Сверх комиссии площадки (feeBps) с каждой сделки берётся
+///         divBps в пользу холдеров — в этой же валюте — и уходит в токен
+///         (DividendToken), который раздаёт их по балансам. Ставку выбирает
+///         создатель при запуске, 0–3%, и она неизменяема, как и всё здесь.
 contract BondingCurvePoolQuote is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
@@ -31,6 +36,8 @@ contract BondingCurvePoolQuote is ReentrancyGuard {
     uint256 public immutable virtualQuote;
     uint16  public immutable feeBps;
     uint16  public immutable creatorFeeShareBps;
+    /// @notice Налог в пользу холдеров, bps. Считается от той же базы, что fee.
+    uint16  public immutable divBps;
 
     /// @notice Потолок суммарных покупок создателя (в quote). Задаётся
     ///         фабрикой как доля от virtualQuote — тот же смысл, что
@@ -46,6 +53,8 @@ contract BondingCurvePoolQuote is ReentrancyGuard {
     uint256 public protocolFeesAccrued;
     uint256 public creatorFeesAccrued;
     uint256 public creatorSpent;
+    /// @notice Всего отдано холдерам за жизнь кривой (в quote).
+    uint256 public dividendsPaid;
 
     // ------------------------------------------------------------- events
     event Buy(address indexed buyer, uint256 quoteIn, uint256 tokensOut, uint256 fee);
@@ -53,6 +62,7 @@ contract BondingCurvePoolQuote is ReentrancyGuard {
     event Graduated(uint256 quoteReserve, uint256 dexTokenReserve);
     event Migrated(address indexed migrator, uint256 quoteAmount, uint256 tokenAmount);
     event FeesClaimed(address indexed to, uint256 amount, bool isCreator);
+    event Dividend(uint256 amount);
 
     error TradingClosed();
     error CreatorCapExceeded();
@@ -62,33 +72,38 @@ contract BondingCurvePoolQuote is ReentrancyGuard {
     error AlreadyMigrated();
     error NotAuthorized();
 
-    constructor(
-        address token_,
-        address quote_,
-        address creator_,
-        uint256 totalSupply_,
-        uint256 saleCap_,
-        uint256 virtualQuote_,
-        uint16  feeBps_,
-        uint16  creatorFeeShareBps_,
-        uint256 creatorBuyCap_
-    ) {
-        require(saleCap_ < totalSupply_, "cap>=supply");
-        require(token_ != address(0) && creator_ != address(0) && quote_ != address(0), "zero addr");
-        require(token_ != quote_, "token==quote");
-        require(virtualQuote_ > 0, "zero virtual");
-        require(feeBps_ <= 500, "fee>5%");
-        require(creatorFeeShareBps_ <= 10_000, "share>100%");
+    struct Params {
+        address token;
+        address quote;
+        address creator;
+        uint256 totalSupply;
+        uint256 saleCap;
+        uint256 virtualQuote;
+        uint16  feeBps;
+        uint16  creatorFeeShareBps;
+        uint256 creatorBuyCap;
+        uint16  divBps;
+    }
+
+    constructor(Params memory p) {
+        require(p.saleCap < p.totalSupply, "cap>=supply");
+        require(p.token != address(0) && p.creator != address(0) && p.quote != address(0), "zero addr");
+        require(p.token != p.quote, "token==quote");
+        require(p.virtualQuote > 0, "zero virtual");
+        require(p.feeBps <= 500, "fee>5%");
+        require(p.divBps <= 300, "div>3%");
+        require(p.creatorFeeShareBps <= 10_000, "share>100%");
         factory = msg.sender;
-        token = IERC20(token_);
-        quote = IERC20(quote_);
-        creator = creator_;
-        totalSupply = totalSupply_;
-        saleCap = saleCap_;
-        virtualQuote = virtualQuote_;
-        feeBps = feeBps_;
-        creatorFeeShareBps = creatorFeeShareBps_;
-        creatorBuyCap = creatorBuyCap_;
+        token = IERC20(p.token);
+        quote = IERC20(p.quote);
+        creator = p.creator;
+        totalSupply = p.totalSupply;
+        saleCap = p.saleCap;
+        virtualQuote = p.virtualQuote;
+        feeBps = p.feeBps;
+        creatorFeeShareBps = p.creatorFeeShareBps;
+        creatorBuyCap = p.creatorBuyCap;
+        divBps = p.divBps;
     }
 
     // ------------------------------------------------------------- views
@@ -101,7 +116,8 @@ contract BondingCurvePoolQuote is ReentrancyGuard {
 
     function quoteBuy(uint256 quoteInGross) public view returns (uint256 tokensOut) {
         uint256 fee = (quoteInGross * feeBps) / 10_000;
-        uint256 quoteIn = quoteInGross - fee;
+        uint256 div = (quoteInGross * divBps) / 10_000;
+        uint256 quoteIn = quoteInGross - fee - div;
         uint256 x = virtualQuote + quoteReserve;
         uint256 y = totalSupply - tokensSold;
         tokensOut = (y * quoteIn) / (x + quoteIn);
@@ -134,7 +150,8 @@ contract BondingCurvePoolQuote is ReentrancyGuard {
         quote.safeTransferFrom(msg.sender, address(this), quoteInGross);
 
         uint256 fee = (quoteInGross * feeBps) / 10_000;
-        uint256 quoteIn = quoteInGross - fee;
+        uint256 div = (quoteInGross * divBps) / 10_000;
+        uint256 quoteIn = quoteInGross - fee - div;
 
         uint256 x = virtualQuote + quoteReserve;
         uint256 y = totalSupply - tokensSold;
@@ -146,10 +163,14 @@ contract BondingCurvePoolQuote is ReentrancyGuard {
             tokensOut = remaining;
             uint256 quoteNeeded = (x * tokensOut + (y - tokensOut) - 1) / (y - tokensOut);
             if (quoteNeeded > quoteIn) quoteNeeded = quoteIn;
-            uint256 grossNeeded = (quoteNeeded * 10_000 + (10_000 - feeBps) - 1) / (10_000 - feeBps);
+            uint256 keepBps = 10_000 - feeBps - divBps;
+            uint256 grossNeeded = (quoteNeeded * 10_000 + keepBps - 1) / keepBps;
             if (grossNeeded > quoteInGross) grossNeeded = quoteInGross;
             refund = quoteInGross - grossNeeded;
-            fee = grossNeeded - quoteNeeded;
+            fee = (grossNeeded * feeBps) / 10_000;
+            // Остаток после комиссии и самой покупки — в дивиденды: так сумма
+            // сходится до вея, ничего не зависает на контракте.
+            div = grossNeeded - quoteNeeded - fee;
             quoteIn = quoteNeeded;
         }
 
@@ -167,6 +188,9 @@ contract BondingCurvePoolQuote is ReentrancyGuard {
         }
 
         // interactions
+        // Дивиденды — ДО перевода токенов покупателю: свой налог идёт тем,
+        // кто уже держит, а не самому покупателю.
+        _payDividend(div);
         token.safeTransfer(recipient, tokensOut);
         if (refund > 0) quote.safeTransfer(msg.sender, refund);
 
@@ -190,7 +214,8 @@ contract BondingCurvePoolQuote is ReentrancyGuard {
         if (quoteOutGross > quoteReserve) quoteOutGross = quoteReserve;
 
         uint256 fee = (quoteOutGross * feeBps) / 10_000;
-        quoteToUser = quoteOutGross - fee;
+        uint256 div = (quoteOutGross * divBps) / 10_000;
+        quoteToUser = quoteOutGross - fee - div;
         if (quoteToUser < minQuoteOut) revert SlippageExceeded();
 
         // effects
@@ -199,7 +224,10 @@ contract BondingCurvePoolQuote is ReentrancyGuard {
         _accrueFees(fee);
 
         // interactions
+        // Сначала забираем токены продавца, потом дивиденды: продал — в
+        // раздаче своего же налога не участвуешь.
         token.safeTransferFrom(msg.sender, address(this), tokensIn);
+        _payDividend(div);
         quote.safeTransfer(msg.sender, quoteToUser);
 
         emit Sell(msg.sender, tokensIn, quoteToUser, fee);
@@ -219,7 +247,15 @@ contract BondingCurvePoolQuote is ReentrancyGuard {
 
         token.safeTransfer(migrator, tokenAmount);
         quote.safeTransfer(migrator, quoteAmount);
-        ILiquidityMigratorQuote(migrator).migrateQuote(address(token), address(quote), tokenAmount, quoteAmount);
+        address v3Pool = ILiquidityMigratorQuote(migrator)
+            .migrateQuote(address(token), address(quote), tokenAmount, quoteAmount);
+
+        // Ликвидность на DEX заперта навсегда — дивиденды ей ни к чему, а
+        // сапплай у неё большой. Исключаем, пока налог с кривой не роздан
+        // кому не надо. Мигратору доверяем адрес: ему же доверили деньги.
+        if (divBps > 0 && v3Pool != address(0)) {
+            IDividendToken(address(token)).setExcluded(v3Pool, true);
+        }
 
         emit Migrated(migrator, quoteAmount, tokenAmount);
     }
@@ -251,6 +287,21 @@ contract BondingCurvePoolQuote is ReentrancyGuard {
         creatorFeesAccrued += creatorCut;
         protocolFeesAccrued += fee - creatorCut;
     }
+
+    /// @dev Переводим налог в токен и говорим ему учесть. Валюта уходит с пула
+    ///      сразу — на пуле дивиденды не задерживаются ни на блок.
+    function _payDividend(uint256 div) internal {
+        if (div == 0) return;
+        dividendsPaid += div;
+        quote.safeTransfer(address(token), div);
+        IDividendToken(address(token)).notifyDividend(div);
+        emit Dividend(div);
+    }
+}
+
+interface IDividendToken {
+    function notifyDividend(uint256 amount) external;
+    function setExcluded(address account, bool value) external;
 }
 
 interface IFactoryConfigQuote {

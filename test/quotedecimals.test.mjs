@@ -69,12 +69,12 @@ test("валюта действительно шестизначная", async (
 
 test("запуск токена за шестизначную валюту", async () => {
   await call(creator, factory, "LaunchpadFactoryQuote", "createToken",
-    ["Dollar Coin", "DLR", "data:,x", quote, creator.address]);
+    ["Dollar Coin", "DLR", "data:,x", quote, creator.address, 0]);
   token = await read(factory, "LaunchpadFactoryQuote", "allTokens", [0]);
   pool = await read(factory, "LaunchpadFactoryQuote", "poolOf", [token]);
   assert.equal((await read(factory, "LaunchpadFactoryQuote", "quoteOf", [token])).toLowerCase(), quote.toLowerCase());
   // у пула должен лежать весь сапплай
-  assert.equal(await read(token, "LaunchToken", "balanceOf", [pool]), 1000000000n * 10n ** 18n);
+  assert.equal(await read(token, "DividendToken", "balanceOf", [pool]), 1000000000n * 10n ** 18n);
 });
 
 test("покупка: токены пришли, валюта списалась ровно на сумму покупки", async () => {
@@ -84,13 +84,13 @@ test("покупка: токены пришли, валюта списалась
   await call(alice, pool, "BondingCurvePoolQuote", "buy", [spend, 0n, alice.address]);
   const after = await read(quote, "MockQuote6", "balanceOf", [alice.address]);
   assert.equal(before - after, spend);
-  assert.ok((await read(token, "LaunchToken", "balanceOf", [alice.address])) > 0n, "токены не пришли");
+  assert.ok((await read(token, "DividendToken", "balanceOf", [alice.address])) > 0n, "токены не пришли");
 });
 
 test("продажа возвращает валюту в тех же знаках", async () => {
-  const bal = await read(token, "LaunchToken", "balanceOf", [alice.address]);
+  const bal = await read(token, "DividendToken", "balanceOf", [alice.address]);
   const q0 = await read(quote, "MockQuote6", "balanceOf", [alice.address]);
-  await call(alice, token, "LaunchToken", "approve", [pool, bal]);
+  await call(alice, token, "DividendToken", "approve", [pool, bal]);
   await call(alice, pool, "BondingCurvePoolQuote", "sell", [bal, 0n]);
   const q1 = await read(quote, "MockQuote6", "balanceOf", [alice.address]);
   const back = q1 - q0;

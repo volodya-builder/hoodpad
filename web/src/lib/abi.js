@@ -138,7 +138,7 @@ export const catMarketAbi = parseAbi([
 // списке). Отличие от ETH-версии: валюта приходит через transferFrom,
 // поэтому перед покупкой нужен approve; продажа и клеймы платят в валюте.
 export const quoteFactoryAbi = parseAbi([
-  "function createToken(string name, string symbol, string metadataURI, address quote, address creatorWallet) returns (address token, address pool)",
+  "function createToken(string name, string symbol, string metadataURI, address quote, address creatorWallet, uint16 divBps) returns (address token, address pool)",
   "function tokenCount() view returns (uint256)",
   "function tokens(uint256 offset, uint256 limit) view returns (address[])",
   "function poolOf(address token) view returns (address)",
@@ -146,7 +146,7 @@ export const quoteFactoryAbi = parseAbi([
   "function allowedQuotesCount() view returns (uint256)",
   "function allowedQuotes(uint256 i) view returns (address)",
   "function quoteConfig(address quote) view returns (bool allowed, uint256 virtualQuote, uint256 creatorBuyCap)",
-  "event TokenCreated(address indexed token, address indexed pool, address indexed creator, string name, string symbol, string metadataURI)",
+  "event TokenCreated(address indexed token, address indexed pool, address indexed creator, address quote, uint16 divBps)",
 ]);
 
 export const quotePoolAbi = parseAbi([
@@ -167,6 +167,25 @@ export const quotePoolAbi = parseAbi([
   "function creatorBuyCap() view returns (uint256)",
   "function creatorFeesAccrued() view returns (uint256)",
   "function claimCreatorFees(address to)",
+  "function divBps() view returns (uint16)",
+  "function dividendsPaid() view returns (uint256)",
+]);
+
+// Токен монеты за ERC20-валюту: холдерам капает валюта с каждой сделки.
+export const dividendTokenAbi = parseAbi([
+  "function divBps() view returns (uint16)",
+  "function quote() view returns (address)",
+  "function pool() view returns (address)",
+  "function totalDistributed() view returns (uint256)",
+  "function pot() view returns (uint256)",
+  "function divSupply() view returns (uint256)",
+  "function withdrawableDividendOf(address) view returns (uint256)",
+  "function accumulativeDividendOf(address) view returns (uint256)",
+  "function withdrawn(address) view returns (uint256)",
+  "function claim() returns (uint256)",
+  "function claimFor(address holder) returns (uint256)",
+  "event DividendsDistributed(uint256 amount)",
+  "event DividendClaimed(address indexed holder, uint256 amount)",
 ]);
 
 export const erc20Abi = parseAbi([
