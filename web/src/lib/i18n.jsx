@@ -559,6 +559,8 @@ const EN = {
   "Назад": "Back",
   "Пока никто не градуировал — первым здесь станет токен, собравший 6.5 ETH.": "No graduations yet — the first token to raise 6.5 ETH lands here.",
   "запущено": "launched",
+  "градуировали": "graduated",
+  "В пути к градации": "On the way to graduation",
   "Токены, летящие к градации на Robinhood Chain.": "Tokens climbing toward graduation on Robinhood Chain.",
   "Отключить": "Disconnect",
   "Продукт": "Product",
