@@ -24,60 +24,58 @@ const PERIOD_LABEL = {
  *  Стрелка и подпись несут смысл сами по себе — цвет только усиливает,
  *  поэтому дальтоник прочитает карточку так же, как все. */
 function Delta({ now, was, period }) {
-  const { t } = useLang();
-  const LBL = { "24h": "к прошлым суткам", week: "к прошлой неделе", month: "к прошлому месяцу" };
-  if (was == null || !LBL[period]) return null;
-  if (was === 0) {
-    return now > 0
-      ? <div className="ana-delta up">▲ {t("впервые за период")}</div>
-      : null;
-  }
+  // Изменение к прошлому периоду той же длины: только число, цвет — усиление.
+  if (was == null || period === "all") return null;
+  if (was === 0) return now > 0 ? <span className="ana-delta up">{"new"}</span> : null;
   const pct = ((now - was) / was) * 100;
   if (!isFinite(pct)) return null;
   const flat = Math.abs(pct) < 0.5;
-  return (
-    <div className={`ana-delta ${flat ? "flat" : pct > 0 ? "up" : "down"}`}>
-      {flat ? "■" : pct > 0 ? "▲" : "▼"} {Math.abs(pct).toFixed(1)}% {t(LBL[period])}
-    </div>
-  );
+  return <span className={`ana-delta ${flat ? "flat" : pct > 0 ? "up" : "down"}`}>{pct > 0 ? "+" : ""}{pct.toFixed(1)}%</span>;
 }
 
 /** Мини-гистограмма как на карточках аналитики.
  *  bins: [{ v, from, to }] — значение и границы корзины по времени. */
-function Bars({ data, bins, fmtVal, axis }) {
+function Bars({ data, bins, fmtVal, hover, setHover, period }) {
+  // Столбики как у Pons: скруглённые, спокойные; под мышью — яркий, остальные
+  // приглушаются; последний (сейчас) — акцентный. Значение и дата корзины
+  // показываются в шапке карточки, а не во всплывашке.
   const max = Math.max(...data, 0);
-  const [hover, setHover] = React.useState(null);
-  const tf = (ts) => {
+  const W = 1000, H = 300, PAD_R = 70, PAD_B = 26, TOP = 10;
+  const n = data.length;
+  const gap = 8, bw = (W - PAD_R - gap * (n - 1)) / n;
+  const grid = [0.25, 0.5, 0.75, 1];
+  const fmtAxis = (ts) => {
     const d = new Date(ts);
     const p = (x) => String(x).padStart(2, "0");
-    return `${p(d.getDate())}.${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+    return period === "24h" ? `${p(d.getHours())}:${p(d.getMinutes())}` : `${d.getDate()} ${["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"][d.getMonth()]}`;
   };
+  const yOf = (v) => TOP + (1 - (max > 0 ? v / max : 0)) * (H - PAD_B - TOP);
   return (
-    <div className="ana-bars-wrap">
-      {hover !== null && bins && bins[hover] && (
-        <div className="ana-tip">
-          <b>{fmtVal ? fmtVal(data[hover]) : data[hover]}</b>
-          <span>{tf(bins[hover].from)} — {tf(bins[hover].to)}</span>
-        </div>
-      )}
-      <div className="ana-bars" onMouseLeave={() => setHover(null)}>
-      {data.map((v, i) => (
-        <div
-          key={i}
-          className={`ana-bar ${v > 0 ? "on" : ""} ${hover === i ? "hl" : ""} ${i === data.length - 1 ? "last" : ""}`}
-          onMouseEnter={() => setHover(i)}
-          title={bins && bins[i] ? `${fmtVal ? fmtVal(v) : v} · ${tf(bins[i].from)} — ${tf(bins[i].to)}` : ""}
-          style={{ height: max > 0 && v > 0 ? `${Math.max(6, (v / max) * 100)}%` : "3px" }}
-        />
+    <svg className="ana-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" onMouseLeave={() => setHover(null)}>
+      {grid.map((g) => (
+        <g key={g}>
+          <line x1="0" x2={W - PAD_R - 6} y1={yOf(max * g)} y2={yOf(max * g)} className="ana-grid-line" />
+          <text x={W - PAD_R + 4} y={yOf(max * g) + 4} className="ana-grid-lbl">{fmtVal ? fmtVal(max * g, true) : Math.round(max * g)}</text>
+        </g>
       ))}
-      </div>
-      {axis && (
-        <div className="ana-axis">
-          <span>{axis[0]}</span>
-          <span>{axis[1]}</span>
-        </div>
-      )}
-    </div>
+      {data.map((v, i) => {
+        const h = max > 0 ? Math.max(3, (v / max) * (H - PAD_B - TOP)) : 3;
+        const x = i * (bw + gap);
+        const cls = `ana-svg-bar ${i === n - 1 ? "now" : ""} ${hover === i ? "hl" : hover !== null ? "dim" : ""}`;
+        return (
+          <g key={i} onMouseEnter={() => setHover(i)}>
+            <rect x={x} y={TOP} width={bw} height={H - PAD_B - TOP} fill="transparent" />
+            <rect x={x} y={H - PAD_B - h} width={bw} height={h} rx="5" className={cls} />
+          </g>
+        );
+      })}
+      {bins && bins.length > 1 && [0, Math.floor((n - 1) / 2), n - 1].map((i) => (
+        <text key={i} x={i === 0 ? 0 : i === n - 1 ? (n - 1) * (bw + gap) + bw : i * (bw + gap) + bw / 2}
+              y={H - 6} className="ana-axis-lbl" textAnchor={i === 0 ? "start" : i === n - 1 ? "end" : "middle"}>
+          {fmtAxis(bins[i].from)}
+        </text>
+      ))}
+    </svg>
   );
 }
 
@@ -103,6 +101,8 @@ export default function Analytics() {
   const [raw, setRaw] = useState(_anaRaw);
   const [error, setError] = useState("");
   const [period, setPeriod] = useState("all");
+  const [chart, setChart] = useState("vol");
+  const [hover, setHover] = useState(null);
   const [rangeOpen, setRangeOpen] = useState(false);
   const [lbOpen, setLbOpen] = useState(true); // лидеры раскрыты по умолчанию, сворачиваются кликом
 
@@ -239,95 +239,59 @@ export default function Analytics() {
 
   return (
     <>
-      <div className="page-title">{t("Аналитика протокола")}</div>
-      <div className="page-sub">{t("Все цифры читаются напрямую из контрактов hood в Robinhood Chain.")}</div>
-
-      <div className="ana-range" onClick={(e) => e.stopPropagation()}>
-        <button
-          className="ana-range-btn"
-          onClick={() => setRangeOpen(!rangeOpen)}
-          aria-haspopup="listbox"
-          aria-expanded={rangeOpen}
-        >
-          <span className="ana-range-lbl">{t("Период")}</span>
-          <b>{t(PERIODS.find(([k]) => k === period)[1])}</b>
-          <span className="chev">▾</span>
-        </button>
-        {rangeOpen && (
-          <div className="ana-range-menu" role="listbox">
-            {PERIODS.map(([k, lbl]) => (
-              <div
-                key={k}
-                role="option"
-                aria-selected={period === k}
-                className={`ana-range-item ${period === k ? "on" : ""}`}
-                onClick={() => { setPeriod(k); setRangeOpen(false); }}
-              >
-                {t(lbl)}
-                {period === k && <span className="ana-range-check">✓</span>}
-              </div>
-            ))}
-          </div>
-        )}
+      <div className="ana-head">
+        <div className="page-title" style={{ margin: 0 }}>{t("Аналитика")}</div>
+        <div className="seg">
+          {PERIODS.map(([k, lbl]) => (
+            <button key={k} type="button" className={`seg-btn ${period === k ? "on" : ""}`} onClick={() => setPeriod(k)}>{t(lbl)}</button>
+          ))}
+        </div>
       </div>
 
       {error && <div className="error">{error}</div>}
       {!stats && !error && <div className="center">{t("Читаю блокчейн…")}</div>}
 
-      {stats && raw && (
+      {stats && raw && (() => {
+        const series = chart === "count" ? stats.cntBars : stats.volBars;
+        const fmtVal = chart === "count" ? (v, axis) => (axis ? String(Math.round(v)) : `${Math.round(v)}`) : (v, axis) => (axis ? usd(v * rate) : D(v));
+        const hv = hover !== null && stats.bins[hover] ? { v: series[hover], from: stats.bins[hover].from, to: stats.bins[hover].to } : null;
+        const d = (ts) => { const x = new Date(ts); return `${x.getDate()} ${["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"][x.getMonth()]}${period === "24h" ? ", " + String(x.getHours()).padStart(2, "0") + ":" + String(x.getMinutes()).padStart(2, "0") : ""}`; };
+        return (
         <>
-        <div className="ana-grid">
-          <div className="ana-card">
-            <div className="k">{t("Объём торгов")}</div>
-            <div className="pf-usd">{D(stats.volume)}</div>
-            <div className="s">{fmtEth(stats.volume)} ETH · {t(PERIOD_LABEL[period])}</div>
-            <Delta now={stats.volume} was={stats.prev && stats.prev.volume} period={period} />
+        <div className="ana-strip">
+          <div className="ana-stat">
+            <div className="n">{D(stats.volume)}</div>
+            <div className="l">{t("Объём")} <Delta now={stats.volume} was={stats.prev && stats.prev.volume} period={period} /></div>
           </div>
-          <div className="ana-card">
-            <div className="k">{t("Сделки")}</div>
-            <div className="v">{stats.count}</div>
-            <div className="s">{t(PERIOD_LABEL[period])}</div>
-            <Delta now={stats.count} was={stats.prev && stats.prev.count} period={period} />
+          <div className="ana-stat">
+            <div className="n">{stats.count}</div>
+            <div className="l">{t("Сделки")} <Delta now={stats.count} was={stats.prev && stats.prev.count} period={period} /></div>
           </div>
-          <div className="ana-card">
-            <div className="k">{t("Запуски токенов")}</div>
-            <div className="v">{raw.launches}</div>
-            <div className="s">
-              {raw.grads} {t("градаций")} · {t("доля градаций")} {gradRate}%
-            </div>
+          <div className="ana-stat">
+            <div className="n">{raw.launches}</div>
+            <div className="l">{t("Запуски")} <span className="dim">· {raw.grads} {t("градаций")}</span></div>
           </div>
-          <div className="ana-card">
-            <div className="k">{t("Выплачено создателям")}</div>
-            <div className="pf-usd" style={{ color: "var(--gold)" }}>{D(stats.creatorPaid)}</div>
-            <div className="s">
-              {fmtEth(stats.creatorPaid)} ETH · {split.creator}% {t("всех комиссий — с первого трейда")}
-            </div>
-            <Delta now={stats.creatorPaid} was={stats.prev && stats.prev.creatorPaid} period={period} />
+          <div className="ana-stat">
+            <div className="n">{D(stats.creatorPaid)}</div>
+            <div className="l">{t("Создателям")} <Delta now={stats.creatorPaid} was={stats.prev && stats.prev.creatorPaid} period={period} /></div>
           </div>
         </div>
 
-        {/* Графикам дана своя ширина: в углу карточки со статистикой
-            они были нечитаемы. Последняя корзина подсвечена. */}
-        <div className="ana-charts">
-          <div className="ana-card ana-chart">
-            <div className="ana-chart-head">
-              <div className="k">{t("Объём торгов")}</div>
-              <div className="ana-chart-val">{D(stats.volume)}</div>
+        <div className="ana-panel">
+          <div className="ana-panel-head">
+            <div>
+              <div className="ana-panel-val">{hv ? fmtVal(hv.v) : (chart === "count" ? stats.count : D(stats.volume))}</div>
+              <div className="ana-panel-sub">{hv ? d(hv.from) : t(PERIOD_LABEL[period])}</div>
             </div>
-            <Bars data={stats.volBars} bins={stats.bins}
-                  fmtVal={(v) => `${D(v)} · ${fmtEth(v)} ETH`} axis={axisLabels} />
-          </div>
-          <div className="ana-card ana-chart">
-            <div className="ana-chart-head">
-              <div className="k">{t("Сделки")}</div>
-              <div className="ana-chart-val">{stats.count}</div>
+            <div className="seg">
+              <button type="button" className={`seg-btn ${chart === "vol" ? "on" : ""}`} onClick={() => setChart("vol")}>{t("Объём")}</button>
+              <button type="button" className={`seg-btn ${chart === "count" ? "on" : ""}`} onClick={() => setChart("count")}>{t("Сделки")}</button>
             </div>
-            <Bars data={stats.cntBars} bins={stats.bins}
-                  fmtVal={(v) => `${v} ${t("сделок")}`} axis={axisLabels} />
           </div>
+          <Bars data={series} bins={stats.bins} fmtVal={fmtVal} hover={hover} setHover={setHover} period={period} />
         </div>
-        </>
-      )}
+        </>);
+      })()}
 
       {/* Лидеры — раскрывающаяся панель внутри аналитики (спрятана FEATURES.leaders) */}
       {FEATURES.leaders && <div className="bottom-card lb-fold" style={{ marginTop: 22 }}>
