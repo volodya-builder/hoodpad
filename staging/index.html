@@ -3,6 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <!-- сайт с кошельком нельзя показывать внутри чужого iframe (кликджекинг);
+         заголовок X-Frame-Options ставится в Cloudflare, это — запасной рубеж -->
+    <script>if (window.top !== window.self) { try { window.top.location = window.self.location; } catch (e) { document.documentElement.style.display = "none"; } }</script>
     <title>hood — лаунчпад Robinhood Chain</title>
     <meta name="description" content="Лаунчпад Robinhood Chain. Запуск в одну транзакцию, 70% комиссий создателю монеты, ликвидность заперта навсегда." />
     <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png" />
@@ -19,18 +23,18 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Nunito:wght@600;700&family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <script type="module" crossorigin src="/staging/assets/index-BtqoburV.js"></script>
+    <script type="module" crossorigin src="/staging/assets/index-ZMOVM3i6.js"></script>
     <link rel="modulepreload" crossorigin href="/staging/assets/react-Ca03aNmg.js">
-    <link rel="modulepreload" crossorigin href="/staging/assets/i18n-BBO9_2Be.js">
+    <link rel="modulepreload" crossorigin href="/staging/assets/i18n-BD1W3yyN.js">
     <link rel="modulepreload" crossorigin href="/staging/assets/utils-Bpv4vmSW.js">
     <link rel="modulepreload" crossorigin href="/staging/assets/ccip-xh-4VzKJ.js">
     <link rel="modulepreload" crossorigin href="/staging/assets/secp256k1-CsfFguzR.js">
-    <link rel="modulepreload" crossorigin href="/staging/assets/config-DgMWfoM0.js">
-    <link rel="modulepreload" crossorigin href="/staging/assets/web3-BcwiN8tj.js">
-    <link rel="modulepreload" crossorigin href="/staging/assets/Who-fPzZh-xJ.js">
-    <link rel="modulepreload" crossorigin href="/staging/assets/parseEther-wmUdpiq1.js">
-    <link rel="modulepreload" crossorigin href="/staging/assets/price-1dtB__W6.js">
-    <link rel="modulepreload" crossorigin href="/staging/assets/data-DeL-jmz3.js">
+    <link rel="modulepreload" crossorigin href="/staging/assets/config-DOUC2eo5.js">
+    <link rel="modulepreload" crossorigin href="/staging/assets/web3-D87B8iQr.js">
+    <link rel="modulepreload" crossorigin href="/staging/assets/verifyMessage-DMWWunyy.js">
+    <link rel="modulepreload" crossorigin href="/staging/assets/bans-BDMsKQrk.js">
+    <link rel="modulepreload" crossorigin href="/staging/assets/price-BlqtoQrT.js">
+    <link rel="modulepreload" crossorigin href="/staging/assets/data-Bl3wS9hW.js">
     <link rel="stylesheet" crossorigin href="/staging/assets/index-C4VfpjO1.css">
   </head>
   <body>
