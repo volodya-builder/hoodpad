@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { formatEther } from "viem";
 import { fmt, fmtEth } from "../lib/web3.js";
-import { useEthUsd, usd, usdFine } from "../lib/price.js";
+import { useEthUsd, useQuoteUsd, usd, usdFine } from "../lib/price.js";
+import { formatUnits } from "viem";
 import { useClock, timeAgo } from "../lib/data.js";
 import { useArena, grandArena, hallOfFame, dayStart, useArenaPot, useArenaPayouts } from "../lib/arena.js";
 import { useLang } from "../lib/i18n.jsx";
@@ -83,7 +84,11 @@ export default function Arena() {
     ["rules", t("Правила")],
   ];
 
-  const Row = ({ p, i, trend = true, right, sub, dim }) => (
+  const Row = ({ p, i, trend = true, right, sub, dim }) => {
+    // монета за валюту: капа через курс валюты, а не ETH
+    const qPrice = useQuoteUsd(p.q?.addr);
+    const mcap = p.q ? Number(formatUnits(p.price, p.q.dec)) * 1e9 * qPrice : mcapOf(p);
+    return (
     <a className={`lt-row ${dim ? "dim" : ""}`} href={`#/token/${p.token}`}>
       <span className="lt-rank">{i != null ? i + 1 : ""}</span>
       <Logo src={p.meta?.image} />
@@ -97,11 +102,12 @@ export default function Arena() {
         </span>
       </span>
       <span className="lt-trend">{trend && st ? <Spark trades={st.trades} pool={p.pool} from={day0} /> : null}</span>
-      <span className="lt-num">{usd(mcapOf(p))}</span>
+      <span className="lt-num">{p.q && !(qPrice > 0) ? "…" : usd(mcap)}</span>
       <span className="lt-num">{D(p.score ?? p.dayVol ?? 0)}</span>
       <span className="lt-st">{right}</span>
     </a>
-  );
+    );
+  };
 
   return (
     <>
