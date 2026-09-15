@@ -3999,9 +3999,6 @@ html[data-theme="light"] .panel { background: #fff; border-color: rgba(0,0,0,.08
 .sr-chip { border: 1px solid transparent; background: transparent; color: var(--text-dim); font: inherit; font-size: 13.5px; padding: 5px 12px; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease), background var(--dur) var(--ease); }
 .sr-chip:hover { color: var(--text); }
 .sr-chip.on { color: var(--text); border-color: rgba(255,255,255,.25); }
-.sr-sel { position: relative; padding-right: 10px; }
-.sr-sel select { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
-.sr-sel.on { border-color: var(--gold); }
 .sr-list { max-height: min(460px, 55vh); padding: 8px; margin: 0; }
 .sr-item { padding: 10px 12px; border-radius: 14px; gap: 14px; }
 .sr-item.on { background: rgba(255,255,255,.05); }
@@ -4027,3 +4024,13 @@ html[data-theme="light"] .sr-item.on { background: rgba(0,0,0,.04); }
 .pair-chip { position: absolute; right: 8px; bottom: 8px; display: inline-flex; align-items: center; padding: 4px 8px 4px 4px; border-radius: 999px; background: #000000a6; backdrop-filter: blur(5px); }
 .pair-chip .qlogo-sym { color: #fff; font-size: 11.5px; }
 .sr-meta .qlogo-sym { font-size: 13px; }
+/* выпадающий список акций в поиске */
+.sr-dd { position: relative; display: inline-flex; }
+.sr-dd .qlogo-sym { color: inherit; }
+.sr-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 5; min-width: 180px; max-height: 280px; overflow-y: auto; padding: 6px; border-radius: 16px; background: #171717; border: 1px solid rgba(255,255,255,.1); box-shadow: 0 20px 50px -20px #000; scrollbar-width: thin; }
+.sr-menu-it { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: transparent; color: var(--text-dim); font: inherit; font-size: 13.5px; padding: 8px 10px; border-radius: 10px; cursor: pointer; text-align: left; transition: background var(--dur) var(--ease), color var(--dur) var(--ease); }
+.sr-menu-it:hover { background: rgba(255,255,255,.06); color: var(--text); }
+.sr-menu-it.on { color: var(--text); background: rgba(255,255,255,.08); }
+.sr-menu-it .qlogo-sym { color: inherit; font-size: 13.5px; }
+html[data-theme="light"] .sr-menu { background: #fff; border-color: rgba(0,0,0,.1); }
+html[data-theme="light"] .sr-menu-it:hover, html[data-theme="light"] .sr-menu-it.on { background: rgba(0,0,0,.05); }
