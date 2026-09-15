@@ -29,7 +29,7 @@ ETH ↔ акция по дороге.
 **Спрятано флагами `FEATURES` в `web/src/lib/config.js`, код не удалён — не
 работать над этим и не «чинить»:** about, arena, cats, vote, treasury, ticker,
 headerSearch, netSwitch, weeklyWorkshop, taxToken, customQuote, payInQuote,
-trustScore, creatorSellBanner. Скрытые страницы грузятся лениво (`lazy()` в
+trustScore, creatorSellBanner, activityTab (вкладка «Активность» в нижней таблице монеты). Скрытые страницы грузятся лениво (`lazy()` в
 App.jsx), их хуки (`useArena`, `useSupport`) выключены флагами — в сеть не ходят.
 
 ## Сеть и контракты (mainnet, chainId 4663)
@@ -106,14 +106,17 @@ App.jsx), их хуки (`useArena`, `useSupport`) выключены флага
   (deploy-staging.yml, база `/staging/`). Cloudflare кэширует — Ctrl+F5.
 - Firebase RTDB `hood-chat-4b664` (europe-west1): чат, доска, `aichat`.
   Правила в консоли — источник правды; `firebase/database.rules.json` — копия
-  (aichat: читать всем, писать никому — воркер ходит с секретом).
+  (aichat: читать всем, писать никому — воркер ходит с секретом; workshop:
+  доска и пульс агента `workshop/agent/heartbeat` — пишет agent-run.mjs в `--run`,
+  сайт показывает состояние агента на вкладке «ИИ»).
   Из песочницы Claude и с машины владельца база закрыта, из браузера и CI — открыта.
 - Workflows (`.github/workflows/`): deploy, deploy-staging, agent (*/5, OPENROUTER_KEY),
   dividends (hourly, TREASURER_PRIVATE_KEY), worker (деплой чата; секреты
   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, FIREBASE_DB_SECRET), mirror
   (**никогда не редактировать**), activity (*/30, торгует реальным ETH ради
   «оживления», $10/день, 4 кошелька из ACTIVITY_PRIVATE_KEY — коммитит
-  `bot/state.json`), treasurer (*/6h, казна старой схемы). Файлы workflows
+  `bot/state.json`; **расписание выключено 15.09.2026**), treasurer (казна старой
+  схемы; **расписание выключено 15.09.2026**). Файлы workflows
   пишутся только heredoc-ом через device_bash — device_commit_files их не пропускает.
 - Платные сервисы владельца: Firebase Blaze, Alchemy PAYG, Cloudflare Pro,
   Goldsky Scale, OpenRouter (пополняет только владелец).
