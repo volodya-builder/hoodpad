@@ -32,7 +32,7 @@ const FEE_SPLITTER = (process.env.FEE_SPLITTER || "0x4b4ca78517a48876a4341cbbfbd
 const BLOCKSCOUT = process.env.BLOCKSCOUT || "https://robinhoodchain.blockscout.com";
 // Блок деплоя quote-фабрики: раньше него её событий не бывает.
 const FACTORY_FROM_BLOCK = BigInt(process.env.FACTORY_FROM_BLOCK || 62_800_000);
-const MIN_PAYOUT_USD = Number(process.env.MIN_PAYOUT_USD || 0.05);
+const MIN_PAYOUT_USD = Number(process.env.MIN_PAYOUT_USD || 1);
 const MIN_SWEEP_USD = Number(process.env.MIN_SWEEP_USD || 0.5);
 const MAX_TX = Number(process.env.MAX_TX || 150);
 const MAX_HOLDERS = Number(process.env.MAX_HOLDERS || 3000);
