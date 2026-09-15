@@ -108,7 +108,7 @@ function TokenRow({ t, fav, onFav, cushion = 0 }) {
       <span className="lt-st">
         {t.graduated ? <span className="lt-tag gold">{tr("Градуировал")}</span>
           : cushion > 0 ? <span className="dim"><Icon name="shield" size={12} style={{ margin: 0 }} /> {fmtEth(cushion)} ETH</span>
-          : <span className="dim">{tr("на кривой")}</span>}
+          : <span className="dim">{q ? q.sym : "ETH"}</span>}
       </span>
     </a>
   );
@@ -131,7 +131,7 @@ export default function Home({ onSearch }) {
   const pickView = (v) => { setView(v); try { localStorage.setItem(VIEW_LS, v); } catch (e) { /* ignore */ } };
   const List = ({ items }) => (
     <div className="lt home-lt">
-      <div className="lt-h"><span /><span /><span>{t("Токен")}</span><span>{t("Кривая")}</span><span className="r">{t("Капа")}</span><span className="r" /></div>
+      <div className="lt-h"><span /><span /><span>{t("Токен")}</span><span>{t("Кривая")}</span><span className="r">{t("Капа")}</span><span className="r">{t("Пара")}</span></div>
       {items.map((t2) => <TokenRow key={t2.token} t={t2} fav={favs.has(t2.token)} onFav={toggleFav} cushion={cushionOf(t2.token)} />)}
     </div>
   );
