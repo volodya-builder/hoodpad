@@ -51,6 +51,35 @@
           ".write": false
         }
       }
+    },
+    "workshop": {
+      ".read": true,
+      "board": {
+        "$token": {
+          ".write": true
+        }
+      },
+      "proposals": {
+        "$token": {
+          ".write": true
+        }
+      },
+      "votes": {
+        "$token": {
+          ".write": true
+        }
+      },
+      "journal": {
+        "$token": {
+          ".write": true
+        }
+      },
+      "agent": {
+        "heartbeat": {
+          ".write": true,
+          ".validate": "newData.hasChildren(['at','state']) && newData.child('at').val() <= now + 60000 && newData.child('state').isString()"
+        }
+      }
     }
   }
 }
