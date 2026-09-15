@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { formatEther, formatUnits } from "viem";
 import { fmt, fmtEth } from "../lib/web3.js";
-import { useEthUsd, useQuoteUsd, usd } from "../lib/price.js";
+import { useEthUsd, useQuoteUsd, usd, moneyEth } from "../lib/price.js";
 import { timeAgo, loadTokens, useClock, useSupport } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 import { useFavs, toggleFav } from "../lib/favs.js";
@@ -47,9 +47,11 @@ function TokenCard({ t, fav, onFav, cushion = 0 }) {
       <div className="ttick">${t.symbol}</div>
       <div className="tmc">
         {q
-          ? (qPrice > 0 ? usd(mcapQuote * qPrice) : `${fmt(mcapQuote, 0)} ${q.sym}`)
+          ? (qPrice > 0 ? usd(mcapQuote * qPrice) : "…")
           : usd(mcapEth * rate)}<span>MC</span>
-        {q && <em className="tq" title={t.divBps ? `${t.divBps / 100}% дивиденды холдерам в ${q.sym}` : q.sym}>{q.sym}{t.divBps ? ` · ${t.divBps / 100}%` : ""}</em>}
+        {/* Дивиденды холдерам — ставка. Символ акции на карточке не пишем:
+            деньги на сайте в ETH и долларах (решение владельца 15.09.2026). */}
+        {q && t.divBps > 0 && <em className="tq" title={tr("дивиденды холдерам с каждой сделки")}>💧 {t.divBps / 100}%</em>}
       </div>
       {/* Модель ИИ монеты — выбор создателя, лежит в метадате. Показываем
           только известного разработчика: чужая строка на карточку не попадает. */}
@@ -70,7 +72,7 @@ function TokenCard({ t, fav, onFav, cushion = 0 }) {
         <span className="mono addr-copy" title={tr("Скопировать адрес")} onClick={copyCA}>
           {t.token.slice(0, 6)}…{t.token.slice(-4)} {cp ? "✓" : "⧉"}
         </span>
-        <span>{t.createdAt ? timeAgo(t.createdAt) : q ? `${fmt(Number(formatUnits(t.reserve, q.dec)), 2)} ${q.sym}` : `${fmtEth(Number(formatEther(t.reserve)))} / 6.5 ETH`}</span>
+        <span>{t.createdAt ? timeAgo(t.createdAt) : q ? moneyEth(formatUnits(t.reserve, q.dec), qPrice, rate) : `${fmtEth(Number(formatEther(t.reserve)))} / 6.5 ETH`}</span>
       </div>
     </a>
   );

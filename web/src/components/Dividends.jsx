@@ -7,14 +7,18 @@ import { useLang } from "../lib/i18n.jsx";
 /**
  * Дивиденды холдерам — витрина того, ради чего монета за валюту.
  *
- * Показывается только у монет с налогом в пользу холдеров: у ETH-монет
- * такого механизма нет, у quote-монет с нулевой ставкой показывать нечего.
- * Рендерит ничего, если это не тот случай, — родитель об этом не думает.
+ * Только у монет с налогом в пользу холдеров: у ETH-монет такого механизма
+ * нет, у quote-монет с нулевой ставкой показывать нечего. Суммы — в валюте
+ * монеты (USDG, NVDA…), знаки берём из q.
  *
- * Суммы — в валюте монеты (USDG, NVDA…), знаки берём из q.
+ * Данные живут в хуке useDividends: страница монеты вызывает его и
+ * раскладывает цифры по карточке «О токене» — чип со ставкой, «роздано»,
+ * кнопка «Забрать». Большой отдельный блок (компонент ниже) с верха
+ * вкладки «Активность» убран 15.09.2026 по просьбе владельца: он
+ * отодвигал ленту сделок и объяснял словами то, что видно по цифрам.
+ * Компонент оставлен на случай, если где-то понадобится целиком.
  */
-export default function Dividends({ token, wallet, q, onConnect }) {
-  const { t } = useLang();
+export function useDividends(token, wallet, q) {
   const [st, setSt] = useState(null); // { divBps, total, pot, mine, accum }
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -45,16 +49,20 @@ export default function Dividends({ token, wallet, q, onConnect }) {
     return () => clearInterval(id);
   }, [load, q]);
 
-  if (!q || !st || st.divBps === 0) return null;
+  /** Сумма в валюте монеты числом — страница переводит её в ETH и доллары. */
+  const num = (v) => (q ? Number(formatUnits(v ?? 0n, q.dec)) : 0);
 
+  /** Сумма в валюте монеты: мелочь не прячем за нулями. */
   const f = (v) => {
+    if (!q) return "0";
     const n = Number(formatUnits(v, q.dec));
     if (n === 0) return "0";
     if (n < 0.01) return String(+n.toPrecision(2)); // 0.00014, а не «0.0000»
     return n.toLocaleString("ru", { maximumFractionDigits: 2 });
   };
 
-  const claim = async () => {
+  /** Забрать вручную (раз в час бот и так выплатит). Без кошелька — подключить. */
+  const claim = async (onConnect) => {
     setErr("");
     if (!wallet) return onConnect?.();
     setBusy(true);
@@ -67,6 +75,17 @@ export default function Dividends({ token, wallet, q, onConnect }) {
     } catch (e) { setErr(String(e.shortMessage || e.message)); }
     finally { setBusy(false); }
   };
+
+  const on = Boolean(q && st && st.divBps > 0);
+  return { on, st, q, f, num, claim, busy, err, reload: load };
+}
+
+/** Полный блок — нигде не показывается с 15.09.2026, см. useDividends. */
+export default function Dividends({ token, wallet, q, onConnect }) {
+  const { t } = useLang();
+  const d = useDividends(token, wallet, q);
+  if (!d.on) return null;
+  const { st, f } = d;
 
   return (
     <div className="dv">
@@ -90,15 +109,12 @@ export default function Dividends({ token, wallet, q, onConnect }) {
           {t("В копилке")} <b>{f(st.pot)} {q.sym}</b> — {t("раздастся холдерам со следующей сделкой")}
         </div>
       )}
-      <div className="dv-note">
-        {t("Держите монету — с каждой покупки и продажи вам капает {q}. Продали — перестало. Накопленное раз в час само приходит на кошелёк; забрать вручную можно в любой момент.").replace("{q}", q.sym)}
-      </div>
       {wallet && (
-        <button className="btn btn-primary dv-btn" disabled={busy || st.mine === 0n} onClick={claim}>
-          {busy ? t("Забираю…") : st.mine > 0n ? `${t("Забрать")} ${f(st.mine)} ${q.sym}` : t("Пока нечего забирать")}
+        <button className="btn btn-primary dv-btn" disabled={d.busy || st.mine === 0n} onClick={() => d.claim(onConnect)}>
+          {d.busy ? t("Забираю…") : st.mine > 0n ? `${t("Забрать")} ${f(st.mine)} ${q.sym}` : t("Пока нечего забирать")}
         </button>
       )}
-      {err && <div className="error" style={{ marginTop: 8 }}>{err}</div>}
+      {d.err && <div className="error" style={{ marginTop: 8 }}>{d.err}</div>}
     </div>
   );
 }

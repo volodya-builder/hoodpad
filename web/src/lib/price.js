@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { fmtEth } from "./web3.js";
 
 // ETH/USD: несколько источников + память в localStorage.
 // Зашитый фолбэк используется ТОЛЬКО при самом первом запуске без сети —
@@ -69,6 +70,38 @@ export function useEthUsd() {
     return () => { alive = false; clearInterval(id); };
   }, []);
   return rate;
+}
+
+/**
+ * Деньги на сайте — в ETH и долларах, у монет за акции тоже (решение
+ * владельца 15.09.2026): покупают и продают за ETH через зап, акция остаётся
+ * под капотом, и сумма «0.0088 AAPL» человеку ничего не говорит.
+ * units — сумма в валюте кривой (у ETH-монеты это уже ETH: quoteUsd = ethUsd).
+ * Курса ещё нет — «…», а не акции под видом эфира.
+ */
+export function moneyEth(units, quoteUsd, ethUsd) {
+  const n = Number(units);
+  if (!isFinite(n)) return "…";
+  if (n === 0) return "0 ETH";
+  if (!(quoteUsd > 0) || !(ethUsd > 0)) return "…";
+  const e = (n * quoteUsd) / ethUsd;
+  return `${fmtEth(e)} ETH (${usdFine(e * ethUsd)})`;
+}
+
+/** Только ETH-часть той же суммы; null — курса нет. */
+export function ethOf(units, quoteUsd, ethUsd) {
+  const n = Number(units);
+  if (!isFinite(n)) return null;
+  if (!(quoteUsd > 0) || !(ethUsd > 0)) return null;
+  return (n * quoteUsd) / ethUsd;
+}
+
+/** Доллары для сумм: мелочь не округляем в «$0.00». */
+export function usdFine(v) {
+  const a = Math.abs(Number(v) || 0);
+  if (a === 0) return "$0";
+  if (a < 0.01) return "<$0.01";
+  return (v < 0 ? "-" : "") + (a >= 1e3 ? usd(a) : "$" + a.toFixed(2));
 }
 
 export function usd(n) {

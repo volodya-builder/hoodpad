@@ -5,6 +5,7 @@ import { factoryAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi, zapAbi, feeSplitte
 import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, FEATURES, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE } from "../lib/config.js";
 import { useSplit, injectNewToken } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
+import { useEthUsd, useQuoteUsd, moneyEth } from "../lib/price.js";
 import { RWA_TOKENS, RWA_POPULAR, stockLogo, CHAIN_LOGOS } from "../lib/rwa.js";
 import { loadCryptoQuotes, loadAllowedQuotes, loadZapQuotes, lookupQuote, matchQuote, featuredQuotes, short as shortAddr } from "../lib/quotes.js";
 import { loadModels, featured, matchModel, modelLogo, costLabel, AI_AUTO } from "../lib/models.mjs";
@@ -161,6 +162,11 @@ export default function Create({ wallet, onConnect }) {
     return () => { on = false; };
   }, [quoteAddr, quoteDec]);
   const fmtQ = (n) => (n >= 100 ? Math.round(n).toLocaleString("ru") : String(+n.toFixed(4)));
+  // Порог и кап на превью — в ETH и долларах, как все деньги на сайте
+  // (решение владельца 15.09.2026); в акции их не переводим.
+  const ethUsd = useEthUsd();
+  const quoteUsd = useQuoteUsd(quoteAddr);
+  const moneyQ = (n) => moneyEth(n, quoteUsd, ethUsd);
   const pickEth = () => { setQuote("ETH"); setQuoteAddr(""); setQuoteDec(18); };
   const quoteAllowed = quote === "ETH" || (QUOTE_LIVE && allowed.has(quoteAddr));
   const quoteIcon = quoteTab === "rwa"
@@ -458,7 +464,7 @@ export default function Create({ wallet, onConnect }) {
               {!QUOTE_LIVE
                   ? t("Запуск за {sym} откроется с деплоем ERC20-пула курвы — контракты готовы и проверены. Выбор сохранится в черновике.").replace("{sym}", quote)
                   : quoteAllowed
-                    ? t("Токен торгуется за {sym}, дивиденды холдерам — в {sym}. Покупать можно и за ETH: обмен делается по дороге, одной транзакцией.").replace(/\{sym\}/g, quote)
+                    ? t("Покупают и продают за ETH — одной транзакцией. Дивиденды холдерам начисляются с каждой сделки.")
                     : t("{sym} пока не в белом списке фабрики. Валюты с комиссией на перевод или ребейзом ломают кривую, поэтому каждую проверяем перед добавлением. Выбор сохранится в черновике.").replace("{sym}", quote)}
             </div>}
           </>
@@ -487,7 +493,7 @@ export default function Create({ wallet, onConnect }) {
               {!QUOTE_LIVE
                 ? t("Токен будет торговаться за акцию Robinhood (канонические Stock Tokens, {n} шт.). Запуск с RWA-валютой откроется с деплоем ERC20-пула курвы — выбор сохранится в черновике.").replace("{n}", String(RWA_TOKENS.length))
                 : quoteAllowed && quote !== "ETH"
-                  ? t("Токен торгуется за {sym}, дивиденды холдерам — в {sym}. Покупать можно и за ETH: обмен делается по дороге, одной транзакцией.").replace(/\{sym\}/g, quote)
+                  ? t("Покупают и продают за ETH — одной транзакцией. Дивиденды холдерам начисляются с каждой сделки.")
                   : t("Акции Robinhood, за которые можно запустить монету. Нужна другая — напишите нам, добавим.")}
             </div>
           </>
@@ -725,9 +731,9 @@ export default function Create({ wallet, onConnect }) {
         <div className={`hint ${quote === "ETH" && !buyOk ? "bad" : ""}`}>
           {quote !== "ETH"
             ? (qcfg
-                ? t("Кап создателя — {cap} {q} за всё время кривой (10% порога). {how} Перебор откатит контракт.")
-                    .replace("{cap}", fmtQ(qcfg.cap)).replace("{q}", quote)
-                    .replace("{how}", ZAP_LIVE ? t("Платите ETH — обмен на {q} сделается по дороге.").replace("{q}", quote) : t("Нужен {q} на кошельке и разрешение пулу.").replace("{q}", quote))
+                ? t("Кап создателя — {cap} за всё время кривой (10% порога). {how} Перебор откатит контракт.")
+                    .replace("{cap}", moneyQ(qcfg.cap))
+                    .replace("{how}", ZAP_LIVE ? t("Платите ETH, одной транзакцией.") : t("Нужен {q} на кошельке и разрешение пулу.").replace("{q}", quote))
                 : t("Кап создателя задаёт фабрика для каждой валюты. Перебор откатит контракт."))
             : (buyOk
                 ? t("Макс {max} ETH · 5% сапплая. Исполняется в той же транзакции — защита от снайперов.")
@@ -805,13 +811,13 @@ export default function Create({ wallet, onConnect }) {
             {quote === "ETH" ? "ETH" : <><Logo cls="pv-qlogo" src={quoteIcon} />{quote}</>}
           </span></div>
           <div className="row"><span className="k">{t("Градация")}</span><span className="v">
-            {quote === "ETH" ? "6.5 ETH" : qcfg ? `${fmtQ(qcfg.threshold)} ${quote}` : t("порог в {q}").replace("{q}", quote)}
+            {quote === "ETH" ? "6.5 ETH" : qcfg ? moneyQ(qcfg.threshold) : "…"}
           </span></div>
           {quote !== "ETH" && qcfg && (
-            <div className="row"><span className="k">{t("Кап создателя")}</span><span className="v">{fmtQ(qcfg.cap)} {quote}</span></div>
+            <div className="row"><span className="k">{t("Кап создателя")}</span><span className="v">{moneyQ(qcfg.cap)}</span></div>
           )}
           {quote !== "ETH" && divBps > 0 && (
-            <div className="row"><span className="k">{t("Дивиденды холдерам")}</span><span className="v">{divBps / 100}% {t("в")} {quote}</span></div>
+            <div className="row"><span className="k">{t("Дивиденды холдерам")}</span><span className="v">{divBps / 100}%</span></div>
           )}
           <div className="row"><span className="k">{t("Ликвидность")}</span><span className="v">{t("Заперта навсегда")}</span></div>
           {buyValue > 0 && (

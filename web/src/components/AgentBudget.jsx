@@ -3,7 +3,7 @@ import { formatEther, formatUnits, parseAbi } from "viem";
 import { useLang } from "../lib/i18n.jsx";
 import { publicClient } from "../lib/web3.js";
 import { AGENT_TREASURY_ADDRESS, EXPLORER, NATIVE_SYMBOL } from "../lib/config.js";
-import { useEthUsd, useQuoteUsd, usd as fmtUsd } from "../lib/price.js";
+import { useEthUsd, useQuoteUsd, moneyEth } from "../lib/price.js";
 
 /** Бюджет агента монеты: собрано, потрачено, осталось.
  *
@@ -57,14 +57,11 @@ export default function AgentBudget({ token, quote = null }) {
 
   if (!AGENT_TREASURY_ADDRESS || !d) return null;
 
-  // Суммы — в валюте бюджета: ETH у ETH-монет, USDG/AAPL у монет за валюту.
+  // Бюджет копится в валюте монеты (ETH или USDG/AAPL), а показываем его в
+  // ETH и долларах — как все деньги на сайте (решение владельца 15.09.2026).
   const num = (v) => Number(quote ? formatUnits(v ?? 0n, quote.dec) : formatEther(v ?? 0n));
-  const show = (v) => { const n = num(v); return n === 0 ? "0" : n < 0.001 ? "<0.001" : n.toFixed(n < 1 ? 4 : 3); };
-  const SYM = quote ? quote.sym : NATIVE_SYMBOL;
-  // Счета за модели приходят в долларах, поэтому остаток полезнее видеть
-  // в них же. Курс может не прийти — тогда строки просто не будет.
-  const rate = quote ? quoteRate : ethUsdRate;
-  const usdLeft = rate ? num(d.budget) * rate : null;
+  const show = (v) => moneyEth(num(v), quote ? quoteRate : ethUsdRate, ethUsdRate);
+  const SYM = "";
 
   return (
     <div className="abg">
@@ -88,9 +85,6 @@ export default function AgentBudget({ token, quote = null }) {
         </div>
       </div>
 
-      {usdLeft !== null && usdLeft > 0 && (
-        <div className="abg-usd">≈ {fmtUsd(usdLeft)}</div>
-      )}
 
       <div className="abg-note">
         {t("Пополняется из комиссий этой монеты. Тратится на вызовы моделей. Обе стороны — в блокчейне.")}
