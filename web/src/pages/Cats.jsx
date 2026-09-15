@@ -34,7 +34,7 @@ function TierArt({ tier, size = 72 }) {
 }
 
 // пиксель-кот в фирменном цвете тикера/редкости (SVG, без внешних ассетов)
-function CatArt({ color = "#7c88ff", size = 96 }) {
+function CatArt({ color = "#c8f542", size = 96 }) {
   return (
     <svg viewBox="0 0 32 32" width={size} height={size} style={{ imageRendering: "pixelated" }} aria-hidden="true">
       <rect width="32" height="32" fill="#12131a" rx="6" />

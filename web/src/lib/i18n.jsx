@@ -1564,6 +1564,7 @@ const EN = {
   "20% каждой торговой комиссии платформы уходят в казну арены — контракт без функции вывода: деньги оттуда могут только выкупать монеты платформы и сжигать их. Каждое утро (после 00:00 UTC) весь накопленный фонд делится между вчерашним подиумом: 70% первому месту, 20% второму, 10% третьему. Первое место — выживший чемпион, второе и третье — по итоговым очкам; нулевые очки не награждаются. Выкуп с рынка и сжигание: предложение падает, выигрывают все держатели. Исполняет бот, все транзакции — в эксплорере.": "20% of every trading fee on the platform goes to the arena treasury — a contract with no withdrawal function: its money can only buy platform coins and burn them. Every morning (after 00:00 UTC) the whole accumulated fund is split between yesterday's podium: 70% to first place, 20% to second, 10% to third. First place is the surviving champion, second and third go by final score; a zero score earns nothing. Bought off the market and burned: supply drops, every holder wins. Executed by a bot, every transaction is in the explorer.",
   "выбывает через": "drops out in",
   "Создателям": "To creators",
+  "дней": "days",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });
