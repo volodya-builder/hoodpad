@@ -3756,3 +3756,40 @@ h1, h2, h3, .card-title h3, .sec-h2, .sec-h3 { font-weight: 500; letter-spacing:
 .ana-svg-bar.now.hl { fill: url(#anaBarNow); }
 .ana-svg-bar.dim { opacity: .6; }
 .ana-grid-line { stroke: rgba(255,255,255,.06); }
+
+/* главная по тому же принципу, что аналитика: заголовок + сегментный
+   переключатель, поиск без тяжёлой рамки, карточки почти без коробки —
+   тонкая линия, ровные веса, одно движение при наведении */
+.home-head { margin: 36px 0 18px; }
+.home-head .seg { flex-wrap: wrap; }
+.search-row { margin: 0 0 26px; }
+.big-search { font-weight: 500; font-size: 14px; background: rgba(255,255,255,.03); border-color: rgba(255,255,255,.08); border-radius: 999px; padding: 13px 18px; }
+.big-search:hover { border-color: rgba(255,255,255,.18); background: rgba(255,255,255,.05); }
+.big-search .kbd { background: transparent; border-color: rgba(255,255,255,.12); color: var(--text-dim); }
+.sec-h2 .dim { font-size: 15px; margin-left: 8px; font-weight: 400; }
+.grad-sec { margin-bottom: 8px; }
+.tgrid { gap: 12px; }
+.tcard { background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.06); border-radius: 18px; padding: 10px; }
+.tcard:hover { transform: translateY(-1px); background: rgba(255,255,255,.045); border-color: rgba(255,255,255,.13); box-shadow: 0 14px 34px -24px #000; }
+.timg { border-radius: 12px; background: rgba(255,255,255,.04); }
+.timg img { transition: transform .4s var(--ease); }
+.tcard:hover .timg img { transform: scale(1.03); }
+.tname { font-size: 14px; font-weight: 500; margin-top: 11px; }
+.ttick { font-size: 12px; margin-top: 1px; }
+.tmc { margin-top: 8px; font-family: var(--font-display-round); font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+.tmc span { font-family: var(--font-ui); font-weight: 500; font-size: 10px; letter-spacing: .04em; margin-left: 5px; }
+.prow { margin-top: 9px; gap: 8px; }
+.prow .pbar { height: 3px; background: rgba(255,255,255,.08); }
+.prow .pv { font-weight: 500; font-size: 11.5px; }
+.tmeta { margin-top: 9px; font-size: 11px; opacity: .85; }
+.grad-chip { font-weight: 500; background: #000000a6; }
+.pg { font-weight: 500; }
+.tcard-skel { aspect-ratio: 1 / 1.62; animation: skel 1.4s var(--ease) infinite alternate; pointer-events: none; }
+@keyframes skel { from { opacity: .45; } to { opacity: 1; } }
+html[data-theme="light"] .tcard { background: #fff; border-color: rgba(0,0,0,.07); }
+html[data-theme="light"] .tcard:hover { background: #fff; border-color: rgba(0,0,0,.16); }
+html[data-theme="light"] .big-search { background: #fff; border-color: rgba(0,0,0,.1); }
+html[data-theme="light"] .big-search:hover { border-color: rgba(0,0,0,.22); }
+html[data-theme="light"] .timg { background: rgba(0,0,0,.04); }
+html[data-theme="light"] .prow .pbar { background: rgba(0,0,0,.08); }
+@media (max-width: 720px) { .home-head { margin-top: 22px; } .home-head .seg { width: 100%; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; } }

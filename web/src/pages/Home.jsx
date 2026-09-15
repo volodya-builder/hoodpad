@@ -122,9 +122,25 @@ export default function Home({ onSearch }) {
 
   return (
     <>
+      {/* шапка как в аналитике: заголовок, тихая подпись, один сегментный
+          переключатель сортировки. Никаких чипов и коробок. */}
+      <div className="ana-head home-head">
+        <div>
+          <h1 className="page-title" style={{ margin: 0 }}>{t("Обзор")}</h1>
+          <div className="ana-panel-sub">
+            {tokens ? <>{tokens.length} {t("запущено")}{grad.length > 0 && <> · {grad.length} {t("градуировали")}</>}</> : t("Загружаю токены из блокчейна…")}
+            {" · "}{t("Токены, летящие к градации на Robinhood Chain.")}
+          </div>
+        </div>
+        <div className="seg">
+          {[["new", t("Новые")], ["old", t("Старые")], ["raised", t("Недавние покупки")], ["mcap", t("Капитализация")], ...(FEATURES.treasury ? [["cushion", t("Выкуп казны")]] : []), ["fav", t("Избранное")]].map(([k, lbl]) => (
+            <button key={k} type="button" className={`seg-btn ${sort === k ? "on" : ""}`} onClick={() => setSort(k)}>{lbl}</button>
+          ))}
+        </div>
+      </div>
       <div className="search-row">
         <div className="big-search" onClick={onSearch}>
-          ⌕ {t("Поиск токенов")} <span className="kbd">Ctrl K</span>
+          <Icon name="search" size={15} style={{ margin: 0 }} /> {t("Поиск токенов")} <span className="kbd">Ctrl K</span>
         </div>
         <a className="btn btn-primary" style={{ padding: "0 26px", display: "flex", alignItems: "center" }} href="#/create">
           {t("+ Создать")}
@@ -154,20 +170,16 @@ export default function Home({ onSearch }) {
         {support.totalEth === 0 && <span className="dim"> · {t("копится с каждой сделки — выкупы начнутся, когда наберётся сумма")}</span>} →
       </a>}
       {error && <div className="error">{error}</div>}
-      {!tokens && !error && <div className="center">{t("Загружаю токены из блокчейна…")}</div>}
+      {!tokens && !error && <div className="tgrid">{Array.from({ length: 10 }, (_, i) => <div key={i} className="tcard tcard-skel" />)}</div>}
 
-      <div className="grad-wrap">
+      {grad.length > 0 && <div className="grad-sec">
         <div className="sec-head">
           <div>
-            <h2 className="sec-h2">
-              {t("Градуировали")} <span className="count-chip">{grad.length}</span>
-            </h2>
-            <div className="page-sub" style={{ margin: "7px 0 0" }}>
-              {t("Прошли порог градации — ликвидность заперта на DEX.")}
-            </div>
+            <h2 className="sec-h2">{t("Градуировали")} <span className="dim">{grad.length}</span></h2>
+            <div className="ana-panel-sub">{t("Прошли порог градации — ликвидность заперта на DEX.")}</div>
           </div>
         </div>
-        {grad.length === 0 ? null : (
+        {(
           <>
             <div className="tgrid">
               {grad.slice((gpage - 1) * GRAD_PER_PAGE, gpage * GRAD_PER_PAGE)
@@ -185,26 +197,12 @@ export default function Home({ onSearch }) {
             )}
           </>
         )}
-      </div>
+      </div>}
 
-      <div className="sec-head">
-        <div>
-          <h2 className="sec-h2">
-            {t("Обзор")} <span className="count-chip">{tokens?.length ?? 0} {t("запущено")}</span>
-          </h2>
-          <div className="page-sub" style={{ margin: "7px 0 0" }}>
-            {t("Токены, летящие к градации на Robinhood Chain.")}
-          </div>
-        </div>
-        <div className="pill-group">
-          {[["new", t("Новые")], ["old", t("Старые")], ["raised", t("Недавние покупки")], ["mcap", t("Капитализация")], ...(FEATURES.treasury ? [["cushion", "🛡 " + t("Выкуп казны")]] : []), ["fav", "★ " + t("Избранное")]].map(([k, lbl]) => (
-            <div key={k} className={`fpill ${sort === k ? "on" : ""}`} onClick={() => setSort(k)}>
-              {lbl}
-            </div>
-          ))}
-        </div>
-      </div>
-      {live.length === 0 ? (
+      {grad.length > 0 && <div className="sec-head" style={{ marginTop: 34 }}>
+        <div><h2 className="sec-h2">{t("В пути к градации")}</h2></div>
+      </div>}
+      {!tokens && !error ? null : live.length === 0 ? (
         <div className="center" style={{ paddingBottom: 60 }}>
           {sort === "fav" ? (
             t("Пока нет избранных — нажмите ☆ на карточке токена.")
