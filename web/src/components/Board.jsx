@@ -34,7 +34,7 @@ function AgentStatus({ st, wakeIn, period, budgetLabel, budgetTitle, t }) {
         {st.kind === "idle" && <span className="ag-dot" />}
         {st.kind === "paused" && <Icon name="pause" size={20} style={{ margin: 0 }} />}
         {st.kind === "failed" && <Icon name="alert" size={20} style={{ margin: 0 }} />}
-        {st.kind === "queued" && <span className="ag-time">{mm}:{String(ss).padStart(2, "0")}</span>}
+        {st.kind === "queued" && <span className="ag-time">{wakeIn > 0 ? `${mm}:${String(ss).padStart(2, "0")}` : "…"}</span>}
       </div>
       <div className="ag-body">
         <div className="ag-title">{st.title}</div>
@@ -197,7 +197,11 @@ export default function Board({ token: fixed, wallet, onConnect, embedded = fals
   };
 
   // ---- строка статуса агента
-  const wakeIn = Math.max(0, nextAgentWake(now) - now);
+  // Отсчёт до следующего захода: по пульсу агента (он знает, когда вернётся),
+  // а без свежего пульса — по расписанию cron.
+  const hbFresh = !!(hb && hb.at && now - hb.at < 20 * 60000);
+  const nextAt = hbFresh && hb.next ? hb.next : nextAgentWake(now);
+  const wakeIn = Math.max(0, nextAt - now);
   const mm = Math.floor(wakeIn / 60000), ss = Math.floor((wakeIn % 60000) / 1000);
   const freeLeft = Math.max(0, FREE_BUILDS - myBuilds.length);
   const rate = budget?.q ? quoteRate : ethRate;
@@ -209,7 +213,7 @@ export default function Board({ token: fixed, wallet, onConnect, embedded = fals
   const aiOff = SPLITTER_LIVE && aiOn === false;
 
   // ---- что делает агент прямо сейчас — одно состояние для панели
-  const period = AGENT_PERIOD_MIN * 60000;
+  const period = hbFresh && hb.next && hb.next > hb.at ? hb.next - hb.at : AGENT_PERIOD_MIN * 60000;
   const hbMine = hb && hb.token && hb.token.toLowerCase() === (sel || "").toLowerCase() ? hb : null;
   const hbAge = hb?.at ? now - hb.at : null;
   const lastSeen = hbAge === null ? "" : hbAge < 90_000 ? t("только что") : `${Math.round(hbAge / 60000)} ${t("мин назад")}`;
@@ -218,7 +222,7 @@ export default function Board({ token: fixed, wallet, onConnect, embedded = fals
   const lastBuild = myBuilds[0] || null;
   const agentSt = (() => {
     const seen = lastSeen ? `${t("агент был на связи")} ${lastSeen}` : t("агент заходит каждые 5 минут");
-    const late = hbLate ? ` · ${t("задерживается — GitHub иногда запаздывает")}` : "";
+    const late = hbLate ? ` · ${t("задерживается — GitHub иногда запаздывает")}` : wakeIn === 0 ? ` · ${t("вот-вот зайдёт")}` : "";
     if (aiOff) return { kind: "paused", title: t("На паузе"), sub: t("ИИ у этой монеты не включён — включает создатель на странице монеты.") };
     if (buildingProp || (hbMine && hbMine.state === "building" && hbAge < 20 * 60000 && !builtPids.has(hbMine.pid)))
       return { kind: "building", title: t("Строит"), sub: `«${(buildingProp?.text || hbMine?.text || "").slice(0, 90)}»`, note: hbMine?.model ? `${t("модель")}: ${hbMine.model}` : undefined };

@@ -250,8 +250,14 @@ async function findBoardWork() {
 /** Пульс агента для сайта: что он делает прямо сейчас. Не критично —
  *  база закрыта → молчим. workshop/agent/heartbeat = { at, state, token, pid, text, note } */
 async function heartbeat(state, extra = {}) {
+  // next — когда ждать следующий заход: эстафета в agent.yml ждёт 5 минут
+  // с начала запуска (минуту после сборки). Сайт показывает обратный отсчёт по нему.
+  const wait = state === "built" || state === "failed" ? 90_000 : state === "idle" ? 300_000 : 0;
+  const at = Date.now();
+  const body = { at, state, ...extra };
+  if (wait) body.next = (Number(process.env.AGENT_T0) * 1000 || at) + wait;
   try {
-    await fetch(`${DB}/workshop/agent/heartbeat.json`, { method: "PUT", body: JSON.stringify({ at: Date.now(), state, ...extra }) });
+    await fetch(`${DB}/workshop/agent/heartbeat.json`, { method: "PUT", body: JSON.stringify(body) });
   } catch { /* пульс — только для статуса на сайте */ }
 }
 

@@ -27,9 +27,12 @@ on:
           - build      # взять задание и построить страницу
           - models     # только показать список моделей, ничего не тратя
   schedule:
-    # Каждые 5 минут (чаще GitHub не умеет): агент заглядывает на доски идей
-    # и, если есть верхняя идея с голосами и бюджет, строит одну страницу.
-    # Без работы запуск заканчивается за минуту и ничего не стоит.
+    # Расписание GitHub — только страховка: «*/5» на деле срабатывает раз
+    # в несколько часов (GitHub режет частые cron'ы, проверено 15.09.2026:
+    # запуски в 21:02, 23:49, 01:55, 06:57). Настоящий ритм держит эстафета
+    # (последний шаг): каждый запуск в конце ждёт до 5 минут и запускает
+    # следующий сам. Если цепочка оборвалась — cron её оживит.
+    # Выключить эстафету: Settings → Variables → AGENT_RELAY = off.
     - cron: '*/5 * * * *'
 
 permissions:
@@ -47,6 +50,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Засечь время
+        run: echo "T0=$(date +%s)" >> "$GITHUB_ENV"
+
       - uses: actions/checkout@v4
         with:
           ref: staging
@@ -79,6 +85,7 @@ jobs:
         if: inputs.mode != 'models'
         env:
           OPENROUTER_KEY: ${{ secrets.OPENROUTER_KEY }}
+          AGENT_T0: ${{ env.T0 }}
         run: node scripts/agent-run.mjs --run
 
       - name: Закоммитить, если что-то построено
@@ -109,3 +116,23 @@ jobs:
         run: |
           gh workflow run deploy-staging.yml --ref staging
           echo "Сборка запущена. Через пару минут: hoodandarrow.com/staging/agents/"
+
+      # Эстафета: ждём, пока с начала запуска пройдёт 5 минут (после сборки —
+      # минута, чтобы очередь идей не ждала), и запускаем следующий заход.
+      # Встроенный токен может запускать workflow_dispatch — это единственный
+      # способ держать ритм без внешнего сервиса и без личного токена.
+      # Не передаём, если в очереди уже стоит другой запуск (например, от cron).
+      - name: Передать эстафету
+        if: always() && inputs.mode != 'models'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELAY: ${{ vars.AGENT_RELAY }}
+          BUILT: ${{ steps.commit.outputs.built }}
+        run: |
+          if [ "$RELAY" = "off" ]; then echo "Эстафета выключена (переменная AGENT_RELAY=off)."; exit 0; fi
+          WAIT=300; [ "$BUILT" = "true" ] && WAIT=60
+          LEFT=$(( T0 + WAIT - $(date +%s) ))
+          [ "$LEFT" -gt 0 ] && { echo "Жду $LEFT с до следующего захода…"; sleep "$LEFT"; }
+          OTHERS=$(gh run list --workflow agent.yml --limit 20 --json status --jq '[.[] | select(.status=="queued" or .status=="pending" or .status=="waiting" or .status=="requested")] | length' || echo 0)
+          if [ "$OTHERS" != "0" ]; then echo "В очереди уже есть запуск — эстафету не передаю."; exit 0; fi
+          gh workflow run agent.yml --ref main -f mode=build && echo "Следующий заход запущен."
