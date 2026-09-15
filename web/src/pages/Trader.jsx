@@ -4,7 +4,7 @@ import { formatEther } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { tokenAbi } from "../lib/abi.js";
 import { EXPLORER } from "../lib/config.js";
-import { loadTokens, subgraphUserTrades, poolTrades, allTrades, timeAgo, useClock } from "../lib/data.js";
+import { loadTokens, subgraphUserTrades, priceEthMap, poolTrades, allTrades, timeAgo, useClock } from "../lib/data.js";
 import { currentPosition } from "../lib/position.js";
 import { computeCreatorRep } from "../lib/creatorRep.js";
 import { useEthUsd, usd } from "../lib/price.js";
@@ -89,9 +89,12 @@ export default function Trader({ address }) {
         enriched.push(...part);
         if (!alive) return;
       }
+      // цена в ETH-эквиваленте (монеты за валюту — через курс валюты)
+      const pem = await priceEthMap(enriched).catch(() => ({}));
+      enriched.forEach((tk) => { tk.priceEth = pem[(tk.token || "").toLowerCase()] ?? Number(formatEther(tk.price)); });
       let totVal = 0, totInv = 0, totReal = 0, volume = 0;
       enriched.forEach((tk) => {
-        totVal += Number(formatEther(tk.bal)) * Number(formatEther(tk.price));
+        totVal += Number(formatEther(tk.bal)) * tk.priceEth;
         totInv += tk.allInv; totReal += tk.allReal;
         volume += tk.all.reduce((s, x) => s + x.eth + x.fee, 0);
       });
@@ -200,11 +203,11 @@ export default function Trader({ address }) {
           {tab === "pos" && (<>
             {state.positions.length === 0 && <div className="center">{t("Открытых позиций нет.")}</div>}
             {[...state.positions].sort((a, b) => {
-              const pnl = (p) => Number(formatEther(p.bal)) * Number(formatEther(p.price)) + p.realized - p.invested;
+              const pnl = (p) => Number(formatEther(p.bal)) * p.priceEth + p.realized - p.invested;
               return pnl(b) - pnl(a);
             }).map((p) => {
               const balTok = Number(formatEther(p.bal));
-              const val = balTok * Number(formatEther(p.price));
+              const val = balTok * p.priceEth;
               const totPnl = val + p.realized - p.invested;
               const pct = p.invested > 0 ? (totPnl / p.invested) * 100 : 0;
               return (
@@ -276,7 +279,7 @@ export default function Trader({ address }) {
                 </span>
               </span>
               <div className="tk-cell"><span>{t("Капа")}</span>
-                <b>{usd(Number(formatEther(p.price)) * 1e9 * rate)}</b></div>
+                <b>{usd(p.priceEth * 1e9 * rate)}</b></div>
               <div className="tk-cell"><span>{t("Кривая")}</span>
                 <b>{fmt(Number((p.sold * 10000n) / p.cap) / 100, 1)}%</b></div>
               <div className="tk-cell"><span>{t("Статус")}</span>

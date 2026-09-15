@@ -1622,6 +1622,7 @@ const EN = {
   "Принимаю": "I accept",
   "Продолжить": "Continue",
   "Валюта курвы и дивиденды холдерам с каждой сделки": "Curve currency and holder dividends on every trade",
+  "сборка": "build",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

@@ -277,6 +277,12 @@ export default function Admin({ wallet, onConnect }) {
           <div className="ana-panel-sub">
             {t("Казна, аудитория, модерация.")}{" "}
             <span className="dim">· {dataSource.v === "subgraph" ? "Goldsky" : dataSource.v === "rpc" ? "RPC" : "…"}</span>
+            {import.meta.env.VITE_BUILD && (
+              <span className="dim" title={import.meta.env.VITE_COMMIT || ""}>
+                {" "}· {import.meta.env.BASE_URL !== "/" ? "staging" : t("сборка")} #{import.meta.env.VITE_BUILD}
+                {import.meta.env.VITE_COMMIT ? ` · ${String(import.meta.env.VITE_COMMIT).slice(0, 7)}` : ""}
+              </span>
+            )}
           </div>
         </div>
         {data && data.unclaimed > 0n && (
