@@ -1,21 +1,23 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import Icon from "./components/Icon.jsx";
 import Home from "./pages/Home.jsx";
 import Create from "./pages/Create.jsx";
 import TokenPage from "./pages/Token.jsx";
 import Analytics from "./pages/Analytics.jsx";
 import Leaderboard from "./pages/Leaderboard.jsx";
-import Arena from "./pages/Arena.jsx";
 import Trader from "./pages/Trader.jsx";
-import Ticker from "./components/Ticker.jsx";
 import Profile from "./pages/Profile.jsx";
-import About from "./pages/About.jsx";
 import AI from "./pages/AI.jsx";
-import Treasury from "./pages/Treasury.jsx";
-import Admin from "./pages/Admin.jsx";
 import { Privacy, Terms } from "./pages/Legal.jsx";
-import Revenue from "./pages/Revenue.jsx";
-import Cats from "./pages/Cats.jsx";
+// Скрытые (FEATURES) и редкие страницы грузятся отдельными кусками и только
+// когда открыты: в основном бандле их нет, посетители их не качают.
+const Arena = lazy(() => import("./pages/Arena.jsx"));
+const Ticker = lazy(() => import("./components/Ticker.jsx"));
+const About = lazy(() => import("./pages/About.jsx"));
+const Treasury = lazy(() => import("./pages/Treasury.jsx"));
+const Admin = lazy(() => import("./pages/Admin.jsx"));
+const Revenue = lazy(() => import("./pages/Revenue.jsx"));
+const Cats = lazy(() => import("./pages/Cats.jsx"));
 import { connectWallet, reconnectWallet, hasWallet, short, fmt, fmtEth, publicClient } from "./lib/web3.js";
 import { CHAIN, FACTORY_ADDRESS, TREASURY_ADDRESS, CHAT_DB_URL, FEATURES } from "./lib/config.js";
 import { treasuryAbi } from "./lib/abi.js";
@@ -569,7 +571,7 @@ export default function App() {
             VITE_FACTORY_ADDRESS.
           </div>
         )}
-        {page}
+        <Suspense fallback={null}>{page}</Suspense>
       </main>
       <footer>
         <div className="container">

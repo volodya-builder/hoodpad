@@ -12,9 +12,12 @@ export {
 } from "./arena-core.js";
 
 /** Реактивный хук: текущая арена (с защитой трона), тикает каждые 30с. */
-export function useArena() {
+/** enabled=false — арена выключена (FEATURES.arena): ни одного запроса в сеть.
+ *  Раньше главная каждые 30 с тянула ВСЕ сделки платформы ради скрытой вкладки. */
+export function useArena(enabled = true) {
   const [st, setSt] = useState(null);
   useEffect(() => {
+    if (!enabled) return undefined;
     let alive = true;
     const pull = async () => {
       try {
@@ -28,6 +31,6 @@ export function useArena() {
     pull();
     const id = setInterval(pull, 30_000);
     return () => { alive = false; clearInterval(id); };
-  }, []);
+  }, [enabled]);
   return st;
 }

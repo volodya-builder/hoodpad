@@ -604,9 +604,11 @@ export function loadSupport() {
   return _sup.p;
 }
 
-export function useSupport() {
-  const [sup, setSup] = useState(_sup.v ?? { per: {}, totalEth: 0 });
-  useEffect(() => { loadSupport().then(setSup).catch(() => {}); }, []);
+/** enabled=false — казна выкупа выключена (FEATURES.treasury): в сеть не ходим,
+ *  «выкуп казны» на карточках и странице монеты не показывается. */
+export function useSupport(enabled = true) {
+  const [sup, setSup] = useState(enabled ? (_sup.v ?? { per: {}, totalEth: 0 }) : { per: {}, totalEth: 0 });
+  useEffect(() => { if (enabled) loadSupport().then(setSup).catch(() => {}); }, [enabled]);
   return sup;
 }
 
