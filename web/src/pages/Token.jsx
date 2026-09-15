@@ -222,6 +222,32 @@ function writeTokenCache(addr, d) {
     localStorage.setItem(TOK_CACHE + addr.toLowerCase(), JSON.stringify({ ...rest, balance: 0n, walletEth: 0n, walletQuote: 0n }, bigOut));
   } catch (e) { /* нет места — не страшно */ }
 }
+// ---- кэш истории сделок: график и лента рисуются сразу, без секунды
+// «пустого» графика, пока идут события (просьба владельца 15.09.2026).
+// Храним последние 150 сделок и 400 точек, не больше 15 монет (LRU).
+const HIST_CACHE = "hood_hist_v1_";
+const HIST_IDX = "hood_hist_idx";
+function readHistCache(addr) {
+  if (!addr) return null;
+  try {
+    const raw = localStorage.getItem(HIST_CACHE + addr.toLowerCase());
+    const h = raw ? JSON.parse(raw, bigIn) : null;
+    if (h && Array.isArray(h.trades) && Array.isArray(h.points) && h.points.length >= 2) return h;
+  } catch (e) { /* без кэша — скелет до прихода событий */ }
+  return null;
+}
+function writeHistCache(addr, h) {
+  if (!h || !h.trades || !h.trades.length) return;
+  try {
+    const key = HIST_CACHE + addr.toLowerCase();
+    const slim = { trades: h.trades.slice(0, 150), points: h.points.slice(-400), now: h.now };
+    localStorage.setItem(key, JSON.stringify(slim, bigOut));
+    let idx = []; try { idx = JSON.parse(localStorage.getItem(HIST_IDX) || "[]"); } catch (e) { idx = []; }
+    idx = [key, ...idx.filter((k) => k !== key)];
+    for (const old of idx.slice(15)) localStorage.removeItem(old);
+    localStorage.setItem(HIST_IDX, JSON.stringify(idx.slice(0, 15)));
+  } catch (e) { /* нет места — не страшно */ }
+}
 // Символ и знаки валюты кривой не меняются — читаем один раз.
 const QUOTE_META = "hood_quote_v1_";
 async function quoteMeta(addr) {
@@ -297,7 +323,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [quote, setQuote] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [history, setHistory] = useState(null); // { trades, points }
+  const [history, setHistory] = useState(() => readHistCache(tokenAddress)); // { trades, points } — сначала из кэша
+  useEffect(() => { setHistory(readHistCache(tokenAddress)); }, [tokenAddress]); // смена монеты — её кэш, а не чужой график
   const [extra, setExtra] = useState({});       // creatorFees, treasuryOwner, treasuryHeld, burned
   const [bbAmt, setBbAmt] = useState("");
   const [copiedLink, setCopiedLink] = useState(false);
@@ -619,6 +646,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       } catch (e) { /* график останется в режиме «всё время» */ }
     }
     setHistory(h);
+    writeHistCache(tokenAddress, h);
     setExtra({ creatorFees, treasuryOwner, treasuryHeld, burned,
                createdAt: createdMap[tokenAddress.toLowerCase()] });
   }, [data?.pool, data?.q?.virt, tokenAddress]); // virt приходит с сетью после кэша — сделки пересчитать
@@ -1229,8 +1257,11 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           </div>
           {history && history.points && history.points.filter((p) => p.ts).length >= 2 ? (
             <CandleChart points={history.points} trades={history.trades} rate={curRate} marks={marks} />
-          ) : (
+          ) : history ? (
             <MiniChart points={chartPoints} rate={curRate} marks={marks} base={data.q ? data.q.virt : 1.625} />
+          ) : (
+            /* события ещё идут и кэша нет: пустое место того же размера, без «пустого» графика */
+            <svg viewBox="0 0 680 300" style={{ width: "100%", display: "block", marginTop: 8 }} aria-hidden="true" />
           )}
         </div>
         </div>

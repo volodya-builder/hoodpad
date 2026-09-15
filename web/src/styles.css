@@ -3679,3 +3679,10 @@ a.who:hover .who-name, a.who:hover .mono { color: var(--gold); }
   .pe-grid { grid-template-columns: 1fr; }
   .pf-edit { margin-left: 0; width: 100%; }
 }
+
+/* Арена — минимализм (15.09.2026) */
+.podium3.minimal .pod-card { padding: 12px 14px; gap: 2px; }
+.podium3.minimal .pod-place { font-size: 12px; color: var(--text-dim); margin: 0; }
+.podium3.minimal .pod-sum { font-size: 17px; }
+.arena-hdr span:last-child { text-align: right; }
+.arena-row .ar-status.bad .mono { font-variant-numeric: tabular-nums; }

@@ -3,7 +3,7 @@ import Icon from "../components/Icon.jsx";
 import { formatEther } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { treasuryAbi } from "../lib/abi.js";
-import { TREASURY_ADDRESS, EXPLORER } from "../lib/config.js";
+import { TREASURY_ADDRESS, EXPLORER, FEATURES } from "../lib/config.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { loadTokens, allTrades, loadSplit, loadSupport, useSplit } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
@@ -329,8 +329,8 @@ export default function Analytics() {
         </>
       )}
 
-      {/* Лидеры — раскрывающаяся панель внутри аналитики */}
-      <div className="bottom-card lb-fold" style={{ marginTop: 22 }}>
+      {/* Лидеры — раскрывающаяся панель внутри аналитики (спрятана FEATURES.leaders) */}
+      {FEATURES.leaders && <div className="bottom-card lb-fold" style={{ marginTop: 22 }}>
         <div className="lb-fold-head" onClick={() => setLbOpen(!lbOpen)}>
           <span><Icon name="trophy" /> {t("Лидеры")}</span>
           <span className="dim" style={{ fontSize: 13 }}>
@@ -338,7 +338,7 @@ export default function Analytics() {
           </span>
         </div>
         {lbOpen && <Leaderboard embedded />}
-      </div>
+      </div>}
 
     </>
   );

@@ -92,7 +92,7 @@ export default function Home({ onSearch }) {
   const [sort, setSort] = useState("new");
   const favs = useFavs();
   const support = useSupport(FEATURES.treasury);
-  const arena = useArena(FEATURES.arena);
+  const arena = useArena(FEATURES.arena && FEATURES.arenaBanner); // без баннера главная не тянет все сделки
   const cushionOf = (addr) => support.per[addr.toLowerCase()]?.eth || 0;
 
 
@@ -130,7 +130,7 @@ export default function Home({ onSearch }) {
           {t("+ Создать")}
         </a>
       </div>
-      {FEATURES.arena && arena && arena.participants.length > 0 && (
+      {FEATURES.arena && FEATURES.arenaBanner && arena && arena.participants.length > 0 && (
         <a className="cushion-banner arena-banner" href="#/arena">
           <Icon name="target" size={14} /> {t("Арена")}: {arena.alive.length > 1 ? (
             <>

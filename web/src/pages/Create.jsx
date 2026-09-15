@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { parseEther, formatEther, parseUnits, decodeEventLog } from "viem";
 import { publicClient } from "../lib/web3.js";
 import { factoryAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi, zapAbi, feeSplitterAbi } from "../lib/abi.js";
-import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, FEATURES, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE } from "../lib/config.js";
+import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, FEATURES, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE, CREATOR_FEE_PCT } from "../lib/config.js";
 import { useSplit, injectNewToken } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 import { useEthUsd, useQuoteUsd, moneyEth } from "../lib/price.js";
@@ -757,26 +757,8 @@ export default function Create({ wallet, onConnect }) {
           {/* Комиссия — простыми словами: одна строка «сколько берётся» и
               кому уходит, без bps и долей от долей. Цифры — с цепи. */}
           <div className="row"><span className="k">{t("Комиссия с каждой сделки")}</span><span className="v">1%</span></div>
-          <div className="row sub"><span className="k">↳ {t("вам, создателю монеты")}</span><span className="v green">{creatorPct}%</span></div>
-          {sp.arena > 0 && (
-            <div className="row sub"><span className="k">↳ {t("в призовой фонд арены")}</span><span className="v">{sp.arena}%</span></div>
-          )}
-          <div className="row sub"><span className="k">↳ {t("команде hood")}</span><span className="v">{sp.team}%</span></div>
-          {sp.live && ai && (
-            <div className="row sub"><span className="k">↳ {t("ИИ этой монеты")}</span><span className="v">{sp.agent}%</span></div>
-          )}
-          {!sp.live && sp.buyback > 0 && (
-            <div className="row sub"><span className="k">↳ {t("в казну выкупа")}</span><span className="v">{sp.buyback}%</span></div>
-          )}
-          {sp.pending && sp.pending.readyAt > Date.now() && (
-            <div className="pv-pending">
-              {(sp.pending.arena > 0
-                ? t("С {d} для новых монет: вам {n}%, в призовой фонд арены {a}%, команде {tm}%. Монета, запущенная раньше, останется на нынешних долях.")
-                : t("С {d} для новых монет: вам {n}% (с агентом {c}%), команде {tm}%. Монета, запущенная раньше, останется на нынешних долях."))
-                .replace("{d}", new Date(sp.pending.readyAt).toLocaleString("ru", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }))
-                .replace("{n}", String(sp.pending.creatorNoAi)).replace("{c}", String(sp.pending.creator)).replace("{a}", String(sp.pending.arena)).replace("{tm}", String(sp.pending.team))}
-            </div>
-          )}
+          {/* Только доля создателя — остальных получателей не показываем (решение владельца 15.09.2026). */}
+          <div className="row sub"><span className="k">↳ {t("вам, создателю монеты")}</span><span className="v green">{CREATOR_FEE_PCT}%</span></div>
           {FEATURES.ai && <div className="row"><span className="k">{t("ИИ-агент монеты")}</span><span className="v">{aiPick ? aiPick.name : t("нет")}</span></div>}
           <div className="row"><span className="k">{t("Валюта курвы")}</span><span className="v">
             {quote === "ETH" ? "ETH" : <><Logo cls="pv-qlogo" src={quoteIcon} />{quote}</>}

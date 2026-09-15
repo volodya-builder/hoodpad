@@ -90,10 +90,10 @@ export const AGENT_TREASURY_ADDRESS = import.meta.env.VITE_AGENT_TREASURY ?? "0x
 export const ARENA_TREASURY_ADDRESS = import.meta.env.VITE_ARENA_TREASURY ?? "";
 export const ARENA_LIVE = /^0x[0-9a-fA-F]{40}$/.test(ARENA_TREASURY_ADDRESS);
 
-// ProfileRegistry — имя, аватар, соцсети кошелька в блокчейне (15.09.2026).
-// Пусто = ещё не задеплоен: имена не показываются, форма в профиле ждёт.
-// Задеплоить: node scripts/deploy-profiles.js --deploy (владелец).
-export const PROFILE_REGISTRY_ADDRESS = import.meta.env.VITE_PROFILE_REGISTRY ?? "";
+// ProfileRegistry — имя, аватар, соцсети кошелька в блокчейне. Задеплоен
+// владельцем 15.09.2026 (scripts/deploy-profiles.js); без владельца, переживёт
+// передеплой фабрик. Пусто = имена не показываются, форма в профиле ждёт.
+export const PROFILE_REGISTRY_ADDRESS = import.meta.env.VITE_PROFILE_REGISTRY ?? "0x71ccb2eb2b2719d0d316385fc276ebeb1275a8c2";
 export const PROFILES_LIVE = /^0x[0-9a-fA-F]{40}$/.test(PROFILE_REGISTRY_ADDRESS);
 
 // FeeSplitterV4 — делит протокольную долю комиссии (команда / агент /
@@ -131,6 +131,8 @@ export const AGENT_OPERATOR =
 export const FEATURES = {
   arena: true,         // «Арена» — суточный турнир, приз: 20% всех комиссий → выкуп и сжигание подиума (возвращена 15.09.2026)
   grandArena: false,   // месячная Гранд-Арена старой схемы казны — спрятана 15.09.2026 (код в pages/Arena.jsx)
+  arenaBanner: false,  // полоска «Арена: N токенов в бою…» на главной — убрана 15.09.2026 по просьбе владельца
+  leaders: false,      // блок «Лидеры» (топ создателей и трейдеров) в аналитике — убран 15.09.2026 по просьбе владельца («дешевит»); pages/Leaderboard.jsx на месте
   cats: false,
   vote: false,
   treasury: false,
@@ -159,6 +161,11 @@ export const FEATURES = {
   creatorSellBanner: false, // «Создатель продаёт: за сутки слил…» на странице монеты — убрана 15.09.2026 по просьбе владельца
   activityTab: false,       // вкладка «Активность» в нижней таблице страницы монеты — убрана 15.09.2026 по просьбе владельца (лента сделок есть справа, во вкладке «Активность» боковой панели)
 };
+
+// Доля создателя в комиссии, как её обещает сайт (решение владельца 15.09.2026:
+// показывать только «создателю 70%», без остальных получателей). Цепь после
+// передеплоя фабрик даст ровно это; до него новые монеты получают 80%.
+export const CREATOR_FEE_PCT = 70;
 
 export const TREASURY_POLICY = { cats: 20, arena: 10, buyback: 70 };
 
