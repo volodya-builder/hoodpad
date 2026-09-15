@@ -110,7 +110,10 @@ App.jsx), их хуки (`useArena`, `useSupport`) выключены флага
   доска и пульс агента `workshop/agent/heartbeat` — пишет agent-run.mjs в `--run`,
   сайт показывает состояние агента на вкладке «ИИ»).
   Из песочницы Claude и с машины владельца база закрыта, из браузера и CI — открыта.
-- Workflows (`.github/workflows/`): deploy, deploy-staging, agent (*/5, OPENROUTER_KEY),
+- Workflows (`.github/workflows/`): deploy, deploy-staging, agent (OPENROUTER_KEY;
+  ритм держит эстафета — каждый запуск в конце ждёт до 5 мин и запускает следующий
+  встроенным токеном, cron `*/5` лишь страховка: GitHub исполняет его раз в часы;
+  выключить — переменная AGENT_RELAY=off; сборка кладётся поверх новых коммитов staging),
   dividends (hourly, TREASURER_PRIVATE_KEY), worker (деплой чата; секреты
   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, FIREBASE_DB_SECRET), mirror
   (**никогда не редактировать**), activity (*/30, торгует реальным ETH ради

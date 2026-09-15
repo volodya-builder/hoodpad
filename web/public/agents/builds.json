@@ -1,19 +1,5 @@
 [
   {
-    "token": "0x00d3c9b6d8d6f7874ebe12f83896e9144870c4b1",
-    "round": 0,
-    "pid": "mu2lo01oiiaub",
-    "by": "0xd3d14c10020ad9c582404669a2fa11aff2386255",
-    "symbol": "TEST",
-    "task": "сделай контент план",
-    "path": "agents/test/mu2lo01oiiaub/",
-    "url": "https://hoodandarrow.com/agents/test/mu2lo01oiiaub/",
-    "model": "moonshotai/kimi-k3",
-    "spent": 0.2172393,
-    "tokens": 16459,
-    "at": 1789475092094
-  },
-  {
     "token": "0x30c3005a7bc77241634efb7c2a3c20a49508756c",
     "round": 2957,
     "symbol": "APPLE",
