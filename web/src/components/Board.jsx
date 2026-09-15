@@ -7,6 +7,7 @@ import { AGENT_TREASURY_ADDRESS, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE } from "../
 import { feeSplitterAbi } from "../lib/abi.js";
 import { useEthUsd, useQuoteUsd } from "../lib/price.js";
 import { modelLogo } from "../lib/models.mjs";
+import CoinPicker from "./CoinPicker.jsx";
 import {
   PROPOSE_MIN, FREE_BUILDS, AGENT_PERIOD_MIN,
   loadBoard, watchBoard, tallyBoard, submitProposal, submitVote,
@@ -173,9 +174,7 @@ export default function Board({ token: fixed, wallet, onConnect, embedded = fals
     <div className={`board ${embedded ? "board-emb" : ""}`}>
       <div className="board-head">
         {!fixed && (
-          <select className="wsh-sel" value={sel} onChange={(e) => setSel(e.target.value)}>
-            {tokens.map((x) => <option key={x.token} value={x.token}>${x.symbol} — {x.name}{x.aiOn ? " · ИИ" : ""}</option>)}
-          </select>
+          <CoinPicker tokens={tokens} value={sel} onChange={setSel} />
         )}
         <div className="board-agent">
           {aiOff ? (

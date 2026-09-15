@@ -1500,6 +1500,12 @@ const EN = {
   "Ошибка": "Error",
   "Лента чата пока недоступна.": "The chat feed is not available yet.",
   "Показать все": "Show all",
+  "без ИИ": "no AI",
+  "ИИ включён": "AI enabled",
+  "ИИ не включён создателем": "AI not enabled by the creator",
+  "Выберите монету": "Pick a coin",
+  "Тикер, название или адрес…": "Ticker, name or address…",
+  "с ИИ": "with AI",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });
