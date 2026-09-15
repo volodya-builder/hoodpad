@@ -191,7 +191,7 @@ export default function Create({ wallet, onConnect }) {
   // Список живой: берём каталог OpenRouter при открытии формы. null — ещё
   // читаем, пустой — не достали, и тогда выбор не показываем вовсе.
   const [models, setModels] = useState(null);
-  useEffect(() => { let on = true; loadModels().then((x) => on && setModels(x)); return () => { on = false; }; }, []);
+  useEffect(() => { if (!FEATURES.ai) return undefined; let on = true; loadModels().then((x) => on && setModels(x)); return () => { on = false; }; }, []);
   const aiPick = (models || []).find((m) => m.id === ai) || null;
   // Доля создателя зависит от фабрики (ETH / за валюту) и от выбора ИИ:
   // с ИИ 10% комиссии идёт в бюджет агента монеты, без ИИ — создателю.
@@ -516,7 +516,7 @@ export default function Create({ wallet, onConnect }) {
         )}
         </>)}
 
-        {models !== null && models.length > 0 && (
+        {FEATURES.ai && models !== null && models.length > 0 && (
           <>
             <label>{t("Модель ИИ монеты")}</label>
             <input className="quote-search" value={aiSearch} onChange={(e) => setAiSearch(e.target.value)}
@@ -808,6 +808,9 @@ export default function Create({ wallet, onConnect }) {
               кому уходит, без bps и долей от долей. Цифры — с цепи. */}
           <div className="row"><span className="k">{t("Комиссия с каждой сделки")}</span><span className="v">1%</span></div>
           <div className="row sub"><span className="k">↳ {t("вам, создателю монеты")}</span><span className="v green">{creatorPct}%</span></div>
+          {sp.arena > 0 && (
+            <div className="row sub"><span className="k">↳ {t("в призовой фонд арены")}</span><span className="v">{sp.arena}%</span></div>
+          )}
           <div className="row sub"><span className="k">↳ {t("команде hood")}</span><span className="v">{sp.team}%</span></div>
           {sp.live && ai && (
             <div className="row sub"><span className="k">↳ {t("ИИ этой монеты")}</span><span className="v">{sp.agent}%</span></div>
@@ -817,12 +820,14 @@ export default function Create({ wallet, onConnect }) {
           )}
           {sp.pending && sp.pending.readyAt > Date.now() && (
             <div className="pv-pending">
-              {t("С {d} для новых монет: вам {n}% (с агентом {c}%), команде {tm}%. Монета, запущенная раньше, останется на нынешних долях.")
+              {(sp.pending.arena > 0
+                ? t("С {d} для новых монет: вам {n}%, в призовой фонд арены {a}%, команде {tm}%. Монета, запущенная раньше, останется на нынешних долях.")
+                : t("С {d} для новых монет: вам {n}% (с агентом {c}%), команде {tm}%. Монета, запущенная раньше, останется на нынешних долях."))
                 .replace("{d}", new Date(sp.pending.readyAt).toLocaleString("ru", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }))
-                .replace("{n}", String(sp.pending.creatorNoAi)).replace("{c}", String(sp.pending.creator)).replace("{tm}", String(sp.pending.team))}
+                .replace("{n}", String(sp.pending.creatorNoAi)).replace("{c}", String(sp.pending.creator)).replace("{a}", String(sp.pending.arena)).replace("{tm}", String(sp.pending.team))}
             </div>
           )}
-          <div className="row"><span className="k">{t("ИИ-агент монеты")}</span><span className="v">{aiPick ? aiPick.name : t("нет")}</span></div>
+          {FEATURES.ai && <div className="row"><span className="k">{t("ИИ-агент монеты")}</span><span className="v">{aiPick ? aiPick.name : t("нет")}</span></div>}
           <div className="row"><span className="k">{t("Валюта курвы")}</span><span className="v">
             {quote === "ETH" ? "ETH" : <><Logo cls="pv-qlogo" src={quoteIcon} />{quote}</>}
           </span></div>

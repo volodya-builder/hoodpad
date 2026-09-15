@@ -460,9 +460,7 @@ export default function App() {
           <div className={`nav-pills ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(false)}>
             <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/leaderboard") && !route.startsWith("/profile") && !route.startsWith("/treasury") && !route.startsWith("/about") && !route.startsWith("/arena") ? "on" : ""}`} href="#/">{t("Обзор")}</a>
             {FEATURES.arena && (
-              <a className={`nav-pill nav-hot ${route.startsWith("/arena") ? "on" : ""}`} href="#/arena">
-                ⚔️ {t("Арена")} <span className="hot-flame">🔥</span>
-              </a>
+              <a className={`nav-pill ${route.startsWith("/arena") ? "on" : ""}`} href="#/arena">{t("Арена")}</a>
             )}
             {FEATURES.cats && (
               <a className={`nav-pill ${route.startsWith("/cats") ? "on" : ""}`} href="#/cats">🐱 {t("Коты")} <span className="rev-nav-beta">β</span></a>
@@ -584,7 +582,7 @@ export default function App() {
               <h4>{t("Продукт")}</h4>
               <a href="#/create">{t("Запустить монету")}</a>
               {FEATURES.ai && <a href="#/ai">{t("ИИ")}</a>}
-              {FEATURES.arena && <a href="#/arena">⚔️ {t("Арена")} 🔥</a>}
+              {FEATURES.arena && <a href="#/arena">{t("Арена")}</a>}
               {FEATURES.treasury && <a href="#/treasury">{t("Казна")}</a>}
               <a href="#/analytics">{t("Аналитика")}</a>
             </div>

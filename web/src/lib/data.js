@@ -508,9 +508,12 @@ async function splitFor(shareBps, treasury) {
   const rest = 100 - creator;
   if (SPLITTER_LIVE && treasury.toLowerCase() === FEE_SPLITTER_ADDRESS.toLowerCase()) {
     const teamBps = await publicClient.readContract({ address: FEE_SPLITTER_ADDRESS, abi: feeSplitterAbi, functionName: "teamShareBps" });
+    // V5 — часть входящего уходит казне арены; у V4 такой функции нет — 0
+    const arenaBps = await publicClient.readContract({ address: FEE_SPLITTER_ADDRESS, abi: feeSplitterAbi, functionName: "arenaShareBps" }).catch(() => 0n);
     const team = (rest * Number(teamBps)) / 10000;
-    const agent = rest - team;
-    return { creator, team: +team.toFixed(1), agent: +agent.toFixed(1), buyback: 0, creatorNoAi: +(creator + agent).toFixed(1), live: true };
+    const arena = (rest * Number(arenaBps)) / 10000;
+    const agent = rest - team - arena;
+    return { creator, team: +team.toFixed(1), arena: +arena.toFixed(1), agent: +agent.toFixed(1), buyback: 0, creatorNoAi: +(creator + agent).toFixed(1), live: true };
   }
   let team = 0;
   try {
@@ -521,7 +524,7 @@ async function splitFor(shareBps, treasury) {
     // переезда это кошелёк команды): весь остаток — команде.
     team = rest;
   }
-  return { creator, team: Math.round(team), agent: 0, buyback: Math.round(rest - team), creatorNoAi: creator, live: false };
+  return { creator, team: Math.round(team), arena: 0, agent: 0, buyback: Math.round(rest - team), creatorNoAi: creator, live: false };
 }
 
 async function splitOf(factory, fAbi) {

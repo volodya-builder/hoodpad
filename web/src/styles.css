@@ -3640,3 +3640,20 @@ html[data-theme="light"] .coin-hero-logo { background: #f2f1ec; }
   .coin-hero-pick { width: 100%; margin-left: 0; }
   .coin-hero-pick .cp, .coin-hero-pick .cp-btn { width: 100%; justify-content: center; }
 }
+
+/* Арена (возвращена 15.09.2026): ранги без эмодзи, выплаты подиуму */
+.ar-rank-ico { color: var(--gold); display: inline-flex; justify-content: center; }
+.ar-streak { display: inline-flex; align-items: center; gap: 2px; }
+.rl-flow.one { grid-template-columns: minmax(260px, 420px); }
+.rl-mp i { font-style: normal; font-weight: 800; font-size: 12px; color: var(--text-dim); }
+.rl-mp.s1 i { color: var(--gold); }
+.arena-pay { margin-top: 8px; }
+.arena-pay-day { margin-bottom: 12px; }
+.arena-pay-row { display: grid; grid-template-columns: 28px 90px 1fr 1fr auto; gap: 12px; align-items: center; padding: 9px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); margin-bottom: 6px; font-size: 13px; color: var(--text); }
+.arena-pay-row:hover { border-color: var(--border-gold); }
+.arena-pay-row .ar-rank { color: var(--gold); }
+.arena-toast .ts-ph { width: 26px; height: 26px; }
+@media (max-width: 700px) {
+  .arena-pay-row { grid-template-columns: 28px 1fr 1fr; }
+  .arena-pay-row .dim { grid-column: 2 / -1; }
+}

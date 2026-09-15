@@ -217,10 +217,20 @@ export const feeSplitterAbi = parseAbi([
   "function enableAi(address token)",
   "function poolOf(address token) view returns (address)",
   "function teamShareBps() view returns (uint256)",
+  "function arenaShareBps() view returns (uint256)",
   "function claim(address pool)",
   "function pendingEth(address) view returns (uint256)",
   "function pendingErc20(address, address) view returns (uint256)",
   "function withdrawEth()",
   "function withdrawErc20(address asset)",
   "event AiEnabled(address indexed token, address indexed creator)",
+]);
+
+// ArenaTreasury — казна арены (contracts/ArenaTreasury.sol)
+export const arenaTreasuryAbi = parseAbi([
+  "function owner() view returns (address)",
+  "function burnedOf(address token) view returns (uint256)",
+  "function totalEthSpent() view returns (uint256)",
+  "event Buyback(address indexed token, address indexed asset, uint256 amountIn, uint256 tokensOut, string note)",
+  "event Burned(address indexed token, uint256 amount)",
 ]);
