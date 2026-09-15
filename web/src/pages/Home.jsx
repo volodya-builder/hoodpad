@@ -56,7 +56,7 @@ function TokenCard({ t, fav, onFav, cushion = 0 }) {
       </div>
       {/* Модель ИИ монеты — выбор создателя, лежит в метадате. Показываем
           только известного разработчика: чужая строка на карточку не попадает. */}
-      {t.meta?.ai && makerOf(String(t.meta.ai)) && (
+      {FEATURES.ai && t.meta?.ai && makerOf(String(t.meta.ai)) && (
         <div className="tai" title={String(t.meta.ai)}>
           <img className="q-logo" src={modelLogo(String(t.meta.ai))} alt="" loading="lazy"
                onError={(e) => { e.currentTarget.style.display = "none"; }} />
@@ -132,7 +132,7 @@ export default function Home({ onSearch }) {
       </div>
       {FEATURES.arena && arena && arena.participants.length > 0 && (
         <a className="cushion-banner arena-banner" href="#/arena">
-          ⚔️ {t("Арена")}: {arena.alive.length > 1 ? (
+          <Icon name="target" size={14} /> {t("Арена")}: {arena.alive.length > 1 ? (
             <>
               <b>{arena.alive.length}</b> {t("токенов в бою")} · {t("лидер")}{" "}
               <b>${arena.alive[0].symbol}</b> ·{" "}
@@ -145,7 +145,7 @@ export default function Home({ onSearch }) {
               </b>
             </>
           ) : (
-            <>👑 {t("Чемпион дня")}: <b>${arena.alive[0]?.symbol}</b></>
+            <><Icon name="crown" size={14} /> {t("Чемпион дня")}: <b>${arena.alive[0]?.symbol}</b></>
           )} →
         </a>
       )}

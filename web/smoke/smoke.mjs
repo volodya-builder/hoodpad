@@ -27,7 +27,7 @@ const srv = createServer((req, res) => {
 
 const DOGE = "0xab38465f3210e18cdb88607405c3458cf41999c6";
 const PAGES = [
-  ["главная", "#/"], ["монета DOGE", `#/token/${DOGE}`], ["создать", "#/create"], ["ИИ", "#/ai"],
+  ["главная", "#/"], ["монета DOGE", `#/token/${DOGE}`], ["создать", "#/create"], ["арена", "#/arena"],
   ["аналитика", "#/analytics"], ["лидеры", "#/leaderboard"], ["профиль", "#/profile"],
   ["трейдер", "#/trader/0xD3d14c10020ad9C582404669a2Fa11AfF2386255"], ["политика", "#/privacy"], ["условия", "#/terms"],
 ];
@@ -62,7 +62,8 @@ const clickTab = (sel, text) => async (page) => {
 console.log("== десктоп");
 const desk = await browser.newContext({ viewport: { width: 1400, height: 900 }, locale: "ru-RU" }); // locale: без неё Chromium в песочнице берёт «en-US@posix» и toLocaleString() падает
 for (const [label, hash] of PAGES) await run(desk, label, hash);
-await run(desk, "монета · вкладка ИИ", `#/token/${DOGE}`, clickTab(".side-tabs .bt-tab", "ИИ"));
+await run(desk, "арена · правила", "#/arena", clickTab(".bt-tab", "Правила"));
+await run(desk, "арена · история", "#/arena", clickTab(".bt-tab", "История побед"));
 await run(desk, "монета · чат", `#/token/${DOGE}`, clickTab(".side-tabs .bt-tab", "Чат"));
 await run(desk, "монета · продать", `#/token/${DOGE}`, clickTab(".tabs .tab", "Продать"));
 await run(desk, "создать · акции", "#/create", clickTab("button", "Акции"));
@@ -73,7 +74,7 @@ const mob = await browser.newContext({ ...devices["iPhone 13"], locale: "ru-RU" 
 for (const [label, hash] of PAGES) await run(mob, label, hash);
 await run(mob, "монета · мои позиции (таблица)", `#/token/${DOGE}`, clickTab(".bt-tabs:not(.side-tabs) .bt-tab", "Мои позиции"));
 await run(mob, "монета · история сделок", `#/token/${DOGE}`, clickTab(".bt-tabs:not(.side-tabs) .bt-tab", "История сделок"));
-await run(mob, "монета · ИИ", `#/token/${DOGE}`, clickTab(".side-tabs .bt-tab", "ИИ"));
+await run(mob, "арена · правила", "#/arena", clickTab(".bt-tab", "Правила"));
 await mob.close();
 
 await browser.close();

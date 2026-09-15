@@ -1,0 +1,79 @@
+name: Арена платит подиуму
+
+# Раз в сутки после полуночи UTC: бот арены берёт накопленный в казне арены
+# ETH и делит между вчерашним подиумом 70/20/10 — выкупает монеты-призёры
+# и сжигает. Состояние — в блокчейне (события казны), повторный запуск
+# ничего не платит дважды.
+#
+# Расписание GitHub ненадёжно (срабатывает с опозданием на часы), поэтому
+# ритм держит эстафета: каждый запуск в конце ждёт до следующей проверки
+# (после 00:20 UTC — выплата; иначе не дольше 5 часов 40 минут) и запускает
+# следующий сам. Бот идемпотентен: лишний запуск ничего не платит дважды.
+# Cron — страховка, ручной запуск — на всякий случай.
+# Выключить эстафету: Settings → Variables → ARENA_RELAY = off.
+#
+# Нужны: секрет ARENA_PRIVATE_KEY (ключ владельца казны арены, на кошельке
+# немного ETH на газ) и переменная ARENA_TREASURY (адрес казны).
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry:
+        description: 'Только показать, ничего не платить'
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    - cron: '25 0 * * *'
+
+permissions:
+  contents: read
+  actions: write   # эстафета: запуск следующего захода
+
+concurrency:
+  group: arena
+  cancel-in-progress: false
+
+jobs:
+  pay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Поставить viem
+        run: npm install viem --no-save --silent
+      - name: Проверить настройки
+        env:
+          ARENA_TREASURY: ${{ vars.ARENA_TREASURY }}
+          HAS_KEY: ${{ secrets.ARENA_PRIVATE_KEY != '' }}
+        run: |
+          [ -n "$ARENA_TREASURY" ] || { echo "::error::Нет переменной ARENA_TREASURY (Settings → Variables)"; exit 1; }
+          [ "$HAS_KEY" = "true" ] || { echo "::error::Нет секрета ARENA_PRIVATE_KEY"; exit 1; }
+      - name: Выплатить подиум
+        env:
+          ARENA_PRIVATE_KEY: ${{ secrets.ARENA_PRIVATE_KEY }}
+          ARENA_TREASURY: ${{ vars.ARENA_TREASURY }}
+        run: node bot/arena/arena.mjs ${{ inputs.dry && '--dry' || '' }}
+
+      # Эстафета: ждём до 00:20 UTC следующих суток, но не дольше 5 ч 40 мин
+      # (потолок GitHub на запуск — 6 часов), и запускаем следующий заход.
+      - name: Передать эстафету
+        if: always() && !inputs.dry
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELAY: ${{ vars.ARENA_RELAY }}
+        run: |
+          if [ "$RELAY" = "off" ]; then echo "Эстафета выключена (ARENA_RELAY=off)."; exit 0; fi
+          NOW=$(date -u +%s)
+          NEXT=$(( (NOW / 86400 + 1) * 86400 + 1200 ))   # завтра 00:20 UTC
+          WAIT=$(( NEXT - NOW )); MAX=$(( 5 * 3600 + 40 * 60 ))
+          [ "$WAIT" -gt "$MAX" ] && WAIT=$MAX
+          OTHERS=$(gh run list --workflow arena.yml --limit 20 --json status --jq '[.[] | select(.status=="queued" or .status=="pending" or .status=="waiting" or .status=="requested")] | length' || echo 0)
+          if [ "$OTHERS" != "0" ]; then echo "В очереди уже есть запуск — эстафету не передаю."; exit 0; fi
+          echo "Следующий заход через $((WAIT / 60)) мин…"; sleep "$WAIT"
+          gh workflow run arena.yml --ref main && echo "Следующий заход запущен."

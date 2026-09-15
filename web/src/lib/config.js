@@ -83,6 +83,13 @@ export const isTeam = (addr) => !!addr && addr.toLowerCase() === TEAM_ADDRESS;
 // Пустой счётчик с нулями выглядит как работающая система, которой нет.
 export const AGENT_TREASURY_ADDRESS = import.meta.env.VITE_AGENT_TREASURY ?? "0xe39e61c2e2897a59dde71d75b7b84f42ed09fd0c";
 
+// ArenaTreasury — казна арены: 20% каждой комиссии (через FeeSplitterV5),
+// деньги уходят только на выкуп и сжигание подиума. Пусто = ещё не
+// задеплоена: страница арены показывает фонд как «…».
+// Задеплоить: node scripts/deploy-arena-economy.js --deploy (владелец).
+export const ARENA_TREASURY_ADDRESS = import.meta.env.VITE_ARENA_TREASURY ?? "";
+export const ARENA_LIVE = /^0x[0-9a-fA-F]{40}$/.test(ARENA_TREASURY_ADDRESS);
+
 // FeeSplitterV4 — делит протокольную долю комиссии (команда / агент /
 // создатель) и хранит, включён ли у монеты ИИ (enableAi — решение
 // создателя, навсегда). Задеплоен владельцем 14.09.2026; ETH-фабрика
@@ -116,7 +123,8 @@ export const AGENT_OPERATOR =
 //   vote     — contracts/VotePower.sol, BuybackVote.sol (интерфейса нет с 06.08.2026)
 //   treasury — pages/Treasury.jsx, contracts/BuybackTreasuryV2.sol
 export const FEATURES = {
-  arena: false,
+  arena: true,         // «Арена» — суточный турнир, приз: 20% всех комиссий → выкуп и сжигание подиума (возвращена 15.09.2026)
+  grandArena: false,   // месячная Гранд-Арена старой схемы казны — спрятана 15.09.2026 (код в pages/Arena.jsx)
   cats: false,
   vote: false,
   treasury: false,
@@ -124,7 +132,7 @@ export const FEATURES = {
   headerSearch: false, // кнопка-лупа в шапке (поиск по Ctrl+K и поле на главной работают)
   netSwitch: false,    // выбор сети в шапке (пока сеть одна — Robinhood Chain)
   about: false,        // «О нас» выключена целиком (и пункт, и маршрут #/about) — решение владельца 14.09.2026; файл pages/About.jsx не трогать и не обновлять
-  ai: true,            // вкладка «Мастерская» — всё про ИИ-агентов монет
+  ai: false,           // ИИ монет (вкладка «ИИ», доска идей, чат, выбор модели при создании) — выключено владельцем 15.09.2026; код и воркер на месте
   weeklyWorkshop: false, // старая недельная мастерская (Workshop/Queue/Journal) — заменена живой доской идей 14.09.2026, код остаётся
   taxToken: false,     // вкладка «Tax-токен» на «Создать» — скрыта 14.09.2026: контракт есть, фабрики и пула под него нет, кнопка лишь сохраняла черновик
   customQuote: false,  // поле «Свой контракт: 0x…» на «Создать» — спрятано 14.09.2026 по просьбе владельца (код остаётся)

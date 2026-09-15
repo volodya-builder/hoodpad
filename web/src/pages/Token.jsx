@@ -64,10 +64,12 @@ function MiniChart({ points, rate, marks, base = 1.625 }) {
   const empty = !(points && points.length >= 2);
 
   let mn = Infinity, mx = -Infinity;
-  pts.forEach((p) => { mn = Math.min(mn, p.mcap); mx = Math.max(mx, p.mcap); });
+  pts.forEach((p) => { if (isFinite(p.mcap)) { mn = Math.min(mn, p.mcap); mx = Math.max(mx, p.mcap); } });
+  if (!isFinite(mn) || !isFinite(mx)) { mn = 0; mx = 1; }
   if (mx - mn < mx * 0.02) { mx *= 1.03; mn *= 0.97; }
+  if (!(mx > mn)) { mx = mn + 1; } // все точки по нулям — иначе NaN в path
   const X = (i) => PADL + (i / (pts.length - 1)) * (W - PADL - PADR);
-  const Y = (v) => PADT + (1 - (v - mn) / (mx - mn)) * (H - PADT - PADB);
+  const Y = (v) => PADT + (1 - ((isFinite(v) ? v : mn) - mn) / (mx - mn)) * (H - PADT - PADB);
   const xs = pts.map((_, i) => X(i));
   const ys = pts.map((p) => Y(p.mcap));
   const line = smoothPath(xs, ys);
@@ -962,7 +964,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   // aiOn === false при живом сплиттере: модель в метадате есть, но создатель
   // не подписал «включить ИИ» — агент на монету не работает, чип гасим.
   const aiOff = SPLITTER_LIVE && aiOn === false;
-  const aiChip = aiMaker ? (
+  const aiChip = FEATURES.ai && aiMaker ? (
     <a className={`badge tk-ai ${aiOff ? "off" : ""}`} href="#/ai"
        title={aiOff ? t("ИИ не включён: создатель не подписал включение. Агент на монету не работает.") : `${t("ИИ этой монеты работает на этой модели")}: ${aiId.slice(0, 80)}`}>
       <img className="q-logo" src={modelLogo(aiId)} alt="" loading="lazy"
@@ -989,7 +991,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       <div className="token-grid-wrap">
       <Grid className="layout" layout={layout} cols={12} rowHeight={26} margin={[16, 16]} containerPadding={[0, 0]}
             draggableHandle=".drag-handle" onLayoutChange={saveLayout}
-            resizeHandles={["se", "s", "e"]}>
+            resizeHandles={["se"]}>{/* только уголок: стрелки по краям блоков убраны 15.09.2026 по просьбе владельца */}
         <div key="about" className="grid-item" data-blk="about"><Handle />
         <div className="card" style={{ cursor: "default", transform: "none" }}>
           <div className="card-title">
@@ -1714,11 +1716,13 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <div className={`bt-tab ${sideTab === "chat" ? "on" : ""}`} onClick={() => setSideTab("chat")}>
               {t("Чат")}
             </div>
-            <div className={`bt-tab ${sideTab === "wsh" ? "on" : ""}`} onClick={() => setSideTab("wsh")}>
-              {t("ИИ")}
-            </div>
+            {FEATURES.ai && (
+              <div className={`bt-tab ${sideTab === "wsh" ? "on" : ""}`} onClick={() => setSideTab("wsh")}>
+                {t("ИИ")}
+              </div>
+            )}
           </div>
-          {sideTab === "wsh" ? (
+          {FEATURES.ai && sideTab === "wsh" ? (
             <div className="side-wsh">
               {SPLITTER_LIVE && aiOn === false && isCreator && (
                 <div className="ai-enable">

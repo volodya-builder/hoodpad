@@ -21,10 +21,14 @@ export default function Trader({ address }) {
   const [error, setError] = useState("");
   const [tab, setTab] = useState("pos");
   // сортировки: позиции — по чему и куда; история — по чему и куда
-  const [posSort, setPosSort] = useState("pnl");   // pnl | inv | val
-  const [posDir, setPosDir] = useState("desc");
-  const [histSort, setHistSort] = useState("time"); // time | eth
-  const [histDir, setHistDir] = useState("desc");
+  // Сортировка истории — кликом по заголовку колонки, как в профиле (15.09.2026).
+  const [trsort, setTrsort] = useState({ key: null, dir: -1 });
+  const SortH = ({ k, label }) => (
+    <span className={`sort-h ${trsort.key === k ? "on" : ""}`} title={t("Сортировать")}
+          onClick={() => setTrsort((s) => ({ key: k, dir: s.key === k ? -s.dir : -1 }))}>
+      {label} <i>{trsort.key === k ? (trsort.dir === 1 ? "▲" : "▼") : "↕"}</i>
+    </span>
+  );
   const [cp, setCp] = useState("");
 
   const dollars = (e) => {
@@ -189,41 +193,13 @@ export default function Trader({ address }) {
             {state.launched.length > 0 && (
               <div className={`bt-tab ${tab === "mint" ? "on" : ""}`} onClick={() => setTab("mint")}>{t("Запуски")}</div>
             )}
-            {/* фильтры сортировки текущей вкладки */}
-            {tab === "pos" && state.positions.length > 1 && (
-              <div className="pill-group" style={{ marginLeft: "auto" }}>
-                {[["pnl", t("Прибыль")], ["inv", t("Куплено")], ["val", t("Баланс")]].map(([k, lbl]) => (
-                  <div key={k} className={`fpill ${posSort === k ? "on" : ""}`} onClick={() => setPosSort(k)}>{lbl}</div>
-                ))}
-                <div className="fpill" title={t(posDir === "desc" ? "По убыванию — нажмите для возрастания" : "По возрастанию — нажмите для убывания")}
-                     onClick={() => setPosDir(posDir === "desc" ? "asc" : "desc")}>
-                  {posDir === "desc" ? "↓" : "↑"}
-                </div>
-              </div>
-            )}
-            {tab === "hist" && state.history.length > 1 && (
-              <div className="pill-group" style={{ marginLeft: "auto" }}>
-                {[["time", t("Время")], ["eth", t("Сумма")]].map(([k, lbl]) => (
-                  <div key={k} className={`fpill ${histSort === k ? "on" : ""}`} onClick={() => setHistSort(k)}>{lbl}</div>
-                ))}
-                <div className="fpill" title={t(histDir === "desc" ? "По убыванию — нажмите для возрастания" : "По возрастанию — нажмите для убывания")}
-                     onClick={() => setHistDir(histDir === "desc" ? "asc" : "desc")}>
-                  {histDir === "desc" ? "↓" : "↑"}
-                </div>
-              </div>
-            )}
           </div>
 
           {tab === "pos" && (<>
             {state.positions.length === 0 && <div className="center">{t("Открытых позиций нет.")}</div>}
             {[...state.positions].sort((a, b) => {
-              const key = (p) => {
-                const val = Number(formatEther(p.bal)) * Number(formatEther(p.price));
-                if (posSort === "inv") return p.invested;
-                if (posSort === "val") return val;
-                return val + p.realized - p.invested; // pnl
-              };
-              return posDir === "desc" ? key(b) - key(a) : key(a) - key(b);
+              const pnl = (p) => Number(formatEther(p.bal)) * Number(formatEther(p.price)) + p.realized - p.invested;
+              return pnl(b) - pnl(a);
             }).map((p) => {
               const balTok = Number(formatEther(p.bal));
               const val = balTok * Number(formatEther(p.price));
@@ -255,13 +231,18 @@ export default function Trader({ address }) {
             {state.history.length === 0 && <div className="center">{t("Сделок пока нет.")}</div>}
             {state.history.length > 0 && (
               <div className="trow phist hdr" style={{ marginTop: 8 }}>
-                <span>{t("Монета")}</span><span>{t("Время")}</span><span>{t("Тип")}</span>
-                <span>ETH</span><span>{t("Токены")}</span><span>{t("Блок")}</span>
+                <span>{t("Монета")}</span>
+                <SortH k="ts" label={t("Время")} />
+                <span>{t("Тип")}</span>
+                <SortH k="eth" label="ETH" />
+                <SortH k="tokens" label={t("Токены")} />
+                <SortH k="block" label={t("Блок")} />
               </div>
             )}
             {[...state.history].sort((a, b) => {
-              const key = (x) => (histSort === "eth" ? x.eth : (x.ts || 0));
-              return histDir === "desc" ? key(b) - key(a) : key(a) - key(b);
+              if (!trsort.key) return (b.ts || 0) - (a.ts || 0);
+              const v = (x) => (trsort.key === "ts" ? (x.ts || 0) : trsort.key === "eth" ? x.eth : trsort.key === "tokens" ? x.tokens : Number(x.block || 0));
+              return (v(b) - v(a)) * -trsort.dir;
             }).map((tr, i) => (
               <div className="trow phist" key={i}>
                 <span className="hist-coin" onClick={() => copyCA(tr.token)} title={t("Скопировать адрес контракта")}>
