@@ -77,11 +77,12 @@ function SearchModal({ open, onClose }) {
   const [tokens, setTokens] = useState(null);
   const [vol24, setVol24] = useState({});
   const [qPx, setQPx] = useState({});        // адрес валюты → $ за единицу
+  const [dd, setDd] = useState(false);       // выпадающий список акций
   const listRef = React.useRef(null);
 
   useEffect(() => {
     if (!open) return;
-    setQ(""); setSort("rel"); setAge("all"); setPair("all"); setPage(0); setCur(0);
+    setQ(""); setSort("rel"); setAge("all"); setPair("all"); setPage(0); setCur(0); setDd(false);
     loadTokens().then(async (tk) => {
       setTokens(tk);
       // курсы валют монет за акции — для капы и сортировки
@@ -194,14 +195,21 @@ function SearchModal({ open, onClose }) {
             <button type="button" className={`sr-chip ${pair === "all" ? "on" : ""}`} onClick={() => setPair("all")}>{t("Все")}</button>
             <button type="button" className={`sr-chip ${pair === "eth" ? "on" : ""}`} onClick={() => setPair("eth")}>ETH</button>
             {stocks.length > 0 && (
-              <span className={`sr-chip sr-sel ${stockSel ? "on" : ""}`}>
-                <span>{!stockSel ? t("Акции") : pair === "stocks" ? t("Все акции") : (stocks.find(([a]) => a === pair) || [])[1] || t("Акции")}</span>
-                <select value={stockSel ? pair : ""} onChange={(e) => setPair(e.target.value || "all")}>
-                  <option value="">{t("Акции")}</option>
-                  <option value="stocks">{t("Все акции")}</option>
-                  {stocks.map(([a, sym]) => <option key={a} value={a}>{sym}</option>)}
-                </select>
-                <Icon name="chevron" size={13} style={{ margin: 0 }} />
+              <span className="sr-dd" onMouseLeave={() => setDd(false)}>
+                <button type="button" className={`sr-chip ${stockSel ? "on" : ""}`} onClick={() => setDd(!dd)}>
+                  {!stockSel ? t("Акции") : pair === "stocks" ? t("Все акции") : <QuoteLogo q={{ sym: (stocks.find(([a]) => a === pair) || [])[1] }} size={14} withSym />}
+                  <Icon name="chevron" size={13} style={{ margin: 0, transform: dd ? "rotate(180deg)" : "", transition: "transform .18s" }} />
+                </button>
+                {dd && (
+                  <div className="sr-menu">
+                    <button type="button" className={`sr-menu-it ${pair === "stocks" ? "on" : ""}`} onClick={() => { setPair("stocks"); setDd(false); }}>{t("Все акции")}</button>
+                    {stocks.map(([a, sym]) => (
+                      <button key={a} type="button" className={`sr-menu-it ${pair === a ? "on" : ""}`} onClick={() => { setPair(a); setDd(false); }}>
+                        <QuoteLogo q={{ sym }} size={18} withSym />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </span>
             )}
           </div>
