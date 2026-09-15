@@ -1498,6 +1498,8 @@ const EN = {
   "Не удалось войти в чат.": "Could not sign in to the chat.",
   "Чат с ИИ пока не подключён — воркер ещё не задеплоен.": "The AI chat is not connected yet — the worker is not deployed.",
   "Ошибка": "Error",
+  "Лента чата пока недоступна.": "The chat feed is not available yet.",
+  "Показать все": "Show all",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

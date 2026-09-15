@@ -1017,7 +1017,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       <Grid className="layout" layout={layout} cols={12} rowHeight={26} margin={[16, 16]} containerPadding={[0, 0]}
             draggableHandle=".drag-handle" onLayoutChange={saveLayout}
             resizeHandles={["se", "s", "e"]}>
-        <div key="about" className="grid-item"><Handle />
+        <div key="about" className="grid-item" data-blk="about"><Handle />
         <div className="card" style={{ cursor: "default", transform: "none" }}>
           <div className="card-title">
             <h3>{t("О токене")}</h3>
@@ -1200,7 +1200,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         </div>
         </div>
 
-        <div key="chart" className="grid-item"><Handle />
+        <div key="chart" className="grid-item" data-blk="chart"><Handle />
         <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
           <div className="card-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
             <h3 style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 22 }}>
@@ -1258,8 +1258,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         </div>
         </div>
 
-        <div key="trades" className="grid-item"><Handle />
-        <div className="card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
+        <div key="trades" className="grid-item" data-blk="trades"><Handle />
+        <div className="card bt-card" style={{ cursor: "default", transform: "none", marginTop: 18 }}>
           <div className="bt-tabs">
             <div className={`bt-tab ${btTab === "mine" ? "on" : ""}`} onClick={() => setBtTab("mine")}>
               {t("Мои позиции")}
@@ -1541,7 +1541,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         </div>
         </div>
 
-        <div key="swap" className="grid-item"><Handle />
+        <div key="swap" className="grid-item" data-blk="swap"><Handle />
         {data.graduated ? (
           data.migrated ? (
             <div className="panel" style={{ margin: 0, maxWidth: "none" }}>
@@ -1728,7 +1728,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         )}
         </div>
 
-        <div key="chat" className="grid-item"><Handle />
+        <div key="chat" className="grid-item" data-blk="chat"><Handle />
         <div className="side-tabs-wrap">
           <div className="bt-tabs side-tabs">
             <div className={`bt-tab ${sideTab === "act" ? "on" : ""}`} onClick={() => setSideTab("act")}>

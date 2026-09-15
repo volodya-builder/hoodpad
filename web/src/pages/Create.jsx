@@ -119,6 +119,7 @@ export default function Create({ wallet, onConnect }) {
   const [quoteAddr, setQuoteAddr] = useState("");
   const [quoteDec, setQuoteDec] = useState(18);
   const [rwaSearch, setRwaSearch] = useState("");
+  const [rwaAll, setRwaAll] = useState(false); // показать все акции, а не первые 20
   const [cryptoSearch, setCryptoSearch] = useState("");
   // Крипто-валюты сети — живой список от обозревателя. null — читаем.
   const [crypto, setCrypto] = useState(null);
@@ -484,8 +485,18 @@ export default function Create({ wallet, onConnect }) {
                 const rank = (x) => { const i = RWA_POPULAR.indexOf(x.sym); return i < 0 ? 99 : i; };
                 listed.sort((a, b) => rank(a) - rank(b) || a.sym.localeCompare(b.sym));
                 const q = rwaSearch.trim();
-                return q ? listed.filter((x) => x.sym.includes(q) || (x.name || "").toUpperCase().includes(q)).slice(0, 24) : listed;
-              })().map((x) => (
+                if (q) return listed.filter((x) => x.sym.includes(q) || (x.name || "").toUpperCase().includes(q)).slice(0, 24);
+                // Семь десятков чипов — простыня, особенно на телефоне: первые
+                // 20 (популярные), остальное по кнопке «ещё» или поиском.
+                const LIMIT = 20;
+                if (rwaAll || listed.length <= LIMIT) return listed;
+                return [...listed.slice(0, LIMIT), { sym: `+${listed.length - LIMIT}`, more: true }];
+              })().map((x) => x.more ? (
+                <button type="button" key="more" className="quote-chip q-more" onClick={() => setRwaAll(true)}
+                        title={t("Показать все")}>
+                  {x.sym} {t("ещё")}
+                </button>
+              ) : (
                 <button type="button" key={x.sym}
                         className={`quote-chip ${quote === x.sym ? "on" : ""}`}
                         onClick={() => pickQuote({ sym: x.sym, addr: x.addr.toLowerCase(), dec: 18 })}

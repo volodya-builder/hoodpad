@@ -30,8 +30,10 @@ function ago(ts) {
 /** Живой список сообщений: поток RTDB, а не выйдет — опрос раз в 6 секунд. */
 function useMessages(token, enabled) {
   const [msgs, setMsgs] = useState(null);
+  const [feedErr, setFeedErr] = useState(false); // база не отдаёт ленту (правила/сеть)
   useEffect(() => {
     if (!enabled || !token) return;
+    setMsgs(null); setFeedErr(false);
     const url = `${CHAT_DB_URL}/aichat/${token.toLowerCase()}/messages.json?orderBy="$key"&limitToLast=${WINDOW}`;
     const toList = (obj) => Object.entries(obj || {})
       .map(([id, m]) => ({ id, ...(m || {}) }))
@@ -42,7 +44,9 @@ function useMessages(token, enabled) {
     let es = null, poll = null;
     const startPoll = () => {
       if (poll) return;
-      const tick = () => fetch(url).then((r) => (r.ok ? r.json() : null)).then((j) => { if (!stopped && j !== null) { snapshot = j || {}; setMsgs(toList(snapshot)); } }).catch(() => {});
+      const tick = () => fetch(url).then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+        .then((j) => { if (!stopped) { snapshot = j || {}; setMsgs(toList(snapshot)); setFeedErr(false); } })
+        .catch(() => { if (!stopped) { setFeedErr(true); setMsgs((m) => m || []); } });
       tick(); poll = setInterval(tick, 6000);
     };
     try {
@@ -64,13 +68,13 @@ function useMessages(token, enabled) {
     } catch (e) { startPoll(); }
     return () => { stopped = true; if (es) try { es.close(); } catch (e) { /* ignore */ } if (poll) clearInterval(poll); };
   }, [token, enabled]);
-  return msgs;
+  return { msgs, feedErr };
 }
 
 export default function AgentChat({ token, symbol, aiOn, model, modelName, holder, wallet, onConnect }) {
   const { t } = useLang();
   const enabled = Boolean(FEATURES.aiChat && CHAT_DB_URL && CHAT_API_URL && token);
-  const msgs = useMessages(token, enabled);
+  const { msgs, feedErr } = useMessages(token, enabled);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -148,7 +152,8 @@ export default function AgentChat({ token, symbol, aiOn, model, modelName, holde
       </div>
       <div className="chat-list" ref={listRef}>
         {msgs === null && <div className="dim">{t("Загружаю…")}</div>}
-        {msgs?.length === 0 && !pending && <div className="dim">{t("Пока тихо — спросите ИИ первым.")}</div>}
+        {feedErr && <div className="dim">{t("Лента чата пока недоступна.")}</div>}
+        {!feedErr && msgs?.length === 0 && !pending && <div className="dim">{t("Пока тихо — спросите ИИ первым.")}</div>}
         {msgs?.map((m) => {
           const ai = m.role === "ai";
           const mine = wallet && !ai && String(m.who || "").toLowerCase() === wallet.account.toLowerCase();
