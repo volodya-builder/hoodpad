@@ -3586,9 +3586,10 @@ html[data-theme="light"] .cp-logo { background: #f2f1ec; }
 .ag-ico { position: relative; width: 48px; height: 48px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #1c1d1b; border: 1px solid var(--border); color: var(--text-dim); }
 .ag-body { flex: 1; min-width: 0; }
 .ag-title { font-weight: 800; font-size: 15px; }
-.ag-sub { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; }
+.ag-sub { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; overflow-wrap: anywhere; }
 .ag-note { font-size: 11.5px; color: var(--text-dim); margin-top: 4px; opacity: .8; }
-.ag-budget { flex: none; }
+.ag-foot { flex: none; }
+.ag-budget { white-space: nowrap; }
 .ag-ring { position: absolute; inset: -1px; transform: rotate(-90deg); }
 .ag-ring-bg { fill: none; stroke: var(--border); stroke-width: 3; }
 .ag-ring-fg { fill: none; stroke: var(--leaf); stroke-width: 3; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
@@ -3607,8 +3608,8 @@ html[data-theme="light"] .cp-logo { background: #f2f1ec; }
 .ag-failed .ag-title { color: var(--red); }
 html[data-theme="light"] .ag-ico { background: #f2f1ec; }
 @media (max-width: 800px) {
-  .ag { flex-wrap: wrap; }
-  .ag-budget { margin-left: 62px; }
+  .ag { flex-wrap: wrap; gap: 12px; }
+  .ag-foot { flex-basis: 100%; padding-left: 60px; }
 }
 
 /* Шапка монеты во вкладке «ИИ» (CoinHero.jsx) */
@@ -3622,6 +3623,7 @@ html[data-theme="light"] .ag-ico { background: #f2f1ec; }
 .coin-hero-name { font-size: 26px; font-weight: 800; color: var(--text); text-decoration: none; letter-spacing: -.2px; }
 .coin-hero-name:hover { color: var(--gold); }
 .coin-hero-row .ticker { font-size: 14px; }
+.coin-hero-row .badge { white-space: nowrap; }
 .coin-hero-sub { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 8px; font-size: 12px; }
 .coin-hero-link { color: var(--text-dim); text-decoration: none; }
 .coin-hero-link:hover { color: var(--gold); }
@@ -3632,8 +3634,9 @@ html[data-theme="light"] .ag-ico { background: #f2f1ec; }
 html[data-theme="light"] .coin-hero-logo { background: #f2f1ec; }
 @media (max-width: 800px) {
   .coin-hero { flex-wrap: wrap; gap: 12px; padding: 14px; }
-  .coin-hero-logo { width: 88px; height: 88px; border-radius: 18px; }
-  .coin-hero-name { font-size: 21px; }
+  .coin-hero-logo { width: 96px; height: 96px; border-radius: 20px; }
+  .coin-hero-body { flex-basis: 100%; }
+  .coin-hero-name { font-size: 22px; }
   .coin-hero-pick { width: 100%; margin-left: 0; }
   .coin-hero-pick .cp, .coin-hero-pick .cp-btn { width: 100%; justify-content: center; }
 }

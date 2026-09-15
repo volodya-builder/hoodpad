@@ -41,7 +41,7 @@ function AgentStatus({ st, wakeIn, period, budgetLabel, budgetTitle, t }) {
         <div className="ag-sub">{st.sub}</div>
         {st.note && <div className="ag-note">{st.note}</div>}
       </div>
-      <span className="board-budget ag-budget" title={budgetTitle}>{budgetLabel}</span>
+      <div className="ag-foot"><span className="board-budget ag-budget" title={budgetTitle}>{budgetLabel}</span></div>
     </div>
   );
 }
