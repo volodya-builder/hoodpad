@@ -154,7 +154,17 @@ export function fmt(n, digits = 4) {
 const SUBS = "₀₁₂₃₄₅₆₇₈₉";
 const toSub = (n) => String(n).split("").map((d) => SUBS[+d]).join("");
 
+// Суммы (балансы, комиссии, объёмы): мелочь меньше 0.01 не расписываем —
+// «<0.01», глаз не цепляется (решение владельца 15.09.2026). Для цен за
+// токен нужна точность — fmtEthFine оставляет запись с нижним индексом.
 export function fmtEth(n) {
+  const x = Number(n);
+  if (!isFinite(x) || x === 0) return "0";
+  if (Math.abs(x) < 0.01) return (x < 0 ? "-" : "") + "<0.01";
+  return fmtEthFine(x);
+}
+
+export function fmtEthFine(n) {
   const x = Number(n);
   if (!isFinite(x) || x === 0) return "0";
   const a = Math.abs(x);

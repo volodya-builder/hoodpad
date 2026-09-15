@@ -93,8 +93,10 @@ export const ARENA_LIVE = /^0x[0-9a-fA-F]{40}$/.test(ARENA_TREASURY_ADDRESS);
 // ProfileRegistry — имя, аватар, соцсети кошелька в блокчейне. Задеплоен
 // владельцем 15.09.2026 (scripts/deploy-profiles.js); без владельца, переживёт
 // передеплой фабрик. Пусто = имена не показываются, форма в профиле ждёт.
+// Контракт ProfileRegistry задеплоен (0x71ccb2eb…), но профили теперь живут
+// в базе сайта по подписи кошелька — бесплатно (решение владельца 15.09.2026).
 export const PROFILE_REGISTRY_ADDRESS = import.meta.env.VITE_PROFILE_REGISTRY ?? "0x71ccb2eb2b2719d0d316385fc276ebeb1275a8c2";
-export const PROFILES_LIVE = /^0x[0-9a-fA-F]{40}$/.test(PROFILE_REGISTRY_ADDRESS);
+export const PROFILES_LIVE = true; // база — CHAT_DB_URL ниже
 
 // FeeSplitterV4 — делит протокольную долю комиссии (команда / агент /
 // создатель) и хранит, включён ли у монеты ИИ (enableAi — решение

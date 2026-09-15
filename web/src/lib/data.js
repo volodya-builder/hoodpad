@@ -46,8 +46,14 @@ const SUBGRAPH_BASE = "https://api.goldsky.com/api/public/project_cmrrkubk3ngb40
 const SUBGRAPH_VERSIONS = ["3.1.0", "3.0.0"];
 export let SUBGRAPH_URL = SUBGRAPH_BASE + SUBGRAPH_VERSIONS[0] + "/gn";
 let _sgPick = null;
+const SG_LS = "hood_subgraph_pick_v1";
 async function pickSubgraph() {
   if (_sgPick) return _sgPick;
+  // выбор помним 10 минут — без лишней пробы при каждом заходе
+  try {
+    const c = JSON.parse(localStorage.getItem(SG_LS) || "null");
+    if (c && c.u && Date.now() - c.t < 600_000) { SUBGRAPH_URL = c.u; _sgPick = Promise.resolve(c.u); return _sgPick; }
+  } catch (e) { /* ignore */ }
   _sgPick = (async () => {
     for (const v of SUBGRAPH_VERSIONS) {
       const u = SUBGRAPH_BASE + v + "/gn";
@@ -55,7 +61,11 @@ async function pickSubgraph() {
         const r = await fetch(u, { method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ query: "{ _meta { block { number } } }" }), signal: AbortSignal.timeout(6000) });
         const j = await r.json();
-        if (r.ok && j?.data?._meta?.block?.number > 0) { SUBGRAPH_URL = u; return u; }
+        if (r.ok && j?.data?._meta?.block?.number > 0) {
+          SUBGRAPH_URL = u;
+          try { localStorage.setItem(SG_LS, JSON.stringify({ u, t: Date.now() })); } catch (e) { /* ignore */ }
+          return u;
+        }
       } catch (e) { /* следующая версия */ }
     }
     return SUBGRAPH_URL;

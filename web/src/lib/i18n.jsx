@@ -1586,6 +1586,11 @@ const EN = {
   "окт": "Oct",
   "ноя": "Nov",
   "дек": "Dec",
+  "Бесплатно: кошелёк только подписывает, без транзакции и комиссии. Пустое поле снимает значение.": "Free: your wallet only signs — no transaction, no fee. An empty field clears the value.",
+  "Сетка или список": "Grid or list",
+  "Список": "List",
+  "Сетка": "Grid",
+  "Выкупы": "Buybacks",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });
