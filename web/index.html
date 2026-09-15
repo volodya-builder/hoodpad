@@ -3,6 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <!-- сайт с кошельком нельзя показывать внутри чужого iframe (кликджекинг);
+         заголовок X-Frame-Options ставится в Cloudflare, это — запасной рубеж -->
+    <script>if (window.top !== window.self) { try { window.top.location = window.self.location; } catch (e) { document.documentElement.style.display = "none"; } }</script>
     <title>hood — лаунчпад Robinhood Chain</title>
     <meta name="description" content="Лаунчпад Robinhood Chain. Запуск в одну транзакцию, 70% комиссий создателю монеты, ликвидность заперта навсегда." />
     <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png" />

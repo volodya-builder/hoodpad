@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import Icon from "../components/Icon.jsx";
 import { short } from "../lib/web3.js";
 import { CHAT_DB_URL } from "../lib/config.js";
+import { loadBans, isBanned } from "../lib/bans.js";
 import { useLang } from "../lib/i18n.jsx";
 
 // Обычный (офчейн) чат поверх Firebase Realtime Database REST API.
@@ -34,7 +35,7 @@ export default function Chat({ tokenAddress, wallet }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [bans, setBans] = useState({});
+  const [bans, setBans] = useState([]); // подписанный владельцем бан-лист
   const listRef = useRef(null);
 
   const enabled = !!CHAT_DB_URL;
@@ -43,20 +44,24 @@ export default function Chat({ tokenAddress, wallet }) {
 
   const load = useCallback(async () => {
     if (!enabled) return;
-    const [r, br] = await Promise.all([
-      fetch(url + '?orderBy="$key"&limitToLast=60'),
-      fetch(`${CHAT_DB_URL}/bans.json`).catch(() => null),
+    // Порядок — по серверному времени `ts` (правила базы не дают поставить
+    // будущее), а не по ключу: ключ пишущий выбирает сам и мог бы «пришпилить»
+    // 60 мусорных записей поверх всех настоящих (аудит 15.09.2026).
+    let [r, banList] = await Promise.all([
+      fetch(url + '?orderBy="ts"&limitToLast=60', { signal: AbortSignal.timeout(8000) }),
+      loadBans(),
     ]);
+    // пока в правилах базы нет индекса по ts — старый порядок по ключу
+    if (r.status === 400) r = await fetch(url + '?orderBy="$key"&limitToLast=60', { signal: AbortSignal.timeout(8000) });
     if (!r.ok) throw new Error("chat backend " + r.status);
     const j = await r.json();
-    const banMap = (br && br.ok) ? (await br.json()) || {} : {};
-    setBans(banMap);
-    const banned = new Set(Object.keys(banMap).map((k) => k.toLowerCase()));
+    setBans(banList);
     const list = j
       ? Object.entries(j)
           .map(([k, v]) => ({ key: k, ...v }))
-          .filter((m) => !banned.has((m.who || "").toLowerCase())) // скрываем забаненных
-          .sort((a, b) => (a.key < b.key ? -1 : 1))
+          .filter((m) => m && typeof m.text === "string" && typeof m.ts === "number")
+          .filter((m) => !isBanned(banList, m.who)) // скрываем забаненных
+          .sort((a, b) => a.ts - b.ts || (a.key < b.key ? -1 : 1))
       : [];
     setMsgs(list);
   }, [url, enabled]);
@@ -78,8 +83,7 @@ export default function Chat({ tokenAddress, wallet }) {
     setError("");
     const author = wallet ? short(wallet.account) : guestName();
     // забаненные не могут писать
-    const banned = new Set(Object.keys(bans).map((k) => k.toLowerCase()));
-    if (banned.has(author.toLowerCase())) {
+    if (isBanned(bans, author)) {
       setError("Вы не можете писать в этот чат.");
       return;
     }

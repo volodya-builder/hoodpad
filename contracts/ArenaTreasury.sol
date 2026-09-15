@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 interface IEthPoolA {
     function buy(uint256 minTokensOut, address recipient) external payable returns (uint256);
@@ -40,7 +40,7 @@ interface IZapA {
 ///           • buybackQuote  — монета за валюту из валюты, что уже лежит здесь
 ///                             (пришла от сплиттера как доля арены).
 ///         Купленное сжигается в той же транзакции (перевод на 0x…dEaD).
-contract ArenaTreasury is Ownable, ReentrancyGuard {
+contract ArenaTreasury is Ownable2Step, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     address public constant DEAD = 0x000000000000000000000000000000000000dEaD;

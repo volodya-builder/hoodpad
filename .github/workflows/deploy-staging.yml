@@ -36,7 +36,7 @@ jobs:
           VITE_BUILD: ${{ github.run_number }}
           VITE_COMMIT: ${{ github.sha }}
         run: |
-          npm install
+          npm ci --no-audit --no-fund   # только версии из package-lock.json — без сюрпризов от свежих релизов
           npx vite build --base=/staging/
 
       - name: Deploy to gh-pages/staging

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {DividendToken} from "./DividendToken.sol";
 import {BondingCurvePoolQuote} from "./BondingCurvePoolQuote.sol";
 
@@ -11,7 +11,7 @@ import {BondingCurvePoolQuote} from "./BondingCurvePoolQuote.sol";
 ///         но валюта — whitelisted quote-токен. Whitelist защищает от
 ///         fee-on-transfer / ребейз / хук-токенов, которые ломают инвариант
 ///         кривой: пускаем только проверенные Stock Tokens и стейблы.
-contract LaunchpadFactoryQuote is Ownable {
+contract LaunchpadFactoryQuote is Ownable2Step {
     uint256 public constant TOTAL_SUPPLY = 1_000_000_000e18;
     uint256 public constant SALE_CAP     =   800_000_000e18;
 
@@ -19,6 +19,7 @@ contract LaunchpadFactoryQuote is Ownable {
     uint256 public constant MAX_SYMBOL_LEN = 12;
     uint256 public constant MAX_URI_LEN = 200_000;
     uint256 public constant CONFIG_DELAY = 48 hours;
+    uint256 public constant CONFIG_GRACE = 7 days; // после готовности заявка живёт неделю
 
     uint16 public feeBps = 100;
     uint16 public creatorFeeShareBps = 5000;
@@ -50,6 +51,9 @@ contract LaunchpadFactoryQuote is Ownable {
     address[] public allTokens;
     mapping(address => address) public poolOf;
     mapping(address => bool) public isPool;
+    /// @notice Запуск монет открыт только после initConfig (иначе чужой
+    ///         createToken сразу после деплоя запирал бы первичную настройку).
+    bool public configured;
     mapping(address => address) public quoteOf; // token => quote
 
     /// @dev name/symbol/metadataURI не дублируем в событии — они читаются
@@ -114,6 +118,7 @@ contract LaunchpadFactoryQuote is Ownable {
         require(bytes(name).length > 0 && bytes(name).length <= MAX_NAME_LEN, "name len");
         require(bytes(symbol).length > 0 && bytes(symbol).length <= MAX_SYMBOL_LEN, "symbol len");
         require(bytes(metadataURI).length <= MAX_URI_LEN, "uri len");
+        require(configured, "not configured");
         require(quoteConfig[quote].allowed, "quote not allowed");
         require(divBps <= MAX_DIV_BPS, "div>3%");
         address creator_ = creatorWallet == address(0) ? msg.sender : creatorWallet;
@@ -192,9 +197,7 @@ contract LaunchpadFactoryQuote is Ownable {
         external
         onlyOwner
     {
-        require(treasury_ != address(0) && migrator_ != address(0), "zero addr");
-        require(feeBps_ <= 500, "fee>5%");
-        require(creatorFeeShareBps_ <= 10_000, "share>100%");
+        _checkConfig(treasury_, migrator_, feeBps_, creatorFeeShareBps_);
         pendingConfig = PendingConfig(treasury_, migrator_, feeBps_, creatorFeeShareBps_, block.timestamp + CONFIG_DELAY);
         emit ConfigProposed(treasury_, migrator_, feeBps_, creatorFeeShareBps_, block.timestamp + CONFIG_DELAY);
     }
@@ -203,6 +206,7 @@ contract LaunchpadFactoryQuote is Ownable {
         PendingConfig memory p = pendingConfig;
         require(p.readyAt != 0, "no pending");
         require(block.timestamp >= p.readyAt, "timelock");
+        require(block.timestamp <= p.readyAt + CONFIG_GRACE, "expired");
         treasury = p.treasury;
         migrator = p.migrator;
         feeBps = p.feeBps;
@@ -221,14 +225,22 @@ contract LaunchpadFactoryQuote is Ownable {
         onlyOwner
     {
         require(allTokens.length == 0, "already launched");
-        require(treasury_ != address(0) && migrator_ != address(0), "zero addr");
-        require(feeBps_ <= 500, "fee>5%");
-        require(creatorFeeShareBps_ <= 10_000, "share>100%");
+        _checkConfig(treasury_, migrator_, feeBps_, creatorFeeShareBps_);
         treasury = treasury_;
         migrator = migrator_;
         feeBps = feeBps_;
         creatorFeeShareBps = creatorFeeShareBps_;
+        configured = true;
         emit ConfigUpdated(treasury_, migrator_, feeBps_, creatorFeeShareBps_);
+    }
+
+    /// @dev Общие проверки: мигратор обязан быть контрактом (пустой адрес
+    ///      заморозил бы градацию всех монет).
+    function _checkConfig(address treasury_, address migrator_, uint16 feeBps_, uint16 creatorFeeShareBps_) internal view {
+        require(treasury_ != address(0) && migrator_ != address(0), "zero addr");
+        require(migrator_.code.length > 0, "migrator: no code");
+        require(feeBps_ <= 500, "fee>5%");
+        require(creatorFeeShareBps_ <= 10_000, "share>100%");
     }
 
     // ------------------------------------------------------------- views

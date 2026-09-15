@@ -5,6 +5,7 @@ import { treasuryAbi, tokenAbi, poolExtraAbi, feeClaimerAbi } from "../lib/abi.j
 import { TREASURY_ADDRESS, EXPLORER, CHAT_DB_URL, FEE_CLAIMER_ADDRESS } from "../lib/config.js";
 import { loadTokens, subgraphVotes, subgraphTreasuryOps, timeAgo, useClock, dataSource } from "../lib/data.js";
 import { useEthUsd, usd } from "../lib/price.js";
+import { loadBans, saveBans } from "../lib/bans.js";
 import { useLang } from "../lib/i18n.jsx";
 import Icon from "../components/Icon.jsx";
 
@@ -86,28 +87,32 @@ export default function Admin({ wallet, onConnect }) {
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
   const [online, setOnline] = useState(null);
-  const [bans, setBans] = useState({});
+  const [bans, setBans] = useState([]); // подписанный бан-лист (lib/bans.js)
   const [banInput, setBanInput] = useState("");
   const [activity, setActivity] = useState(null);   // { bucket: { b, p: { pid: 1|2 } } }
   const [range, setRange] = useState("day");
   const [hover, setHover] = useState(null);
   const [tab, setTab] = useState("buyback");
 
+  // владелец подтверждён по цепи (owner() казны) — только тогда грузим
+  // тяжёлое: до этого страница #/admin для посетителя ничего не тянет
+  const isOwner = !!(wallet && owner && wallet.account.toLowerCase() === owner.toLowerCase());
+
   // онлайн, баны и корзины активности — из базы сайта
   useEffect(() => {
-    if (!CHAT_DB_URL) return undefined;
+    if (!CHAT_DB_URL || !isOwner) return undefined;
     let alive = true;
     const load = async () => {
       try {
         const [pr, br, ar] = await Promise.all([
           fetch(`${CHAT_DB_URL}/presence.json`).then((r) => r.json()).catch(() => ({})),
-          fetch(`${CHAT_DB_URL}/bans.json`).then((r) => r.json()).catch(() => ({})),
+          loadBans({ force: true }),
           fetch(`${CHAT_DB_URL}/activity.json`).then((r) => r.json()).catch(() => null),
         ]);
         if (!alive) return;
         const now = Date.now();
         setOnline(Object.values(pr || {}).filter((p) => p && now - (p.ts || 0) < 45_000).length);
-        setBans(br || {});
+        setBans(br || []);
         const act = ar || {};
         setActivity(act);
         // чистим корзины старше месяца, чтобы база не росла (и старые 12 слотов формата 0..11)
@@ -117,12 +122,18 @@ export default function Admin({ wallet, onConnect }) {
           fetch(`${CHAT_DB_URL}/activity.json`, { method: "PATCH", headers: { "Content-Type": "application/json" },
             body: JSON.stringify(Object.fromEntries(stale.slice(0, 500).map((k) => [k, null]))) }).catch(() => {});
         }
+        // и протухшее присутствие (правила базы дают удалять записи старше часа)
+        const stalePr = Object.entries(pr || {}).filter(([, p]) => !p || now - (p.ts || 0) > 3_600_000).map(([k]) => k);
+        if (stalePr.length) {
+          fetch(`${CHAT_DB_URL}/presence.json`, { method: "PATCH", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(Object.fromEntries(stalePr.slice(0, 500).map((k) => [k, null]))) }).catch(() => {});
+        }
       } catch (e) { /* ignore */ }
     };
     load();
     const id = setInterval(load, 15_000);
     return () => { alive = false; clearInterval(id); };
-  }, []);
+  }, [isOwner]);
 
   // график аудитории: уникальные id по корзинам выбранного периода
   const aud = useMemo(() => {
@@ -149,22 +160,27 @@ export default function Admin({ wallet, onConnect }) {
   };
   useEffect(() => { setHover(null); }, [range]);
 
+  // Бан-лист подписывается кошельком владельца (без газа) — иначе базу не
+  // убедить, что писал именно владелец. Ошибка записи показывается, а не
+  // глотается: раньше «Забанен» горело, хотя база запись отклоняла.
   const banUser = async (who) => {
-    const key = who.trim();
-    if (!key || !CHAT_DB_URL) return;
+    const key = who.trim().toLowerCase();
+    if (!key || !CHAT_DB_URL || !wallet) return;
+    setError("");
     try {
-      await fetch(`${CHAT_DB_URL}/bans.json`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ [key]: { ts: Date.now() } }) });
-      setBans((b) => ({ ...b, [key]: { ts: Date.now() } }));
+      const next = await saveBans(wallet, [...bans, key]);
+      setBans(next);
       setBanInput("");
       setOk(`${t("Забанен")}: ${key}`); setTimeout(() => setOk(""), 2500);
-    } catch (e) { setError("Не удалось забанить: " + e.message); }
+    } catch (e) { setError("Не удалось забанить: " + (e.shortMessage || e.message)); }
   };
   const unbanUser = async (who) => {
-    if (!CHAT_DB_URL) return;
+    if (!CHAT_DB_URL || !wallet) return;
+    setError("");
     try {
-      await fetch(`${CHAT_DB_URL}/bans.json`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ [who]: null }) });
-      setBans((b) => { const c = { ...b }; delete c[who]; return c; });
-    } catch (e) { setError("Не удалось разбанить: " + e.message); }
+      const next = await saveBans(wallet, bans.filter((b) => b !== who));
+      setBans(next);
+    } catch (e) { setError("Не удалось разбанить: " + (e.shortMessage || e.message)); }
   };
 
   const copyAddr = (addr, e) => {
@@ -178,13 +194,23 @@ export default function Admin({ wallet, onConnect }) {
     return a >= 1e3 ? usd(v) : "$" + v.toFixed(2);
   };
 
+  // Сначала — только владелец казны (один дешёвый вызов): пока кошелёк не
+  // подтверждён, страница ничего больше не читает.
+  useEffect(() => {
+    let alive = true;
+    publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "owner" })
+      .then((o) => { if (alive) setOwner(o); })
+      .catch((e) => { if (alive) setError(e.shortMessage || e.message); });
+    return () => { alive = false; };
+  }, []);
+
   const load = useCallback(async () => {
-    const [tokens, bal, received, spent, ownerAddr] = await Promise.all([
+    if (!isOwner) return;
+    const [tokens, bal, received, spent] = await Promise.all([
       loadTokens(),
       publicClient.getBalance({ address: TREASURY_ADDRESS }),
       publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "totalReceived" }).catch(() => 0n),
       publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "totalSpent" }).catch(() => 0n),
-      publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "owner" }).catch(() => null),
     ]);
     const ep = BigInt(Math.floor(Date.now() / 1000 / EPOCH_LEN));
     const votes = await subgraphVotes(ep).catch(() => []);
@@ -198,9 +224,8 @@ export default function Admin({ wallet, onConnect }) {
     const list = tokens.map((tk, i) => ({ ...tk, held: held[i], accrued: accrued[i], voteCount: tally[tk.token.toLowerCase()] ?? 0 }))
       .sort((a, b) => b.voteCount - a.voteCount || Number(b.reserve - a.reserve));
     const unclaimed = accrued.reduce((s2, a) => s2 + a, 0n);
-    setOwner(ownerAddr);
     setData({ list, bal, received, spent, unclaimed, ops: ops.slice(0, 12) });
-  }, []);
+  }, [isOwner]);
 
   useEffect(() => {
     load().catch((e) => setError(e.shortMessage || e.message));
@@ -226,7 +251,16 @@ export default function Admin({ wallet, onConnect }) {
       setTimeout(() => load().catch(() => {}), 3000);
     } catch (e) { setError(e.shortMessage || e.message); } finally { setBusy(false); }
   }
-  const doBuyback = () => run(() => wallet.walletClient.writeContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "buyback", args: [selected.token, parseEther(amt), 0n] }), t("Выкуп исполнен"));
+  // выкуп: сначала симуляция — сколько монет даст кривая, и не меньше 97% от
+  // этого в minTokensOut (раньше стоял 0 — казну можно было зажать сэндвичем)
+  const doBuyback = () => run(async () => {
+    const { result } = await publicClient.simulateContract({
+      account: wallet.account, address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "buyback",
+      args: [selected.token, parseEther(amt), 0n],
+    });
+    const minOut = (BigInt(result) * 97n) / 100n;
+    return wallet.walletClient.writeContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "buyback", args: [selected.token, parseEther(amt), minOut] });
+  }, t("Выкуп исполнен"));
   const doBurn = () => run(() => wallet.walletClient.writeContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "burn", args: [selected.token, parseEther(burnAmt)] }), t("Сжигание исполнено"));
   async function claimAll() {
     setError(""); setOk(""); setBusy(true);
@@ -328,7 +362,7 @@ export default function Admin({ wallet, onConnect }) {
 
       <div className="ttabs">
         <button type="button" className={`ttab ${tab === "buyback" ? "on" : ""}`} onClick={() => setTab("buyback")}>{t("Выкуп с казны")}</button>
-        <button type="button" className={`ttab ${tab === "mod" ? "on" : ""}`} onClick={() => setTab("mod")}>{t("Модерация чата")}{Object.keys(bans).length > 0 && <span className="dim"> · {Object.keys(bans).length}</span>}</button>
+        <button type="button" className={`ttab ${tab === "mod" ? "on" : ""}`} onClick={() => setTab("mod")}>{t("Модерация чата")}{bans.length > 0 && <span className="dim"> · {bans.length}</span>}</button>
         {tab === "buyback" && <span className="ttabs-right">{t("Голоса раунда — подсказка, решение за вами")}</span>}
       </div>
 
@@ -433,11 +467,11 @@ export default function Admin({ wallet, onConnect }) {
             <button className="btn btn-danger" onClick={() => banUser(banInput)} disabled={!banInput.trim()}>{t("Забанить")}</button>
           </div>
           <div className="lt" style={{ marginTop: 14 }}>
-            {Object.keys(bans).length === 0 ? <div className="lt-empty">{t("Никто не забанен.")}</div>
-              : Object.entries(bans).map(([who, b]) => (
+            {bans.length === 0 ? <div className="lt-empty">{t("Никто не забанен.")}</div>
+              : bans.map((who) => (
                 <div className="lt-row adm-ban" key={who}>
                   <span className="mono">{who}</span>
-                  <span className="dim">{b?.ts ? timeAgo(b.ts) : ""}</span>
+                  <span className="dim" />
                   <button className="btn" onClick={() => unbanUser(who)}>{t("Разбанить")}</button>
                 </div>
               ))}

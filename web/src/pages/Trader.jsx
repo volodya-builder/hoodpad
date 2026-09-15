@@ -281,7 +281,7 @@ export default function Trader({ address }) {
               <div className="tk-cell"><span>{t("Капа")}</span>
                 <b>{usd(p.priceEth * 1e9 * rate)}</b></div>
               <div className="tk-cell"><span>{t("Кривая")}</span>
-                <b>{fmt(Number((p.sold * 10000n) / p.cap) / 100, 1)}%</b></div>
+                <b>{fmt(p.cap > 0n ? Number((p.sold * 10000n) / p.cap) / 100 : 0, 1)}%</b></div>
               <div className="tk-cell"><span>{t("Статус")}</span>
                 <b>{p.graduated ? <><Icon name="target" size={12} /> {t("Градуировал")}</> : t("на кривой")}</b></div>
             </div>

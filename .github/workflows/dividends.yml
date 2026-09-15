@@ -36,7 +36,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm i viem@2 --no-audit --no-fund
+      - run: npm ci --prefix bot --omit=optional --no-audit --no-fund   # версии из bot/package-lock.json
       - name: Pay dividends
         env:
           TREASURER_PRIVATE_KEY: ${{ secrets.TREASURER_PRIVATE_KEY }}

@@ -251,7 +251,7 @@ function rpcList() {
   if (envUrl) urls.unshift(envUrl);
   try {
     const ls = localStorage.getItem("hood_rpc");
-    if (ls && /^https?:\/\//.test(ls)) urls.unshift(ls.trim());
+    if (ls && /^https:\/\//.test(ls)) urls.unshift(ls.trim()); // только https
   } catch (e) { /* ignore */ }
   return [...new Set(urls)]; // без дублей, приоритетные первыми
 }
