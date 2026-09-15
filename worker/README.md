@@ -21,7 +21,12 @@
 Автоматически: `.github/workflows/worker.yml` при пуше `worker/**` в `main`.
 Нужны секреты репозитория: `CLOUDFLARE_API_TOKEN` (шаблон «Edit Cloudflare
 Workers»), `CLOUDFLARE_ACCOUNT_ID`, `OPENROUTER_KEY` (уже есть у агента),
+`FIREBASE_DB_SECRET` (Firebase → Project settings → Service accounts → Database
+secrets; им воркер пишет в `aichat/`, закрытую для всех остальных),
 необязательно `CHAT_SECRET`.
+
+Правила базы (firebase/database.rules.json → вкладка Rules в консоли): `aichat`
+читают все, пишет только воркер — подделать ответ ИИ в ленте нельзя.
 
 Руками: `cd worker && npm ci && npx wrangler login && npx wrangler deploy`,
 затем `npx wrangler secret put OPENROUTER_KEY`.

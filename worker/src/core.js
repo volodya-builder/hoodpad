@@ -142,7 +142,9 @@ export async function isHolder(env, coin, address) {
 }
 
 // ------------------------------------------------------------------ база (RTDB, REST)
-const db = (env, p) => `${env.CHAT_DB_URL}/${p}.json`;
+// Записи — с секретом базы (FIREBASE_DB_SECRET): правила закрывают aichat на
+// запись всем, кроме воркера, поэтому подделать ответ ИИ в ленте нельзя.
+const db = (env, p, write = false) => `${env.CHAT_DB_URL}/${p}.json${write && env.FIREBASE_DB_SECRET ? `?auth=${encodeURIComponent(env.FIREBASE_DB_SECRET)}` : ""}`;
 export const chatPath = (coin) => `aichat/${String(coin).toLowerCase()}/messages`;
 
 export async function lastMessages(env, coin, n = HISTORY) {
@@ -153,14 +155,14 @@ export async function lastMessages(env, coin, n = HISTORY) {
     .filter((m) => m && typeof m.text === "string");
 }
 export async function pushMessage(env, coin, msg) {
-  const r = await fetch(db(env, chatPath(coin)), { method: "POST", body: JSON.stringify({ ...msg, ts: { ".sv": "timestamp" } }) });
-  if (!r.ok) throw new Error("db write " + r.status);
+  const r = await fetch(db(env, chatPath(coin), true), { method: "POST", body: JSON.stringify({ ...msg, ts: { ".sv": "timestamp" } }) });
+  if (!r.ok) throw new Error(r.status === 401 ? "база не пускает воркер на запись: нужен секрет FIREBASE_DB_SECRET" : "db write " + r.status);
   const j = await r.json().catch(() => ({}));
   return j.name || "";
 }
 export async function bumpStats(env, coin, cost) {
   const day = new Date().toISOString().slice(0, 10);
-  await fetch(db(env, `aichat/${String(coin).toLowerCase()}/stats/${day}`), {
+  await fetch(db(env, `aichat/${String(coin).toLowerCase()}/stats/${day}`, true), {
     method: "PATCH", body: JSON.stringify({ n: { ".sv": { increment: 1 } }, cost: { ".sv": { increment: Number(cost) || 0 } } }),
   }).catch(() => {});
 }
