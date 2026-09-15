@@ -4,7 +4,7 @@ import { formatEther } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { tokenAbi, poolAbi } from "../lib/abi.js";
 import { EXPLORER } from "../lib/config.js";
-import { loadTokens, poolTrades, subgraphUserTrades, timeAgo, useClock } from "../lib/data.js";
+import { loadTokens, poolTrades, subgraphUserTrades, priceEthMap, timeAgo, useClock } from "../lib/data.js";
 import { currentPosition } from "../lib/position.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { useLang } from "../lib/i18n.jsx";
@@ -144,11 +144,14 @@ export default function Profile({ wallet, onConnect }) {
       const launched = enriched.filter((tk) => tk.isMine);
       // итоги (Общий PnL / Вложено / Реализовано) — по ВСЕЙ истории,
       // чтобы общий PnL не терял реализованную прибыль закрытых циклов
+      // цена в ETH-эквиваленте (монеты за валюту — через курс валюты)
+      const pem = await priceEthMap(enriched).catch(() => ({}));
+      enriched.forEach((tk) => { tk.priceEth = pem[(tk.token || "").toLowerCase()] ?? Number(formatEther(tk.price)); });
       let totVal = 0, totInv = 0, totReal = 0;
       enriched.forEach((tk) => {
         const all = tk.mineAll || tk.mine;
         if (all.length === 0 && tk.bal === 0n) return;
-        totVal += Number(formatEther(tk.bal)) * Number(formatEther(tk.price));
+        totVal += Number(formatEther(tk.bal)) * tk.priceEth;
         totInv += all.filter((x) => x.side === "buy").reduce((s, x) => s + x.eth + x.fee, 0);
         totReal += all.filter((x) => x.side === "sell").reduce((s, x) => s + x.eth, 0);
       });
@@ -361,7 +364,7 @@ export default function Profile({ wallet, onConnect }) {
                 || p.name.toLowerCase().includes(needle)
                 || p.token.toLowerCase().includes(needle);
             }), psort, (p, k) => {
-              const val = Number(formatEther(p.bal)) * Number(formatEther(p.price));
+              const val = Number(formatEther(p.bal)) * p.priceEth;
               return k === "bal" ? Number(formatEther(p.bal))
                 : k === "val" ? val
                 : k === "inv" ? p.invested
@@ -369,7 +372,7 @@ export default function Profile({ wallet, onConnect }) {
                 : Number((p.sold * 10000n) / p.cap);
             }).map((p) => {
               const balTok = Number(formatEther(p.bal));
-              const val = Number(formatEther(p.bal)) * Number(formatEther(p.price));
+              const val = Number(formatEther(p.bal)) * p.priceEth;
               const buys = p.mine ? p.mine.filter((x) => x.side === "buy") : [];
               const sells = p.mine ? p.mine.filter((x) => x.side === "sell") : [];
               const buysTok = buys.reduce((s, x) => s + x.tokens, 0);
@@ -465,7 +468,7 @@ export default function Profile({ wallet, onConnect }) {
                   : k === "curve" ? Number((tk.sold * 10000n) / tk.cap)
                   : Number(tk.feesAccrued)
               ).map((tk) => {
-                const mcapEth = Number(formatEther(tk.price)) * 1e9;
+                const mcapEth = (tk.priceEth ?? Number(formatEther(tk.price))) * 1e9;
                 const prog = Number((tk.sold * 10000n) / tk.cap) / 100;
                 const fees = Number(formatEther(tk.feesAccrued));
                 return (

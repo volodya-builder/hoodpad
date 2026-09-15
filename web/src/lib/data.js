@@ -254,17 +254,39 @@ export async function allTrades() {
 
 /** Все сделки одного пользователя одним запросом (для профиля). */
 export async function subgraphUserTrades(trader) {
+  const qf = (await subgraphHasQuote()) ? " quote" : "";
   const d = await gql(`{ trades(first: 1000, orderBy: timestamp, orderDirection: desc,
     where: { trader: "${trader.toLowerCase()}" }) {
-    pool isBuy ethAmount tokenAmount fee timestamp block tx } }`);
+    pool isBuy ethAmount tokenAmount fee timestamp block tx${qf} } }`);
   if (!d?.trades) throw new Error("no trades field");
-  return d.trades.map((l) => ({
+  const rows = d.trades.map((l) => ({
     pool: l.pool.toLowerCase(),
     side: l.isBuy ? "buy" : "sell",
     eth: Number(l.ethAmount) / 1e18, tokens: Number(l.tokenAmount) / 1e18,
     fee: Number(l.fee) / 1e18,
     ts: Number(l.timestamp) * 1000, block: BigInt(l.block), tx: l.tx,
+    quote: l.quote ? String(l.quote).toLowerCase() : null,
+    ethRaw: l.ethAmount, feeRaw: l.fee,
   }));
+  // сделки за валюту — в ETH-эквиваленте, как везде (PnL, объём, история)
+  await toEthEquivalent(rows);
+  return rows;
+}
+
+/** Цена токена в ETH-эквиваленте: у ETH-монет — как есть, у монет за валюту —
+ *  через курс валюты и ETH. Возвращает { tokenLower: priceEth }. */
+export async function priceEthMap(tokens) {
+  const { quoteUsd, ethUsd, ethUsdCached } = await import("./price.js");
+  const { formatEther, formatUnits } = await import("viem");
+  const rate = await Promise.race([ethUsd().catch(() => ethUsdCached()), new Promise((r) => setTimeout(() => r(ethUsdCached()), 4000))]);
+  const out = {};
+  await Promise.all(tokens.map(async (tk) => {
+    const k = (tk.token || "").toLowerCase();
+    if (!tk.q) { out[k] = Number(formatEther(tk.price || 0n)); return; }
+    const px = await quoteUsd(tk.q.addr).catch(() => 0);
+    out[k] = rate > 0 && px > 0 ? Number(formatUnits(tk.price || 0n, tk.q.dec)) * px / rate : 0;
+  }));
+  return out;
 }
 
 export async function subgraphTreasuryOps() {
