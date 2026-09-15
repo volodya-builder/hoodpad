@@ -22,6 +22,7 @@ import { modelLogo, makerOf } from "../lib/models.mjs";
 import CandleChart from "../components/CandleChart.jsx";
 import TokenSidebar from "../components/TokenSidebar.jsx";
 import { useDividends } from "../components/Dividends.jsx";
+import QuoteLogo from "../components/QuoteLogo.jsx";
 import { useFavs, toggleFav } from "../lib/favs.js";
 import { currentPosition } from "../lib/position.js";
 import RGL, { WidthProvider } from "react-grid-layout";
@@ -1055,7 +1056,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               </>)}
               {/* Дивиденды холдерам: ставка с каждой сделки, в валюте монеты.
                   Было отдельным блоком на «Активности» — перенесено сюда 15.09.2026. */}
-              {dv.on && (
+              {FEATURES.dividendsCard && dv.on && (
                 <span className="chip" title={t("С каждой сделки холдерам. Приходит на кошелёк само раз в час.")}>
                   <Icon name="droplet" /> {t("Дивиденды")} <b>{dv.st.divBps / 100}%</b>
                 </span>
@@ -1116,7 +1117,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 {money(fc(extra.creatorFees ?? 0n))}
               </div>
             </div>
-            {dv.on && (
+            {FEATURES.dividendsCard && dv.on && (
               <div className="stat-card">
                 <div className="k"><Icon name="droplet" /> {t("Дивиденды роздано")}</div>
                 <div className="v" style={{ color: "var(--gold)" }}>{money(dv.num(dv.st.total))}</div>
@@ -1151,7 +1152,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               {t("Забрать комиссии создателя")}
             </button>
           )}
-          {dv.on && wallet && dv.st.mine > 0n && (
+          {FEATURES.dividendsCard && dv.on && wallet && dv.st.mine > 0n && (
             <button className="btn" style={{ marginTop: 12, marginLeft: 8 }} disabled={dv.busy}
                     title={`${t("Накопленное раз в час само приходит на кошелёк; забрать можно и вручную.")} ${t("Придёт в кошелёк в")} ${dv.q.sym}.`}
                     onClick={() => dv.claim(onConnect)}>
@@ -1221,6 +1222,12 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                   {data.name} <span className="ticker">${data.symbol}</span>
                   {data.graduated && <span className="badge"><Icon name="target" size={12} /> {t("В яблочке")}</span>}
+                  {data.q && (
+                    <span className="th-pair" title={data.divBps > 0 ? t("Валюта курвы и дивиденды холдерам с каждой сделки") : t("Валюта курвы")}>
+                      <QuoteLogo q={data.q} size={16} withSym />
+                      {data.divBps > 0 && <b>· {t("дивиденды")} {data.divBps / 100}%</b>}
+                    </span>
+                  )}
                   {aiChip}
                   {socials}
                 </div>

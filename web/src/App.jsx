@@ -673,32 +673,23 @@ export default function App() {
       {tosOpen && wallet && (
         <div className="modal-back open">
           <div className="tos-modal">
-            <div className="tos-hero"><div className="tos-ico"><Icon name="handshake" size={30} style={{ margin: 0 }} /></div></div>
             <div className="tos-body">
-              <h2 className="tos-title">
-                {t("Ознакомьтесь и примите")} <span className="tos-chip">{t("Обязательно")}</span>
-              </h2>
-              <p className="dim" style={{ lineHeight: 1.6, margin: "10px 0 18px" }}>
-                {t("Прежде чем использовать hood с этим кошельком, примите актуальные Условия использования и Политику конфиденциальности. Вы также подтверждаете, что не находитесь в юрисдикции, где использование запрещено.")}
+              <h2 className="tos-title">{t("Условия и конфиденциальность")}</h2>
+              <p className="tos-sub">
+                {t("Чтобы пользоваться hood с этим кошельком, примите Условия использования и Политику конфиденциальности и подтвердите, что вы не в юрисдикции, где это запрещено.")}
               </p>
-              <label className="tos-check">
+              <label className={`tos-check ${tosA ? "on" : ""}`}>
                 <input type="checkbox" checked={tosA} onChange={(e) => setTosA(e.target.checked)} />
-                <span>
-                  {t("Я прочитал и принимаю")}{" "}
-                  <a href="#/terms" target="_blank" rel="noreferrer">{t("Условия использования")}</a>.
-                </span>
+                <span className="tos-box"><Icon name="check" size={13} style={{ margin: 0 }} /></span>
+                <span>{t("Принимаю")} <a href="#/terms" target="_blank" rel="noreferrer">{t("Условия использования")}</a></span>
               </label>
-              <label className="tos-check">
+              <label className={`tos-check ${tosB ? "on" : ""}`}>
                 <input type="checkbox" checked={tosB} onChange={(e) => setTosB(e.target.checked)} />
-                <span>
-                  {t("Я прочитал и принимаю")}{" "}
-                  <a href="#/privacy" target="_blank" rel="noreferrer">{t("Политику конфиденциальности")}</a>.
-                </span>
+                <span className="tos-box"><Icon name="check" size={13} style={{ margin: 0 }} /></span>
+                <span>{t("Принимаю")} <a href="#/privacy" target="_blank" rel="noreferrer">{t("Политику конфиденциальности")}</a></span>
               </label>
               <div className="tos-actions">
-                <button className="btn btn-primary" disabled={!tosA || !tosB} onClick={acceptTos}>
-                  {t("Принять и продолжить")}
-                </button>
+                <button className="btn btn-primary" disabled={!tosA || !tosB} onClick={acceptTos}>{t("Продолжить")}</button>
                 <button className="tos-ghost" onClick={declineTos}>{t("Отключить кошелёк")}</button>
               </div>
             </div>
