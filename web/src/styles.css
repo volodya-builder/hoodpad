@@ -3686,3 +3686,7 @@ a.who:hover .who-name, a.who:hover .mono { color: var(--gold); }
 .podium3.minimal .pod-sum { font-size: 17px; }
 .arena-hdr span:last-child { text-align: right; }
 .arena-row .ar-status.bad .mono { font-variant-numeric: tabular-nums; }
+.podium3.minimal { margin-bottom: 16px; }
+.arena-row .ar-status { white-space: nowrap; }
+.arena-row .ar-status.bad { text-transform: none; letter-spacing: 0; font-weight: 600; font-size: 12px; }
+@media (min-width: 701px) { .arena-row, .arena-hdr { grid-template-columns: 34px 34px 1.2fr 110px 2fr 150px; } }
