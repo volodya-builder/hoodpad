@@ -177,6 +177,18 @@ export async function loadBuilds() {
   return buildsCache?.v || [];
 }
 
+/** Пульс агента (пишет scripts/agent-run.mjs из CI): { at, state, token, pid, text, note, url }.
+ *  Нет записи или база закрыта — null: сайт живёт по расписанию cron. */
+export async function loadHeartbeat() {
+  if (!CHAT_DB_URL) return null;
+  try {
+    const r = await fetch(db("workshop/agent/heartbeat"));
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j && typeof j === "object" && j.at ? j : null;
+  } catch (e) { return null; }
+}
+
 /** Следующее пробуждение агента по cron (каждые AGENT_PERIOD_MIN минут). */
 export function nextAgentWake(now = Date.now()) {
   const p = AGENT_PERIOD_MIN * 60_000;

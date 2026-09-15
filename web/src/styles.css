@@ -3580,3 +3580,60 @@ html[data-theme="light"] .cp-logo { background: #f2f1ec; }
   .cp-pop { width: 100%; }
   .cp-name { max-width: 140px; }
 }
+
+/* Панель состояния агента (Board.jsx → AgentStatus) */
+.ag { display: flex; align-items: center; gap: 14px; margin: 14px 0 18px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
+.ag-ico { position: relative; width: 48px; height: 48px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #1c1d1b; border: 1px solid var(--border); color: var(--text-dim); }
+.ag-body { flex: 1; min-width: 0; }
+.ag-title { font-weight: 800; font-size: 15px; }
+.ag-sub { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; }
+.ag-note { font-size: 11.5px; color: var(--text-dim); margin-top: 4px; opacity: .8; }
+.ag-budget { flex: none; }
+.ag-ring { position: absolute; inset: -1px; transform: rotate(-90deg); }
+.ag-ring-bg { fill: none; stroke: var(--border); stroke-width: 3; }
+.ag-ring-fg { fill: none; stroke: var(--leaf); stroke-width: 3; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+.ag-time { position: relative; font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--text); }
+.ag-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-dim); animation: ag-blink 2.4s ease-in-out infinite; }
+@keyframes ag-blink { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+.ag-spin { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--gold-dim); border-top-color: var(--gold); animation: ag-spin .9s linear infinite; }
+@keyframes ag-spin { to { transform: rotate(360deg); } }
+.ag-building { border-color: var(--border-gold); }
+.ag-building .ag-title { color: var(--gold); }
+.ag-building .ag-ico { border-color: var(--border-gold); background: var(--gold-dim); }
+.ag-queued .ag-title { color: var(--leaf); }
+.ag-paused .ag-ico { color: #e0a54a; border-color: #e0a54a66; }
+.ag-paused .ag-title { color: #e0a54a; }
+.ag-failed .ag-ico { color: var(--red); border-color: var(--red); }
+.ag-failed .ag-title { color: var(--red); }
+html[data-theme="light"] .ag-ico { background: #f2f1ec; }
+@media (max-width: 800px) {
+  .ag { flex-wrap: wrap; }
+  .ag-budget { margin-left: 62px; }
+}
+
+/* Шапка монеты во вкладке «ИИ» (CoinHero.jsx) */
+.coin-hero { display: flex; align-items: center; gap: 18px; padding: 16px 18px; border: 1px solid var(--border); border-radius: 16px; background: var(--card); }
+.coin-hero .tok-star { flex: none; font-size: 22px; }
+.coin-hero-logo { flex: none; width: 124px; height: 124px; border-radius: 22px; overflow: hidden; background: #2a2a28; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); }
+.coin-hero-logo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.coin-hero-ph { color: var(--text-dim); }
+.coin-hero-body { flex: 1; min-width: 0; }
+.coin-hero-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.coin-hero-name { font-size: 26px; font-weight: 800; color: var(--text); text-decoration: none; letter-spacing: -.2px; }
+.coin-hero-name:hover { color: var(--gold); }
+.coin-hero-row .ticker { font-size: 14px; }
+.coin-hero-sub { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 8px; font-size: 12px; }
+.coin-hero-link { color: var(--text-dim); text-decoration: none; }
+.coin-hero-link:hover { color: var(--gold); }
+.coin-hero-pick { flex: none; margin-left: auto; align-self: flex-start; }
+.cp-btn.cp-compact { padding: 8px 12px; color: var(--text-dim); }
+.cp-btn.cp-compact .cp-cur b { font-size: 13px; font-weight: 700; }
+.cp-btn.cp-compact:hover { color: var(--text); }
+html[data-theme="light"] .coin-hero-logo { background: #f2f1ec; }
+@media (max-width: 800px) {
+  .coin-hero { flex-wrap: wrap; gap: 12px; padding: 14px; }
+  .coin-hero-logo { width: 88px; height: 88px; border-radius: 18px; }
+  .coin-hero-name { font-size: 21px; }
+  .coin-hero-pick { width: 100%; margin-left: 0; }
+  .coin-hero-pick .cp, .coin-hero-pick .cp-btn { width: 100%; justify-content: center; }
+}

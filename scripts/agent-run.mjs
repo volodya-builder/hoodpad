@@ -247,6 +247,14 @@ async function findBoardWork() {
   return { token: c.tk.token, round: 0, pid: c.top.pid, task: c.top.text, at: c.top.at, by: c.top.by, from: "доска", q: c.tk.q };
 }
 
+/** Пульс агента для сайта: что он делает прямо сейчас. Не критично —
+ *  база закрыта → молчим. workshop/agent/heartbeat = { at, state, token, pid, text, note } */
+async function heartbeat(state, extra = {}) {
+  try {
+    await fetch(`${DB}/workshop/agent/heartbeat.json`, { method: "PUT", body: JSON.stringify({ at: Date.now(), state, ...extra }) });
+  } catch { /* пульс — только для статуса на сайте */ }
+}
+
 async function markBuilding(token, pid) {
   try {
     await fetch(`${DB}/workshop/board/${token}/building.json`, { method: pid ? "PUT" : "DELETE", body: pid ? JSON.stringify({ pid, at: Date.now() }) : undefined });
@@ -467,9 +475,11 @@ async function main() {
   const operatorAddress = operator ? operator.address : OPERATOR_ADDRESS;
 
   console.log("Смотрю доски идей…");
+  if (run) await heartbeat("checking");
   const work = (await findBoardWork()) || (await findWork(operatorAddress));
   if (!work) {
     console.log("Работы нет: на досках нет идей с голосами (или у монет нет бюджета), в журнале нет записей «строит».");
+    if (run) await heartbeat("idle");
     return;
   }
 
@@ -511,6 +521,7 @@ async function main() {
   console.log("");
 
   if (work.pid) await markBuilding(work.token, work.pid);
+  await heartbeat("building", { token: work.token.toLowerCase(), pid: work.pid || "", text: String(work.task).slice(0, 120), model });
   const res = await fetch(`${OR}/chat/completions`, {
     method: "POST",
     headers: {
@@ -553,6 +564,7 @@ async function main() {
       bl.unshift({ token: work.token.toLowerCase(), round: 0, pid: work.pid, symbol, task: work.task, model, spent: cost || 0, tokens, at: Date.now(), failed: true, note: problems.join("; ") });
       fs.writeFileSync(bf, JSON.stringify(bl.slice(0, 200), null, 2) + "\n");
       console.error("Записано в builds.json как «не вышло», идея снята с доски.");
+      await heartbeat("failed", { token: work.token.toLowerCase(), pid: work.pid, text: String(work.task).slice(0, 120), note: problems[0] || "" });
       return;
     }
     process.exit(1);
@@ -568,6 +580,7 @@ async function main() {
     fs.writeFileSync(path.join(rootDir, "index.html"), html);
     await markBuilding(work.token, null);
   }
+  await heartbeat("built", { token: work.token.toLowerCase(), pid: work.pid || "", text: String(work.task).slice(0, 120), url });
 
   // Отчёт рядом со страницей. Перезапись по (монета, раунд): повторная
   // сборка того же задания заменяет старую строку, а не плодит дубли.
