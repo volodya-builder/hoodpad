@@ -1597,6 +1597,8 @@ const EN = {
   "Все акции": "All stocks",
   "валюта курвы": "curve currency",
   "дивиденды": "dividends",
+  "hood — независимый проект, не аффилирован с Robinhood Markets, Inc.; названия и тикеры акций принадлежат их правообладателям.": "hood is an independent project, not affiliated with Robinhood Markets, Inc.; company names and tickers belong to their owners.",
+  "Подробнее в Условиях": "More in the Terms",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });
