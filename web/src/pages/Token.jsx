@@ -237,7 +237,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const { t } = useLang();
   const rate = useEthUsd();
   const split = useSplit();
-  const support = useSupport();
+  const support = useSupport(FEATURES.treasury);
   const cushion = support.per[tokenAddress?.toLowerCase()]?.eth || 0;
   // Страница рисуется МГНОВЕННО из кэша последнего захода (localStorage),
   // а сеть обновляет цифры следом. Раньше до первого кадра было 6–7

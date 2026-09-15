@@ -91,8 +91,8 @@ export default function Home({ onSearch }) {
   const [error, setError] = useState("");
   const [sort, setSort] = useState("new");
   const favs = useFavs();
-  const support = useSupport();
-  const arena = useArena();
+  const support = useSupport(FEATURES.treasury);
+  const arena = useArena(FEATURES.arena);
   const cushionOf = (addr) => support.per[addr.toLowerCase()]?.eth || 0;
 
 
