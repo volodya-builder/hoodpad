@@ -1924,6 +1924,22 @@ html[data-theme="light"] .tos-ico { background: #ffffff; }
   }
   .react-grid-item > .react-resizable-handle { display: none; }
   .drag-handle { display: none; }
+  /* порядок блоков на телефоне: шапка с графиком → купить/продать →
+     активность/чат/ИИ → позиции и держатели → «О токене» (15.09.2026) */
+  .react-grid-layout { display: flex; flex-direction: column; }
+  .react-grid-item[data-blk="chart"] { order: 1; }
+  .react-grid-item[data-blk="swap"] { order: 2; }
+  .react-grid-item[data-blk="chat"] { order: 3; }
+  .react-grid-item[data-blk="trades"] { order: 4; }
+  .react-grid-item[data-blk="about"] { order: 5; }
+  /* нижние вкладки в два ряда, широкие таблицы листаются внутри карточки,
+     а не распирают страницу вбок */
+  .bt-card { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .bt-card .bt-tabs { flex-wrap: wrap; position: sticky; left: 0; }
+  .bt-card .bt-tab { padding: 8px 12px; font-size: 13px; }
+  .arow { min-width: 560px; }
+  /* ссылки подвала — крупнее цель для пальца */
+  .footer-cols a { display: inline-block; padding: 5px 0; }
   .grid-item > .card, .grid-item > .panel, .grid-item > .chat-panel { overflow: visible; }
   .grid-item > .panel > * { max-width: none; }
   .chart-resize { height: 300px !important; width: 100% !important; resize: none; max-width: 100%; }
@@ -3527,3 +3543,5 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .aichat-typing { font-style: italic; }
 .aichat-gate { margin-top: 12px; font-size: 12.5px; color: var(--text-dim); background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
 .aichat-gate b { color: var(--gold); }
+
+.q-more { color: var(--text-dim); border-style: dashed; }
