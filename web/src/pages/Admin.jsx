@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { formatEther, parseEther } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
-import { treasuryAbi, tokenAbi, poolExtraAbi } from "../lib/abi.js";
-import { TREASURY_ADDRESS, EXPLORER, CHAT_DB_URL } from "../lib/config.js";
+import { treasuryAbi, tokenAbi, poolExtraAbi, feeClaimerAbi } from "../lib/abi.js";
+import { TREASURY_ADDRESS, EXPLORER, CHAT_DB_URL, FEE_CLAIMER_ADDRESS } from "../lib/config.js";
 import { loadTokens, subgraphVotes, subgraphTreasuryOps, timeAgo, useClock, dataSource } from "../lib/data.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { useLang } from "../lib/i18n.jsx";
@@ -231,10 +231,16 @@ export default function Admin({ wallet, onConnect }) {
   async function claimAll() {
     setError(""); setOk(""); setBusy(true);
     try {
+      const pools = data.list.filter((tk) => tk.accrued > 0n).map((tk) => tk.pool);
       let claimed = 0;
-      for (const tk of data.list) {
-        if (tk.accrued > 0n) {
-          const hash = await wallet.walletClient.writeContract({ address: tk.pool, abi: poolExtraAbi, functionName: "claimProtocolFees" });
+      if (FEE_CLAIMER_ADDRESS && pools.length > 1) {
+        // одна транзакция на все пулы — через FeeClaimer
+        const hash = await wallet.walletClient.writeContract({ address: FEE_CLAIMER_ADDRESS, abi: feeClaimerAbi, functionName: "claimAll", args: [pools] });
+        await publicClient.waitForTransactionReceipt({ hash });
+        claimed = pools.length;
+      } else {
+        for (const pool of pools) {
+          const hash = await wallet.walletClient.writeContract({ address: pool, abi: poolExtraAbi, functionName: "claimProtocolFees" });
           await publicClient.waitForTransactionReceipt({ hash });
           claimed++;
         }

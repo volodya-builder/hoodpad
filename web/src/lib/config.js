@@ -97,6 +97,10 @@ export const ARENA_LIVE = /^0x[0-9a-fA-F]{40}$/.test(ARENA_TREASURY_ADDRESS);
 // в базе сайта по подписи кошелька — бесплатно (решение владельца 15.09.2026).
 export const PROFILE_REGISTRY_ADDRESS = import.meta.env.VITE_PROFILE_REGISTRY ?? "0x71ccb2eb2b2719d0d316385fc276ebeb1275a8c2";
 export const PROFILES_LIVE = true; // база — CHAT_DB_URL ниже
+// FeeClaimer — сбор комиссий протокола со всех пулов одной транзакцией
+// (contracts/FeeClaimer.sol, scripts/deploy-fee-claimer.js). Пусто — админка
+// шлёт по транзакции на пул.
+export const FEE_CLAIMER_ADDRESS = import.meta.env.VITE_FEE_CLAIMER ?? "";
 
 // FeeSplitterV4 — делит протокольную долю комиссии (команда / агент /
 // создатель) и хранит, включён ли у монеты ИИ (enableAi — решение
