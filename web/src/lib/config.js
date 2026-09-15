@@ -100,7 +100,7 @@ export const PROFILES_LIVE = true; // база — CHAT_DB_URL ниже
 // FeeClaimer — сбор комиссий протокола со всех пулов одной транзакцией
 // (contracts/FeeClaimer.sol, scripts/deploy-fee-claimer.js). Пусто — админка
 // шлёт по транзакции на пул.
-export const FEE_CLAIMER_ADDRESS = import.meta.env.VITE_FEE_CLAIMER ?? "";
+export const FEE_CLAIMER_ADDRESS = import.meta.env.VITE_FEE_CLAIMER ?? "0x1675389096cfb6f49c35a82b503eafad1c2c2af2"; // задеплоен владельцем 15.09.2026
 
 // FeeSplitterV4 — делит протокольную долю комиссии (команда / агент /
 // создатель) и хранит, включён ли у монеты ИИ (enableAi — решение
