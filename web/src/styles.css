@@ -3851,3 +3851,111 @@ html[data-theme="light"] .lt-logo { background: rgba(0,0,0,.05); }
   .lt.pay .lt-row { grid-template-columns: 22px minmax(0, 1fr) 140px; }
   .lt.pay .lt-row > :nth-child(4), .lt.pay .lt-row > :nth-child(5) { display: none; }
 }
+
+/* ======================================================================
+   Системный слой (15.09.2026, по образцу новой версии Pons): один и тот же
+   принцип на всех страницах — заголовки Nunito, цифры без коробок с
+   разделителями, вкладки текстом с подчёркиванием, переключатели-капсулы,
+   карточки плоские с тонкой линией, подписи без капса и жирного.
+   Идёт последним и перекрывает старые правила. */
+
+/* карточки: без градиента, блика сверху и «прыжка» */
+.card, .bottom-card, .ana-card, .stat-card, .rep-card, .sidebar-card, .tk-card, .buy-card, .chart-card, .create-card, .preview-card, .pf-card, .pe-card, .lb-card {
+  background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); border-radius: 22px; box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+.card::before { display: none; }
+.card:hover { transform: none; box-shadow: inset 0 1px 0 rgba(255,255,255,.04); border-color: rgba(255,255,255,.14); }
+.stat-card { border-radius: 16px; }
+
+/* подписи: без капса и веса 800 */
+.stat-card .k, .ana-card .k, .tk-cell span, .trow.hdr, .prow6.hdr, .arena-hdr, .pf-stat .k, .preview-stats .k, .rep-grid span, .lbl, .form-label, label.lbl, .field-label, .sec-label, .fld > span:first-child, .cp-k, .pv-k, .holder-hdr, .tp-hdr, .order-hdr {
+  text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 12.5px; color: var(--text-dim);
+}
+.trow.hdr, .prow6.hdr, .arena-hdr { font-size: 13px; padding-bottom: 10px; }
+.tk-cell b { font-weight: 500; font-size: 15px; }
+.ana-card .v, .stat-card .v, .pf-usd, .rep-score { font-family: var(--font-display-round); font-weight: 600; letter-spacing: -.02em; }
+.ana-card .v { font-size: 30px; }
+.stat-card .v { font-size: 22px; }
+
+/* полоса цифр профиля/трейдера: без коробок, с разделителями */
+.ana-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin: 26px 0 26px; padding-bottom: 26px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.ana-grid .ana-card, .ana-grid .pf-stat { background: transparent; border: 0; border-left: 1px solid rgba(255,255,255,.08); border-radius: 0; box-shadow: none; padding: 4px 22px; }
+.ana-grid > :first-child { border-left: 0; padding-left: 0; }
+.ana-grid .pf-stat:hover { transform: none; }
+.pf-usd { font-size: 34px; line-height: 1.1; margin-top: 0; }
+.pf-stat .s, .ana-card .s { margin-top: 8px; font-size: 13.5px; }
+.pf-stat .k, .ana-card .k { order: 2; margin-top: 8px; font-size: 13.5px; }
+.ana-grid .pf-stat, .ana-grid .ana-card { display: flex; flex-direction: column; }
+.ana-grid .pf-usd, .ana-grid .v { order: 1; }
+.ana-grid .s { order: 3; }
+.pf-pct { font-size: 13px; font-weight: 500; margin-left: 8px; vertical-align: middle; }
+@media (max-width: 800px) {
+  .ana-grid { grid-template-columns: 1fr 1fr; row-gap: 18px; }
+  .ana-grid > :nth-child(3) { border-left: 0; padding-left: 0; }
+  .pf-usd { font-size: 26px; }
+}
+
+/* репутация: тихая строка вместо рамки */
+.rep-card { background: transparent; border: 0; box-shadow: none; padding: 0 0 22px; margin: 0 0 8px; border-bottom: 1px solid rgba(255,255,255,.08); border-radius: 0; }
+.rep-title { font-weight: 500; font-size: 14.5px; }
+.rep-score { font-size: 22px; }
+.rep-grid { gap: 26px; }
+.rep-grid b { font-weight: 500; }
+
+/* вкладки текстом (профиль, трейдер, низ страницы монеты) */
+.bt-tabs { gap: 26px; border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 18px; }
+.bt-tab { padding: 6px 0 12px; border-radius: 0; font-size: 15px; font-weight: 400; background: transparent; position: relative; }
+.bt-tab.on { background: transparent; color: var(--text); font-weight: 500; }
+.bt-tab.on::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--text); border-radius: 2px; }
+.bottom-card { padding: 22px 24px; }
+
+/* переключатели-капсулы: старые pill-group/mode-tabs */
+.pill-group, .mode-tabs { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06); border-radius: 999px; padding: 3px; gap: 2px; }
+.fpill, .mode-tab { border-radius: 999px; font-weight: 500; font-size: 12.5px; padding: 6px 12px; }
+.fpill.on, .mode-tab.on { background: rgba(255,255,255,.1); color: var(--text); box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
+.fpill:hover, .mode-tab:hover { background: transparent; color: var(--text); }
+.mode-tab { padding: 7px 12px; }
+
+/* чипы выбора (валюта, дивиденды, интервалы графика) */
+.quote-chip, .chip, .iv-pill, .cp-btn { font-weight: 500; border-radius: 999px; }
+.quote-chip.on, .chip.on { border-color: var(--gold); color: var(--text); background: color-mix(in srgb, var(--gold) 10%, transparent); }
+
+/* поля ввода */
+input, textarea, select, .prefix-input, .suffix-input { background: rgba(255,255,255,.03); border-color: rgba(255,255,255,.1); border-radius: 14px; font-weight: 400; }
+input:focus, textarea:focus, .prefix-input:focus-within, .suffix-input:focus-within { border-color: rgba(255,255,255,.3); box-shadow: 0 0 0 3px rgba(255,255,255,.05); }
+
+/* кнопки: вес 500–600, капсула */
+.btn { font-weight: 500; border-radius: 999px; }
+.btn-primary { font-weight: 600; }
+
+/* строки таблиц: выше и мягче */
+.trow, .prow6, .holder-row, .order-row { padding-top: 12px; padding-bottom: 12px; border-color: rgba(255,255,255,.06); font-size: 13.5px; }
+.trow:hover, .prow6:hover, .holder-row:hover, .order-row:hover { background: rgba(255,255,255,.03); }
+
+/* заголовки блоков */
+.sec-h3, .card-title h3, .rl-title { font-weight: 500; font-size: 15.5px; letter-spacing: -.01em; }
+.page-sub { font-weight: 400; font-size: 14px; }
+
+/* превью на создании: строки без жирного */
+.preview-stats .row { border-color: rgba(255,255,255,.06); }
+.preview-stats .v { font-weight: 500; }
+
+html[data-theme="light"] .card, html[data-theme="light"] .bottom-card, html[data-theme="light"] .ana-card, html[data-theme="light"] .stat-card { background: #fff; border-color: rgba(0,0,0,.08); box-shadow: none; }
+html[data-theme="light"] .ana-grid, html[data-theme="light"] .rep-card, html[data-theme="light"] .bt-tabs { border-color: rgba(0,0,0,.1); }
+html[data-theme="light"] .ana-grid .ana-card, html[data-theme="light"] .ana-grid .pf-stat { background: transparent; border-left-color: rgba(0,0,0,.1); }
+html[data-theme="light"] .pill-group, html[data-theme="light"] .mode-tabs { background: rgba(0,0,0,.04); border-color: rgba(0,0,0,.06); }
+html[data-theme="light"] .fpill.on, html[data-theme="light"] .mode-tab.on { background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+html[data-theme="light"] input, html[data-theme="light"] textarea, html[data-theme="light"] select { background: #fff; border-color: rgba(0,0,0,.12); }
+label { text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 13px; margin: 18px 0 8px; }
+.panel { background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); border-radius: 22px; box-shadow: inset 0 1px 0 rgba(255,255,255,.04); }
+.panel h2, .create-layout h2 { font-family: var(--font-display-round); font-weight: 700; font-size: 26px; letter-spacing: -.01em; }
+html[data-theme="light"] .panel { background: #fff; border-color: rgba(0,0,0,.08); box-shadow: none; }
+/* купить/продать: капсула-переключатель, активная — лайм или красный текст */
+.tabs { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06); border-radius: 999px; padding: 3px; gap: 2px; }
+.tab { border: 0; background: transparent; border-radius: 999px; font-weight: 500; font-size: 13.5px; padding: 8px; }
+.tab.active-buy { background: rgba(255,255,255,.1); border-color: transparent; color: var(--gold); box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
+.tab.active-sell { background: rgba(255,255,255,.1); border-color: transparent; color: var(--red); box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
+.quote-box { background: rgba(255,255,255,.03); border-color: rgba(255,255,255,.08); border-radius: 14px; }
+.ts-hdr { text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 12px; }
+.badge { font-weight: 500; letter-spacing: 0; text-transform: none; }
+.tk-chg { font-weight: 500; }
