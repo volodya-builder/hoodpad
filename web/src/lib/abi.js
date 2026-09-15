@@ -244,3 +244,9 @@ export const profileRegistryAbi = parseAbi([
   "function clearProfile()",
   "event ProfileSet(address indexed who, string name, bool hasAvatar)",
 ]);
+
+// FeeClaimer — один вызов на все пулы (contracts/FeeClaimer.sol)
+export const feeClaimerAbi = parseAbi([
+  "function claimAll(address[] pools) returns (uint256 ok)",
+  "function pending(address[] pools) view returns (address[] out)",
+]);
