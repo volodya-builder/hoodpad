@@ -3742,3 +3742,17 @@ h1, h2, h3, .card-title h3, .sec-h2, .sec-h3 { font-weight: 500; letter-spacing:
   .ana-stat .n { font-size: 30px; }
   .ana-svg { height: 220px; }
 }
+
+/* по скриншоту новой версии Pons: округлый дисплейный шрифт у заголовков и
+   крупных цифр, столбики серые с подсветкой сверху, «сейчас» — зелёный,
+   под мышью — почти белый */
+:root { --font-display-round: "Nunito", "Inter", -apple-system, sans-serif; }
+.page-title, .ana-stat .n, .ana-panel-val { font-family: var(--font-display-round); font-weight: 700; letter-spacing: -.01em; }
+.page-title { font-size: 30px; }
+.ana-stat .n { font-weight: 600; }
+.ana-svg-bar { fill: url(#anaBarGrad); }
+.ana-svg-bar.now { fill: url(#anaBarNow); opacity: 1; }
+.ana-svg-bar.hl { fill: url(#anaBarHl); opacity: 1; }
+.ana-svg-bar.now.hl { fill: url(#anaBarNow); }
+.ana-svg-bar.dim { opacity: .6; }
+.ana-grid-line { stroke: rgba(255,255,255,.06); }
