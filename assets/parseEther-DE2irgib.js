@@ -1,0 +1,1 @@
+import{_t as e}from"./ccip-Ddu8I7rK.js";import{l as t}from"./web3-Cu88TOMA.js";function n(n,r=`wei`){return t(n,e[r])}export{n as t};
