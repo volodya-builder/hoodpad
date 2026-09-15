@@ -1527,6 +1527,7 @@ const EN = {
   "при следующем заходе": "on its next visit",
   "Сменить монету": "Change coin",
   "Страница монеты": "Coin page",
+  "вот-вот зайдёт": "about to check in",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

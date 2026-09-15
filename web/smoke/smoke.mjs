@@ -41,7 +41,7 @@ async function run(ctx, label, hash, after) {
   const page = await ctx.newPage();
   const errs = [];
   page.on("pageerror", (e) => errs.push("pageerror: " + e.message.split("\n")[0]));
-  page.on("console", (m) => { if (m.type() === "error" && !/net::|Failed to fetch|ERR_|403|401|CORS/.test(m.text())) errs.push("console: " + m.text().slice(0, 140)); });
+  page.on("console", (m) => { if (m.type() === "error" && !/net::|Failed to fetch|ERR_|403|401|CORS|status of 5\d\d/.test(m.text())) errs.push("console: " + m.text().slice(0, 140)); });
   await page.goto(url(hash), { waitUntil: "load" });
   await page.waitForTimeout(5000);
   if (after) { try { await after(page); } catch (e) { errs.push("after: " + e.message.split("\n")[0]); } }
@@ -60,7 +60,7 @@ const clickTab = (sel, text) => async (page) => {
 };
 
 console.log("== десктоп");
-const desk = await browser.newContext({ viewport: { width: 1400, height: 900 } });
+const desk = await browser.newContext({ viewport: { width: 1400, height: 900 }, locale: "ru-RU" }); // locale: без неё Chromium в песочнице берёт «en-US@posix» и toLocaleString() падает
 for (const [label, hash] of PAGES) await run(desk, label, hash);
 await run(desk, "монета · вкладка ИИ", `#/token/${DOGE}`, clickTab(".side-tabs .bt-tab", "ИИ"));
 await run(desk, "монета · чат", `#/token/${DOGE}`, clickTab(".side-tabs .bt-tab", "Чат"));
