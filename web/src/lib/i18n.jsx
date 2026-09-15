@@ -1617,6 +1617,11 @@ const EN = {
   "выкуп": "buyback",
   "Забанен": "Banned",
   "Забаньте кошелёк или ник — их сообщения скроются у всех, и писать они больше не смогут. Адрес берите в том виде, как он показан в чате.": "Ban a wallet or nickname — their messages disappear for everyone and they can no longer write. Use the address exactly as shown in the chat.",
+  "Условия и конфиденциальность": "Terms and privacy",
+  "Чтобы пользоваться hood с этим кошельком, примите Условия использования и Политику конфиденциальности и подтвердите, что вы не в юрисдикции, где это запрещено.": "To use hood with this wallet, accept the Terms of Use and the Privacy Policy and confirm you are not in a jurisdiction where this is prohibited.",
+  "Принимаю": "I accept",
+  "Продолжить": "Continue",
+  "Валюта курвы и дивиденды холдерам с каждой сделки": "Curve currency and holder dividends on every trade",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });
