@@ -20,7 +20,9 @@ BUILDS_URL = "https://hoodandarrow.com/staging/agents/builds.json"
 FALLBACK_MODEL = "openai/gpt-4o-mini"
 # Лимиты: кошелёк в минуту / в сутки, монета в минуту / в сутки, всё в сутки.
 LIMITS = "wallet_min=6,wallet_day=60,coin_min=20,coin_day=200,all_day=1500"
-# Секреты (wrangler secret put …): OPENROUTER_KEY — обязательный,
+# Секреты (wrangler secret put …): OPENROUTER_KEY — обязательный;
+# FIREBASE_DB_SECRET — секрет базы (Firebase → Project settings → Service
+# accounts → Database secrets), чтобы писать в aichat/ мимо закрытых правил;
 # CHAT_SECRET — необязательный (иначе выводится из ключа OpenRouter).
 
 [[durable_objects.bindings]]
