@@ -78,6 +78,17 @@ function SearchModal({ open, onClose }) {
   const [vol24, setVol24] = useState({});
   const [qPx, setQPx] = useState({});        // адрес валюты → $ за единицу
   const [dd, setDd] = useState(false);       // выпадающий список акций
+  const ddRef = React.useRef(null);
+  // меню закрывается кликом мимо или Esc — не уходом мыши (щель между
+  // кнопкой и меню закрывала его раньше, чем успеешь выбрать)
+  useEffect(() => {
+    if (!dd) return undefined;
+    const onDown = (e) => { if (ddRef.current && !ddRef.current.contains(e.target)) setDd(false); };
+    const onEsc = (e) => { if (e.key === "Escape") { e.stopPropagation(); setDd(false); } };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onEsc, true);
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onEsc, true); };
+  }, [dd]);
   const listRef = React.useRef(null);
 
   useEffect(() => {
@@ -195,7 +206,7 @@ function SearchModal({ open, onClose }) {
             <button type="button" className={`sr-chip ${pair === "all" ? "on" : ""}`} onClick={() => setPair("all")}>{t("Все")}</button>
             <button type="button" className={`sr-chip ${pair === "eth" ? "on" : ""}`} onClick={() => setPair("eth")}>ETH</button>
             {stocks.length > 0 && (
-              <span className="sr-dd" onMouseLeave={() => setDd(false)}>
+              <span className="sr-dd" ref={ddRef}>
                 <button type="button" className={`sr-chip ${stockSel ? "on" : ""}`} onClick={() => setDd(!dd)}>
                   {!stockSel ? t("Акции") : pair === "stocks" ? t("Все акции") : <QuoteLogo q={{ sym: (stocks.find(([a]) => a === pair) || [])[1] }} size={14} withSym />}
                   <Icon name="chevron" size={13} style={{ margin: 0, transform: dd ? "rotate(180deg)" : "", transition: "transform .18s" }} />
