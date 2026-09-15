@@ -68,6 +68,7 @@ const RPC = "https://rpc.mainnet.chain.robinhood.com";
 // реально тратит» не могут разойтись.
 const MAX_TOKENS = MAX_OUT_TOKENS;
 const MAX_HTML_BYTES = 200 * 1024;
+const MODEL_TIMEOUT_MS = 12 * 60 * 1000; // сколько ждём ответ модели
 
 const cfg = (() => {
   try { return JSON.parse(fs.readFileSync(path.join(HERE, "deploy-config.json"), "utf8")); }
@@ -528,27 +529,43 @@ async function main() {
 
   if (work.pid) await markBuilding(work.token, work.pid);
   await heartbeat("building", { token: work.token.toLowerCase(), pid: work.pid || "", text: String(work.task).slice(0, 120), model });
-  const res = await fetch(`${OR}/chat/completions`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${orKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": SITE,
-      "X-Title": "hood agent",
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: MAX_TOKENS,
-      messages: [{ role: "user", content: PROMPT(work.task, symbol) }],
-    }),
-  });
-
-  if (!res.ok) {
-    console.error(`OpenRouter ответил ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  // Модель может молчать долго (16k токенов у медленной модели — минуты),
+  // но не бесконечно: через MODEL_TIMEOUT_MS сдаёмся, снимаем «в работе» с
+  // доски и пишем провал в пульс — иначе запуск висит часами, а с ним и
+  // эстафета. Идея остаётся на доске — следующий заход попробует ещё раз.
+  const giveUp = async (why) => {
+    console.error(why);
+    if (work.pid) await markBuilding(work.token, null);
+    await heartbeat("failed", { token: work.token.toLowerCase(), pid: work.pid || "", text: String(work.task).slice(0, 120), note: why.slice(0, 160) });
     process.exit(1);
+  };
+  let res;
+  try {
+    res = await fetch(`${OR}/chat/completions`, {
+      method: "POST",
+      signal: AbortSignal.timeout(MODEL_TIMEOUT_MS),
+      headers: {
+        Authorization: `Bearer ${orKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": SITE,
+        "X-Title": "hood agent",
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: MAX_TOKENS,
+        messages: [{ role: "user", content: PROMPT(work.task, symbol) }],
+      }),
+    });
+  } catch (e) {
+    await giveUp(e?.name === "TimeoutError" || e?.name === "AbortError"
+      ? `Модель не ответила за ${Math.round(MODEL_TIMEOUT_MS / 60000)} минут — сдаюсь, попробую в следующий заход.`
+      : `Не достучался до OpenRouter: ${e?.message || e}`);
   }
 
-  const data = await res.json();
+  if (!res.ok) await giveUp(`OpenRouter ответил ${res.status}: ${(await res.text()).slice(0, 300)}`);
+
+  let data;
+  try { data = await res.json(); } catch (e) { await giveUp(`OpenRouter прислал не JSON: ${e?.message || e}`); }
   const html = stripFence(data?.choices?.[0]?.message?.content || "");
   const cost = Number(data?.usage?.cost ?? 0);
   const tokens = data?.usage?.total_tokens ?? 0;

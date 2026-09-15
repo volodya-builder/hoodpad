@@ -49,6 +49,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Модель ждём не больше 12 минут (MODEL_TIMEOUT_MS в agent-run.mjs);
+    # потолок на весь запуск — чтобы зависший шаг не держал эстафету часами.
+    timeout-minutes: 25
     steps:
       - name: Засечь время
         run: echo "T0=$(date +%s)" >> "$GITHUB_ENV"
