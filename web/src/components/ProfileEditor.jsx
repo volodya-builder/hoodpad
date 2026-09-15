@@ -1,15 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useLang } from "../lib/i18n.jsx";
-import { publicClient } from "../lib/web3.js";
-import { profileRegistryAbi } from "../lib/abi.js";
-import { PROFILE_REGISTRY_ADDRESS, PROFILES_LIVE } from "../lib/config.js";
+import { PROFILES_LIVE } from "../lib/config.js";
 import { fileToDataUrl } from "../lib/image.js";
-import { useProfile, invalidateProfile } from "../lib/profiles.js";
+import { useProfile, saveProfile } from "../lib/profiles.js";
 import Icon from "./Icon.jsx";
 
-// Настройка своего профиля: имя, аватар, X, Telegram, сайт — одной
-// транзакцией в ProfileRegistry (пишет только сам кошелёк). Аватар
-// сжимается на месте до 256px и ~30 КБ, чтобы транзакция была дешёвой.
+// Настройка своего профиля: имя, аватар, X, Telegram, сайт — бесплатно,
+// одной подписью кошелька (без транзакции и газа; см. lib/profiles.js).
+// Аватар сжимается на месте до 256px и ~30 КБ.
 const AVA_SIZE = 256;
 const AVA_BUDGET = 40_000; // символов data-URI (~30 КБ)
 
@@ -37,12 +35,7 @@ export default function ProfileEditor({ wallet, onDone }) {
     if (!wallet?.walletClient) return;
     setBusy(true); setErr("");
     try {
-      const hash = clear
-        ? await wallet.walletClient.writeContract({ address: PROFILE_REGISTRY_ADDRESS, abi: profileRegistryAbi, functionName: "clearProfile", args: [] })
-        : await wallet.walletClient.writeContract({ address: PROFILE_REGISTRY_ADDRESS, abi: profileRegistryAbi, functionName: "setProfile",
-            args: [f.name.trim().slice(0, 32), f.avatar, f.x.trim().slice(0, 120), f.telegram.trim().slice(0, 120), f.website.trim().slice(0, 200)] });
-      await publicClient.waitForTransactionReceipt({ hash });
-      invalidateProfile(addr);
+      await saveProfile(wallet, clear ? { name: "", avatar: "", x: "", telegram: "", website: "" } : f);
       setOpen(false); onDone?.();
     } catch (e2) { setErr(e2.shortMessage || e2.message || String(e2)); }
     setBusy(false);
@@ -73,7 +66,7 @@ export default function ProfileEditor({ wallet, onDone }) {
         </div>
       </div>
       <div className="pe-foot">
-        <span className="dim">{t("Профиль хранится в блокчейне — одна транзакция, пишет только ваш кошелёк. Пустое поле снимает значение.")}</span>
+        <span className="dim">{t("Бесплатно: кошелёк только подписывает, без транзакции и комиссии. Пустое поле снимает значение.")}</span>
         <div className="pe-btns">
           {cur && <button className="btn" disabled={busy} onClick={() => save(true)}>{t("Стереть")}</button>}
           <button className="btn" disabled={busy} onClick={() => setOpen(false)}>{t("Отмена")}</button>

@@ -68,8 +68,34 @@ export {
 /** Реактивный хук: текущая арена (с защитой трона), тикает каждые 30с. */
 /** enabled=false — арена выключена (FEATURES.arena): ни одного запроса в сеть.
  *  Раньше главная каждые 30 с тянула ВСЕ сделки платформы ради скрытой вкладки. */
+// Кэш исходных данных арены в localStorage: страница рисуется мгновенно из
+// прошлого захода, свежие данные подтягиваются следом (владелец 15.09.2026:
+// «читаю блокчейн» на пару секунд — недопустимо).
+const ARENA_LS = "hood_cache_arena_v1";
+const _bigR = (k, v) => (typeof v === "bigint" ? { __b: v.toString() } : v);
+const _bigV = (k, v) => (v && typeof v === "object" && "__b" in v ? BigInt(v.__b) : v);
+function readArenaCache() {
+  try {
+    const c = JSON.parse(localStorage.getItem(ARENA_LS) || "null", _bigV);
+    if (c && c.t && Date.now() - c.t < 6 * 3600 * 1000 && Array.isArray(c.tokens) && Array.isArray(c.trades)) return c;
+  } catch (e) { /* ignore */ }
+  return null;
+}
+function writeArenaCache(tokens, trades) {
+  try { localStorage.setItem(ARENA_LS, JSON.stringify({ t: Date.now(), tokens, trades: trades.slice(0, 4000) }, _bigR)); } catch (e) { /* переполнение — просто без кэша */ }
+}
+function computeArena(tokens, trades) {
+  const { chain, today } = buildChain(tokens, trades, 31);
+  const todaySt = chain.get(today) ?? arenaState(tokens, trades, today);
+  return { ...todaySt, tokens, trades };
+}
+
 export function useArena(enabled = true) {
-  const [st, setSt] = useState(null);
+  const [st, setSt] = useState(() => {
+    if (!enabled) return null;
+    const c = readArenaCache();
+    try { return c ? { ...computeArena(c.tokens, c.trades), cached: true } : null; } catch (e) { return null; }
+  });
   useEffect(() => {
     if (!enabled) return undefined;
     let alive = true;
@@ -77,9 +103,8 @@ export function useArena(enabled = true) {
       try {
         const [tokens, trades] = await Promise.all([loadTokens(), allTrades()]);
         if (!alive) return;
-        const { chain, today } = buildChain(tokens, trades, 31);
-        const todaySt = chain.get(today) ?? arenaState(tokens, trades, today);
-        setSt({ ...todaySt, tokens, trades });
+        setSt(computeArena(tokens, trades));
+        writeArenaCache(tokens, trades);
       } catch (e) { /* ignore */ }
     };
     pull();

@@ -5,7 +5,8 @@ import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { treasuryAbi } from "../lib/abi.js";
 import { TREASURY_ADDRESS, EXPLORER, FEATURES } from "../lib/config.js";
 import { useEthUsd, usd } from "../lib/price.js";
-import { loadTokens, allTrades, loadSplit, loadSupport, useSplit } from "../lib/data.js";
+import { loadTokens, allTrades, loadSplit, loadSupport, useSplit, subgraphTreasuryOps } from "../lib/data.js";
+import { loadArenaPayouts } from "../lib/arena.js";
 import { useLang } from "../lib/i18n.jsx";
 import Leaderboard from "./Leaderboard.jsx";
 
@@ -89,7 +90,7 @@ function Bars({ data, bins, fmtVal, hover, setHover, period }) {
 
 // Память вкладки между заходами (+ localStorage — мгновенно после перезагрузки)
 let _anaRaw = null;
-const ANA_LS = "hood_cache_analytics_v1";
+const ANA_LS = "hood_cache_analytics_v2";
 const _bigR = (k, v) => (typeof v === "bigint" ? { __b: v.toString() } : v);
 const _bigV = (k, v) => (v && typeof v === "object" && "__b" in v ? BigInt(v.__b) : v);
 try {
@@ -119,12 +120,20 @@ export default function Analytics() {
     (async () => {
       // Масштабируемая схема: 2 запроса к индексатору (токены + сделки),
       // казна — из кэша treasuryOps, и всего 3 RPC-вызова. Никаких циклов по пулам.
-      const [tokens, trades, split2, sup] = await Promise.all([
+      const [tokens, trades, split2, sup, ops, arenaPays] = await Promise.all([
         loadTokens(),
         allTrades(),
         loadSplit(),
         loadSupport().catch(() => ({ totalBought: 0, totalBurned: 0, buybackCount: null })),
+        subgraphTreasuryOps().catch(() => []),
+        loadArenaPayouts().catch(() => []),
       ]);
+      // выкупы по дням: старая казна (сабграф) + казна арены (события Buyback)
+      const buybacks = [
+        ...ops.filter((o) => o.kind === "buyback").map((o) => ({ ts: Number(o.timestamp) * 1000, eth: Number(o.ethAmount || 0) / 1e18 })),
+        ...arenaPays.flatMap(({ day, rows }) => rows.map((r) => ({ ts: Date.parse(day + "T00:00:00Z") + 3600_000, eth: r.eth || 0 }))),
+      ];
+      const launchTs = tokens.map((tk) => Number(tk.createdAt || 0)).filter((x) => x > 0);
       const shareBps = (split2?.creator ?? 50) * 100;
       for (const tr of trades) tr.shareBps = shareBps;
 
@@ -164,7 +173,7 @@ export default function Analytics() {
 
       if (!alive) return;
       _anaRaw = {
-        trades, now: Date.now(),
+        trades, now: Date.now(), launchTs, buybacks,
         launches: tokens.length,
         grads: tokens.filter((tk) => tk.graduated).length,
         treBal, received, spent,
@@ -209,6 +218,11 @@ export default function Analytics() {
     const t0 = day0.getTime() - (N - 1) * DAY;
     const volBars = Array(N).fill(0);
     const cntBars = Array(N).fill(0);
+    const lauBars = Array(N).fill(0);
+    const buyBars = Array(N).fill(0);
+    let chartLau = 0, chartBuy = 0;
+    for (const ts of raw.launchTs || []) { if (ts < t0) continue; lauBars[Math.min(N - 1, Math.floor((ts - t0) / DAY))] += 1; chartLau += 1; }
+    for (const b of raw.buybacks || []) { if (b.ts < t0) continue; buyBars[Math.min(N - 1, Math.floor((b.ts - t0) / DAY))] += b.eth; chartBuy += b.eth; }
     const bins = Array.from({ length: N }, (_, i) => ({ from: t0 + i * DAY, to: t0 + (i + 1) * DAY }));
     let chartVol = 0, chartCnt = 0;
     for (const tr of raw.trades) {
@@ -232,7 +246,7 @@ export default function Analytics() {
       };
     }
 
-    return { volume, creatorPaid, count: filtered.length, volBars, cntBars, bins, t0, tEnd: raw.now, prev, chartVol, chartCnt, chartDays: N };
+    return { volume, creatorPaid, count: filtered.length, volBars, cntBars, bins, t0, tEnd: raw.now, prev, chartVol, chartCnt, chartDays: N, lauBars, buyBars, chartLau, chartBuy };
   }, [raw, period]);
 
   // подписи оси времени под мини-графиками
@@ -265,8 +279,11 @@ export default function Analytics() {
       {!stats && !error && <div className="center">{t("Читаю блокчейн…")}</div>}
 
       {stats && raw && (() => {
-        const series = chart === "count" ? stats.cntBars : stats.volBars;
-        const fmtVal = chart === "count" ? (v, axis) => (axis ? String(Math.round(v)) : `${Math.round(v)}`) : (v, axis) => (axis ? usd(v * rate) : D(v));
+        const series = chart === "count" ? stats.cntBars : chart === "launch" ? stats.lauBars : chart === "buyback" ? stats.buyBars : stats.volBars;
+        const isCount = chart === "count" || chart === "launch";
+        const fmtVal = isCount ? (v, axis) => (axis ? String(Math.round(v)) : `${Math.round(v)}`) : (v, axis) => (axis ? usd(v * rate) : D(v));
+        const chartTotal = chart === "count" ? stats.chartCnt : chart === "launch" ? stats.chartLau : chart === "buyback" ? D(stats.chartBuy) : D(stats.chartVol);
+        const chartName = { vol: "Объём", count: "Сделки", launch: "Запуски", buyback: "Выкупы" }[chart];
         const hv = hover !== null && stats.bins[hover] ? { v: series[hover], from: stats.bins[hover].from, to: stats.bins[hover].to } : null;
         const d = (ts) => { const x = new Date(ts); return `${x.getDate()} ${["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"][x.getMonth()]}`; };
         return (
@@ -293,12 +310,14 @@ export default function Analytics() {
         <div className="ana-panel">
           <div className="ana-panel-head">
             <div>
-              <div className="ana-panel-val">{hv ? fmtVal(hv.v) : (chart === "count" ? stats.chartCnt : D(stats.chartVol))}</div>
-              <div className="ana-panel-sub">{hv ? d(hv.from) : `${t(chart === "count" ? "Сделки" : "Объём")}, ${stats.chartDays} ${t("дней")}`}</div>
+              <div className="ana-panel-val">{hv ? fmtVal(hv.v) : chartTotal}</div>
+              <div className="ana-panel-sub">{hv ? d(hv.from) : `${t(chartName)}, ${stats.chartDays} ${t("дней")}`}</div>
             </div>
             <div className="seg">
               <button type="button" className={`seg-btn ${chart === "vol" ? "on" : ""}`} onClick={() => setChart("vol")}>{t("Объём")}</button>
               <button type="button" className={`seg-btn ${chart === "count" ? "on" : ""}`} onClick={() => setChart("count")}>{t("Сделки")}</button>
+              <button type="button" className={`seg-btn ${chart === "launch" ? "on" : ""}`} onClick={() => setChart("launch")}>{t("Запуски")}</button>
+              <button type="button" className={`seg-btn ${chart === "buyback" ? "on" : ""}`} onClick={() => setChart("buyback")}>{t("Выкупы")}</button>
             </div>
           </div>
           <Bars data={series} bins={stats.bins} fmtVal={fmtVal} hover={hover} setHover={setHover} period={period} />

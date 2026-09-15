@@ -52,6 +52,15 @@
         }
       }
     },
+    "profiles": {
+      ".read": true,
+      "$addr": {
+        "$ts": {
+          ".write": "!data.exists() && $addr.matches(/^0x[0-9a-f]{40}$/) && $ts.matches(/^[0-9]{13}$/)",
+          ".validate": "newData.hasChildren(['p','s']) && newData.child('p').isString() && newData.child('p').val().length < 70000 && newData.child('s').isString() && newData.child('s').val().length == 132"
+        }
+      }
+    },
     "workshop": {
       ".read": true,
       "board": {

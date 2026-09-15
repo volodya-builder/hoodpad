@@ -9,6 +9,7 @@ import { useFavs, toggleFav } from "../lib/favs.js";
 import { useArena } from "../lib/arena.js";
 import { FEATURES } from "../lib/config.js";
 import { modelLogo, makerOf } from "../lib/models.mjs";
+import Who from "../components/Who.jsx";
 
 
 function TokenCard({ t, fav, onFav, cushion = 0 }) {
@@ -79,6 +80,42 @@ function TokenCard({ t, fav, onFav, cushion = 0 }) {
   );
 }
 
+/** Строка списка — как в Launches у Pons: логотип, имя и тикер, создатель ·
+ *  возраст, прогресс кривой, капа, статус. Сетка/список — выбор пользователя. */
+function TokenRow({ t, fav, onFav, cushion = 0 }) {
+  const { t: tr } = useLang();
+  const rate = useEthUsd();
+  const progress = Number((t.sold * 10000n) / t.cap) / 100;
+  const q = t.q || null;
+  const qPrice = useQuoteUsd(q?.addr);
+  const priceUnits = q ? Number(formatUnits(t.price, q.dec)) : Number(formatEther(t.price));
+  const mcap = q ? (qPrice > 0 ? priceUnits * 1e9 * qPrice : null) : priceUnits * 1e9 * rate;
+  return (
+    <a className="lt-row home-row" href={`#/token/${t.token}`}>
+      <button className={`fav-btn inline ${fav ? "on" : ""}`} title={tr(fav ? "Убрать из избранного" : "В избранное")}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onFav(t.token); }}>{fav ? "★" : "☆"}</button>
+      <span className="lt-logo">{t.meta.image ? <img src={t.meta.image} alt="" loading="lazy" /> : <Icon name="image" size={16} style={{ margin: 0, opacity: .5 }} />}</span>
+      <span className="lt-tok">
+        <span className="lt-name">{t.name} <em>${t.symbol}</em></span>
+        <span className="lt-sub">
+          {t.creator && <Who addr={t.creator} size={14} />}
+          {t.creator && t.createdAt ? " · " : ""}{t.createdAt ? timeAgo(t.createdAt) : ""}
+          {q && t.divBps > 0 && <> · <Icon name="droplet" size={11} style={{ margin: 0 }} /> {t.divBps / 100}%</>}
+        </span>
+      </span>
+      <span className="lt-prog"><span className="pbar"><span style={{ width: `${Math.min(progress, 100)}%` }} /></span><em>{fmt(Math.min(progress, 100), 0)}%</em></span>
+      <span className="lt-num">{mcap === null ? "…" : usd(mcap)}</span>
+      <span className="lt-st">
+        {t.graduated ? <span className="lt-tag gold">{tr("Градуировал")}</span>
+          : cushion > 0 ? <span className="dim"><Icon name="shield" size={12} style={{ margin: 0 }} /> {fmtEth(cushion)} ETH</span>
+          : <span className="dim">{tr("на кривой")}</span>}
+      </span>
+    </a>
+  );
+}
+
+const VIEW_LS = "hood_home_view";
+
 export default function Home({ onSearch }) {
   const { t } = useLang();
   const rate = useEthUsd();
@@ -90,6 +127,14 @@ export default function Home({ onSearch }) {
   const [tokens, setTokens] = useState(null);
   const [error, setError] = useState("");
   const [sort, setSort] = useState("new");
+  const [view, setView] = useState(() => { try { return localStorage.getItem(VIEW_LS) === "list" ? "list" : "grid"; } catch (e) { return "grid"; } });
+  const pickView = (v) => { setView(v); try { localStorage.setItem(VIEW_LS, v); } catch (e) { /* ignore */ } };
+  const List = ({ items }) => (
+    <div className="lt home-lt">
+      <div className="lt-h"><span /><span /><span>{t("Токен")}</span><span>{t("Кривая")}</span><span className="r">{t("Капа")}</span><span className="r" /></div>
+      {items.map((t2) => <TokenRow key={t2.token} t={t2} fav={favs.has(t2.token)} onFav={toggleFav} cushion={cushionOf(t2.token)} />)}
+    </div>
+  );
   const favs = useFavs();
   const support = useSupport(FEATURES.treasury);
   const arena = useArena(FEATURES.arena && FEATURES.arenaBanner); // без баннера главная не тянет все сделки
@@ -132,10 +177,16 @@ export default function Home({ onSearch }) {
             {" · "}{t("Токены, летящие к градации на Robinhood Chain.")}
           </div>
         </div>
-        <div className="seg">
-          {[["new", t("Новые")], ["old", t("Старые")], ["raised", t("Недавние покупки")], ["mcap", t("Капитализация")], ...(FEATURES.treasury ? [["cushion", t("Выкуп казны")]] : []), ["fav", t("Избранное")]].map(([k, lbl]) => (
-            <button key={k} type="button" className={`seg-btn ${sort === k ? "on" : ""}`} onClick={() => setSort(k)}>{lbl}</button>
-          ))}
+        <div className="home-controls">
+          <div className="seg">
+            {[["new", t("Новые")], ["old", t("Старые")], ["raised", t("Недавние покупки")], ["mcap", t("Капитализация")], ...(FEATURES.treasury ? [["cushion", t("Выкуп казны")]] : []), ["fav", t("Избранное")]].map(([k, lbl]) => (
+              <button key={k} type="button" className={`seg-btn ${sort === k ? "on" : ""}`} onClick={() => setSort(k)}>{lbl}</button>
+            ))}
+          </div>
+          <div className="seg seg-icons" title={t("Сетка или список")}>
+            <button type="button" className={`seg-btn ${view === "list" ? "on" : ""}`} onClick={() => pickView("list")} aria-label={t("Список")}><Icon name="list" size={15} style={{ margin: 0 }} /></button>
+            <button type="button" className={`seg-btn ${view === "grid" ? "on" : ""}`} onClick={() => pickView("grid")} aria-label={t("Сетка")}><Icon name="grid" size={15} style={{ margin: 0 }} /></button>
+          </div>
         </div>
       </div>
       <div className="search-row">
@@ -181,10 +232,11 @@ export default function Home({ onSearch }) {
         </div>
         {(
           <>
+            {view === "list" ? <List items={grad.slice((gpage - 1) * GRAD_PER_PAGE, gpage * GRAD_PER_PAGE)} /> : (
             <div className="tgrid">
               {grad.slice((gpage - 1) * GRAD_PER_PAGE, gpage * GRAD_PER_PAGE)
                    .map((t2) => <TokenCard key={t2.token} t={t2} fav={favs.has(t2.token)} onFav={toggleFav} cushion={cushionOf(t2.token)} />)}
-            </div>
+            </div>)}
             {grad.length > GRAD_PER_PAGE && (
               <div className="pager">
                 <div className="pg nav" onClick={() => setGpage(Math.max(1, gpage - 1))}>‹</div>
@@ -217,10 +269,11 @@ export default function Home({ onSearch }) {
         </div>
       ) : (
         <>
+          {view === "list" ? <List items={live.slice((lpage - 1) * LIVE_PER_PAGE, lpage * LIVE_PER_PAGE)} /> : (
           <div className="tgrid">
             {live.slice((lpage - 1) * LIVE_PER_PAGE, lpage * LIVE_PER_PAGE)
                  .map((t2) => <TokenCard key={t2.token} t={t2} fav={favs.has(t2.token)} onFav={toggleFav} cushion={cushionOf(t2.token)} />)}
-          </div>
+          </div>)}
           <div className="pager" style={{ paddingBottom: 60 }}>
             {live.length > LIVE_PER_PAGE && (
               <>

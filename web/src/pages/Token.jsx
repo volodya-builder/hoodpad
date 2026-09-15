@@ -3,7 +3,7 @@ import Icon from "../components/Icon.jsx";
 import Socials from "../components/Socials.jsx";
 import Who from "../components/Who.jsx";
 import { parseEther, formatEther, parseUnits, formatUnits } from "viem";
-import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
+import { publicClient, fmt, fmtEth, fmtEthFine, short } from "../lib/web3.js";
 import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi, zapAbi, feeSplitterAbi } from "../lib/abi.js";
 import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, FEATURES, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE } from "../lib/config.js";
 import { poolTrades, invalidateTrades, loadTokens, allTrades, parseMeta, cachedToken } from "../lib/data.js";
@@ -293,7 +293,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   // (решение владельца 15.09.2026): человек платит и получает ETH, акция
   // под капотом. units — сумма в валюте кривой.
   const money = (units) => moneyEth(units, Q ? quoteRate : rate, rate);
-  const ethStr = (units) => { const e = Q ? ethOf(units, quoteRate, rate) : Number(units); return e === null ? "…" : fmtEth(e); };
+  const ethStr = (units) => { const e = Q ? ethOf(units, quoteRate, rate) : Number(units); return e === null ? "…" : fmtEthFine(e); };
   // Платим ETH через zap (обмен по дороге, как терминал у Pons) или самой
   // валютой напрямую. По умолчанию — ETH, если zap умеет эту монету.
   // Платят всегда ETH (решение владельца 14.09.2026): переключатель
@@ -1315,7 +1315,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                   }}>
                     {dollars(tr.eth)}
                   </span>
-                  <span className="dim">${fmtEth(priceUsd)}</span>
+                  <span className="dim">${fmtEthFine(priceUsd)}</span>
                   <span>{compactN(tr.tokens)}</span>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0 }}>
                     <Who addr={tr.addr} title={t("Открыть профиль трейдера")} />
@@ -1862,7 +1862,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             </div>
             <div className="tp-cell"><span>{t("Время удержания")}</span><b>{holdStr2}</b></div>
             <div className="tp-cell"><span>{t("Ср. покупка / продажа")}</span>
-              <b>${fmtEth(avgB * curRate)} / {sTok > 0 ? `$${fmtEth(avgS * curRate)}` : "—"}</b>
+              <b>${fmtEthFine(avgB * curRate)} / {sTok > 0 ? `$${fmtEthFine(avgS * curRate)}` : "—"}</b>
             </div>
             <div className="tp-cell"><span>{t("Всего куплено")}</span>
               <b className="side-buy">{dollars(bEth)} · {buys.length} TXs</b>
@@ -1885,7 +1885,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           {sortTradesBy(trs, tpSort).slice(0, 40).map((x, i) => (
             <div className="tp-row" key={i}>
               <span className={`tp-type ${x.side}`}>{t(x.side === "buy" ? "Покупка" : "Продажа")}</span>
-              <span className="dim">${fmtEth(x.tokens > 0 ? (x.eth / x.tokens) * curRate : 0)}</span>
+              <span className="dim">${fmtEthFine(x.tokens > 0 ? (x.eth / x.tokens) * curRate : 0)}</span>
               <span>{compactN(x.tokens)}</span>
               <span className={x.side === "buy" ? "side-buy" : "side-sell"}>{dollars(x.eth)}</span>
               <a className="dim" href={`${EXPLORER}/tx/${x.tx}`} target="_blank" rel="noreferrer"

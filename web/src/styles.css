@@ -3961,3 +3961,28 @@ html[data-theme="light"] .panel { background: #fff; border-color: rgba(0,0,0,.08
 .tk-chg { font-weight: 500; }
 .rep-verdict { text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 13.5px; }
 .pf-pct { background: transparent; padding: 0; border-radius: 0; }
+/* главная: сетка / список */
+.home-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.seg-icons .seg-btn { padding: 6px 9px; display: inline-flex; align-items: center; }
+.home-lt .lt-h, .home-lt .lt-row { grid-template-columns: 28px 44px minmax(0, 1fr) 160px 110px 150px; }
+.home-lt .lt-row { min-height: 72px; }
+.fav-btn.inline { position: static; opacity: .5; width: 26px; height: 26px; font-size: 14px; background: transparent; border: 0; color: var(--text-dim); padding: 0; cursor: pointer; }
+.fav-btn.inline.on, .home-lt .lt-row:hover .fav-btn.inline { opacity: 1; }
+.lt-prog { display: flex; align-items: center; gap: 10px; }
+.lt-prog .pbar { flex: 1; margin: 0; height: 3px; background: rgba(255,255,255,.08); }
+.lt-prog .pbar > span { display: block; height: 100%; background: var(--gold); border-radius: 3px; }
+.lt-prog em { font-style: normal; font-size: 12.5px; color: var(--text-dim); font-variant-numeric: tabular-nums; width: 34px; text-align: right; }
+.lt-row.skel { pointer-events: none; animation: skel 1.4s var(--ease) infinite alternate; }
+.lt-row.skel .lt-logo { background: rgba(255,255,255,.06); }
+.lt-row.skel .lt-name, .lt-row.skel .lt-sub { display: block; height: 12px; border-radius: 6px; background: rgba(255,255,255,.06); width: 40%; }
+.lt-row.skel .lt-sub { width: 25%; margin-top: 8px; }
+@media (max-width: 860px) {
+  .home-lt .lt-h, .home-lt .lt-row { grid-template-columns: 22px 40px minmax(0, 1fr) 90px; }
+  .home-lt .lt-h > :nth-child(4), .home-lt .lt-row > :nth-child(4), .home-lt .lt-h > :nth-child(6), .home-lt .lt-row > :nth-child(6) { display: none; }
+  .home-lt .lt-h > :nth-child(5), .home-lt .lt-row > :nth-child(5) { display: block; grid-column: 4; }
+}
+@media (max-width: 720px) {
+  .home-controls { width: 100%; }
+  .home-controls .seg:first-child { flex: 1; min-width: 0; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+  .home-controls .seg-btn { white-space: nowrap; }
+}
