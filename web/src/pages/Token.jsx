@@ -1027,7 +1027,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           )}
 
           {/* Паспорт токена: накрутка и риски видны сразу */}
-          {passport?.dumping && (
+          {/* Плашка «Создатель продаёт» скрыта по просьбе владельца 15.09.2026
+              (FEATURES.creatorSellBanner); расчёт passport.dumping остаётся. */}
+          {FEATURES.creatorSellBanner && passport?.dumping && (
             <div className="cushion-banner" style={{ marginTop: 12, display: "block", borderColor: "#e06a4a", color: "#e06a4a" }}>
               <Icon name="alert" /> {t("Создатель продаёт: за сутки слил заметную часть своей позиции.")}
             </div>

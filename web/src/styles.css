@@ -1934,7 +1934,7 @@ html[data-theme="light"] .tos-ico { background: #ffffff; }
   .react-grid-item[data-blk="about"] { order: 5; }
   /* нижние вкладки в два ряда, широкие таблицы листаются внутри карточки,
      а не распирают страницу вбок */
-  .bt-card { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .grid-item > .card.bt-card { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
   .bt-card .bt-tabs { flex-wrap: wrap; position: sticky; left: 0; }
   .bt-card .bt-tab { padding: 8px 12px; font-size: 13px; }
   .arow { min-width: 560px; }
