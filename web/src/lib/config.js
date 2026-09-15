@@ -142,6 +142,7 @@ export const FEATURES = {
   // Чат холдеров с ИИ монеты (components/AgentChat.jsx + worker/). Включён
   // 15.09.2026; сообщения ходят через воркер Cloudflare на /api/chat/*.
   aiChat: true,
+  creatorSellBanner: false, // «Создатель продаёт: за сутки слил…» на странице монеты — убрана 15.09.2026 по просьбе владельца
 };
 
 export const TREASURY_POLICY = { cats: 20, arena: 10, buyback: 70 };
