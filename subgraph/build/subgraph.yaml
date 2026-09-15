@@ -1,4 +1,9 @@
 specVersion: 0.0.5
+features:
+  - grafting
+graft:
+  base: QmNYxmheyHF6vRyQgoujKYxyf6BGPNDpkMPWkRzV7KMzCY
+  block: 62830000
 schema:
   file: schema.graphql
 dataSources:
@@ -6,9 +11,9 @@ dataSources:
     name: LaunchpadFactory
     network: robinhood-mainnet
     source:
-      address: "0x68a983f0c73f1a5dc13aa3ae71a19a5787162cdb"
+      address: "0x08a887196fc31b89305ae03aa991917f6b1d23ec"
       abi: LaunchpadFactory
-      startBlock: 16758000
+      startBlock: 18192900
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -18,18 +23,41 @@ dataSources:
         - Protocol
       abis:
         - name: LaunchpadFactory
-          file: LaunchpadFactory\LaunchpadFactory.json
+          file: LaunchpadFactory/LaunchpadFactory.json
       eventHandlers:
         - event: TokenCreated(indexed address,indexed address,indexed address,string,string,string)
           handler: handleTokenCreated
-      file: LaunchpadFactory\LaunchpadFactory.wasm
+      file: LaunchpadFactory/LaunchpadFactory.wasm
+  - kind: ethereum
+    name: LaunchpadFactoryQuote
+    network: robinhood-mainnet
+    source:
+      address: "0xd7299e03c5e7d4f9f4c62f305a0b619359cf9a4f"
+      abi: LaunchpadFactoryQuote
+      startBlock: 62830000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Token
+        - Protocol
+      abis:
+        - name: LaunchpadFactoryQuote
+          file: LaunchpadFactoryQuote/LaunchpadFactoryQuote.json
+        - name: DividendToken
+          file: LaunchpadFactoryQuote/DividendToken.json
+      eventHandlers:
+        - event: TokenCreated(indexed address,indexed address,indexed address,address,uint16)
+          handler: handleQuoteTokenCreated
+      file: LaunchpadFactory/LaunchpadFactory.wasm
   - kind: ethereum
     name: BuybackTreasury
     network: robinhood-mainnet
     source:
-      address: "0x232cf3b0026ed39e1448567e8da55206375945e4"
+      address: "0xb45661df6625decdc697dd2fa0556c2637ea063a"
       abi: BuybackTreasury
-      startBlock: 16758000
+      startBlock: 18192900
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -39,7 +67,7 @@ dataSources:
         - Protocol
       abis:
         - name: BuybackTreasury
-          file: BuybackTreasury\BuybackTreasury.json
+          file: BuybackTreasury/BuybackTreasury.json
       eventHandlers:
         - event: Received(indexed address,uint256)
           handler: handleReceived
@@ -47,7 +75,7 @@ dataSources:
           handler: handleBuyback
         - event: Burned(indexed address,uint256)
           handler: handleBurned
-      file: BuybackTreasury\BuybackTreasury.wasm
+      file: BuybackTreasury/BuybackTreasury.wasm
 templates:
   - kind: ethereum
     name: BondingCurvePool
@@ -64,7 +92,7 @@ templates:
         - Protocol
       abis:
         - name: BondingCurvePool
-          file: BondingCurvePool\BondingCurvePool.json
+          file: BondingCurvePool/BondingCurvePool.json
       eventHandlers:
         - event: Buy(indexed address,uint256,uint256,uint256)
           handler: handleBuy
@@ -72,4 +100,4 @@ templates:
           handler: handleSell
         - event: Graduated(uint256,uint256)
           handler: handleGraduated
-      file: templates\BondingCurvePool\BondingCurvePool.wasm
+      file: templates/BondingCurvePool/BondingCurvePool.wasm

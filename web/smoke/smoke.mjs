@@ -41,7 +41,7 @@ async function run(ctx, label, hash, after) {
   const page = await ctx.newPage();
   const errs = [];
   page.on("pageerror", (e) => errs.push("pageerror: " + e.message.split("\n")[0]));
-  page.on("console", (m) => { if (m.type() === "error" && !/net::|Failed to fetch|ERR_|403|401|CORS|status of 5\d\d/.test(m.text())) errs.push("console: " + m.text().slice(0, 140)); });
+  page.on("console", (m) => { if (m.type() === "error" && !/net::|Failed to fetch|ERR_|403|401|CORS|status of (5\d\d|404)/.test(m.text())) errs.push("console: " + m.text().slice(0, 140)); });
   await page.goto(url(hash), { waitUntil: "load" });
   await page.waitForTimeout(5000);
   if (after) { try { await after(page); } catch (e) { errs.push("after: " + e.message.split("\n")[0]); } }

@@ -71,6 +71,39 @@ const poolAbi = parseAbi(["function graduated() view returns (bool)"]);
 const gql = (q) => fetch(SUBGRAPH, { method: "POST", headers: { "Content-Type": "application/json" },
   body: JSON.stringify({ query: q }) }).then((r) => r.json()).then((j) => j.data);
 
+/** Сделки монет за валюту → ETH-эквивалент, той же формулой, что на сайте
+ *  (web/src/lib/data.js → toEthEquivalent): курс валюты с обозревателя,
+ *  ETH — с coingecko/binance. Без курса сделка остаётся с нулём. */
+const EXPLORER_API = process.env.EXPLORER_API || "https://robinhoodchain.blockscout.com/api/v2";
+async function ethUsdRate() {
+  const srcs = [
+    async () => (await (await fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd")).json()).ethereum.usd,
+    async () => parseFloat((await (await fetch("https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT")).json()).price),
+    async () => parseFloat((await (await fetch("https://api.coinbase.com/v2/prices/ETH-USD/spot")).json()).data.amount),
+  ];
+  for (const s of srcs) { try { const v = await s(); if (v > 0) return v; } catch (e) { /* дальше */ } }
+  return 0;
+}
+async function quoteTradesToEth(trades) {
+  const q = trades.filter((t) => t.quote);
+  if (!q.length) return;
+  const rate = await ethUsdRate();
+  const quotes = [...new Set(q.map((t) => t.quote))];
+  const info = {};
+  for (const a of quotes) {
+    let usd = 0, dec = 18;
+    try { usd = parseFloat((await (await fetch(`${EXPLORER_API}/tokens/${a}`)).json()).exchange_rate) || 0; } catch (e) { /* нет курса */ }
+    try { dec = Number(await pub.readContract({ address: a, abi: [{ type: "function", name: "decimals", stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] }], functionName: "decimals" })); } catch (e) { /* 18 */ }
+    info[a] = { usd, dec };
+  }
+  for (const t of q) {
+    const { usd, dec } = info[t.quote];
+    const k = rate > 0 && usd > 0 ? usd / rate : 0;
+    t.eth = (Number(t.ethRaw) / 10 ** dec) * k;
+    t.fee = (Number(t.feeRaw) / 10 ** dec) * k;
+  }
+}
+
 /** Токены и сделки в формате сайта — полная история, иначе подиум разойдётся с экраном. */
 async function loadArenaData() {
   const td = await gql(`{ tokens(first: 500) { id symbol creator pool createdAt graduated ethReserve tokensSold } }`);
@@ -81,19 +114,24 @@ async function loadArenaData() {
   }));
   const trades = [];
   let beforeTs = null;
+  // сабграф 3.1.0+: у сделки есть quote (валюта курвы). Без поля — старый сабграф.
+  let hasQuote = true;
+  try { const t = await gql("{ trades(first: 1) { quote } }"); hasQuote = !!t; } catch (e) { hasQuote = false; }
   for (let page = 0; page < 60; page++) {
     const cond = beforeTs ? `, where: { timestamp_lt: "${beforeTs}" }` : "";
     const d = await gql(`{ trades(first: 1000, orderBy: timestamp, orderDirection: desc${cond}) {
-      pool trader isBuy ethAmount tokenAmount fee timestamp } }`);
+      pool trader isBuy ethAmount tokenAmount fee timestamp${hasQuote ? " quote" : ""} } }`);
     const rows = d?.trades || [];
     for (const l of rows) {
       trades.push({ pool: l.pool.toLowerCase(), side: l.isBuy ? "buy" : "sell", addr: l.trader,
         eth: Number(l.ethAmount) / 1e18, tokens: Number(l.tokenAmount) / 1e18,
-        fee: Number(l.fee) / 1e18, ts: Number(l.timestamp) * 1000 });
+        fee: Number(l.fee) / 1e18, ts: Number(l.timestamp) * 1000,
+        quote: l.quote ? String(l.quote).toLowerCase() : null, ethRaw: l.ethAmount, feeRaw: l.fee });
     }
     if (rows.length < 1000) break;
     beforeTs = rows[rows.length - 1].timestamp;
   }
+  await quoteTradesToEth(trades);
   // свежесть индексатора: платить по отставшим данным нельзя
   const meta = await gql(`{ _meta { block { number } } }`);
   const head = await pub.getBlockNumber();

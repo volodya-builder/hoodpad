@@ -8,7 +8,9 @@ type Token @entity(immutable: false) {
   createdAt: BigInt!
   createdBlock: BigInt!
   graduated: Boolean!
-  ethReserve: BigInt!
+  quote: Bytes          # валюта курвы: null — ETH, иначе адрес ERC20 (квот-фабрика)
+  divBps: Int           # налог в пользу холдеров (монеты за валюту); null/0 — нет. Nullable — ради графта
+  ethReserve: BigInt!   # у монет за валюту — в единицах валюты
   tokensSold: BigInt!
   tradesCount: Int!
   volumeEth: BigInt!
@@ -23,6 +25,7 @@ type Trade @entity(immutable: true) {
   pool: Bytes!
   trader: Bytes!
   isBuy: Boolean!
+  quote: Bytes          # null — сделка в ETH; иначе ethAmount и fee — в единицах этой валюты
   ethAmount: BigInt!
   tokenAmount: BigInt!
   fee: BigInt!
