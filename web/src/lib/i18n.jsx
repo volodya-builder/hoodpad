@@ -1471,6 +1471,21 @@ const EN = {
   "Агент строит одну страницу за раз, не трогает деньги, не даёт финансовых советов и не выходит за свой поддомен.": "The agent builds one page at a time, never touches money, gives no financial advice and never leaves its own subdomain.",
   "Это зашито в код и не меняется голосованием": "This is hard-coded and cannot be changed by a vote",
   "У этой монеты ИИ не включён: агент на неё не работает, идеи копить некуда. Включить может создатель одной подписью на странице монеты.": "This coin's AI is off: the agent does not work on it, so there is nowhere to collect ideas. The creator can enable it with one signature on the coin page.",
+  "Дивиденды": "Dividends",
+  "С каждой сделки холдерам, в": "Of every trade to holders, in",
+  "Приходит на кошелёк само раз в час.": "Lands in your wallet automatically every hour.",
+  "Дивиденды роздано": "Dividends paid out",
+  "вам начислено": "credited to you",
+  "держателям, в": "to holders, in",
+  "в копилке": "in the pot",
+  "Забрать дивиденды": "Claim dividends",
+  "Накопленное раз в час само приходит на кошелёк; забрать можно и вручную.": "What you have earned lands in your wallet automatically every hour; you can also claim it by hand.",
+  "С каждой сделки холдерам. Приходит на кошелёк само раз в час.": "Of every trade, to holders. Lands in your wallet automatically every hour.",
+  "Придёт в кошелёк в": "Arrives in your wallet as",
+  "Покупают и продают за ETH — одной транзакцией. Дивиденды холдерам начисляются с каждой сделки.": "Buy and sell with ETH — one transaction. Holder dividends accrue on every trade.",
+  "дивиденды холдерам с каждой сделки": "dividends to holders on every trade",
+  "Кап создателя — {cap} за всё время кривой (10% порога). {how} Перебор откатит контракт.": "Creator cap — {cap} over the whole curve (10% of the threshold). {how} Going over reverts the contract.",
+  "Платите ETH, одной транзакцией.": "You pay ETH, in one transaction.",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

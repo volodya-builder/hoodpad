@@ -6,7 +6,7 @@ import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER, QUOTE_FACTORY_ADDRESS, QUO
 import { poolTrades, invalidateTrades, loadTokens, allTrades, parseMeta } from "../lib/data.js";
 import { computeTrust } from "../lib/trust.js";
 import { honestVolume } from "../lib/fairvol.js";
-import { useEthUsd, useQuoteUsd, usd } from "../lib/price.js";
+import { useEthUsd, useQuoteUsd, usd, moneyEth, ethOf } from "../lib/price.js";
 import Chat from "./Chat.jsx";
 import Workshop from "../components/Workshop.jsx";
 import Journal from "../components/Journal.jsx";
@@ -17,7 +17,7 @@ import { useLang } from "../lib/i18n.jsx";
 import { modelLogo, makerOf } from "../lib/models.mjs";
 import CandleChart from "../components/CandleChart.jsx";
 import TokenSidebar from "../components/TokenSidebar.jsx";
-import Dividends from "../components/Dividends.jsx";
+import { useDividends } from "../components/Dividends.jsx";
 import { useFavs, toggleFav } from "../lib/favs.js";
 import { currentPosition } from "../lib/position.js";
 import RGL, { WidthProvider } from "react-grid-layout";
@@ -207,6 +207,11 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   // знаки и символ её валюты (у USDG 6). Всё, что ниже считает деньги
   // кривой, ходит через эти три функции, а не через parseEther напрямую.
   const Q = data?.q || null;
+  // Все суммы страницы — в ETH и долларах, и у монеты за акцию тоже
+  // (решение владельца 15.09.2026): человек платит и получает ETH, акция
+  // под капотом. units — сумма в валюте кривой.
+  const money = (units) => moneyEth(units, Q ? quoteRate : rate, rate);
+  const ethStr = (units) => { const e = Q ? ethOf(units, quoteRate, rate) : Number(units); return e === null ? "…" : fmtEth(e); };
   // Платим ETH через zap (обмен по дороге, как терминал у Pons) или самой
   // валютой напрямую. По умолчанию — ETH, если zap умеет эту монету.
   // Платят всегда ETH (решение владельца 14.09.2026): переключатель
@@ -223,6 +228,10 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   // В чём считает цену и резерв САМА кривая (у quote-монеты — всегда валюта).
   const CSYM = Q ? Q.sym : "ETH";
   const fc = (v) => (Q ? formatUnits(v, Q.dec) : formatEther(v));
+  // Дивиденды холдерам (монеты за валюту с налогом): цифры уходят в карточку
+  // «О токене» — чип со ставкой, «роздано», кнопка «Забрать». Строго после
+  // useState(data): хук читает data.q.
+  const dv = useDividends(tokenAddress, wallet, Q);
   // Запас на газ нужен только когда платим нативным ETH.
   const GAS_KEEP = PAY ? 0 : 0.0003;
   const payBal = PAY ? (data?.walletQuote ?? 0n) : (data?.walletEth ?? 0n);
@@ -831,7 +840,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const mcapEth = data.q ? 0 : Number(formatEther(data.price)) * 1_000_000_000;
   const mcapQuote = data.q ? Number(formatUnits(data.price, data.q.dec)) * 1_000_000_000 : 0;
   const mcapUsd = data.q
-    ? (quoteRate > 0 ? usd(mcapQuote * quoteRate) : `${fmt(mcapQuote, 2)} ${data.q.sym}`)
+    ? (quoteRate > 0 ? usd(mcapQuote * quoteRate) : "…")
     : usd(mcapEth * rate);
 
   // сортировка таблиц сделок по клику на заголовок колонки
@@ -977,14 +986,14 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           )}
 
           {/* Паспорт токена: накрутка и риски видны сразу */}
-          {passport && (
-            <>
-              {passport.dumping && (
-                <div className="cushion-banner" style={{ marginTop: 12, display: "block", borderColor: "#e06a4a", color: "#e06a4a" }}>
-                  ⚠ {t("Создатель продаёт: за сутки слил заметную часть своей позиции.")}
-                </div>
-              )}
-              <div className="hero-chips" style={{ marginTop: 12 }}>
+          {passport?.dumping && (
+            <div className="cushion-banner" style={{ marginTop: 12, display: "block", borderColor: "#e06a4a", color: "#e06a4a" }}>
+              ⚠ {t("Создатель продаёт: за сутки слил заметную часть своей позиции.")}
+            </div>
+          )}
+          {(passport || dv.on) && (
+            <div className="hero-chips" style={{ marginTop: 12 }}>
+              {passport && (<>
                 <span className="chip" title={t("Сколько токенов сейчас держит кошелёк создателя")}>
                   🏹 {t("Создатель держит")} <b>{fmt(passport.crePct, 1)}%</b>
                 </span>
@@ -996,8 +1005,15 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                     ✅ {t("Честный объём")} <b>{fmt(passport.honestPct, 0)}%</b>
                   </span>
                 )}
-              </div>
-            </>
+              </>)}
+              {/* Дивиденды холдерам: ставка с каждой сделки, в валюте монеты.
+                  Было отдельным блоком на «Активности» — перенесено сюда 15.09.2026. */}
+              {dv.on && (
+                <span className="chip" title={t("С каждой сделки холдерам. Приходит на кошелёк само раз в час.")}>
+                  💧 {t("Дивиденды")} <b>{dv.st.divBps / 100}%</b>
+                </span>
+              )}
+            </div>
           )}
 
           {/* hood AI — судья платформы: Trust Score с объяснением.
@@ -1050,9 +1066,21 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <div className="stat-card">
               <div className="k">{t("Комиссии создателя")}</div>
               <div className="v" style={{ color: "var(--gold)" }}>
-                {fmtEth(fc(extra.creatorFees ?? 0n))} {CSYM}
+                {money(fc(extra.creatorFees ?? 0n))}
               </div>
             </div>
+            {dv.on && (
+              <div className="stat-card">
+                <div className="k">💧 {t("Дивиденды роздано")}</div>
+                <div className="v" style={{ color: "var(--gold)" }}>{money(dv.num(dv.st.total))}</div>
+                <div className="dim" style={{ fontSize: 11, marginTop: 4 }}>
+                  {wallet
+                    ? <>{t("вам начислено")} {dollars(dv.num(dv.st.accum))}{dv.st.mine > 0n && <> · {t("ждёт")} {dollars(dv.num(dv.st.mine))}</>}</>
+                    : <>{dv.st.divBps / 100}% {t("с каждой сделки")}</>}
+                  {dv.st.pot > 0n && <> · {t("в копилке")} {dollars(dv.num(dv.st.pot))}</>}
+                </div>
+              </div>
+            )}
             {cushion > 0 && (
               <div className="stat-card">
                 <div className="k">🛡 {t("Выкуп казны")}</div>
@@ -1076,6 +1104,14 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               {t("Забрать комиссии создателя")}
             </button>
           )}
+          {dv.on && wallet && dv.st.mine > 0n && (
+            <button className="btn" style={{ marginTop: 12, marginLeft: 8 }} disabled={dv.busy}
+                    title={`${t("Накопленное раз в час само приходит на кошелёк; забрать можно и вручную.")} ${t("Придёт в кошелёк в")} ${dv.q.sym}.`}
+                    onClick={() => dv.claim(onConnect)}>
+              {dv.busy ? t("Забираю…") : `${t("Забрать дивиденды")} ${money(dv.num(dv.st.mine))}`}
+            </button>
+          )}
+          {dv.err && <div className="error" style={{ marginTop: 8 }}>{dv.err}</div>}
 
           <p className="dim" style={{ marginTop: 18 }}>
             {t("Токен:")}{" "}
@@ -1164,9 +1200,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               )}
             </div>
             <div className="tk-cells">
-              <div className="tk-cell"><span>{t("Цена")}</span><b>{fmtEth(fc(data.price))} {CSYM}</b></div>
-              <div className="tk-cell"><span>{t("Собрано")}</span><b>{fmtEth(fc(data.reserve))} {CSYM}</b></div>
-              <div className="tk-cell"><span>{t("Объём 24ч")}</span><b>{tokStats ? fmtEth(tokStats.vol24) : "0"} {CSYM}</b></div>
+              <div className="tk-cell"><span>{t("Цена")}</span><b>{ethStr(fc(data.price))} ETH</b></div>
+              <div className="tk-cell"><span>{t("Собрано")}</span><b>{money(fc(data.reserve))}</b></div>
+              <div className="tk-cell"><span>{t("Объём 24ч")}</span><b>{tokStats ? money(tokStats.vol24) : "0 ETH"}</b></div>
               <div className="tk-cell"><span>ATH</span><b>{tokStats && curRate > 0 ? usd(tokStats.ath * curRate) : "—"}</b></div>
               {!data.graduated && (
                 <div className="tk-cell"><span>{t("До градации")}</span><b>{fmt(progress, 1)}%</b></div>
@@ -1385,7 +1421,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 </span>
                 <a href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer"
                    style={{ color: "inherit" }} title={t("Открыть транзакцию")}>
-                  {fmtEth(tr.eth)} {CSYM} <span className="usd-sub">({dollars(tr.eth)})</span>
+                  {ethStr(tr.eth)} ETH <span className="usd-sub">({dollars(tr.eth)})</span>
                 </a>
                 <span>{fmt(tr.tokens, 0)}</span>
                 <a className="mono" href={`${EXPLORER}/address/${tr.addr}`} target="_blank" rel="noreferrer"
@@ -1620,7 +1656,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                   {tab === "buy"
                     ? `${fmt(formatEther(quote.value), 2)} ${data.symbol}`
                     : quote.kind === "quote"
-                      ? `${fmtEth(fc(quote.value))} ${CSYM} (${t("в ETH — после разрешения")})`
+                      ? money(fc(quote.value))
                       : `${fmtEth(fq(quote.value))} ${QSYM}`}
                 </b>
               </div>
@@ -1690,7 +1726,6 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <Chat tokenAddress={tokenAddress} wallet={wallet} onConnect={onConnect} embedded />
           ) : (
             <div className="side-act">
-              <Dividends token={tokenAddress} wallet={wallet} q={data.q} onConnect={onConnect} />
               {!history && <div className="dim" style={{ padding: 12 }}>{t("Читаю события…")}</div>}
               {history && history.trades.length === 0 && (
                 <div className="dim" style={{ padding: 12 }}>{t("Пока нет сделок.")}</div>
