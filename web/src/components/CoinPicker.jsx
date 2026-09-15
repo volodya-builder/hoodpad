@@ -29,7 +29,7 @@ function AiChip({ x, t }) {
   );
 }
 
-export default function CoinPicker({ tokens, value, onChange }) {
+export default function CoinPicker({ tokens, value, onChange, compact = false }) {
   const { t } = useLang();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -68,8 +68,11 @@ export default function CoinPicker({ tokens, value, onChange }) {
 
   return (
     <div className={`cp ${open ? "open" : ""}`} ref={wrap}>
-      <button type="button" className="cp-btn" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}>
-        {cur ? (<>
+      <button type="button" className={`cp-btn ${compact ? "cp-compact" : ""}`} onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}>
+        {compact ? (<>
+          <Icon name="search" size={15} style={{ margin: 0 }} />
+          <span className="cp-cur"><b>{cur ? t("Сменить монету") : t("Выберите монету")}</b></span>
+        </>) : cur ? (<>
           <Logo src={cur.meta?.image} />
           <span className="cp-cur"><b>${cur.symbol}</b><span className="cp-name">{cur.name}</span></span>
           <AiChip x={cur} t={t} />

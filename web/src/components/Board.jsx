@@ -8,11 +8,43 @@ import { feeSplitterAbi } from "../lib/abi.js";
 import { useEthUsd, useQuoteUsd } from "../lib/price.js";
 import { modelLogo } from "../lib/models.mjs";
 import CoinPicker from "./CoinPicker.jsx";
+import CoinHero from "./CoinHero.jsx";
 import {
   PROPOSE_MIN, FREE_BUILDS, AGENT_PERIOD_MIN,
   loadBoard, watchBoard, tallyBoard, submitProposal, submitVote,
-  proposalMessage, voteMessage, newPid, balanceOf, loadBuilds, nextAgentWake,
+  proposalMessage, voteMessage, newPid, balanceOf, loadBuilds, nextAgentWake, loadHeartbeat,
 } from "../lib/board.js";
+import Icon from "./Icon.jsx";
+
+/** Панель «что делает агент»: одно состояние крупно, подпись и кольцо таймера. */
+function AgentStatus({ st, wakeIn, period, budgetLabel, budgetTitle, t }) {
+  const frac = Math.max(0, Math.min(1, 1 - wakeIn / period));
+  const R = 20, C = 2 * Math.PI * R;
+  const mm = Math.floor(wakeIn / 60000), ss = Math.floor((wakeIn % 60000) / 1000);
+  return (
+    <div className={`ag ag-${st.kind}`}>
+      <div className="ag-ico">
+        {st.kind === "building" && <span className="ag-spin" />}
+        {st.kind === "queued" && (
+          <svg viewBox="0 0 48 48" width="48" height="48" className="ag-ring">
+            <circle cx="24" cy="24" r={R} className="ag-ring-bg" />
+            <circle cx="24" cy="24" r={R} className="ag-ring-fg" strokeDasharray={C} strokeDashoffset={C * (1 - frac)} />
+          </svg>
+        )}
+        {st.kind === "idle" && <span className="ag-dot" />}
+        {st.kind === "paused" && <Icon name="pause" size={20} style={{ margin: 0 }} />}
+        {st.kind === "failed" && <Icon name="alert" size={20} style={{ margin: 0 }} />}
+        {st.kind === "queued" && <span className="ag-time">{mm}:{String(ss).padStart(2, "0")}</span>}
+      </div>
+      <div className="ag-body">
+        <div className="ag-title">{st.title}</div>
+        <div className="ag-sub">{st.sub}</div>
+        {st.note && <div className="ag-note">{st.note}</div>}
+      </div>
+      <span className="board-budget ag-budget" title={budgetTitle}>{budgetLabel}</span>
+    </div>
+  );
+}
 
 /** Доска идей монеты + что построено. token — зафиксировать монету
  *  (страница монеты); без него — выбор монеты сверху (вкладка «ИИ»). */
@@ -30,6 +62,7 @@ export default function Board({ token: fixed, wallet, onConnect, embedded = fals
   const [now, setNow] = useState(Date.now());
   const [aiOn, setAiOn] = useState(null);
   const [budget, setBudget] = useState(null); // { eth, erc20, sym, dec }
+  const [hb, setHb] = useState(null); // пульс агента из CI
   const ethRate = useEthUsd();
   const tk = useMemo(() => (tokens || []).find((x) => x.token.toLowerCase() === (sel || "").toLowerCase()) || null, [tokens, sel]);
   const quoteRate = useQuoteUsd(tk?.q?.addr);
@@ -65,6 +98,14 @@ export default function Board({ token: fixed, wallet, onConnect, embedded = fals
     const poll = setInterval(() => { loadBoard(sel).then((b) => { if (alive) setBoard(b); }).catch(() => {}); }, 10_000);
     return () => { alive = false; stop(); clearInterval(poll); };
   }, [sel]);
+
+  // пульс агента — раз в 15 с
+  useEffect(() => {
+    let alive = true;
+    const go = () => loadHeartbeat().then((h) => { if (alive) setHb(h); });
+    go(); const i = setInterval(go, 15_000);
+    return () => { alive = false; clearInterval(i); };
+  }, []);
 
   // построенное — из builds.json (обновляется раз в 30 с)
   useEffect(() => {
@@ -167,32 +208,45 @@ export default function Board({ token: fixed, wallet, onConnect, embedded = fals
   const buildingProp = building ? tally.list.find((p) => p.pid === building.pid) : null;
   const aiOff = SPLITTER_LIVE && aiOn === false;
 
+  // ---- что делает агент прямо сейчас — одно состояние для панели
+  const period = AGENT_PERIOD_MIN * 60000;
+  const hbMine = hb && hb.token && hb.token.toLowerCase() === (sel || "").toLowerCase() ? hb : null;
+  const hbAge = hb?.at ? now - hb.at : null;
+  const lastSeen = hbAge === null ? "" : hbAge < 90_000 ? t("только что") : `${Math.round(hbAge / 60000)} ${t("мин назад")}`;
+  const hbLate = hbAge !== null && hbAge > 15 * 60000;
+  const topIdea = tally?.list?.[0] || null;
+  const lastBuild = myBuilds[0] || null;
+  const agentSt = (() => {
+    const seen = lastSeen ? `${t("агент был на связи")} ${lastSeen}` : t("агент заходит каждые 5 минут");
+    const late = hbLate ? ` · ${t("задерживается — GitHub иногда запаздывает")}` : "";
+    if (aiOff) return { kind: "paused", title: t("На паузе"), sub: t("ИИ у этой монеты не включён — включает создатель на странице монеты.") };
+    if (buildingProp || (hbMine && hbMine.state === "building" && hbAge < 20 * 60000 && !builtPids.has(hbMine.pid)))
+      return { kind: "building", title: t("Строит"), sub: `«${(buildingProp?.text || hbMine?.text || "").slice(0, 90)}»`, note: hbMine?.model ? `${t("модель")}: ${hbMine.model}` : undefined };
+    if (hbMine && hbMine.state === "failed" && hbAge < 30 * 60000 && lastBuild && lastBuild.failed && lastBuild.pid === hbMine.pid)
+      return { kind: "failed", title: t("Последняя сборка не удалась"), sub: hbMine.note || t("страница не прошла проверку, идея снята с доски"), note: seen };
+    if (!tally || tally.list.length === 0) return { kind: "idle", title: t("Ждёт идей"), sub: t("Доска пуста — агент проснётся, как только появится идея с голосом."), note: seen + late };
+    if (!(topIdea.weight > 0n)) return { kind: "idle", title: t("Ждёт голосов"), sub: t("Идеи есть, но ни у одной нет веса — проголосуйте."), note: seen + late };
+    if (freeLeft === 0 && paidBuilds !== null && paidBuilds === 0)
+      return { kind: "paused", title: t("На паузе — бюджет пуст"), sub: t("Бесплатные сборки кончились; 10% комиссии с каждой сделки пополняют бюджет монеты."), note: seen };
+    return { kind: "queued", title: t("В очереди"), sub: `${t("заберёт")} «${String(topIdea.text).slice(0, 70)}» ${t("при следующем заходе")}`, note: seen + late };
+  })();
+
   if (!fixed && tokens === null) return <div className="ai-empty">{t("Загружаю…")}</div>;
   if (!fixed && !tokens.length) return <div className="ai-empty">{t("Пока нет ни одной монеты.")}</div>;
 
   return (
     <div className={`board ${embedded ? "board-emb" : ""}`}>
-      <div className="board-head">
-        {!fixed && (
-          <CoinPicker tokens={tokens} value={sel} onChange={setSel} />
-        )}
-        <div className="board-agent">
-          {aiOff ? (
-            <span className="board-st off">{t("ИИ у монеты не включён — создатель не подписал включение")}</span>
-          ) : buildingProp ? (
-            <span className="board-st work"><i className="ai-dot work" /> {t("агент строит")}: «{buildingProp.text.slice(0, 60)}»</span>
-          ) : (
-            <span className="board-st live"><i className="ai-dot live" /> {t("агент заглянет через")} {mm}:{String(ss).padStart(2, "0")}</span>
-          )}
-          <span className="board-budget" title={t("Первые сборки за счёт hood, дальше — на бюджет монеты: 10% комиссии с каждой сделки")}>
-            {freeLeft > 0
-              ? t("{n} сборки бесплатно").replace("{n}", String(freeLeft))
-              : paidBuilds !== null
-                ? t("бюджет ≈ {n} сборок").replace("{n}", String(paidBuilds))
-                : t("бюджет: по комиссиям монеты")}
-          </span>
-        </div>
-      </div>
+      {!fixed && (
+        <CoinHero x={tk} aiOn={SPLITTER_LIVE ? aiOn : null}
+                  picker={<CoinPicker tokens={tokens} value={sel} onChange={setSel} compact={!!tk} />} />
+      )}
+      <AgentStatus st={agentSt} wakeIn={wakeIn} period={period} t={t}
+        budgetTitle={t("Первые сборки за счёт hood, дальше — на бюджет монеты: 10% комиссии с каждой сделки")}
+        budgetLabel={freeLeft > 0
+          ? t("{n} сборки бесплатно").replace("{n}", String(freeLeft))
+          : paidBuilds !== null
+            ? t("бюджет ≈ {n} сборок").replace("{n}", String(paidBuilds))
+            : t("бюджет: по комиссиям монеты")} />
 
       <div className="board-cols">
         <div className="board-main">

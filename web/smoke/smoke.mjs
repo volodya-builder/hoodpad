@@ -71,7 +71,7 @@ await desk.close();
 console.log("== телефон 375px");
 const mob = await browser.newContext({ ...devices["iPhone 13"], locale: "ru-RU" });
 for (const [label, hash] of PAGES) await run(mob, label, hash);
-await run(mob, "монета · активность (таблица)", `#/token/${DOGE}`, clickTab(".bt-tabs:not(.side-tabs) .bt-tab", "Активность"));
+await run(mob, "монета · мои позиции (таблица)", `#/token/${DOGE}`, clickTab(".bt-tabs:not(.side-tabs) .bt-tab", "Мои позиции"));
 await run(mob, "монета · история сделок", `#/token/${DOGE}`, clickTab(".bt-tabs:not(.side-tabs) .bt-tab", "История сделок"));
 await run(mob, "монета · ИИ", `#/token/${DOGE}`, clickTab(".side-tabs .bt-tab", "ИИ"));
 await mob.close();
