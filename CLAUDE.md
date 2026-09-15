@@ -64,7 +64,8 @@ creatorSellBanner, activityTab (вкладка «Активность» в ни�
 - **ProfileRegistry** (`contracts/ProfileRegistry.sol`, `scripts/deploy-profiles.js`) —
   имя/аватар/соцсети кошелька в цепи; сайт: `lib/profiles.js` (общий кэш,
   `profilesOf` пачкой), `components/Who.jsx` (имя вместо адреса везде),
-  `ProfileEditor.jsx` в профиле. Адрес — `PROFILE_REGISTRY_ADDRESS` в config.js.
+  `ProfileEditor.jsx` в профиле. Адрес `0x71ccb2eb2b2719d0d316385fc276ebeb1275a8c2`
+  (задеплоен 15.09.2026, без владельца) — `PROFILE_REGISTRY_ADDRESS` в config.js.
 - **План владельца (15.09.2026): перед запуском передеплоить фабрики заново,
   чтобы все нынешние монеты пропали, и запустить первую монету самому.**
   Значит, новую экономику ставить сразу на свежие фабрики (V5 с их адресами,

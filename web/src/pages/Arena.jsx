@@ -13,7 +13,9 @@ import Icon from "../components/Icon.jsx";
 // копятся в казне арены (ArenaTreasury); утром следующего дня бот арены
 // делит фонд между подиумом 70/20/10 — выкупает монеты-призёры с рынка и
 // сжигает. Подиум и здесь, и у бота считает одно ядро (lib/arena-core.js).
-// Гранд-Арена (месячная лига старой схемы казны) — за FEATURES.grandArena.
+// Оформление — минимализм (просьба владельца 15.09.2026): одна строка
+// описания, полоса цифр, три места, таблица. Без комментатора, «болельщика»,
+// всплывающих тостов и полос-таймеров. Гранд-Арена — за FEATURES.grandArena.
 
 const SPLIT = [70, 20, 10];
 
@@ -32,17 +34,6 @@ function useClockTick() {
   }, []);
 }
 
-// болельщик: за какой токен человек болеет (localStorage)
-function useCheer() {
-  const [c, setC] = useState(() => { try { return localStorage.getItem("hood_cheer") || ""; } catch (e) { return ""; } });
-  const set = (addr) => {
-    const v = c.toLowerCase() === (addr || "").toLowerCase() ? "" : (addr || "");
-    setC(v);
-    try { v ? localStorage.setItem("hood_cheer", v) : localStorage.removeItem("hood_cheer"); } catch (e) { /* ignore */ }
-  };
-  return [c, set];
-}
-
 const Logo = ({ src }) => (src
   ? <img src={src} alt="" />
   : <span className="ts-ph"><Icon name="image" size={14} style={{ margin: 0 }} /></span>);
@@ -58,25 +49,6 @@ export default function Arena() {
   const st = useArena();
   const pot = useArenaPot();           // фонд казны арены, ETH
   const payouts = useArenaPayouts();   // последние выкупы, по дням
-  const [cheer, setCheer] = useCheer();
-  const [toast, setToast] = useState(null);
-  const prevElim = React.useRef(null);
-
-  // тост при новом выбывании
-  useEffect(() => {
-    if (!st) return;
-    const cur = new Set(st.eliminated.map((e) => e.token.token.toLowerCase()));
-    if (prevElim.current) {
-      for (const e of st.eliminated) {
-        if (!prevElim.current.has(e.token.token.toLowerCase())) {
-          setToast({ sym: e.token.symbol, img: e.token.meta?.image, ts: Date.now() });
-          setTimeout(() => setToast((x) => (x && Date.now() - x.ts >= 5500 ? null : x)), 6000);
-          break;
-        }
-      }
-    }
-    prevElim.current = cur;
-  }, [st?.eliminated?.length]);
 
   // сумма: ETH и рядом доллары
   const M = (eth) => (eth === null || eth === undefined
@@ -100,8 +72,8 @@ export default function Arena() {
   return (
     <>
       <div className="page-title">{t("Арена")}</div>
-      <div className="page-sub" style={{ maxWidth: 760 }}>
-        {t("Каждый день — бой на выживание по честному объёму торгов: на каждом чекпоинте выбывает слабейший, последний выживший — чемпион дня. 20% каждой комиссии платформы копятся в призовой фонд; утром фонд выкупает монеты-призёры с рынка и сжигает их. Выбывание — витрина, торговля не останавливается.")}
+      <div className="page-sub" style={{ maxWidth: 720 }}>
+        {t("Суточный турнир по честному объёму торгов. Приз — 20% всех комиссий платформы: каждое утро выкуп и сжигание монет подиума.")}
       </div>
 
       {!st && <div className="center">{t("Читаю блокчейн…")}</div>}
@@ -127,64 +99,31 @@ export default function Arena() {
           {view === "rules" && (
             <div className="rules-wrap">
               <div className="rl-sec">
-                <div className="rl-title"><Icon name="target" /> {t("Как проходит день")}</div>
-                <div className="rl-tl">
-                  <div className="rl-tl-line" />
-                  <div className="rl-tl-pt"><span className="rl-tl-dot start"><Icon name="bolt" size={13} style={{ margin: 0 }} /></span><b>00:00 UTC</b><span className="dim">{t("все токены в бою")}</span></div>
-                  <div className="rl-tl-pt"><span className="rl-tl-dot">–</span><b>{t("чекпоинт")}</b><span className="dim">{t("слабейший выбывает")}</span></div>
-                  <div className="rl-tl-pt"><span className="rl-tl-dot">–</span><b>{t("чекпоинт")}</b><span className="dim">{t("и так весь день")}</span></div>
-                  <div className="rl-tl-pt"><span className="rl-tl-dot gold"><Icon name="crown" size={13} style={{ margin: 0 }} /></span><b>24:00 UTC</b><span className="dim">{t("выживший — Чемпион")}</span></div>
-                </div>
-                <div className="rl-foot dim">
-                  {t("Участвуют все неградуировавшие токены автоматически. Выбывание — витрина: торговля не останавливается ни на секунду. Чекпоинтов столько, сколько участников. Наутро чемпион отдыхает на троне — у остальных честный шанс.")}
+                <div className="rl-title">{t("Как проходит день")}</div>
+                <div className="rl-foot dim" style={{ marginTop: 0 }}>
+                  {t("В 00:00 UTC в бой вступают все неградуировавшие токены. День делится на чекпоинты — по числу участников; на каждом выбывает токен с наименьшими очками боя. Последний выживший — чемпион дня. Выбывание — витрина: торговля не останавливается. Наутро чемпион отдыхает на троне — у остальных честный шанс.")}
                 </div>
               </div>
 
               <div className="rl-sec">
-                <div className="rl-title"><Icon name="check" /> {t("Как считаются очки боя")}</div>
+                <div className="rl-title">{t("Очки боя")}</div>
                 <div className="rl-formula">
                   <div className="rl-box green"><b>{t("Честный объём")}</b><span className="dim">{t("за день, в ETH")}</span></div>
                   <span className="rl-op">×</span>
                   <div className="rl-box"><b>1 + {t("рост капы")}</b><span className="dim">{t("за день")}</span></div>
                   <span className="rl-op">=</span>
-                  <div className="rl-box gold"><b>{t("Очки боя")}</b><span className="dim">{t("решают всё")}</span></div>
+                  <div className="rl-box gold"><b>{t("Очки боя")}</b></div>
                 </div>
-                <div className="rl-chips">
-                  <div className="rl-chip ok"><Icon name="check" size={13} /> {t("Разные кошельки покупают и держат — очки растут")}</div>
-                  <div className="rl-chip ok"><Icon name="check" size={13} /> {t("Цена за день выросла — множитель больше")}</div>
-                  <div className="rl-chip bad"><Icon name="alert" size={13} /> {t("Гонять объём туда-сюда — считается разница, т.е. ноль")}</div>
-                  <div className="rl-chip bad"><Icon name="alert" size={13} /> {t("Сделки создателя токена — не считаются вовсе")}</div>
-                  <div className="rl-chip bad"><Icon name="alert" size={13} /> {t("Один кошелёк — в зачёт идёт максимум четверть общего потока")}</div>
-                  <div className="rl-chip bad"><Icon name="alert" size={13} /> {t("Дамп цены — режет собственные очки")}</div>
+                <div className="rl-foot dim">
+                  {t("Честный объём — покупки минус продажи по каждому кошельку; сделки создателя не считаются; вклад одного кошелька — не больше четверти общего потока. Гонять объём туда-сюда бесполезно, дамп цены режет собственные очки.")}
                 </div>
               </div>
 
               <div className="rl-sec">
-                <div className="rl-title"><Icon name="bank" /> {t("Откуда приз и куда он идёт")}</div>
-                <div className="rl-foot dim" style={{ marginTop: 2 }}>
-                  {t("20% каждой торговой комиссии платформы уходят в казну арены. Вывести из неё нельзя — только выкупать монеты платформы и сжигать. Каждое утро (после 00:00 UTC) весь накопленный фонд делится между вчерашним подиумом.")}
+                <div className="rl-title">{t("Приз")}</div>
+                <div className="rl-foot dim" style={{ marginTop: 0 }}>
+                  {t("20% каждой торговой комиссии платформы уходят в казну арены — контракт без функции вывода: деньги оттуда могут только выкупать монеты платформы и сжигать их. Каждое утро (после 00:00 UTC) весь накопленный фонд делится между вчерашним подиумом: 70% первому месту, 20% второму, 10% третьему. Первое место — выживший чемпион, второе и третье — по итоговым очкам; нулевые очки не награждаются. Выкуп с рынка и сжигание: предложение падает, выигрывают все держатели. Исполняет бот, все транзакции — в эксплорере.")}
                 </div>
-                <div className="rl-flow one">
-                  <div className="rl-fcard gold">
-                    <div className="rl-fpct">20%</div>
-                    <div className="rl-frate">{t("каждой комиссии")}</div>
-                    <div className="rl-fname">{t("Подиум арены")}</div>
-                    <div className="rl-mini-podium">
-                      <div className="rl-mp s2"><i>2</i><em style={{ height: 28 }} /><span>20%</span></div>
-                      <div className="rl-mp s1"><i>1</i><em style={{ height: 64 }} /><span>70%</span></div>
-                      <div className="rl-mp s3"><i>3</i><em style={{ height: 16 }} /><span>10%</span></div>
-                    </div>
-                  </div>
-                </div>
-                <div className="rl-foot dim">
-                  {t("Приз — не перевод денег, а выкуп токена с рынка + сжигание: предложение падает, цена крепнет, выигрывают все держатели. 1-е место — выживший чемпион, 2-е и 3-е — по итоговым очкам. Нулевые очки не награждаются. Исполняет бот арены утром следующего дня, все транзакции — в эксплорере.")}
-                </div>
-              </div>
-
-              <div className="rl-fair">
-                <span><Icon name="shield" size={13} /> {t("Всё считается из он-чейн сделок")}</span>
-                <span><Icon name="code" size={13} /> {t("Правила исполняет код, не люди")}</span>
-                <span><Icon name="search" size={13} /> {t("Каждый может проверить сам")}</span>
               </div>
             </div>
           )}
@@ -220,13 +159,10 @@ export default function Arena() {
             const maxPts = Math.max(...ga.table.map((r) => r.points + (r.pendingPoints || 0)), 1e-9);
             return (
               <>
-                <div className="arena-bar" style={{ borderColor: "var(--gold)", marginTop: 18 }}>
+                <div className="arena-bar" style={{ marginTop: 18 }}>
                   <div className="ab-cell"><span>{t("В лиге")}</span><b>{ga.table.length}</b></div>
                   <div className="ab-cell"><span>{t("Финал месяца")}</span>
                     <b className="ab-timer">{days}{t("д")} {hours}{t("ч")}</b></div>
-                </div>
-                <div className="dim" style={{ fontSize: 12.5, margin: "0 0 14px" }}>
-                  {t("Сюда попадают только чемпионы дня. Каждая победа — звезда и очки лиги.")}
                 </div>
                 {ga.table.length === 0 && <div className="center">{t("Пока нет чемпионов — лига откроется после первого финала дня.")}</div>}
                 <div className="arena-list">
@@ -243,9 +179,7 @@ export default function Arena() {
                           <span className="ar-volbar"><span style={{ width: `${w}%` }} /></span>
                           <span className="ar-vol">{D(pts)}</span>
                         </span>
-                        <span className={`ar-status ${row.leadingToday ? "ok" : ""}`} style={!row.leadingToday ? { color: "var(--text-dim)" } : undefined}>
-                          {row.leadingToday ? t("лидирует сегодня") : t("в лиге")}
-                        </span>
+                        <span className="ar-status dim">{row.leadingToday ? t("лидирует сегодня") : ""}</span>
                       </a>
                     );
                   })}
@@ -266,70 +200,29 @@ export default function Arena() {
             </div>
             <div className="ab-cell">
               <span>{t("Призовой фонд")}</span>
-              <b style={{ color: "var(--gold)" }}>{ARENA_LIVE ? M(pot) : t("скоро")}</b>
-              <span className="dim" style={{ fontSize: 11.5, textTransform: "none", letterSpacing: 0, fontWeight: 500 }}>
-                {t("20% всех комиссий · выплата утром")}
-              </span>
+              <b style={{ color: "var(--gold)" }}>{ARENA_LIVE ? M(pot) : "—"}</b>
             </div>
           </div>
 
-          {/* Подиум дня: что даёт каждое место */}
-          <div className="podium3">
-            <div className="pod-head">
-              {t("Призовой фонд дня")}
-              <span className="share-chip gold" title={t("Каждое утро казна арены тратит весь накопленный фонд на вчерашний подиум")}>{t("весь фонд")}</span>
-              <span className="dim" style={{ fontWeight: 500 }}> · {t("делится между тремя местами")}</span>
-            </div>
-            {[
-              ["gold", t("1 место"), t("чемпион дня")],
-              ["silver", t("2 место"), t("по очкам боя")],
-              ["bronze", t("3 место"), t("по очкам боя")],
-            ].map(([cls, place, who], i) => {
+          {/* Три места — только цифры */}
+          <div className="podium3 minimal">
+            {[t("1 место"), t("2 место"), t("3 место")].map((place, i) => {
               const v = pot === null ? null : pot * (SPLIT[i] / 100);
               return (
-                <div className={`pod-card ${cls}`} key={cls}>
-                  <span className="pod-medal">{i + 1}</span>
-                  <span className="pod-place">{place} <span className="dim">· {who}</span></span>
+                <div className={`pod-card ${["gold", "silver", "bronze"][i]}`} key={place}>
+                  <span className="pod-place">{place}</span>
                   <b className="pod-sum">{ARENA_LIVE ? (v === null ? "…" : M(v)) : "—"}</b>
-                  <span className="pod-pct">{SPLIT[i]}% {t("приза")}</span>
+                  <span className="pod-pct">{SPLIT[i]}%</span>
                 </div>
               );
             })}
-            <div className="pod-note dim">
-              {t("Каждое утро бот арены выкупает токены-призёры с рынка и сжигает их — предложение падает, выигрывают все держатели. Фонд растёт с каждой сделкой на платформе.")}
-            </div>
           </div>
 
           {st.champion && st.alive.length === 1 && (
             <div className="arena-champ">
-              <Icon name="crown" /> {t("Чемпион дня")}: <b>${st.champion.symbol}</b> — {t("объём")} {D(st.champion.dayVol)}
-              {" "}({st.champion.dayGrowth >= 0 ? "+" : ""}{(st.champion.dayGrowth * 100).toFixed(1)}% {t("капа за день")})
+              <Icon name="crown" /> {t("Чемпион дня")}: <b>${st.champion.symbol}</b>
             </div>
           )}
-
-          {/* комментатор боя */}
-          {st.alive.length > 1 && (() => {
-            const secs = Math.max(0, Math.floor(((st.nextCheckpoint ?? 0) - Date.now()) / 1000));
-            const leader = st.alive[0], loser = st.alive[st.alive.length - 1];
-            const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60);
-            const hm = h > 0 ? `${h}${t("ч")} ${m}${t("м")}` : `${m}${t("м")}`;
-            let line;
-            if (secs < 90) line = <>{t("Развязка близко!")} <b>${loser.symbol}</b> {t("вылетает через")} <b>{secs}{t("с")}</b> — {t("держателям пора спасать монету!")}</>;
-            else if (leader.dayGrowth > 0.05) line = <><b>${leader.symbol}</b> {t("рвётся вперёд")} (+{(leader.dayGrowth * 100).toFixed(1)}%)! <b>${loser.symbol}</b> {t("на грани — осталось")} {hm}.</>;
-            else line = <><b>${leader.symbol}</b> {t("держит корону")}. <b>${loser.symbol}</b> {t("замыкает — следующее выбывание через")} {hm}.</>;
-            return <div className="arena-caster">{line}</div>;
-          })()}
-
-          {/* болеешь за токен */}
-          {cheer && st.alive.some((p) => p.token.toLowerCase() === cheer.toLowerCase()) && (() => {
-            const my = st.alive.find((p) => p.token.toLowerCase() === cheer.toLowerCase());
-            const place = st.alive.indexOf(my) + 1;
-            return (
-              <div className="cushion-banner" style={{ marginBottom: 12 }}>
-                <Icon name="sparkles" size={14} /> {t("Ты болеешь за")} <b>${my.symbol}</b> — {t("сейчас")} {place}/{st.alive.length} {t("в бою")}
-              </div>
-            );
-          })()}
 
           <div className="arena-list">
             <div className="arena-hdr">
@@ -337,67 +230,37 @@ export default function Arena() {
               <span />
               <span>{t("Токен")}</span>
               <span>{t("Капа")}</span>
-              <span>{t("Очки боя")} <i title={t("Очки боя = ЧЕСТНЫЙ объём за день × (1 + прирост капитализации). Честный объём: покупки минус продажи по каждому кошельку, сделки создателя не в счёт, вклад одного кошелька урезан до четверти общего потока. Накрутка и прокрутка объёма очков не дают, дамп цены режет их. На каждом чекпоинте вылетает токен с наименьшими очками.")}>ⓘ</i></span>
-              <span style={{ textAlign: "right" }}>{t("Статус")}</span>
+              <span>{t("Очки боя")}</span>
+              <span style={{ textAlign: "right" }} />
             </div>
             {(() => {
               const maxVol = Math.max(...st.alive.map((x) => x.score), 1e-9);
               const secsToElim = Math.max(0, Math.floor(((st.nextCheckpoint ?? 0) - Date.now()) / 1000));
-              const elimInterval = st.participants.length ? 86_400_000 / st.participants.length : 0;
-              const elimFrac = elimInterval > 0
-                ? Math.max(0, Math.min(1, ((st.nextCheckpoint ?? 0) - Date.now()) / elimInterval)) : 0;
               const p2 = (x) => String(x).padStart(2, "0");
               const eh = Math.floor(secsToElim / 3600);
               const elimClock = eh > 0
                 ? `${eh}:${p2(Math.floor((secsToElim % 3600) / 60))}:${p2(secsToElim % 60)}`
                 : `${p2(Math.floor(secsToElim / 60))}:${p2(secsToElim % 60)}`;
-              const winCount = {};
-              try { for (const h of hallOfFame(st.tokens, st.trades, 14)) { const k = h.champion.token.toLowerCase(); winCount[k] = (winCount[k] || 0) + 1; } } catch (e) { /* ignore */ }
               return st.alive.map((p, i) => {
                 const w = Math.max(3, (p.score / maxVol) * 100);
                 const danger = st.alive.length > 1 && i === st.alive.length - 1;
-                const hot = danger && secsToElim < 60;
-                const isCheer = cheer && p.token.toLowerCase() === cheer.toLowerCase();
-                const streak = winCount[p.token.toLowerCase()] || 0;
-                const row = (
-                  <a key={p.token} className={`arena-row ${i === 0 ? "leader" : ""} ${danger ? "danger" : ""} ${hot ? "danger-hot" : ""} ${isCheer ? "cheered" : ""}`}
-                     href={`#/token/${p.token}`}>
+                return (
+                  <a key={p.token} className={`arena-row ${i === 0 ? "leader" : ""} ${danger ? "danger" : ""}`} href={`#/token/${p.token}`}>
                     <Rank i={i} />
                     <Logo src={p.meta.image} />
                     <span className="ar-name">
-                      <b>${p.symbol}{streak > 0 && <span className="ar-streak" title={t("Побед за 2 недели")}><Icon name="flame" size={11} style={{ margin: 0 }} />{streak}</span>}</b>
+                      <b>${p.symbol}</b>
                       <CA p={p} />
                     </span>
                     <span className="ar-mcap">{usd(mcapOf(p))}</span>
                     <span className="ar-volwrap">
                       <span className="ar-volbar"><span style={{ width: `${w}%` }} /></span>
-                      <span className="ar-vol">
-                        {D(p.dayVol)}{" "}
-                        <span className={p.dayGrowth >= 0 ? "side-buy" : "side-sell"} style={{ fontSize: 11 }}>
-                          {p.dayGrowth >= 0 ? "+" : ""}{(p.dayGrowth * 100).toFixed(1)}%
-                        </span>
-                      </span>
+                      <span className="ar-vol">{D(p.dayVol)}</span>
                     </span>
-                    <span className={`ar-status ${danger ? "bad" : "ok"}`} style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "flex-end" }}>
-                      <span className={`ar-star ${isCheer ? "on" : ""}`} title={t(isCheer ? "Не болеть" : "Болеть за этот токен")}
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setCheer(p.token); }}>
-                        {isCheer ? "★" : "☆"}
-                      </span>
-                      {hot ? <span className="hot-timer">{secsToElim}{t("с")}</span>
-                        : danger ? <span style={{ color: "#e06a4a" }}>{t("под угрозой")}</span>
-                          : t("в бою")}
+                    <span className={`ar-status ${danger ? "bad" : ""}`} style={{ textAlign: "right" }}>
+                      {danger ? <>{t("выбывает через")} <span className="mono">{elimClock}</span></> : ""}
                     </span>
                   </a>
-                );
-                if (!danger) return row;
-                return (
-                  <React.Fragment key={p.token}>
-                    {row}
-                    <div className={`elim-timer ${elimFrac < 0.25 ? "critical" : ""}`}>
-                      <div className="elim-fill" style={{ width: `${elimFrac * 100}%` }} />
-                      <span className="elim-label">{t("До выбывания")} <b>${p.symbol}</b>: <b className="mono">{elimClock}</b></span>
-                    </div>
-                  </React.Fragment>
                 );
               });
             })()}
@@ -414,12 +277,12 @@ export default function Arena() {
                 <span className="ar-volwrap dim">
                   {t("выбыл")} {new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </span>
-                <span className="ar-status bad">{t("выбыл")}</span>
+                <span />
               </a>
             ))}
           </div>
 
-          {/* Вчерашние выкупы — из событий казны арены */}
+          {/* Последние выкупы — из событий казны арены */}
           {ARENA_LIVE && payouts && payouts.length > 0 && (
             <div className="arena-pay">
               <div className="sec-h3" style={{ marginTop: 26 }}>{t("Последние выплаты подиуму")}</div>
@@ -440,13 +303,6 @@ export default function Arena() {
             </div>
           )}
           </>)}
-        </div>
-      )}
-
-      {toast && (
-        <div className="arena-toast">
-          {toast.img ? <img src={toast.img} alt="" /> : <span className="ts-ph"><Icon name="image" size={14} style={{ margin: 0 }} /></span>}
-          <span><b>${toast.sym}</b> {t("выбыл из арены!")}</span>
         </div>
       )}
     </>
