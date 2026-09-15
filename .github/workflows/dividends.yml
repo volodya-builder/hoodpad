@@ -40,7 +40,7 @@ jobs:
       - name: Pay dividends
         env:
           TREASURER_PRIVATE_KEY: ${{ secrets.TREASURER_PRIVATE_KEY }}
-          MIN_PAYOUT_USD: "0.05"
+          MIN_PAYOUT_USD: "1"
           MIN_SWEEP_USD: "0.5"
         run: |
           set -o pipefail   # иначе tee прячет ошибку бота, и заход выглядит успешным
