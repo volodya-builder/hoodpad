@@ -3516,3 +3516,14 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .ico { display: inline-block; vertical-align: -2px; margin-right: 5px; flex: none; }
 .chat-ava .ico, .ts-ph .ico, .wb .ico { vertical-align: middle; }
 .chat-ava.guest { color: var(--text-dim); }
+
+/* Чат с ИИ монеты (components/AgentChat.jsx) */
+.aichat { margin: 8px 8px 14px; max-height: 520px; }
+.aichat .chat-list { min-height: 160px; max-height: 320px; }
+.aichat-model { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: var(--text-dim); background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: 3px 9px 3px 5px; }
+.aichat-model img { width: 16px; height: 16px; border-radius: 50%; }
+.aichat .chat-msg.from-ai .chat-ava { color: var(--gold); border-color: var(--border-gold); background: var(--gold-dim); }
+.aichat .who.ai { color: var(--gold); }
+.aichat-typing { font-style: italic; }
+.aichat-gate { margin-top: 12px; font-size: 12.5px; color: var(--text-dim); background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+.aichat-gate b { color: var(--gold); }

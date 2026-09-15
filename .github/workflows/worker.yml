@@ -1,0 +1,61 @@
+# Деплой воркера чата с ИИ монеты (worker/) в Cloudflare.
+#
+# Нужны секреты репозитория (Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN  — токен с шаблоном «Edit Cloudflare Workers»
+#   CLOUDFLARE_ACCOUNT_ID — Account ID из панели Cloudflare (Workers & Pages)
+#   OPENROUTER_KEY        — уже есть (им пользуется агент)
+#   CHAT_SECRET           — необязательно: своя соль для сессий
+#
+# Запускается сам при пуше worker/** в main; руками — «Run workflow».
+name: worker
+on:
+  push:
+    branches: [main]
+    paths: ["worker/**", ".github/workflows/worker.yml"]
+  workflow_dispatch:
+concurrency: worker
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - name: Секреты на месте?
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          OR_KEY: ${{ secrets.OPENROUTER_KEY }}
+        run: |
+          ok=1
+          [ -n "$CF_TOKEN" ]   || { echo "::error::Нет секрета CLOUDFLARE_API_TOKEN"; ok=0; }
+          [ -n "$CF_ACCOUNT" ] || { echo "::error::Нет секрета CLOUDFLARE_ACCOUNT_ID"; ok=0; }
+          [ -n "$OR_KEY" ]     || { echo "::error::Нет секрета OPENROUTER_KEY"; ok=0; }
+          [ "$ok" = 1 ]
+      - run: npm ci
+      - name: Проверка ядра (подпись, сессия, промпт, чтение монеты из цепи)
+        run: node test/core.test.mjs
+      - name: Деплой в Cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy
+      - name: Секреты воркера
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          OPENROUTER_KEY: ${{ secrets.OPENROUTER_KEY }}
+          CHAT_SECRET: ${{ secrets.CHAT_SECRET }}
+        run: |
+          printf '%s' "$OPENROUTER_KEY" | npx wrangler secret put OPENROUTER_KEY
+          if [ -n "$CHAT_SECRET" ]; then printf '%s' "$CHAT_SECRET" | npx wrangler secret put CHAT_SECRET; fi
+      - name: Проверка
+        run: |
+          sleep 5
+          curl -sS --fail https://hoodandarrow.com/api/chat/health

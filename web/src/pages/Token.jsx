@@ -13,6 +13,7 @@ import Workshop from "../components/Workshop.jsx";
 import Journal from "../components/Journal.jsx";
 import Board from "../components/Board.jsx";
 import AgentBudget from "../components/AgentBudget.jsx";
+import AgentChat from "../components/AgentChat.jsx";
 import { useSplit, loadCreationTimes, timeAgo, useClock, useSupport } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 import { modelLogo, makerOf } from "../lib/models.mjs";
@@ -1754,6 +1755,10 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                   </button>
                 </div>
               )}
+              {/* Чат с ИИ монеты — первым: это прямой разговор, доска и бюджет ниже. */}
+              <AgentChat token={tokenAddress} symbol={data.symbol} wallet={wallet} onConnect={onConnect}
+                         aiOn={SPLITTER_LIVE ? aiOn : Boolean(aiId)} model={aiId} modelName={meta.aiName}
+                         holder={wallet ? (data.balance ?? 0n) > 0n : null} />
               <AgentBudget token={tokenAddress} quote={data.q || null} />
               <Board token={tokenAddress} wallet={wallet} onConnect={onConnect} embedded />
               {FEATURES.weeklyWorkshop && (<>
