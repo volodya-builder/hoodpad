@@ -61,6 +61,15 @@ creatorSellBanner, activityTab (вкладка «Активность» в ни�
   владелец — кошелёк бота арены). После деплоя: адреса в `config.js`
   (`FEE_SPLITTER_ADDRESS`, `ARENA_TREASURY_ADDRESS`), переменная GitHub
   `ARENA_TREASURY`, секрет `ARENA_PRIVATE_KEY`. Тесты: `test/arena5.test.mjs`.
+- **ProfileRegistry** (`contracts/ProfileRegistry.sol`, `scripts/deploy-profiles.js`) —
+  имя/аватар/соцсети кошелька в цепи; сайт: `lib/profiles.js` (общий кэш,
+  `profilesOf` пачкой), `components/Who.jsx` (имя вместо адреса везде),
+  `ProfileEditor.jsx` в профиле. Адрес — `PROFILE_REGISTRY_ADDRESS` в config.js.
+- **План владельца (15.09.2026): перед запуском передеплоить фабрики заново,
+  чтобы все нынешние монеты пропали, и запустить первую монету самому.**
+  Значит, новую экономику ставить сразу на свежие фабрики (V5 с их адресами,
+  `initConfig` без таймлока) — одним скриптом «чистого запуска», а не
+  `deploy-arena-economy.js` поверх старых.
 - Старое, живо, но без интерфейса: BuybackTreasuryV2 `0xb456…a063a`, VotePower,
   чат-контракт. Тестнет 46630 — для экспериментов.
 - Голдски-сабграф (ETH-фабрика): адрес в `web/src/lib/data.js`; quote-фабрику

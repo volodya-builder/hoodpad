@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 import Icon from "../components/Icon.jsx";
-import { fmtEth, short } from "../lib/web3.js";
+import { fmtEth } from "../lib/web3.js";
 import { EXPLORER } from "../lib/config.js";
 import { loadTokens, allTrades, loadSplit } from "../lib/data.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { useLang } from "../lib/i18n.jsx";
+import Who from "../components/Who.jsx";
 
 // Память вкладки: мгновенно при переключении и после перезагрузки.
 let _lbRaw = null;
@@ -109,7 +110,7 @@ export default function Leaderboard({ embedded = false }) {
               <a className="lb-row" key={addr} href={`#/trader/${addr}`}>
                 <span className={i < 3 ? `rank-num rk${i + 1}` : "dim"}>{i + 1}</span>
                 <span className="lb-who">
-                  <span className="mono">{short(addr)}</span>
+                  <Who addr={addr} link={false} />
                   <span className="lb-syms">
                     {c.tokens} {t("монет")} · {c.symbols.slice(0, 5).map((s) => `$${s}`).join(" ")}
                   </span>
@@ -136,7 +137,7 @@ export default function Leaderboard({ embedded = false }) {
               <a className="lb-row" key={addr} href={`#/trader/${addr}`}>
                 <span className={i < 3 ? `rank-num rk${i + 1}` : "dim"}>{i + 1}</span>
                 <span className="lb-who">
-                  <span className="mono">{short(addr)}</span>
+                  <Who addr={addr} link={false} />
                   <span className="lb-syms">{x.count} {t("сделок")} · {fmtEth(x.volume)} ETH</span>
                 </span>
                 <span className="lb-val" style={tSort.k === "pnl" ? { color: x.pnl >= 0 ? "var(--leaf)" : "var(--red)" } : undefined}>

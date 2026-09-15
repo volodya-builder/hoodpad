@@ -90,6 +90,12 @@ export const AGENT_TREASURY_ADDRESS = import.meta.env.VITE_AGENT_TREASURY ?? "0x
 export const ARENA_TREASURY_ADDRESS = import.meta.env.VITE_ARENA_TREASURY ?? "";
 export const ARENA_LIVE = /^0x[0-9a-fA-F]{40}$/.test(ARENA_TREASURY_ADDRESS);
 
+// ProfileRegistry — имя, аватар, соцсети кошелька в блокчейне (15.09.2026).
+// Пусто = ещё не задеплоен: имена не показываются, форма в профиле ждёт.
+// Задеплоить: node scripts/deploy-profiles.js --deploy (владелец).
+export const PROFILE_REGISTRY_ADDRESS = import.meta.env.VITE_PROFILE_REGISTRY ?? "";
+export const PROFILES_LIVE = /^0x[0-9a-fA-F]{40}$/.test(PROFILE_REGISTRY_ADDRESS);
+
 // FeeSplitterV4 — делит протокольную долю комиссии (команда / агент /
 // создатель) и хранит, включён ли у монеты ИИ (enableAi — решение
 // создателя, навсегда). Задеплоен владельцем 14.09.2026; ETH-фабрика

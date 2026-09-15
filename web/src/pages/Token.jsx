@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import Icon from "../components/Icon.jsx";
 import Socials from "../components/Socials.jsx";
+import Who from "../components/Who.jsx";
 import { parseEther, formatEther, parseUnits, formatUnits } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi, zapAbi, feeSplitterAbi } from "../lib/abi.js";
@@ -1144,8 +1145,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               {short(data.pool)}
             </a>
             {" · "}{t("Создатель:")}{" "}
-            <a className="mono" href={`#/trader/${data.creator}`} title={t("Открыть профиль трейдера")}
-               style={{ color: "var(--gold)" }}>{short(data.creator)}</a>
+            <Who addr={data.creator} title={t("Открыть профиль трейдера")} style={{ color: "var(--gold)" }} />
             {(() => {
               const mine = tokensList.filter((x) => (x.creator || "").toLowerCase() === (data.creator || "").toLowerCase());
               if (mine.length < 2) return null;
@@ -1287,10 +1287,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                   <span className="dim">${fmtEth(priceUsd)}</span>
                   <span>{compactN(tr.tokens)}</span>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                    <a className="mono" href={`#/trader/${tr.addr}`}
-                       title={t("Открыть профиль трейдера")}>
-                      {short(tr.addr)}
-                    </a>
+                    <Who addr={tr.addr} title={t("Открыть профиль трейдера")} />
                     <span className="cnt-chip" title={t("Сделок этого трейдера по токену")}>{counts[tr.addr]}</span>
                     <Badges addr={tr.addr} />
                     {isMine && <span className="badge hr-badge">{t("Вы")}</span>}
@@ -1498,9 +1495,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                   <div className="holder-row" key={h.addr}>
                     <span className="hr-rank dim">{hSort === "desc" ? i + 1 : holders.list.length - i}</span>
                     <span className="hr-who">
-                      <a className="mono" href={`#/trader/${h.addr}`} title={t("Открыть профиль трейдера")}>
-                        {short(h.addr)}
-                      </a>
+                      <Who addr={h.addr} title={t("Открыть профиль трейдера")} />
                       <Badges addr={h.addr} />
                       {isCre && <span className="badge hr-badge"><Icon name="user" size={11} /> {t("Создатель")}</span>}
                       {isTre && <span className="badge hr-badge"><Icon name="bank" size={11} /> {t("Казна")}</span>}
@@ -1763,11 +1758,10 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                   <div className="sa-row" key={i} {...rowHover(tr.addr)}>
                     <span className={buy ? "side-buy" : "side-sell"}>{dollars(tr.eth)}</span>
                     <span className="dim">{compactN(tr.tokens)}</span>
-                    <a className="mono" href={`#/trader/${tr.addr}`} title={t("Открыть профиль трейдера")}
-                       style={{ color: "inherit" }}>
-                      {short(tr.addr)}<Badges addr={tr.addr} />
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, minWidth: 0 }}>
+                      <Who addr={tr.addr} title={t("Открыть профиль трейдера")} style={{ color: "inherit" }} /><Badges addr={tr.addr} />
                       {isMine && <span className="badge hr-badge" style={{ marginLeft: 5 }}>{t("Вы")}</span>}
-                    </a>
+                    </span>
                     <a className="dim" href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer">
                       {shortAgo(tr.ts)} ↗
                     </a>
