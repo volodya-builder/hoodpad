@@ -194,11 +194,15 @@ async function subgraphHasQuote() {
 async function toEthEquivalent(rows) {
   const qrows = rows.filter((r) => r.quote);
   if (!qrows.length) return rows;
-  const { quoteUsd, ethUsd } = await import("./price.js");
+  const { quoteUsd, ethUsd, ethUsdCached } = await import("./price.js");
   const tokens = await loadTokens().catch(() => []);
   const byPool = {};
   for (const tk of tokens) if (tk.q) byPool[(tk.pool || "").toLowerCase()] = tk.q;
-  const rate = await ethUsd().catch(() => 0);
+  // курс ETH ждём не дольше 4 с — иначе берём последний известный
+  const rate = await Promise.race([
+    ethUsd().catch(() => ethUsdCached()),
+    new Promise((r) => setTimeout(() => r(ethUsdCached()), 4000)),
+  ]);
   const quotes = [...new Set(qrows.map((r) => r.quote))];
   const px = {};
   await Promise.all(quotes.map(async (a) => { px[a] = await quoteUsd(a).catch(() => 0); }));

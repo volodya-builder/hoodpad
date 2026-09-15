@@ -39,6 +39,9 @@ const SOURCES = [
 
 let _pending = null;
 
+/** Последний известный курс без ожидания сети (для расчётов, где ждать нельзя). */
+export function ethUsdCached() { return cached.v || FALLBACK; }
+
 export async function ethUsd() {
   if (cached.v && Date.now() - cached.t < 60_000) return cached.v;
   if (_pending) return _pending;
