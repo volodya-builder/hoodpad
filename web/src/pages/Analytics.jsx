@@ -16,6 +16,9 @@ const PERIODS = [
   ["all", "Всё время", 0],
 ];
 
+// окно графика в днях для каждого периода (как у Pons)
+const CHART_DAYS = { "24h": 14, week: 56, month: 60, all: 60 };
+
 const PERIOD_LABEL = {
   "24h": "за 24 часа", week: "за неделю", month: "за месяц", all: "за всё время",
 };
@@ -42,20 +45,20 @@ function Bars({ data, bins, fmtVal, hover, setHover, period }) {
   const max = Math.max(...data, 0);
   const W = 1000, H = 300, PAD_R = 70, PAD_B = 26, TOP = 10;
   const n = data.length;
-  const gap = 8, bw = (W - PAD_R - gap * (n - 1)) / n;
+  const slot = (W - PAD_R) / n, gap = Math.max(3, Math.min(10, slot * 0.28)), bw = slot - gap;
   const grid = [0.25, 0.5, 0.75, 1];
   const fmtAxis = (ts) => {
     const d = new Date(ts);
     const p = (x) => String(x).padStart(2, "0");
-    return period === "24h" ? `${p(d.getHours())}:${p(d.getMinutes())}` : `${d.getDate()} ${["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"][d.getMonth()]}`;
+    return `${d.getDate()} ${["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"][d.getMonth()]}`;
   };
   const yOf = (v) => TOP + (1 - (max > 0 ? v / max : 0)) * (H - PAD_B - TOP);
   return (
     <svg className="ana-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" onMouseLeave={() => setHover(null)}>
       <defs>
-        <linearGradient id="anaBarGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#6b6b69" /><stop offset="1" stopColor="#3a3a39" /></linearGradient>
-        <linearGradient id="anaBarHl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#f2f2ef" /><stop offset="1" stopColor="#9a9a96" /></linearGradient>
-        <linearGradient id="anaBarNow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#7fb04a" /><stop offset="1" stopColor="#4f7a2c" /></linearGradient>
+        <linearGradient id="anaBarGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#e6e6e3" /><stop offset="1" stopColor="#7c7c79" /></linearGradient>
+        <linearGradient id="anaBarHl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ffffff" /><stop offset="1" stopColor="#c9c9c5" /></linearGradient>
+        <linearGradient id="anaBarNow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#c8f542" /><stop offset="1" stopColor="#a6d92e" /></linearGradient>
       </defs>
       {grid.map((g) => (
         <g key={g}>
@@ -64,13 +67,13 @@ function Bars({ data, bins, fmtVal, hover, setHover, period }) {
         </g>
       ))}
       {data.map((v, i) => {
-        const h = max > 0 ? Math.max(3, (v / max) * (H - PAD_B - TOP)) : 3;
+        const h = max > 0 ? Math.max(4, (v / max) * (H - PAD_B - TOP)) : 4;
         const x = i * (bw + gap);
         const cls = `ana-svg-bar ${i === n - 1 ? "now" : ""} ${hover === i ? "hl" : hover !== null ? "dim" : ""}`;
         return (
           <g key={i} onMouseEnter={() => setHover(i)}>
             <rect x={x} y={TOP} width={bw} height={H - PAD_B - TOP} fill="transparent" />
-            <rect x={x} y={H - PAD_B - h} width={bw} height={h} rx="5" className={cls} />
+            <rect x={x} y={H - PAD_B - h} width={bw} height={h} rx={Math.min(6, bw / 2)} className={cls} />
           </g>
         );
       })}
@@ -197,19 +200,24 @@ export default function Analytics() {
     const volume = filtered.reduce((s, tr) => s + tr.eth + tr.fee, 0);
     const creatorPaid = filtered.reduce((s, tr) => s + tr.fee * (tr.shareBps / 10000), 0);
 
-    // 14 корзин для мини-графиков.
-    const N = 14;
-    const t0 = cutoff || (filtered.length
-      ? Math.min(...filtered.map((tr) => tr.ts ?? raw.now))
-      : raw.now - 86400 * 1000);
-    const w = Math.max(1, (raw.now - t0) / N);
+    // График как у Pons: всегда по дням, окно шире выбранного периода —
+    // 24ч → 14 дней, неделя → 56, месяц и всё время → 60. Последняя
+    // корзина — сегодня (с полуночи до сейчас).
+    const N = CHART_DAYS[period];
+    const day0 = new Date(raw.now); day0.setHours(0, 0, 0, 0);
+    const DAY = 86400 * 1000;
+    const t0 = day0.getTime() - (N - 1) * DAY;
     const volBars = Array(N).fill(0);
     const cntBars = Array(N).fill(0);
-    const bins = Array.from({ length: N }, (_, i) => ({ from: t0 + i * w, to: t0 + (i + 1) * w }));
-    for (const tr of filtered) {
-      const i = Math.min(N - 1, Math.max(0, Math.floor(((tr.ts ?? raw.now) - t0) / w)));
+    const bins = Array.from({ length: N }, (_, i) => ({ from: t0 + i * DAY, to: t0 + (i + 1) * DAY }));
+    let chartVol = 0, chartCnt = 0;
+    for (const tr of raw.trades) {
+      const ts = tr.ts ?? raw.now;
+      if (ts < t0) continue;
+      const i = Math.min(N - 1, Math.max(0, Math.floor((ts - t0) / DAY)));
       volBars[i] += tr.eth + tr.fee;
       cntBars[i] += 1;
+      chartVol += tr.eth + tr.fee; chartCnt += 1;
     }
     // Предыдущий период той же длины — чтобы показать, куда двинулось.
     // Для «всё время» сравнивать не с чем.
@@ -224,7 +232,7 @@ export default function Analytics() {
       };
     }
 
-    return { volume, creatorPaid, count: filtered.length, volBars, cntBars, bins, t0, tEnd: raw.now, prev };
+    return { volume, creatorPaid, count: filtered.length, volBars, cntBars, bins, t0, tEnd: raw.now, prev, chartVol, chartCnt, chartDays: N };
   }, [raw, period]);
 
   // подписи оси времени под мини-графиками
@@ -260,7 +268,7 @@ export default function Analytics() {
         const series = chart === "count" ? stats.cntBars : stats.volBars;
         const fmtVal = chart === "count" ? (v, axis) => (axis ? String(Math.round(v)) : `${Math.round(v)}`) : (v, axis) => (axis ? usd(v * rate) : D(v));
         const hv = hover !== null && stats.bins[hover] ? { v: series[hover], from: stats.bins[hover].from, to: stats.bins[hover].to } : null;
-        const d = (ts) => { const x = new Date(ts); return `${x.getDate()} ${["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"][x.getMonth()]}${period === "24h" ? ", " + String(x.getHours()).padStart(2, "0") + ":" + String(x.getMinutes()).padStart(2, "0") : ""}`; };
+        const d = (ts) => { const x = new Date(ts); return `${x.getDate()} ${["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"][x.getMonth()]}`; };
         return (
         <>
         <div className="ana-strip">
@@ -285,8 +293,8 @@ export default function Analytics() {
         <div className="ana-panel">
           <div className="ana-panel-head">
             <div>
-              <div className="ana-panel-val">{hv ? fmtVal(hv.v) : (chart === "count" ? stats.count : D(stats.volume))}</div>
-              <div className="ana-panel-sub">{hv ? d(hv.from) : t(PERIOD_LABEL[period])}</div>
+              <div className="ana-panel-val">{hv ? fmtVal(hv.v) : (chart === "count" ? stats.chartCnt : D(stats.chartVol))}</div>
+              <div className="ana-panel-sub">{hv ? d(hv.from) : `${t(chart === "count" ? "Сделки" : "Объём")}, ${stats.chartDays} ${t("дней")}`}</div>
             </div>
             <div className="seg">
               <button type="button" className={`seg-btn ${chart === "vol" ? "on" : ""}`} onClick={() => setChart("vol")}>{t("Объём")}</button>
