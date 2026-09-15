@@ -384,37 +384,17 @@ export default function App() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ts: now, w: wallet ? 1 : 0 }),
         }).catch(() => {});
-        // анонимная статистика посещений: случайный id, время первого и последнего визита,
-        // подключался ли кошелёк. Никаких персональных данных и IP не собираем.
-        let first = 0;
-        try {
-          first = Number(localStorage.getItem("hood_first_seen") || 0);
-          if (!first) { first = now; localStorage.setItem("hood_first_seen", String(first)); }
-        } catch (e) { first = now; }
-        fetch(`${CHAT_DB_URL}/visitors/${pid}.json`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            first, last: now, w: wallet ? 1 : 0,
-            addr: wallet ? wallet.account : null,
-          }),
-        }).catch(() => {});
-        // активность по 5-минутным корзинам для графика «за час» в админке:
-        // 12 слотов по кругу, старые перезаписываются сами — база не растёт.
+        // анонимная активность по 5-минутным корзинам для графика аудитории в
+        // админке: activity/{корзина}/p/{id} = 1 (с кошельком — 2). Никаких
+        // персональных данных и IP. Старые корзины чистит админка.
         const bucket = Math.floor(now / 300_000);
-        if (window.__hoodActBucket !== bucket) {
-          window.__hoodActBucket = bucket;
-          const slot = bucket % 12;
-          fetch(`${CHAT_DB_URL}/activity/${slot}.json`)
-            .then((r) => r.json())
-            .then((cur) => (cur && cur.b === bucket
-              ? fetch(`${CHAT_DB_URL}/activity/${slot}/p/${pid}.json`, { method: "PUT", body: "1" })
-              : fetch(`${CHAT_DB_URL}/activity/${slot}.json`, {
-                  method: "PUT",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ b: bucket, p: { [pid]: 1 } }),
-                })))
-            .catch(() => {});
+        const mark = wallet ? 2 : 1;
+        if (window.__hoodActBucket !== bucket || window.__hoodActMark !== mark) {
+          window.__hoodActBucket = bucket; window.__hoodActMark = mark;
+          fetch(`${CHAT_DB_URL}/activity/${bucket}.json`, {
+            method: "PATCH", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ b: bucket, [`p/${pid}`]: mark }),
+          }).catch(() => {});
         }
       };
       beat();

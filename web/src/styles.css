@@ -4037,3 +4037,31 @@ html[data-theme="light"] .sr-menu-it:hover, html[data-theme="light"] .sr-menu-it
 .footer-disclaimer { font-size: 12px; opacity: .7; border-top: 0; padding-top: 0; margin-top: 6px; }
 .footer-disclaimer a { color: var(--text-dim); text-decoration: underline; text-underline-offset: 3px; }
 .footer-disclaimer a:hover { color: var(--text); }
+/* админка */
+.adm-svg { height: 220px; }
+.adm-val-sub { font-family: var(--font-ui); font-size: 14px; font-weight: 400; color: var(--text-dim); }
+.adm-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 22px; align-items: start; }
+.adm-search { margin-bottom: 12px; padding: 10px 16px; }
+.adm-search input { flex: 1; border: 0; background: transparent; padding: 0; font-size: 14px; box-shadow: none; }
+.adm-search input:focus { box-shadow: none; }
+.adm-lt .lt-h, .adm-lt .lt-row { grid-template-columns: 44px minmax(0, 1fr) 80px 130px 120px; }
+.adm-lt .lt-row { min-height: 64px; cursor: pointer; }
+.adm-lt .lt-row.on { background: rgba(255,255,255,.06); }
+.adm-lt .lt-sub.addr-copy { cursor: copy; }
+.adm-aside { margin-bottom: 0; padding: 20px; position: sticky; top: 90px; }
+.adm-aside-head { display: flex; align-items: center; gap: 12px; }
+.adm-aside-head img { width: 44px; height: 44px; border-radius: 12px; object-fit: cover; }
+.adm-op { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; padding: 8px 0; border-top: 1px solid rgba(255,255,255,.06); font-size: 13px; color: var(--text); }
+.adm-op:hover { color: var(--gold); }
+.adm-mod { max-width: 760px; }
+.adm-ban-row { display: flex; gap: 10px; }
+.adm-ban-row input { flex: 1; }
+.lt-row.adm-ban { grid-template-columns: minmax(0, 1fr) 120px auto; min-height: 56px; }
+.btn-danger { background: transparent; border: 1px solid rgba(224,92,92,.5); color: var(--red); }
+.btn-danger:hover:not(:disabled) { background: rgba(224,92,92,.12); }
+@media (max-width: 900px) {
+  .adm-layout { grid-template-columns: 1fr; }
+  .adm-aside { position: static; }
+  .adm-lt .lt-h, .adm-lt .lt-row { grid-template-columns: 40px minmax(0, 1fr) 110px; }
+  .adm-lt .lt-h > :nth-child(3), .adm-lt .lt-row > :nth-child(3), .adm-lt .lt-h > :nth-child(5), .adm-lt .lt-row > :nth-child(5) { display: none; }
+}
