@@ -1441,6 +1441,16 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                   </b>
                 </div>
                 <div className="tk-cell"><span>{t("Комиссии")}</span><b>{dollars(feesEth)}</b></div>
+                {dv.on && dv.st && (() => {
+                  // выплачено = начислено − ещё не забрано; всё в валюте монеты (акции)
+                  const paid = dv.st.accum - dv.st.mine;
+                  return (
+                    <div className="tk-cell pos-div"><span>{t("Дивиденды")}</span>
+                      <b><QuoteLogo q={data.q} size={14} /> {dv.f(paid)} <span className="pos-div-usd">{dollars(dv.num(paid))}</span></b>
+                      <span>{dv.st.mine > 0n ? <>{t("ждёт")} {dv.f(dv.st.mine)}</> : t("выплачено")}</span>
+                    </div>
+                  );
+                })()}
               </div>
             )];
           })()}

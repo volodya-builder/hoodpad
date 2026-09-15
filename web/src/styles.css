@@ -4087,3 +4087,7 @@ html[data-theme="light"] .tos-box { border-color: rgba(0,0,0,.3); }
 .th-pair { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 400; color: var(--text-dim); padding: 4px 10px 4px 5px; border-radius: 999px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); }
 .th-pair b { font-weight: 500; color: var(--text); }
 .th-pair .qlogo-sym { color: var(--text); font-size: 13px; }
+
+/* позиция: выплаченные дивиденды — логотип акции + сумма в акции + доллары */
+.pos-row .pos-div > b { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; color: var(--gold); }
+.pos-row .pos-div .pos-div-usd { color: var(--text-dim); font-weight: 500; font-size: 12px; }
