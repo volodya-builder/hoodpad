@@ -4034,3 +4034,6 @@ html[data-theme="light"] .sr-item.on { background: rgba(0,0,0,.04); }
 .sr-menu-it .qlogo-sym { color: inherit; font-size: 13.5px; }
 html[data-theme="light"] .sr-menu { background: #fff; border-color: rgba(0,0,0,.1); }
 html[data-theme="light"] .sr-menu-it:hover, html[data-theme="light"] .sr-menu-it.on { background: rgba(0,0,0,.05); }
+.footer-disclaimer { font-size: 12px; opacity: .7; border-top: 0; padding-top: 0; margin-top: 6px; }
+.footer-disclaimer a { color: var(--text-dim); text-decoration: underline; text-underline-offset: 3px; }
+.footer-disclaimer a:hover { color: var(--text); }
