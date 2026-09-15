@@ -3,6 +3,11 @@ name: hood dividends
 # Автовыплата дивидендов холдерам монет за валюту + сбор протокольной доли
 # у их пулов в сплиттер. Раз в час. Ключ — любой кошелёк с ETH на газ
 # (у claimFor/claim нет прав), берём тот же секрет, что у казначея.
+#
+# Cron у GitHub срабатывает раз в несколько часов (15.09.2026: 00:33, 06:07,
+# 12:38, 17:38) — холдеры ждали выплат по полдня. Поэтому эстафета, как у
+# арены: заход ждёт до следующего часа и сам запускает следующий.
+# Выключить эстафету: Settings → Variables → DIVIDENDS_RELAY = off.
 on:
   schedule:
     - cron: "7 * * * *"
@@ -16,6 +21,7 @@ on:
 
 permissions:
   contents: read
+  actions: write   # эстафета: запуск следующего захода
 
 concurrency:
   group: dividends
@@ -24,6 +30,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -41,3 +48,18 @@ jobs:
           else
             node bot/dividends/dividends.mjs --run | tee -a "$GITHUB_STEP_SUMMARY"
           fi
+      # Эстафета: ждём до начала следующего часа (+2 мин) и запускаем следующий заход.
+      - name: Передать эстафету
+        if: always() && github.event.inputs.mode != 'dry'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELAY: ${{ vars.DIVIDENDS_RELAY }}
+        run: |
+          if [ "$RELAY" = "off" ]; then echo "Эстафета выключена (DIVIDENDS_RELAY=off)."; exit 0; fi
+          NOW=$(date -u +%s)
+          NEXT=$(( (NOW / 3600 + 1) * 3600 + 120 ))
+          WAIT=$(( NEXT - NOW ))
+          OTHERS=$(gh run list --workflow dividends.yml --limit 20 --json status --jq '[.[] | select(.status=="queued" or .status=="pending" or .status=="waiting" or .status=="requested")] | length' || echo 0)
+          if [ "$OTHERS" != "0" ]; then echo "В очереди уже есть запуск — эстафету не передаю."; exit 0; fi
+          echo "Следующий заход через $((WAIT / 60)) мин…"; sleep "$WAIT"
+          gh workflow run dividends.yml --ref main && echo "Следующий заход запущен."
