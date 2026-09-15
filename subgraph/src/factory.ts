@@ -1,5 +1,7 @@
 import { DataSourceContext } from "@graphprotocol/graph-ts";
 import { TokenCreated } from "../generated/LaunchpadFactory/LaunchpadFactory";
+import { TokenCreated as QuoteTokenCreated } from "../generated/LaunchpadFactoryQuote/LaunchpadFactoryQuote";
+import { DividendToken } from "../generated/LaunchpadFactoryQuote/DividendToken";
 import { Token, Protocol } from "../generated/schema";
 import { BondingCurvePool } from "../generated/templates";
 import { BigInt } from "@graphprotocol/graph-ts";
@@ -29,6 +31,7 @@ export function handleTokenCreated(e: TokenCreated): void {
   t.createdAt = e.block.timestamp;
   t.createdBlock = e.block.number;
   t.graduated = false;
+  t.divBps = 0;
   t.ethReserve = BigInt.zero();
   t.tokensSold = BigInt.zero();
   t.tradesCount = 0;
@@ -43,5 +46,42 @@ export function handleTokenCreated(e: TokenCreated): void {
 
   let ctx = new DataSourceContext();
   ctx.setString("token", e.params.token.toHexString());
+  ctx.setString("quote", "");
+  BondingCurvePool.createWithContext(e.params.pool, ctx);
+}
+
+// Квот-фабрика не кладёт имя/тикер в событие — читаем с токена.
+export function handleQuoteTokenCreated(e: QuoteTokenCreated): void {
+  let tok = DividendToken.bind(e.params.token);
+  let name = tok.try_name();
+  let symbol = tok.try_symbol();
+  let uri = tok.try_metadataURI();
+
+  let t = new Token(e.params.token.toHexString());
+  t.name = name.reverted ? "" : name.value;
+  t.symbol = symbol.reverted ? "" : symbol.value;
+  t.metadataURI = uri.reverted ? "" : uri.value;
+  t.creator = e.params.creator;
+  t.pool = e.params.pool;
+  t.createdAt = e.block.timestamp;
+  t.createdBlock = e.block.number;
+  t.graduated = false;
+  t.quote = e.params.quote;
+  t.divBps = e.params.divBps;
+  t.ethReserve = BigInt.zero();
+  t.tokensSold = BigInt.zero();
+  t.tradesCount = 0;
+  t.volumeEth = BigInt.zero();
+  t.feesEth = BigInt.zero();
+  t.lastTradeAt = BigInt.zero();
+  t.save();
+
+  let p = loadProtocol();
+  p.tokensCount += 1;
+  p.save();
+
+  let ctx = new DataSourceContext();
+  ctx.setString("token", e.params.token.toHexString());
+  ctx.setString("quote", e.params.quote.toHexString());
   BondingCurvePool.createWithContext(e.params.pool, ctx);
 }

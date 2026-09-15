@@ -40,15 +40,36 @@ const PAGE = 96n;
 // При любой ошибке автоматически откатываемся на прямое чтение блокчейна.
 // МЕЙННЕТ Goldsky-субграф (индексатор). Сеть robinhood-mainnet.
 // hood v2 subgraph (мейннет, фабрика 0x68a9…): версия 2.0.0
-export const SUBGRAPH_URL =
-  "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/3.0.0/gn";
+// 3.1.0 = + квот-фабрика (монеты за валюту). Пока владелец её не задеплоил,
+// сайт сам откатывается на 3.0.0: первая проба _meta решает, дальше кэш.
+const SUBGRAPH_BASE = "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/";
+const SUBGRAPH_VERSIONS = ["3.1.0", "3.0.0"];
+export let SUBGRAPH_URL = SUBGRAPH_BASE + SUBGRAPH_VERSIONS[0] + "/gn";
+let _sgPick = null;
+async function pickSubgraph() {
+  if (_sgPick) return _sgPick;
+  _sgPick = (async () => {
+    for (const v of SUBGRAPH_VERSIONS) {
+      const u = SUBGRAPH_BASE + v + "/gn";
+      try {
+        const r = await fetch(u, { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: "{ _meta { block { number } } }" }), signal: AbortSignal.timeout(6000) });
+        const j = await r.json();
+        if (r.ok && j?.data?._meta?.block?.number > 0) { SUBGRAPH_URL = u; return u; }
+      } catch (e) { /* следующая версия */ }
+    }
+    return SUBGRAPH_URL;
+  })();
+  return _sgPick;
+}
 
 async function gql(query, attempts = 3) {
   if (!SUBGRAPH_URL) throw new Error("subgraph disabled"); // сразу на RPC-фолбэк
+  const url = await pickSubgraph();
   let lastErr;
   for (let i = 0; i < attempts; i++) {
     try {
-      const r = await fetch(SUBGRAPH_URL, {
+      const r = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query }),
@@ -147,6 +168,42 @@ export async function subgraphTraderFees(trader, sinceTs = 0) {
 /** Последние сделки ВСЕХ пулов одним запросом (для аналитики и лидербордов).
  *  Вместо обхода каждого пула по отдельности — до 3000 свежих сделок за 1-3 запроса.
  *  SWR-кэш 60с: сто посетителей = те же 1-3 запроса в минуту, а не сотни. */
+// Сабграф 3.1.0 отдаёт у сделки поле quote (валюта курвы). До передеплоя
+// поля нет — запрос с ним падает целиком, поэтому сначала пробуем.
+let _hasQuote = null;
+async function subgraphHasQuote() {
+  if (_hasQuote !== null) return _hasQuote;
+  try { await gql("{ trades(first: 1) { quote } }"); _hasQuote = true; }
+  catch (e) { _hasQuote = false; }
+  return _hasQuote;
+}
+
+/** Сделки монет за валюту переводим в ETH-эквивалент: аналитика и арена
+ *  считают всё в ETH. Курс валюты — с обозревателя, ETH — как везде.
+ *  Нет курса — сделка остаётся с eth = 0 (в объём не попадёт, но видна). */
+async function toEthEquivalent(rows) {
+  const qrows = rows.filter((r) => r.quote);
+  if (!qrows.length) return rows;
+  const { quoteUsd, ethUsd } = await import("./price.js");
+  const tokens = await loadTokens().catch(() => []);
+  const byPool = {};
+  for (const tk of tokens) if (tk.q) byPool[(tk.pool || "").toLowerCase()] = tk.q;
+  const rate = await ethUsd().catch(() => 0);
+  const quotes = [...new Set(qrows.map((r) => r.quote))];
+  const px = {};
+  await Promise.all(quotes.map(async (a) => { px[a] = await quoteUsd(a).catch(() => 0); }));
+  for (const r of qrows) {
+    const q = byPool[r.pool];
+    const dec = q?.dec ?? 18;
+    const k = rate > 0 && px[r.quote] > 0 ? px[r.quote] / rate : 0;
+    r.qAmt = Number(r.ethRaw) / 10 ** dec;
+    r.qFee = Number(r.feeRaw) / 10 ** dec;
+    r.eth = r.qAmt * k;
+    r.fee = r.qFee * k;
+  }
+  return rows;
+}
+
 let _allTr = { v: null, t: 0, p: null };
 export async function allTrades() {
   if (_allTr.v && Date.now() - _allTr.t < 60_000) return _allTr.v;
@@ -154,10 +211,11 @@ export async function allTrades() {
   _allTr.p = (async () => {
     const out = [];
     let beforeTs = null;
+    const qf = (await subgraphHasQuote()) ? " quote" : "";
     for (let page = 0; page < 3; page++) {
       const cond = beforeTs ? `, where: { timestamp_lt: "${beforeTs}" }` : "";
       const d = await gql(`{ trades(first: 1000, orderBy: timestamp, orderDirection: desc${cond}) {
-        pool trader isBuy ethAmount tokenAmount fee timestamp block tx } }`);
+        pool trader isBuy ethAmount tokenAmount fee timestamp block tx${qf} } }`);
       const rows = d?.trades || [];
       for (const l of rows) {
         out.push({
@@ -166,11 +224,14 @@ export async function allTrades() {
           eth: Number(l.ethAmount) / 1e18, tokens: Number(l.tokenAmount) / 1e18,
           fee: Number(l.fee) / 1e18,
           ts: Number(l.timestamp) * 1000, block: BigInt(l.block), tx: l.tx,
+          quote: l.quote ? String(l.quote).toLowerCase() : null,
+          ethRaw: l.ethAmount, feeRaw: l.fee,
         });
       }
       if (rows.length < 1000) break;
       beforeTs = rows[rows.length - 1].timestamp;
     }
+    await toEthEquivalent(out);
     _allTr = { v: out, t: Date.now(), p: null };
     return out;
   })().catch((e) => { _allTr.p = null; if (_allTr.v) return _allTr.v; throw e; });
@@ -286,7 +347,11 @@ async function _loadTokensFresh() {
   // индексирует. Читаем их с цепи напрямую: их немного, а один упавший
   // запрос не должен ронять весь список.
   const q = await _loadQuoteTokensRpc().catch(() => []);
-  return q.length ? [...q, ...eth] : eth;
+  if (!q.length) return eth;
+  // сабграф 3.1+ тоже знает монеты за валюту — чтобы не было дублей,
+  // из его списка их убираем (с цепи они приходят с курсом и валютой)
+  const qs = new Set(q.map((x) => x.token.toLowerCase()));
+  return [...q, ...eth.filter((x) => !qs.has(x.token.toLowerCase()))];
 }
 
 /** Монеты quote-фабрики. Строка — как у ETH-монет, плюс q = {addr, sym, dec}:

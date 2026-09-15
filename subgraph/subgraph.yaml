@@ -1,4 +1,12 @@
 specVersion: 0.0.5
+# Графт: 3.1.0 наследует все данные 3.0.0 до блока 62 830 000 (за 8 минут до
+# деплоя квот-фабрики) и индексирует дальше сама — минуты вместо часов.
+# При передеплое фабрик перед запуском графт убрать и стартовать с нуля.
+features:
+  - grafting
+graft:
+  base: QmNYxmheyHF6vRyQgoujKYxyf6BGPNDpkMPWkRzV7KMzCY
+  block: 62830000
 schema:
   file: ./schema.graphql
 dataSources:
@@ -24,6 +32,30 @@ dataSources:
       eventHandlers:
         - event: TokenCreated(indexed address,indexed address,indexed address,string,string,string)
           handler: handleTokenCreated
+      file: ./src/factory.ts
+  # --- квот-фабрика: монеты за акции/валюту (задеплоено 14.09.2026). Пулы
+  # шлют те же Buy/Sell/Graduated, поэтому шаблон пула общий; в контексте
+  # лежит адрес валюты, чтобы фронт отличал единицы.
+  - kind: ethereum
+    name: LaunchpadFactoryQuote
+    network: robinhood-mainnet
+    source:
+      address: "0xd7299e03c5e7d4f9f4c62f305a0b619359cf9a4f"
+      abi: LaunchpadFactoryQuote
+      startBlock: 62830000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities: [Token, Protocol]
+      abis:
+        - name: LaunchpadFactoryQuote
+          file: ./abis/LaunchpadFactoryQuote.json
+        - name: DividendToken
+          file: ./abis/DividendToken.json
+      eventHandlers:
+        - event: TokenCreated(indexed address,indexed address,indexed address,address,uint16)
+          handler: handleQuoteTokenCreated
       file: ./src/factory.ts
   - kind: ethereum
     name: BuybackTreasury
