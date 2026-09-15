@@ -1486,6 +1486,18 @@ const EN = {
   "дивиденды холдерам с каждой сделки": "dividends to holders on every trade",
   "Кап создателя — {cap} за всё время кривой (10% порога). {how} Перебор откатит контракт.": "Creator cap — {cap} over the whole curve (10% of the threshold). {how} Going over reverts the contract.",
   "Платите ETH, одной транзакцией.": "You pay ETH, in one transaction.",
+  "Чат с ИИ монеты": "Chat with the coin's AI",
+  "ИИ у этой монеты не включён — это решение её создателя.": "This coin's AI is off — that is its creator's call.",
+  "Читают все, пишут холдеры. ИИ отвечает от лица монеты — про мемы, посты, идеи для доски.": "Everyone can read, holders can write. The AI speaks for the coin — memes, posts, ideas for the board.",
+  "Пока тихо — спросите ИИ первым.": "Quiet so far — ask the AI first.",
+  "думает…": "thinking…",
+  "Подключить кошелёк, чтобы писать": "Connect a wallet to write",
+  "Писать могут холдеры": "Only holders can write",
+  "купите хоть немного, и чат откроется.": "buy even a little and the chat opens.",
+  "Спросите ИИ монеты…": "Ask the coin's AI…",
+  "Не удалось войти в чат.": "Could not sign in to the chat.",
+  "Чат с ИИ пока не подключён — воркер ещё не задеплоен.": "The AI chat is not connected yet — the worker is not deployed.",
+  "Ошибка": "Error",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

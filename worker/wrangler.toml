@@ -1,0 +1,32 @@
+# Воркер чата с ИИ монеты — единственный серверный кусок hood.
+# Деплой: GitHub Actions (.github/workflows/worker.yml) при пуше в main,
+# или руками: cd worker && npx wrangler deploy (нужен вход в Cloudflare).
+name = "hood-chat"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
+
+# Живёт на том же домене, что сайт: hoodandarrow.com/api/* перехватывает
+# воркер, остальное отдаёт GitHub Pages. Без CORS и без отдельного домена.
+routes = [{ pattern = "hoodandarrow.com/api/*", zone_name = "hoodandarrow.com" }]
+
+[vars]
+RPC_URL = "https://rpc.mainnet.chain.robinhood.com"
+CHAT_DB_URL = "https://hood-chat-4b664-default-rtdb.europe-west1.firebasedatabase.app"
+FEE_SPLITTER = "0x4b4ca78517a48876a4341cbbfbd96e15c9d99491"
+SITE_URL = "https://hoodandarrow.com"
+BUILDS_URL = "https://hoodandarrow.com/staging/agents/builds.json"
+# Модель, если у монеты своя недоступна (сняли с каталога и т.п.).
+FALLBACK_MODEL = "openai/gpt-4o-mini"
+# Лимиты: кошелёк в минуту / в сутки, монета в минуту / в сутки, всё в сутки.
+LIMITS = "wallet_min=6,wallet_day=60,coin_min=20,coin_day=200,all_day=1500"
+# Секреты (wrangler secret put …): OPENROUTER_KEY — обязательный,
+# CHAT_SECRET — необязательный (иначе выводится из ключа OpenRouter).
+
+[[durable_objects.bindings]]
+name = "LIMITS_DO"
+class_name = "Limits"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Limits"]

@@ -139,6 +139,9 @@ export const FEATURES = {
   // Скрыта 14.09.2026 по решению владельца: лишняя информация. Код и
   // lib/trust.js на месте — включается флагом.
   trustScore: false,
+  // Чат холдеров с ИИ монеты (components/AgentChat.jsx + worker/). Включён
+  // 15.09.2026; сообщения ходят через воркер Cloudflare на /api/chat/*.
+  aiChat: true,
 };
 
 export const TREASURY_POLICY = { cats: 20, arena: 10, buyback: 70 };
@@ -185,6 +188,10 @@ export const VOTE_ADDRESS =
 // После деплоя v2 вписать адрес VotePower (или задать VITE_VOTEPOWER_ADDRESS).
 export const VOTEPOWER_ADDRESS =
   import.meta.env.VITE_VOTEPOWER_ADDRESS ?? "0x352b66605283d3b492a20a61f1f9aa541816def8";
+
+// Воркер чата с ИИ монеты (worker/): живёт на том же домене, /api/*.
+// Пусто = чат выключен. Локально можно указать VITE_CHAT_API.
+export const CHAT_API_URL = (import.meta.env.VITE_CHAT_API ?? "https://hoodandarrow.com/api").replace(/\/$/, "");
 
 // Off-chain chat storage: Firebase Realtime Database URL
 export const CHAT_DB_URL = (import.meta.env.VITE_CHAT_DB_URL ?? "https://hood-chat-4b664-default-rtdb.europe-west1.firebasedatabase.app").replace(/\/$/, "");

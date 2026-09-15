@@ -202,6 +202,43 @@ builds.json с `failed: true`). Cron `agent.yml` — `*/5`. Результаты
 staging), ссылки ведут на staging. Известные дыры v1: открытая база (чужой
 голос можно удалить), балансы без снимка, on-chain списание бюджета не из CI.
 
+## Чат холдеров с ИИ монеты (15.09.2026) — worker/ + components/AgentChat.jsx
+
+Единственная серверная часть сайта: Cloudflare Worker `hood-chat` на маршруте
+`hoodandarrow.com/api/*` (тот же домен, без CORS; staging и прод ходят в один воркер).
+- Вход: одна подпись `hood ai chat\naddress: <addr>\nts: <ms>` → `POST /api/chat/session`
+  → сессия на неделю (HMAC). Подпись проверяется через прекомпайл ecrecover сети
+  (`eth_call` на 0x01) — воркер не тратит CPU (free-план: 10 мс); смарт-кошельки — EIP-1271.
+- `POST /api/chat/send {session, coin, text}`: `aiOf(coin)` у сплиттера, `balanceOf > 0`,
+  лимиты в Durable Object (`LIMITS` в wrangler.toml), промпт = описание монеты + что построил
+  агент (builds.json) + идеи с доски + правила; модель монеты (`meta.ai`) через OpenRouter,
+  запасная `FALLBACK_MODEL`; вопрос и ответ — в RTDB `aichat/<coin>/messages`,
+  расход — `aichat/<coin>/stats/<день>`. Платит hood (ключ OpenRouter в секретах CI).
+- Сайт: общая комната на монету во вкладке «ИИ» страницы монеты; читают все (поток RTDB),
+  пишут холдеры. `CHAT_API_URL` в config.js (`https://hoodandarrow.com/api`), флаг `FEATURES.aiChat`.
+- Деплой: `.github/workflows/worker.yml` при пуше `worker/**` в main. Секреты репозитория:
+  `CLOUDFLARE_API_TOKEN` (шаблон «Edit Cloudflare Workers»), `CLOUDFLARE_ACCOUNT_ID`,
+  `OPENROUTER_KEY` (есть), `CHAT_SECRET` (необязательно). Проверка: `/api/chat/health`.
+- Тест ядра без Cloudflare: `cd worker && node test/core.test.mjs` (нужен RPC).
+  Из песочницы Claude — через прокси (scratchpad/worker/test/run.mjs).
+- Честно про v1: база открыта на запись — подделать строку в ленте может кто угодно
+  (как и в обычном чате); ответы модели идут за счёт hood без привязки к бюджету монеты.
+
+## Реестр акций и белый список (15.09.2026)
+
+- `web/src/lib/rwa.js` — 194 бумаги из живого реестра docs.robinhood.com/chain/contracts
+  (таблица строится JS-ом: читать через браузер, не через fetch).
+- `scripts/allow-stocks.js` — открыть запуск за акции с живым пулом Uniswap V3 (глубже
+  $2 000; зонд 15.09.2026: 71 бумага — как у Pons): `setQuote` с порогом $16 000 по цене
+  из пула + `setRoute` запу (WETH→USDG→акция, WETH/USDG пул fee 100 — самый глубокий).
+  Сухой прогон без ключа; `--send` — владелец. Пулы к WETH у акций почти пустые, вся
+  ликвидность в USDG — маршруты двуххоповые.
+- Деньги на сайте везде в ETH и долларах (`moneyEth` в lib/price.js), символ акции в суммах
+  не пишем (решение владельца 15.09.2026); дивиденды при этом приходят акцией — это в
+  подсказке кнопки «Забрать».
+- Страница монеты рисуется из кэша (`hood_tok_v1_<addr>` / список с главной) мгновенно.
+- Эмодзи в UI заменены иконками `components/Icon.jsx` — новые эмодзи не добавлять.
+
 ## Мастерская и журнал агента (13.09.2026) — устарело, см. выше
 
 Вкладка «Мастерская» (`web/src/pages/AI.jsx`) — всё про ИИ-агентов монет. Три живых блока:
