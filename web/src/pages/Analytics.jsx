@@ -52,6 +52,11 @@ function Bars({ data, bins, fmtVal, hover, setHover, period }) {
   const yOf = (v) => TOP + (1 - (max > 0 ? v / max : 0)) * (H - PAD_B - TOP);
   return (
     <svg className="ana-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" onMouseLeave={() => setHover(null)}>
+      <defs>
+        <linearGradient id="anaBarGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#6b6b69" /><stop offset="1" stopColor="#3a3a39" /></linearGradient>
+        <linearGradient id="anaBarHl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#f2f2ef" /><stop offset="1" stopColor="#9a9a96" /></linearGradient>
+        <linearGradient id="anaBarNow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#7fb04a" /><stop offset="1" stopColor="#4f7a2c" /></linearGradient>
+      </defs>
       {grid.map((g) => (
         <g key={g}>
           <line x1="0" x2={W - PAD_R - 6} y1={yOf(max * g)} y2={yOf(max * g)} className="ana-grid-line" />
