@@ -43,6 +43,7 @@ jobs:
           MIN_PAYOUT_USD: "0.05"
           MIN_SWEEP_USD: "0.5"
         run: |
+          set -o pipefail   # иначе tee прячет ошибку бота, и заход выглядит успешным
           if [ "${{ github.event.inputs.mode }}" = "dry" ]; then
             node bot/dividends/dividends.mjs | tee -a "$GITHUB_STEP_SUMMARY"
           else
