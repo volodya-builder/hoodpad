@@ -62,8 +62,8 @@ const clickTab = (sel, text) => async (page) => {
 console.log("== десктоп");
 const desk = await browser.newContext({ viewport: { width: 1400, height: 900 }, locale: "ru-RU" }); // locale: без неё Chromium в песочнице берёт «en-US@posix» и toLocaleString() падает
 for (const [label, hash] of PAGES) await run(desk, label, hash);
-await run(desk, "арена · правила", "#/arena", clickTab(".bt-tab", "Правила"));
-await run(desk, "арена · история", "#/arena", clickTab(".bt-tab", "История побед"));
+await run(desk, "арена · правила", "#/arena", clickTab(".ttab", "Правила"));
+await run(desk, "арена · история", "#/arena", clickTab(".ttab", "История побед"));
 await run(desk, "монета · чат", `#/token/${DOGE}`, clickTab(".side-tabs .bt-tab", "Чат"));
 await run(desk, "монета · продать", `#/token/${DOGE}`, clickTab(".tabs .tab", "Продать"));
 await run(desk, "создать · акции", "#/create", clickTab("button", "Акции"));
@@ -74,7 +74,7 @@ const mob = await browser.newContext({ ...devices["iPhone 13"], locale: "ru-RU" 
 for (const [label, hash] of PAGES) await run(mob, label, hash);
 await run(mob, "монета · мои позиции (таблица)", `#/token/${DOGE}`, clickTab(".bt-tabs:not(.side-tabs) .bt-tab", "Мои позиции"));
 await run(mob, "монета · история сделок", `#/token/${DOGE}`, clickTab(".bt-tabs:not(.side-tabs) .bt-tab", "История сделок"));
-await run(mob, "арена · правила", "#/arena", clickTab(".bt-tab", "Правила"));
+await run(mob, "арена · правила", "#/arena", clickTab(".ttab", "Правила"));
 await mob.close();
 
 await browser.close();
