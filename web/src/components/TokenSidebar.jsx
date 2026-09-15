@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import Icon from "./Icon.jsx";
 import { formatEther, formatUnits } from "viem";
 import { loadTokens, subgraphStats24 } from "../lib/data.js";
 import { useEthUsd, usd, quoteUsd } from "../lib/price.js";
@@ -99,9 +100,9 @@ export default function TokenSidebar({ current }) {
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFav(x.token); }}>
                 {favs.has(x.token) ? "★" : "☆"}
               </span>
-              {x.meta.image ? <img src={x.meta.image} alt="" /> : <span className="ts-ph">🖼️</span>}
+              {x.meta.image ? <img src={x.meta.image} alt="" /> : <span className="ts-ph"><Icon name="image" style={{ margin: 0 }} /></span>}
               <span className="ts-name">
-                <b>${x.symbol}{x.graduated ? " 🎯" : ""}</b>
+                <b>${x.symbol}{x.graduated ? <> <Icon name="target" size={11} style={{ margin: 0 }} /></> : ""}</b>
                 <span className="dim" title={t("Объём 24ч")}>
                   {v > 0 ? (v * rate >= 1000 ? usd(v * rate) : "$" + (v * rate).toFixed(2)) : "—"}
                 </span>

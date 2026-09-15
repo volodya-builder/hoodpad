@@ -3511,3 +3511,8 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .board-build-meta .q-logo { width: 14px; height: 14px; margin-right: 4px; vertical-align: -2px; }
 .board-facts { margin-top: 14px; font-size: 11.5px; color: var(--text-dim); line-height: 1.5; }
 @media (max-width: 860px) { .board-cols { grid-template-columns: 1fr; } .board-agent { margin-left: 0; } }
+
+/* Линейные иконки вместо эмодзи (components/Icon.jsx) */
+.ico { display: inline-block; vertical-align: -2px; margin-right: 5px; flex: none; }
+.chat-ava .ico, .ts-ph .ico, .wb .ico { vertical-align: middle; }
+.chat-ava.guest { color: var(--text-dim); }

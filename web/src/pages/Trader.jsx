@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import Icon from "../components/Icon.jsx";
 import { formatEther } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { tokenAbi } from "../lib/abi.js";
@@ -110,7 +111,7 @@ export default function Trader({ address }) {
       <div className="pf-head" style={{ display: "flex", alignItems: "center", gap: 16, margin: "30px 0 18px" }}>
         <div className="pf-ava" style={{ width: 56, height: 56, borderRadius: 16, background: "var(--card)",
           border: "1px solid var(--border-gold)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>
-          👤
+          <Icon name="user" size={26} style={{ margin: 0 }} />
         </div>
         <div>
           <div className="page-title" style={{ margin: 0, fontSize: 26 }}>{t("Трейдер")}</div>
@@ -160,7 +161,7 @@ export default function Trader({ address }) {
         {state.rep && (
           <div className="rep-card">
             <div className="rep-head">
-              <span className="rep-title">🏹 {t("Репутация создателя")}</span>
+              <span className="rep-title"><Icon name="user" /> {t("Репутация создателя")}</span>
               <span className="rep-score" style={{
                 color: state.rep.rugs > 0 ? "#e06a4a" : state.rep.score >= 70 ? "var(--leaf)" : "var(--gold)",
               }}>
@@ -264,7 +265,7 @@ export default function Trader({ address }) {
             }).map((tr, i) => (
               <div className="trow phist" key={i}>
                 <span className="hist-coin" onClick={() => copyCA(tr.token)} title={t("Скопировать адрес контракта")}>
-                  {tr.img ? <img src={tr.img} alt="" /> : <span className="ts-ph">🖼️</span>}
+                  {tr.img ? <img src={tr.img} alt="" /> : <span className="ts-ph"><Icon name="image" style={{ margin: 0 }} /></span>}
                   <a href={`#/token/${tr.token}`} onClick={(e) => e.stopPropagation()} style={{ color: "inherit" }}>
                     <b>${tr.sym}</b>
                   </a>
@@ -296,7 +297,7 @@ export default function Trader({ address }) {
               <div className="tk-cell"><span>{t("Кривая")}</span>
                 <b>{fmt(Number((p.sold * 10000n) / p.cap) / 100, 1)}%</b></div>
               <div className="tk-cell"><span>{t("Статус")}</span>
-                <b>{p.graduated ? "🎯 " + t("Градуировал") : t("на кривой")}</b></div>
+                <b>{p.graduated ? <><Icon name="target" size={12} /> {t("Градуировал")}</> : t("на кривой")}</b></div>
             </div>
           ))}
         </div>

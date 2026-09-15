@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import Icon from "../components/Icon.jsx";
 import { formatEther } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { tokenAbi, poolAbi } from "../lib/abi.js";
@@ -319,7 +320,7 @@ export default function Profile({ wallet, onConnect }) {
                             title={t("Скопировать адрес контракта")}>
                         {tr.img
                           ? <img src={tr.img} alt="" />
-                          : <span className="ts-ph" style={{ fontSize: 14 }}>🖼️</span>}
+                          : <span className="ts-ph"><Icon name="image" style={{ margin: 0 }} /></span>}
                         <a href={`#/token/${tr.token}`} onClick={(e) => e.stopPropagation()}
                            style={{ color: "inherit" }}><b>${tr.sym}</b></a>
                         <span className="mono dim">
@@ -477,7 +478,7 @@ export default function Profile({ wallet, onConnect }) {
                       </span>
                     </span>
                     <span>{usd(mcapEth * rate)}</span>
-                    <span className="dim">{tk.graduated ? "🎯" : fmt(prog, 0) + "%"}</span>
+                    <span className="dim">{tk.graduated ? <Icon name="target" size={12} style={{ margin: 0 }} /> : fmt(prog, 0) + "%"}</span>
                     <span style={{ color: fees > 0 ? "var(--leaf)" : "inherit" }}>
                       {fmtEth(fees)} ETH {U(fees)}
                     </span>
