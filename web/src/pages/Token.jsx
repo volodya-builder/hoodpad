@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import Icon from "../components/Icon.jsx";
 import { parseEther, formatEther, parseUnits, formatUnits } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi, zapAbi, feeSplitterAbi } from "../lib/abi.js";
 import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, FEATURES, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE } from "../lib/config.js";
-import { poolTrades, invalidateTrades, loadTokens, allTrades, parseMeta } from "../lib/data.js";
+import { poolTrades, invalidateTrades, loadTokens, allTrades, parseMeta, cachedToken } from "../lib/data.js";
 import { computeTrust } from "../lib/trust.js";
 import { honestVolume } from "../lib/fairvol.js";
 import { useEthUsd, useQuoteUsd, usd, moneyEth, ethOf } from "../lib/price.js";
@@ -189,6 +190,47 @@ function MiniChart({ points, rate, marks, base = 1.625 }) {
   );
 }
 
+// ---- кэш страницы монеты: последнее состояние data, чтобы рисовать сразу
+const TOK_CACHE = "hood_tok_v1_";
+const bigOut = (k, v) => (typeof v === "bigint" ? { $b: v.toString() } : v);
+const bigIn = (k, v) => (v && typeof v === "object" && typeof v.$b === "string" ? BigInt(v.$b) : v);
+function readTokenCache(addr) {
+  if (!addr) return null;
+  try {
+    const raw = localStorage.getItem(TOK_CACHE + addr.toLowerCase());
+    const d = raw ? JSON.parse(raw, bigIn) : null;
+    if (d && d.pool && d.symbol) return d;
+  } catch (e) { /* дальше — список монет */ }
+  // Первый заход на монету: берём то, что уже знает список с главной
+  // (имя, цена, резерв, картинка). Остального нет — придёт с сетью.
+  const t = cachedToken(addr);
+  if (!t || !t.pool) return null;
+  return { pool: t.pool, name: t.name, symbol: t.symbol, uri: "", price: t.price ?? 0n, sold: t.sold ?? 0n,
+           cap: t.cap ?? 0n, reserve: t.reserve ?? 0n, graduated: !!t.graduated, migrated: false, creator: t.creator || "",
+           balance: 0n, walletEth: 0n, walletQuote: 0n, q: t.q ? { virt: 0, ...t.q } : null, divBps: t.divBps || 0, zapOk: false,
+           _meta: t.meta || {} };
+}
+function writeTokenCache(addr, d) {
+  try {
+    // Балансы — не в кэш: они принадлежат кошельку, а не монете.
+    const { balance, walletEth, walletQuote, ...rest } = d;
+    localStorage.setItem(TOK_CACHE + addr.toLowerCase(), JSON.stringify({ ...rest, balance: 0n, walletEth: 0n, walletQuote: 0n }, bigOut));
+  } catch (e) { /* нет места — не страшно */ }
+}
+// Символ и знаки валюты кривой не меняются — читаем один раз.
+const QUOTE_META = "hood_quote_v1_";
+async function quoteMeta(addr) {
+  const k = QUOTE_META + String(addr).toLowerCase();
+  try { const c = JSON.parse(localStorage.getItem(k) || "null"); if (c && c.sym && c.dec != null) return c; } catch (e) { /* ignore */ }
+  const [sym, dec] = await Promise.all([
+    publicClient.readContract({ address: addr, abi: erc20Abi, functionName: "symbol" }).catch(() => "?"),
+    publicClient.readContract({ address: addr, abi: erc20Abi, functionName: "decimals" }).catch(() => 18),
+  ]);
+  const m = { sym: String(sym), dec: Number(dec) };
+  try { if (m.sym !== "?") localStorage.setItem(k, JSON.stringify(m)); } catch (e) { /* ignore */ }
+  return m;
+}
+
 export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   useClock(5000);
   const { t } = useLang();
@@ -196,7 +238,16 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const split = useSplit();
   const support = useSupport();
   const cushion = support.per[tokenAddress?.toLowerCase()]?.eth || 0;
-  const [data, setData] = useState(null);
+  // Страница рисуется МГНОВЕННО из кэша последнего захода (localStorage),
+  // а сеть обновляет цифры следом. Раньше до первого кадра было 6–7
+  // последовательных обращений к RPC — «Загружаю…» на пару секунд (просьба
+  // владельца 15.09.2026: открываться сразу). Балансы кошелька в кэш не
+  // пишем — они у каждого свои.
+  const [data, setData] = useState(() => readTokenCache(tokenAddress));
+  useEffect(() => { // смена монеты — её кэш (или пусто), старые цифры не показываем
+    const c = readTokenCache(tokenAddress);
+    setData(c); setMeta(c?._meta || parseMeta(c?.uri || "")); setError("");
+  }, [tokenAddress]);
   // Курс валюты кривой в долларах — для монет за AAPL/USDG. У ETH-монет 0.
   // Строго ПОСЛЕ useState(data): обращение к data выше строки объявления
   // роняло страницу («Cannot access before initialization»).
@@ -235,7 +286,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   // Запас на газ нужен только когда платим нативным ETH.
   const GAS_KEEP = PAY ? 0 : 0.0003;
   const payBal = PAY ? (data?.walletQuote ?? 0n) : (data?.walletEth ?? 0n);
-  const [meta, setMeta] = useState({});
+  const [meta, setMeta] = useState(() => { const c = readTokenCache(tokenAddress); return c?._meta || parseMeta(c?.uri || ""); });
   const [tab, setTab] = useState("buy");
   const [amount, setAmount] = useState("");
   const [quote, setQuote] = useState(null);
@@ -284,22 +335,22 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     const creatorL = (data.creator || "").toLowerCase();
     for (const [a, list] of Object.entries(byAddr)) {
       const out = [];
-      if (a === creatorL) out.push(["👨‍💻", t("Кошелёк создателя токена")]);
-      if (a === TREASURY_ADDRESS.toLowerCase()) out.push(["🏦", t("Казна выкупа hood")]);
+      if (a === creatorL) out.push(["code", t("Кошелёк создателя токена")]);
+      if (a === TREASURY_ADDRESS.toLowerCase()) out.push(["bank", t("Казна выкупа hood")]);
       const vol = list.reduce((s, x) => s + x.eth + x.fee, 0);
       if (vol / poolVol > 0.25 && list.length > 1 && a !== creatorL)
-        out.push(["🐳", t("Кит: больше 25% объёма этого токена")]);
+        out.push(["users", t("Кит: больше 25% объёма этого токена")]);
       const firstBuy = list.filter((x) => x.side === "buy")
         .reduce((m, x) => Math.min(m, x.ts || Infinity), Infinity);
       if (extra?.createdAt && firstBuy !== Infinity && a !== creatorL
           && firstBuy - extra.createdAt < 10 * 60 * 1000)
-        out.push(["🎯", t("Снайпер: вход в первые 10 минут после запуска")]);
+        out.push(["target", t("Снайпер: вход в первые 10 минут после запуска")]);
       const bought = list.filter((x) => x.side === "buy").reduce((s, x) => s + x.tokens, 0);
       const sold = list.filter((x) => x.side === "sell").reduce((s, x) => s + x.tokens, 0);
       if (list.length >= 6 && bought > 0 && Math.abs(bought - sold) / bought < 0.15)
-        out.push(["🔁", t("Подозрение на накрутку: покупки ≈ продажи")]);
+        out.push(["repeat", t("Подозрение на накрутку: покупки ≈ продажи")]);
       if (firstPlat[a] && Date.now() - firstPlat[a] < 24 * 3600 * 1000)
-        out.push(["🌱", t("Свежий кошелёк: первая сделка на платформе меньше суток назад")]);
+        out.push(["leaf", t("Свежий кошелёк: первая сделка на платформе меньше суток назад")]);
       map[a] = out;
     }
     return map;
@@ -307,7 +358,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const Badges = ({ addr }) => (
     <>{(walletBadges[addr.toLowerCase()] || []).map(([ic, lbl], i) => (
       <span key={i} className="wb" data-tip={lbl}
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>{ic}</span>
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}><Icon name={ic} size={12} style={{ margin: 0 }} /></span>
     ))}</>
   );
   const [qpcts, setQpcts] = useState(() => {
@@ -473,36 +524,32 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
 
   const load = useCallback(async () => {
     const ZERO = "0x0000000000000000000000000000000000000000";
-    let pool = await publicClient.readContract({
-      address: FACTORY_ADDRESS,
-      abi: factoryAbi,
-      functionName: "poolOf",
-      args: [tokenAddress],
-    });
+    // Обе фабрики спрашиваем разом (один пакет RPC), а не по очереди.
+    const [poolEth, poolQ] = await Promise.all([
+      publicClient.readContract({ address: FACTORY_ADDRESS, abi: factoryAbi, functionName: "poolOf", args: [tokenAddress] }),
+      QUOTE_LIVE
+        ? publicClient.readContract({ address: QUOTE_FACTORY_ADDRESS, abi: quoteFactoryAbi, functionName: "poolOf", args: [tokenAddress] }).catch(() => ZERO)
+        : Promise.resolve(ZERO),
+    ]);
+    let pool = poolEth;
     // Монеты за ERC20-валюту (USDG, акции) живут в quote-фабрике. У них
     // другая ABI пула и своя валюта; q — всё, что о ней нужно знать странице.
     let q = null;
-    if (pool === ZERO && QUOTE_LIVE) {
-      pool = await publicClient.readContract({
-        address: QUOTE_FACTORY_ADDRESS, abi: quoteFactoryAbi, functionName: "poolOf", args: [tokenAddress],
-      });
-      if (pool !== ZERO) {
-        const addr = await publicClient.readContract({
-          address: QUOTE_FACTORY_ADDRESS, abi: quoteFactoryAbi, functionName: "quoteOf", args: [tokenAddress],
-        });
-        const [sym, dec] = await Promise.all([
-          publicClient.readContract({ address: addr, abi: erc20Abi, functionName: "symbol" }).catch(() => "?"),
-          publicClient.readContract({ address: addr, abi: erc20Abi, functionName: "decimals" }).catch(() => 18),
-        ]);
-        const virt = await publicClient.readContract({ address: pool, abi: quotePoolAbi, functionName: "virtualQuote" }).catch(() => 0n);
-        q = { addr, sym: String(sym), dec: Number(dec), virt: Number(formatUnits(virt, Number(dec))) };
-      }
+    let divBps = 0;
+    if (pool === ZERO && poolQ !== ZERO) {
+      pool = poolQ;
+      const [addr, virt, db] = await Promise.all([
+        publicClient.readContract({ address: QUOTE_FACTORY_ADDRESS, abi: quoteFactoryAbi, functionName: "quoteOf", args: [tokenAddress] }),
+        publicClient.readContract({ address: pool, abi: quotePoolAbi, functionName: "virtualQuote" }).catch(() => 0n),
+        publicClient.readContract({ address: pool, abi: quotePoolAbi, functionName: "divBps" }).catch(() => 0),
+      ]);
+      // Знаки и символ валюты не меняются — после первого раза берём из кэша.
+      const { sym, dec } = await quoteMeta(addr);
+      q = { addr, sym, dec, virt: Number(formatUnits(virt, dec)) };
+      divBps = Number(db);
     }
-    const divBps = q
-      ? Number(await publicClient.readContract({ address: pool, abi: quotePoolAbi, functionName: "divBps" }).catch(() => 0))
-      : 0;
     const pAbi = q ? quotePoolAbi : poolAbi;
-    const [name, symbol, uri, price, sold, cap, reserve, graduated, migrated, creator] =
+    const [name, symbol, uri, price, sold, cap, reserve, graduated, migrated, creator, balance, walletEth, walletQuote, zapOk] =
       await Promise.all([
         publicClient.readContract({ address: tokenAddress, abi: tokenAbi, functionName: "name" }),
         publicClient.readContract({ address: tokenAddress, abi: tokenAbi, functionName: "symbol" }),
@@ -514,28 +561,21 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         publicClient.readContract({ address: pool, abi: pAbi, functionName: "graduated" }),
         publicClient.readContract({ address: pool, abi: pAbi, functionName: "migrated" }),
         publicClient.readContract({ address: pool, abi: pAbi, functionName: "creator" }),
-      ]);
-    let balance = 0n;
-    let walletEth = 0n;
-    let walletQuote = 0n;
-    if (wallet) {
-      [balance, walletEth, walletQuote] = await Promise.all([
-        publicClient.readContract({
-          address: tokenAddress,
-          abi: tokenAbi,
-          functionName: "balanceOf",
-          args: [wallet.account],
-        }),
-        publicClient.getBalance({ address: wallet.account }).catch(() => 0n),
-        q
+        // Кошелёк и зап — тем же пакетом: они не зависят от ответов выше.
+        wallet
+          ? publicClient.readContract({ address: tokenAddress, abi: tokenAbi, functionName: "balanceOf", args: [wallet.account] }).catch(() => 0n)
+          : Promise.resolve(0n),
+        wallet ? publicClient.getBalance({ address: wallet.account }).catch(() => 0n) : Promise.resolve(0n),
+        wallet && q
           ? publicClient.readContract({ address: q.addr, abi: erc20Abi, functionName: "balanceOf", args: [wallet.account] }).catch(() => 0n)
           : Promise.resolve(0n),
+        q && ZAP_LIVE
+          ? publicClient.readContract({ address: ZAP_ADDRESS, abi: zapAbi, functionName: "supported", args: [tokenAddress] }).catch(() => false)
+          : Promise.resolve(false),
       ]);
-    }
-    const zapOk = q && ZAP_LIVE
-      ? await publicClient.readContract({ address: ZAP_ADDRESS, abi: zapAbi, functionName: "supported", args: [tokenAddress] }).catch(() => false)
-      : false;
-    setData({ pool, name, symbol, uri, price, sold, cap, reserve, graduated, migrated, creator, balance, walletEth, walletQuote, q, divBps, zapOk });
+    const next = { pool, name, symbol, uri, price, sold, cap, reserve, graduated, migrated, creator, balance, walletEth, walletQuote, q, divBps, zapOk };
+    setData(next);
+    writeTokenCache(tokenAddress, next);
     setMeta(parseMeta(uri)); // нормализует мусор: null/массив/числа не роняют страницу
   }, [tokenAddress, wallet]);
 
@@ -576,7 +616,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     setHistory(h);
     setExtra({ creatorFees, treasuryOwner, treasuryHeld, burned,
                createdAt: createdMap[tokenAddress.toLowerCase()] });
-  }, [data?.pool, tokenAddress]);
+  }, [data?.pool, data?.q?.virt, tokenAddress]); // virt приходит с сетью после кэша — сделки пересчитать
 
   useEffect(() => {
     loadExtras().catch(() => {});
@@ -988,21 +1028,21 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           {/* Паспорт токена: накрутка и риски видны сразу */}
           {passport?.dumping && (
             <div className="cushion-banner" style={{ marginTop: 12, display: "block", borderColor: "#e06a4a", color: "#e06a4a" }}>
-              ⚠ {t("Создатель продаёт: за сутки слил заметную часть своей позиции.")}
+              <Icon name="alert" /> {t("Создатель продаёт: за сутки слил заметную часть своей позиции.")}
             </div>
           )}
           {(passport || dv.on) && (
             <div className="hero-chips" style={{ marginTop: 12 }}>
               {passport && (<>
                 <span className="chip" title={t("Сколько токенов сейчас держит кошелёк создателя")}>
-                  🏹 {t("Создатель держит")} <b>{fmt(passport.crePct, 1)}%</b>
+                  <Icon name="user" /> {t("Создатель держит")} <b>{fmt(passport.crePct, 1)}%</b>
                 </span>
                 <span className="chip" title={t("Доля пяти крупнейших кошельков от всего сапплая")}>
-                  🐳 {t("Топ-5 держат")} <b>{fmt(passport.top5Pct, 1)}%</b>
+                  <Icon name="users" /> {t("Топ-5 держат")} <b>{fmt(passport.top5Pct, 1)}%</b>
                 </span>
                 {passport.honestPct != null && (
                   <span className="chip" title={t("Честный объём за 24ч: покупки минус продажи по каждому кошельку, сделки создателя не в счёт. Чем ниже — тем больше объёма прокручено туда-сюда.")}>
-                    ✅ {t("Честный объём")} <b>{fmt(passport.honestPct, 0)}%</b>
+                    <Icon name="check" /> {t("Честный объём")} <b>{fmt(passport.honestPct, 0)}%</b>
                   </span>
                 )}
               </>)}
@@ -1010,7 +1050,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                   Было отдельным блоком на «Активности» — перенесено сюда 15.09.2026. */}
               {dv.on && (
                 <span className="chip" title={t("С каждой сделки холдерам. Приходит на кошелёк само раз в час.")}>
-                  💧 {t("Дивиденды")} <b>{dv.st.divBps / 100}%</b>
+                  <Icon name="droplet" /> {t("Дивиденды")} <b>{dv.st.divBps / 100}%</b>
                 </span>
               )}
             </div>
@@ -1071,7 +1111,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             </div>
             {dv.on && (
               <div className="stat-card">
-                <div className="k">💧 {t("Дивиденды роздано")}</div>
+                <div className="k"><Icon name="droplet" /> {t("Дивиденды роздано")}</div>
                 <div className="v" style={{ color: "var(--gold)" }}>{money(dv.num(dv.st.total))}</div>
                 <div className="dim" style={{ fontSize: 11, marginTop: 4 }}>
                   {wallet
@@ -1083,7 +1123,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             )}
             {cushion > 0 && (
               <div className="stat-card">
-                <div className="k">🛡 {t("Выкуп казны")}</div>
+                <div className="k"><Icon name="shield" /> {t("Выкуп казны")}</div>
                 <div className="v" style={{ color: "var(--gold)" }}>{fmtEth(cushion)} ETH</div>
               </div>
             )}
@@ -1134,7 +1174,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               const grads = mine.filter((x) => x.graduated).length;
               return (
                 <span className="cre-chip">
-                  {" "}· <b>{mine.length}</b> {t("запусков")}{grads > 0 && <> · <b>{grads}</b> 🎯</>}
+                  {" "}· <b>{mine.length}</b> {t("запусков")}{grads > 0 && <> · <b>{grads}</b> <Icon name="target" size={12} style={{ margin: 0 }} /></>}
                 </span>
               );
             })()}
@@ -1174,7 +1214,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                   {data.name} <span className="ticker">${data.symbol}</span>
-                  {data.graduated && <span className="badge">🎯 {t("В яблочке")}</span>}
+                  {data.graduated && <span className="badge"><Icon name="target" size={12} /> {t("В яблочке")}</span>}
                   {aiChip}
                   {socials}
                 </div>
@@ -1364,7 +1404,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                     <span>
                       <b className="ticker" style={{ fontSize: 14 }}>${data.symbol}</b>
                       <span className="pos-sub">
-                        {lastTs ? timeAgo(lastTs) : "—"} {totPnl >= 0 ? "💎" : ""}
+                        {lastTs ? timeAgo(lastTs) : "—"} {totPnl >= 0 ? <Icon name="gem" size={12} style={{ margin: 0 }} /> : ""}
                       </span>
                     </span>
                   </span>
@@ -1412,7 +1452,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 </span>
                 <span className="hist-coin" onClick={() => copyCA("hist")}
                       title={t("Скопировать адрес контракта")}>
-                  {meta.image ? <img src={meta.image} alt="" /> : <span className="ts-ph">🖼️</span>}
+                  {meta.image ? <img src={meta.image} alt="" /> : <span className="ts-ph"><Icon name="image" style={{ margin: 0 }} /></span>}
                   <b>${data.symbol}</b>
                   <span className="mono dim">{copiedCA === "hist" ? "✓" : `${tokenAddress.slice(0, 6)}…${tokenAddress.slice(-4)} ⧉`}</span>
                 </span>
@@ -1482,8 +1522,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                         {short(h.addr)}
                       </a>
                       <Badges addr={h.addr} />
-                      {isCre && <span className="badge hr-badge">🏹 {t("Создатель")}</span>}
-                      {isTre && <span className="badge hr-badge">🏦 {t("Казна")}</span>}
+                      {isCre && <span className="badge hr-badge"><Icon name="user" size={11} /> {t("Создатель")}</span>}
+                      {isTre && <span className="badge hr-badge"><Icon name="bank" size={11} /> {t("Казна")}</span>}
                       {isMe && <span className="badge hr-badge">{t("Вы")}</span>}
                     </span>
                     <span className="hr-bar"><span style={{ width: `${Math.min(h.pct * 4, 100)}%` }} /></span>
@@ -1632,7 +1672,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 <div className={`slip-opt ${slip === "auto" ? "on" : ""}`}
                      onClick={() => setSlipSave("auto")}
                      title={t("Подбирается автоматически под размер сделки")}>
-                  ⚡ {t("Авто")} 40%
+                  <Icon name="bolt" size={12} /> {t("Авто")} 40%
                 </div>
                 <div className="slip-div" />
                 <label className={`slip-opt slip-opt-custom ${typeof slip === "number" ? "on" : ""}`}>
@@ -1664,7 +1704,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             {impact !== null && impact > 0.05 && (
               <div className={`impact-note ${impact >= 5 ? "bad" : impact >= 2 ? "warn" : ""}`}>
                 {t("влияние на цену")} ≈ {fmt(impact, 1)}%
-                {impact >= 5 ? " ⚠" : ""}
+                {impact >= 5 ? <> <Icon name="alert" size={12} style={{ margin: 0 }} /></> : ""}
               </div>
             )}
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import Icon from "./components/Icon.jsx";
 import Home from "./pages/Home.jsx";
 import Create from "./pages/Create.jsx";
 import TokenPage from "./pages/Token.jsx";
@@ -170,7 +171,7 @@ function SearchModal({ open, onClose }) {
               </span>
               <span className="sr-age">{r.createdAt ? timeAgo(r.createdAt) : ""}</span>
               <span className="m">
-                {usd(mcapOf(r))}{r.graduated ? " · 🎯" : ""}
+                {usd(mcapOf(r))}{r.graduated ? <> · <Icon name="target" size={11} style={{ margin: 0 }} /></> : ""}
               </span>
             </div>
           ))}
@@ -605,7 +606,7 @@ export default function App() {
             <span className="dim">© 2026 hood · Robinhood Chain</span>
             <span style={{ display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap" }}>
               <a className="dim" href="mailto:contact@hoodandarrow.com" style={{ textDecoration: "none" }}>
-                ✉ contact@hoodandarrow.com
+                <Icon name="mail" /> contact@hoodandarrow.com
               </a>
               <a className="x-chip" href="https://x.com/hoodandarrow" target="_blank" rel="noreferrer">
                 @hoodandarrow <span className="x-box">𝕏</span>
@@ -618,7 +619,7 @@ export default function App() {
       {tosOpen && wallet && (
         <div className="modal-back open">
           <div className="tos-modal">
-            <div className="tos-hero"><div className="tos-ico">🤝</div></div>
+            <div className="tos-hero"><div className="tos-ico"><Icon name="handshake" size={30} style={{ margin: 0 }} /></div></div>
             <div className="tos-body">
               <h2 className="tos-title">
                 {t("Ознакомьтесь и примите")} <span className="tos-chip">{t("Обязательно")}</span>

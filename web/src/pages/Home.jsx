@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import Icon from "../components/Icon.jsx";
 import { formatEther, formatUnits } from "viem";
 import { fmt, fmtEth } from "../lib/web3.js";
 import { useEthUsd, useQuoteUsd, usd, moneyEth } from "../lib/price.js";
@@ -30,11 +31,11 @@ function TokenCard({ t, fav, onFav, cushion = 0 }) {
   return (
     <a className="tcard" href={`#/token/${t.token}`}>
       <div className="timg">
-        {t.meta.image ? <img src={t.meta.image} alt="" /> : "🖼️"}
+        {t.meta.image ? <img src={t.meta.image} alt="" /> : <Icon name="image" size={22} style={{ margin: 0, opacity: .6 }} />}
         {t.graduated && <span className="grad-chip">{tr("Градуировал")}</span>}
         {cushion > 0 && (
           <span className="cushion-chip" title={tr("Казна потратила на выкуп этого токена")}>
-            🛡 {fmtEth(cushion)} ETH
+            <Icon name="shield" size={12} /> {fmtEth(cushion)} ETH
           </span>
         )}
         <button className={`fav-btn ${fav ? "on" : ""}`}
@@ -51,7 +52,7 @@ function TokenCard({ t, fav, onFav, cushion = 0 }) {
           : usd(mcapEth * rate)}<span>MC</span>
         {/* Дивиденды холдерам — ставка. Символ акции на карточке не пишем:
             деньги на сайте в ETH и долларах (решение владельца 15.09.2026). */}
-        {q && t.divBps > 0 && <em className="tq" title={tr("дивиденды холдерам с каждой сделки")}>💧 {t.divBps / 100}%</em>}
+        {q && t.divBps > 0 && <em className="tq" title={tr("дивиденды холдерам с каждой сделки")}><Icon name="droplet" size={11} /> {t.divBps / 100}%</em>}
       </div>
       {/* Модель ИИ монеты — выбор создателя, лежит в метадате. Показываем
           только известного разработчика: чужая строка на карточку не попадает. */}
@@ -149,7 +150,7 @@ export default function Home({ onSearch }) {
         </a>
       )}
       {FEATURES.treasury && <a className="cushion-banner" href="#/treasury">
-        🛡 {t("Казна вернула рынку")}: <b>{support.totalEth * rate >= 1000 ? usd(support.totalEth * rate) : "$" + (support.totalEth * rate).toFixed(2)}</b> <span className="dim">({fmtEth(support.totalEth)} ETH)</span>
+        <Icon name="shield" /> {t("Казна вернула рынку")}: <b>{support.totalEth * rate >= 1000 ? usd(support.totalEth * rate) : "$" + (support.totalEth * rate).toFixed(2)}</b> <span className="dim">({fmtEth(support.totalEth)} ETH)</span>
         {support.totalEth === 0 && <span className="dim"> · {t("копится с каждой сделки — выкупы начнутся, когда наберётся сумма")}</span>} →
       </a>}
       {error && <div className="error">{error}</div>}

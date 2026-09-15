@@ -479,12 +479,17 @@ export default function Create({ wallet, onConnect }) {
                 const listed = QUOTE_LIVE
                   ? RWA_TOKENS.filter((x) => allowed.has(x.addr.toLowerCase()))
                   : RWA_TOKENS.filter((x) => RWA_POPULAR.includes(x.sym));
-                return rwaSearch ? listed.filter((x) => x.sym.includes(rwaSearch)).slice(0, 18) : listed;
+                // Популярные — первыми, остальные по алфавиту: разрешённых
+                // бумаг семь десятков, глазами ищут по знакомым тикерам.
+                const rank = (x) => { const i = RWA_POPULAR.indexOf(x.sym); return i < 0 ? 99 : i; };
+                listed.sort((a, b) => rank(a) - rank(b) || a.sym.localeCompare(b.sym));
+                const q = rwaSearch.trim();
+                return q ? listed.filter((x) => x.sym.includes(q) || (x.name || "").toUpperCase().includes(q)).slice(0, 24) : listed;
               })().map((x) => (
                 <button type="button" key={x.sym}
                         className={`quote-chip ${quote === x.sym ? "on" : ""}`}
                         onClick={() => pickQuote({ sym: x.sym, addr: x.addr.toLowerCase(), dec: 18 })}
-                        title={x.addr}>
+                        title={x.name ? `${x.name} · ${x.addr}` : x.addr}>
                   <Logo cls="q-logo" src={stockLogo(x.sym)} />{x.sym}
                 </button>
               ))}

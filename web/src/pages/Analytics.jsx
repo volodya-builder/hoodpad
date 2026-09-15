@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import Icon from "../components/Icon.jsx";
 import { formatEther } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { treasuryAbi } from "../lib/abi.js";
@@ -331,7 +332,7 @@ export default function Analytics() {
       {/* Лидеры — раскрывающаяся панель внутри аналитики */}
       <div className="bottom-card lb-fold" style={{ marginTop: 22 }}>
         <div className="lb-fold-head" onClick={() => setLbOpen(!lbOpen)}>
-          <span>🏆 {t("Лидеры")}</span>
+          <span><Icon name="trophy" /> {t("Лидеры")}</span>
           <span className="dim" style={{ fontSize: 13 }}>
             {t("создатели и трейдеры")} {lbOpen ? "▲" : "▼"}
           </span>

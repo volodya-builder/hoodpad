@@ -256,6 +256,13 @@ function refreshTokens() {
   return _tok.p;
 }
 
+/** Монета из уже загруженного списка (память/localStorage) — синхронно,
+ *  для мгновенной отрисовки страницы монеты. Нет — null. */
+export function cachedToken(addr) {
+  const a = String(addr || "").toLowerCase();
+  return (_tok.v || []).find((t) => (t.token || "").toLowerCase() === a) || null;
+}
+
 export async function loadTokens() {
   if (_tok.v) {
     if (Date.now() - _tok.t > 20_000) refreshTokens(); // фоновое обновление, не ждём

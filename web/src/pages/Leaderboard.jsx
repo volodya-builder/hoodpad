@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import Icon from "../components/Icon.jsx";
 import { fmtEth, short } from "../lib/web3.js";
 import { EXPLORER } from "../lib/config.js";
 import { loadTokens, allTrades, loadSplit } from "../lib/data.js";
@@ -94,7 +95,7 @@ export default function Leaderboard({ embedded = false }) {
         <div className="lb-grid" style={{ marginTop: 18 }}>
           <div className="bottom-card" style={{ marginTop: 0 }}>
             <div className="bt-tabs" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-              <div className="bt-tab on">🏆 {t("Топ создателей")}</div>
+              <div className="bt-tab on"><Icon name="trophy" /> {t("Топ создателей")}</div>
               <div className="pill-group">
                 {[["fees", t("Комиссии")], ["vol", t("Объём")], ["tokens", t("Монет")]].map(([k, lbl]) => (
                   <div key={k} className={`fpill ${cSort.k === k ? "on" : ""}`} onClick={() => pickC(k)}>
@@ -121,7 +122,7 @@ export default function Leaderboard({ embedded = false }) {
           </div>
           <div className="bottom-card" style={{ marginTop: 0 }}>
             <div className="bt-tabs" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-              <div className="bt-tab on">⚡ {t("Топ трейдеров")}</div>
+              <div className="bt-tab on"><Icon name="bolt" /> {t("Топ трейдеров")}</div>
               <div className="pill-group">
                 {[["vol", t("Объём")], ["pnl", "PnL"], ["trades", t("Сделки")]].map(([k, lbl]) => (
                   <div key={k} className={`fpill ${tSort.k === k ? "on" : ""}`} onClick={() => pickT(k)}>

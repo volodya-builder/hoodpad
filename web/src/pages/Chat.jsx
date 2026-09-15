@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
+import Icon from "../components/Icon.jsx";
 import { short } from "../lib/web3.js";
 import { CHAT_DB_URL } from "../lib/config.js";
 import { useLang } from "../lib/i18n.jsx";
@@ -125,7 +126,7 @@ export default function Chat({ tokenAddress, wallet }) {
         {msgs?.length === 0 && <div className="dim">{t("Пока тихо — напишите первым.")}</div>}
         {msgs?.map((m) => (
           <div className="chat-msg" key={m.key}>
-            <div className="chat-ava">{m.w ? "🏹" : "👤"}</div>
+            <div className={`chat-ava ${m.w ? "" : "guest"}`}><Icon name="user" size={13} style={{ margin: 0 }} /></div>
             <div>
               <span className="who mono">{m.who}</span>
               <span className="when">{m.ts ? ago(m.ts) : ""}</span>
@@ -143,7 +144,7 @@ export default function Chat({ tokenAddress, wallet }) {
           onKeyDown={(e) => e.key === "Enter" && send()}
         />
         <button className="btn btn-primary chat-send" onClick={send} disabled={busy}>
-          {busy ? "…" : "➤"}
+          {busy ? "…" : <Icon name="send" size={15} style={{ margin: 0 }} />}
         </button>
       </div>
       {error && <div className="error">{error}</div>}
