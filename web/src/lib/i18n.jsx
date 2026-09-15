@@ -1591,6 +1591,10 @@ const EN = {
   "Список": "List",
   "Сетка": "Grid",
   "Выкупы": "Buybacks",
+  "Возраст": "Age",
+  "Пара": "Pair",
+  "Акции": "Stocks",
+  "Все акции": "All stocks",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

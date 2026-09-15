@@ -24,7 +24,7 @@ import { treasuryAbi } from "./lib/abi.js";
 import { loadTokens, timeAgo } from "./lib/data.js";
 import { useEthUsd, usd } from "./lib/price.js";
 import { useLang } from "./lib/i18n.jsx";
-import { formatEther } from "viem";
+import { formatEther, formatUnits } from "viem";
 
 function useHashRoute() {
   const [hash, setHash] = useState(window.location.hash || "#/");
@@ -54,38 +54,76 @@ function Mark({ text, q }) {
 const SR_SORTS = [
   ["rel", "Релевантность"],
   ["mcap", "Капитализация"],
+  ["vol", "Объём"],
   ["new", "Новые"],
   ["old", "Старые"],
 ];
+const SR_AGES = [["all", "Все"], ["24h", "24ч"], ["7d", "7д"]];
+const SR_PAGE = 24;
 
+// Умный поиск (по образцу Pons, 15.09.2026): одна строка, три ряда фильтров —
+// сортировка, возраст, валюта пары (ETH / акции с выпадающим списком),
+// строки «имя · $тикер · капа · возраст», счётчик и страницы.
 function SearchModal({ open, onClose }) {
   const { t } = useLang();
   const rate = useEthUsd();
   const [q, setQ] = useState("");
   const [sort, setSort] = useState("rel");
+  const [age, setAge] = useState("all");
+  const [pair, setPair] = useState("all");   // all | eth | stocks | <quote addr>
+  const [page, setPage] = useState(0);
   const [cur, setCur] = useState(0);
   const [tokens, setTokens] = useState(null);
+  const [vol24, setVol24] = useState({});
+  const [qPx, setQPx] = useState({});        // адрес валюты → $ за единицу
   const listRef = React.useRef(null);
 
   useEffect(() => {
     if (!open) return;
-    setQ(""); setSort("rel"); setCur(0);
-    loadTokens().then(setTokens).catch(() => setTokens([]));
+    setQ(""); setSort("rel"); setAge("all"); setPair("all"); setPage(0); setCur(0);
+    loadTokens().then(async (tk) => {
+      setTokens(tk);
+      // курсы валют монет за акции — для капы и сортировки
+      const { quoteUsd } = await import("./lib/price.js");
+      const qs = [...new Set(tk.filter((x) => x.q).map((x) => x.q.addr.toLowerCase()))];
+      const px = {};
+      await Promise.all(qs.map(async (a) => { px[a] = await quoteUsd(a).catch(() => 0); }));
+      setQPx(px);
+    }).catch(() => setTokens([]));
+    import("./lib/data.js").then((m) => m.subgraphStats24 && m.subgraphStats24().then((st) => setVol24(st?.vol || {})).catch(() => {}));
   }, [open]);
 
-  const mcapOf = React.useCallback(
-    (r) => Number(formatEther(r.price)) * 1e9 * (rate || 0), [rate]);
+  const mcapOf = React.useCallback((r) => {
+    if (r.q) {
+      const px = qPx[r.q.addr.toLowerCase()] || 0;
+      return px > 0 ? Number(formatUnits(r.price, r.q.dec)) * 1e9 * px : 0;
+    }
+    return Number(formatEther(r.price)) * 1e9 * (rate || 0);
+  }, [rate, qPx]);
+  const volOf = (r) => (vol24[(r.pool || "").toLowerCase()] || 0) * (rate || 0);
 
-  // Ранжирование: точное совпадение тикера важнее, чем случайная
-  // подстрока в середине названия. Иначе «app» находит «apple» позже,
-  // чем какой-нибудь «Grappling».
+  // акции, за которые есть монеты — для выпадающего списка
+  const stocks = React.useMemo(() => {
+    const m = new Map();
+    for (const r of tokens || []) if (r.q && r.q.stock !== false && r.q.sym !== "ETH") m.set(r.q.addr.toLowerCase(), r.q.sym);
+    return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [tokens]);
+
   const res = React.useMemo(() => {
     const all = tokens ?? [];
     const s = q.trim().toLowerCase();
-    let list = all;
+    const now = Date.now();
+    let list = all.filter((r) => {
+      if (age === "24h" && !(r.createdAt && now - r.createdAt < 86400e3)) return false;
+      if (age === "7d" && !(r.createdAt && now - r.createdAt < 7 * 86400e3)) return false;
+      if (pair === "eth" && r.q) return false;
+      if (pair === "stocks" && !r.q) return false;
+      if (pair.startsWith("0x") && (!r.q || r.q.addr.toLowerCase() !== pair)) return false;
+      return true;
+    });
     if (s) {
-      list = [];
-      for (const r of all) {
+      const scored = [];
+      for (const r of list) {
         const sym = (r.symbol || "").toLowerCase();
         const nm = (r.name || "").toLowerCase();
         const addr = (r.token || "").toLowerCase();
@@ -96,22 +134,24 @@ function SearchModal({ open, onClose }) {
         else if (sym.includes(s)) score = 3;
         else if (nm.includes(s)) score = 4;
         else if (addr.includes(s)) score = 5;
-        if (score >= 0) list.push({ r, score });
+        if (score >= 0) scored.push({ r, score });
       }
-      list.sort((a, b) => a.score - b.score || mcapOf(b.r) - mcapOf(a.r));
-      list = list.map((x) => x.r);
+      scored.sort((a, b) => a.score - b.score || mcapOf(b.r) - mcapOf(a.r));
+      list = scored.map((x) => x.r);
     }
     const out = [...list];
     if (sort === "mcap") out.sort((a, b) => mcapOf(b) - mcapOf(a));
+    else if (sort === "vol") out.sort((a, b) => volOf(b) - volOf(a));
     else if (sort === "new") out.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     else if (sort === "old") out.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
     else if (!s) out.sort((a, b) => mcapOf(b) - mcapOf(a));
-    return out.slice(0, 30);
-  }, [tokens, q, sort, mcapOf]);
+    return out;
+  }, [tokens, q, sort, age, pair, mcapOf, vol24]); // eslint-disable-line
 
-  useEffect(() => { setCur(0); }, [q, sort]);
-
-  // Держим выбранную строку в поле зрения при ходьбе стрелками.
+  const pages = Math.max(1, Math.ceil(res.length / SR_PAGE));
+  const shown = res.slice(page * SR_PAGE, (page + 1) * SR_PAGE);
+  useEffect(() => { setCur(0); setPage(0); }, [q, sort, age, pair]);
+  useEffect(() => { setCur(0); }, [page]);
   useEffect(() => {
     const el = listRef.current && listRef.current.children[cur];
     if (el && el.scrollIntoView) el.scrollIntoView({ block: "nearest" });
@@ -120,70 +160,83 @@ function SearchModal({ open, onClose }) {
   if (!open) return null;
 
   const go = (r) => { onClose(); window.location.hash = `#/token/${r.token}`; };
-
   const onKey = (e) => {
     if (e.key === "Escape") { onClose(); return; }
-    if (e.key === "ArrowDown") { e.preventDefault(); setCur((c) => Math.min(res.length - 1, c + 1)); }
+    if (e.key === "ArrowDown") { e.preventDefault(); setCur((c) => Math.min(shown.length - 1, c + 1)); }
     else if (e.key === "ArrowUp") { e.preventDefault(); setCur((c) => Math.max(0, c - 1)); }
-    else if (e.key === "Enter" && res[cur]) { go(res[cur]); }
+    else if (e.key === "Enter" && shown[cur]) { go(shown[cur]); }
   };
+  const Chips = ({ label, items, val, set }) => (
+    <div className="sr-row">
+      <span className="sr-row-lbl">{label}</span>
+      {items.map(([k, lbl]) => (
+        <button key={k} type="button" className={`sr-chip ${val === k ? "on" : ""}`} onClick={() => set(k)}>{lbl}</button>
+      ))}
+    </div>
+  );
+  const stockSel = pair === "stocks" || pair.startsWith("0x");
 
   return (
     <div className="modal-back open" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="search-modal">
-        <input
-          autoFocus
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder={t("Имя, тикер или адрес контракта…")}
-          onKeyDown={onKey}
-        />
+        <div className="sr-input">
+          <Icon name="search" size={17} style={{ margin: 0, opacity: .7 }} />
+          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("Имя, тикер или адрес контракта…")} onKeyDown={onKey} />
+          <button type="button" className="sr-close" onClick={onClose} aria-label={t("закрыть")}>×</button>
+        </div>
 
-        <div className="sr-sorts">
-          <span className="sr-sorts-lbl">{t("Сортировка")}</span>
-          {SR_SORTS.map(([k, lbl]) => (
-            <button
-              key={k}
-              className={`sr-sort ${sort === k ? "on" : ""}`}
-              onClick={() => setSort(k)}
-            >
-              {t(lbl)}
-            </button>
-          ))}
+        <div className="sr-filters">
+          <Chips label={t("Сортировка")} items={SR_SORTS.map(([k, l]) => [k, t(l)])} val={sort} set={setSort} />
+          <Chips label={t("Возраст")} items={SR_AGES.map(([k, l]) => [k, t(l)])} val={age} set={setAge} />
+          <div className="sr-row">
+            <span className="sr-row-lbl">{t("Пара")}</span>
+            <button type="button" className={`sr-chip ${pair === "all" ? "on" : ""}`} onClick={() => setPair("all")}>{t("Все")}</button>
+            <button type="button" className={`sr-chip ${pair === "eth" ? "on" : ""}`} onClick={() => setPair("eth")}>ETH</button>
+            {stocks.length > 0 && (
+              <span className={`sr-chip sr-sel ${stockSel ? "on" : ""}`}>
+                <span>{!stockSel ? t("Акции") : pair === "stocks" ? t("Все акции") : (stocks.find(([a]) => a === pair) || [])[1] || t("Акции")}</span>
+                <select value={stockSel ? pair : ""} onChange={(e) => setPair(e.target.value || "all")}>
+                  <option value="">{t("Акции")}</option>
+                  <option value="stocks">{t("Все акции")}</option>
+                  {stocks.map(([a, sym]) => <option key={a} value={a}>{sym}</option>)}
+                </select>
+                <Icon name="chevron" size={13} style={{ margin: 0 }} />
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="sr-list" ref={listRef}>
           {tokens === null && <div className="center" style={{ padding: "20px 0" }}>{t("Загружаю…")}</div>}
-          {tokens !== null && res.length === 0 && (
-            <div className="center" style={{ padding: "20px 0" }}>{t("Ничего не найдено")}</div>
-          )}
-          {res.map((r, i) => (
-            <div
-              className={`sr-item ${i === cur ? "on" : ""}`}
-              key={r.token}
-              onMouseEnter={() => setCur(i)}
-              onClick={() => go(r)}
-            >
-              {r.meta && r.meta.image
-                ? <img src={r.meta.image} alt="" />
-                : <span className="sr-noimg" />}
-              <span className="n">
-                <Mark text={r.name} q={q} />{" "}
-                <span className="ticker">$<Mark text={r.symbol} q={q} /></span>
-              </span>
-              <span className="sr-age">{r.createdAt ? timeAgo(r.createdAt) : ""}</span>
-              <span className="m">
-                {usd(mcapOf(r))}{r.graduated ? <> · <Icon name="target" size={11} style={{ margin: 0 }} /></> : ""}
-              </span>
-            </div>
-          ))}
+          {tokens !== null && shown.length === 0 && <div className="center" style={{ padding: "20px 0" }}>{t("Ничего не найдено")}</div>}
+          {shown.map((r, i) => {
+            const mc = mcapOf(r);
+            return (
+              <div className={`sr-item ${i === cur ? "on" : ""}`} key={r.token} onMouseEnter={() => setCur(i)} onClick={() => go(r)}>
+                {r.meta && r.meta.image ? <img src={r.meta.image} alt="" loading="lazy" /> : <span className="sr-noimg" />}
+                <span className="sr-main">
+                  <span className="n"><Mark text={r.name || r.symbol} q={q} /></span>
+                  <span className="sr-meta">
+                    <span className="ticker">$<Mark text={r.symbol} q={q} /></span>
+                    {" · "}{mc > 0 ? usd(mc) : "…"} MC
+                    {r.createdAt ? <> · {timeAgo(r.createdAt)}</> : null}
+                    {r.q ? <> · {r.q.sym}</> : null}
+                    {r.graduated ? <> · {t("Градуировал")}</> : null}
+                  </span>
+                </span>
+                <Icon name="chevron" size={14} style={{ margin: 0, transform: "rotate(-90deg)", opacity: .5 }} />
+              </div>
+            );
+          })}
         </div>
 
         {tokens !== null && res.length > 0 && (
           <div className="sr-hint">
-            <span>{res.length} {t("найдено")}</span>
-            <span className="sr-keys">
-              <kbd>↑</kbd><kbd>↓</kbd> {t("выбрать")} · <kbd>↵</kbd> {t("открыть")} · <kbd>Esc</kbd> {t("закрыть")}
+            <span>{page * SR_PAGE + 1}–{Math.min(res.length, (page + 1) * SR_PAGE)} {t("из")} {res.length}</span>
+            <span className="sr-pages">
+              <button type="button" className="sr-pg" disabled={page === 0} onClick={() => setPage(page - 1)}>{t("Назад")}</button>
+              <span className="mono">{page + 1} / {pages}</span>
+              <button type="button" className="sr-pg" disabled={page >= pages - 1} onClick={() => setPage(page + 1)}>{t("Дальше")}</button>
             </span>
           </div>
         )}
