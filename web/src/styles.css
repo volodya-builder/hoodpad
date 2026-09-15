@@ -4018,3 +4018,12 @@ html[data-theme="light"] .search-modal { background: #fff; border-color: rgba(0,
 html[data-theme="light"] .sr-input, html[data-theme="light"] .sr-filters, html[data-theme="light"] .sr-hint { border-color: rgba(0,0,0,.08); }
 html[data-theme="light"] .sr-item.on { background: rgba(0,0,0,.04); }
 @media (max-width: 600px) { .sr-row-lbl { width: 100%; } .sr-input input { font-size: 16px; } }
+/* значок валюты курвы (в чём дивиденды) */
+.qlogo { display: inline-flex; align-items: center; gap: 5px; vertical-align: middle; }
+.qlogo img, .qlogo-ph { width: var(--qs, 18px); height: var(--qs, 18px); border-radius: 50%; background: #fff; object-fit: contain; flex: none; }
+.qlogo-ph { display: inline-flex; align-items: center; justify-content: center; font-size: calc(var(--qs, 18px) * .45); font-weight: 600; color: #111; letter-spacing: 0; }
+.qlogo-sym { font-size: 12.5px; color: var(--text-dim); font-weight: 500; }
+.tmc .tq { display: inline-flex; align-items: center; gap: 4px; }
+.pair-chip { position: absolute; right: 8px; bottom: 8px; display: inline-flex; align-items: center; padding: 4px 8px 4px 4px; border-radius: 999px; background: #000000a6; backdrop-filter: blur(5px); }
+.pair-chip .qlogo-sym { color: #fff; font-size: 11.5px; }
+.sr-meta .qlogo-sym { font-size: 13px; }

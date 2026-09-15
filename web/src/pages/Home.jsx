@@ -10,6 +10,7 @@ import { useArena } from "../lib/arena.js";
 import { FEATURES } from "../lib/config.js";
 import { modelLogo, makerOf } from "../lib/models.mjs";
 import Who from "../components/Who.jsx";
+import QuoteLogo from "../components/QuoteLogo.jsx";
 
 
 function TokenCard({ t, fav, onFav, cushion = 0 }) {
@@ -34,6 +35,7 @@ function TokenCard({ t, fav, onFav, cushion = 0 }) {
       <div className="timg">
         {t.meta.image ? <img src={t.meta.image} alt="" /> : <Icon name="image" size={22} style={{ margin: 0, opacity: .6 }} />}
         {t.graduated && <span className="grad-chip">{tr("Градуировал")}</span>}
+        {q && <span className="pair-chip"><QuoteLogo q={q} size={16} withSym /></span>}
         {cushion > 0 && (
           <span className="cushion-chip" title={tr("Казна потратила на выкуп этого токена")}>
             <Icon name="shield" size={12} /> {fmtEth(cushion)} ETH
@@ -53,7 +55,7 @@ function TokenCard({ t, fav, onFav, cushion = 0 }) {
           : usd(mcapEth * rate)}<span>MC</span>
         {/* Дивиденды холдерам — ставка. Символ акции на карточке не пишем:
             деньги на сайте в ETH и долларах (решение владельца 15.09.2026). */}
-        {q && t.divBps > 0 && <em className="tq" title={tr("дивиденды холдерам с каждой сделки")}><Icon name="droplet" size={11} /> {t.divBps / 100}%</em>}
+        {q && <em className="tq" title={t.divBps > 0 ? tr("дивиденды холдерам с каждой сделки") : tr("валюта курвы")}><QuoteLogo q={q} size={14} />{t.divBps > 0 ? ` ${t.divBps / 100}%` : ""}</em>}
       </div>
       {/* Модель ИИ монеты — выбор создателя, лежит в метадате. Показываем
           только известного разработчика: чужая строка на карточку не попадает. */}
@@ -100,7 +102,7 @@ function TokenRow({ t, fav, onFav, cushion = 0 }) {
         <span className="lt-sub">
           {t.creator && <Who addr={t.creator} size={14} />}
           {t.creator && t.createdAt ? " · " : ""}{t.createdAt ? timeAgo(t.createdAt) : ""}
-          {q && t.divBps > 0 && <> · <Icon name="droplet" size={11} style={{ margin: 0 }} /> {t.divBps / 100}%</>}
+          {q && t.divBps > 0 && <> · {tr("дивиденды")} {t.divBps / 100}%</>}
         </span>
       </span>
       <span className="lt-prog"><span className="pbar"><span style={{ width: `${Math.min(progress, 100)}%` }} /></span><em>{fmt(Math.min(progress, 100), 0)}%</em></span>
@@ -108,7 +110,7 @@ function TokenRow({ t, fav, onFav, cushion = 0 }) {
       <span className="lt-st">
         {t.graduated ? <span className="lt-tag gold">{tr("Градуировал")}</span>
           : cushion > 0 ? <span className="dim"><Icon name="shield" size={12} style={{ margin: 0 }} /> {fmtEth(cushion)} ETH</span>
-          : <span className="dim">{q ? q.sym : "ETH"}</span>}
+          : q ? <QuoteLogo q={q} size={18} withSym /> : <span className="dim">ETH</span>}
       </span>
     </a>
   );

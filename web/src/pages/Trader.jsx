@@ -151,7 +151,6 @@ export default function Trader({ address }) {
           <div className="ana-card pf-stat">
             <div className="k">{t("Объём торгов")}</div>
             <div className="pf-usd">{dollars(state.volume)}</div>
-            <div className="s">{fmtEth(state.volume)} ETH</div>
           </div>
           <div className="ana-card pf-stat">
             <div className="k">{t("Стоимость позиций")}</div>

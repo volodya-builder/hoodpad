@@ -261,22 +261,20 @@ export default function Profile({ wallet, onConnect }) {
                   </span>
                 )}
               </div>
-              <div className="s">{fmtEth(state.totPnl)} ETH · {state.tradesCount} {t("сделок")}</div>
+              <div className="s">{state.tradesCount} {t("сделок")}</div>
             </div>
             <div className="ana-card pf-stat">
               <div className="k">{t("Стоимость позиций")}</div>
               <div className="pf-usd">{dollars(state.totVal)}</div>
-              <div className="s">{fmtEth(state.totVal)} ETH · {state.positions.length} {t("позиций")}</div>
+              <div className="s">{state.positions.length} {t("позиций")}</div>
             </div>
             <div className="ana-card pf-stat">
               <div className="k">{t("Вложено")}</div>
               <div className="pf-usd">{dollars(state.totInv)}</div>
-              <div className="s">{fmtEth(state.totInv)} ETH</div>
             </div>
             <div className="ana-card pf-stat">
               <div className="k">{t("Реализовано")}</div>
               <div className="pf-usd">{dollars(state.totReal)}</div>
-              <div className="s">{fmtEth(state.totReal)} ETH</div>
             </div>
           </div>
 
