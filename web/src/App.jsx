@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import Icon from "./components/Icon.jsx";
+import QuoteLogo from "./components/QuoteLogo.jsx";
 import Home from "./pages/Home.jsx";
 import Create from "./pages/Create.jsx";
 import TokenPage from "./pages/Token.jsx";
@@ -220,7 +221,7 @@ function SearchModal({ open, onClose }) {
                     <span className="ticker">$<Mark text={r.symbol} q={q} /></span>
                     {" · "}{mc > 0 ? usd(mc) : "…"} MC
                     {r.createdAt ? <> · {timeAgo(r.createdAt)}</> : null}
-                    {r.q ? <> · {r.q.sym}</> : null}
+                    {r.q ? <> · <QuoteLogo q={r.q} size={14} withSym /></> : null}
                     {r.graduated ? <> · {t("Градуировал")}</> : null}
                   </span>
                 </span>

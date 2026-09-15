@@ -1595,6 +1595,8 @@ const EN = {
   "Пара": "Pair",
   "Акции": "Stocks",
   "Все акции": "All stocks",
+  "валюта курвы": "curve currency",
+  "дивиденды": "dividends",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });
