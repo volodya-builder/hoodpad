@@ -234,3 +234,13 @@ export const arenaTreasuryAbi = parseAbi([
   "event Buyback(address indexed token, address indexed asset, uint256 amountIn, uint256 tokensOut, string note)",
   "event Burned(address indexed token, uint256 amount)",
 ]);
+
+// ProfileRegistry — профили кошельков (contracts/ProfileRegistry.sol)
+export const profileRegistryAbi = parseAbi([
+  "struct Profile { string name; string avatar; string x; string telegram; string website; uint64 updatedAt; }",
+  "function profileOf(address who) view returns (Profile)",
+  "function profilesOf(address[] whos) view returns (Profile[])",
+  "function setProfile(string name, string avatar, string x, string telegram, string website)",
+  "function clearProfile()",
+  "event ProfileSet(address indexed who, string name, bool hasAvatar)",
+]);

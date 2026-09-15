@@ -9,6 +9,7 @@ import { useEthUsd, useQuoteUsd, moneyEth } from "../lib/price.js";
 import { RWA_TOKENS, RWA_POPULAR, stockLogo, CHAIN_LOGOS } from "../lib/rwa.js";
 import { loadCryptoQuotes, loadAllowedQuotes, loadZapQuotes, lookupQuote, matchQuote, featuredQuotes, short as shortAddr } from "../lib/quotes.js";
 import { loadModels, featured, matchModel, modelLogo, costLabel, AI_AUTO } from "../lib/models.mjs";
+import { fileToDataUrl } from "../lib/image.js";
 
 // Логотип с фолбэком: если CDN не знает тикер — просто прячем картинку
 const Logo = ({ src, cls }) => (
@@ -48,57 +49,6 @@ const MAX_DEV_BUY_ETH = 1.625 * 0.05e9 / 0.95e9 / 0.99; // ≈ 0.0864
 const IMG_SIZE = 512;
 const IMG_BUDGET = 120_000; // max data-URL chars (~90KB binary) per image
 
-function fileToDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      // 1) crop to centered square
-      const s = Math.min(img.width, img.height);
-      let cur = document.createElement("canvas");
-      cur.width = cur.height = s;
-      let cx = cur.getContext("2d");
-      cx.imageSmoothingQuality = "high";
-      cx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, s, s);
-      // 2) stepped downscale (halve until близко к цели) — без «лесенки»
-      let size = s;
-      while (size / 2 >= IMG_SIZE) {
-        size = Math.floor(size / 2);
-        const next = document.createElement("canvas");
-        next.width = next.height = size;
-        const nx = next.getContext("2d");
-        nx.imageSmoothingQuality = "high";
-        nx.drawImage(cur, 0, 0, size, size);
-        cur = next;
-      }
-      // 3) финальный размер + подбор формата/качества под бюджет
-      const attempts = [
-        [IMG_SIZE, "image/webp", 0.90],
-        [IMG_SIZE, "image/webp", 0.80],
-        [IMG_SIZE, "image/jpeg", 0.85], // Safari без WebP-энкодера вернёт png → пропустит
-        [256, "image/webp", 0.85],
-        [256, "image/jpeg", 0.85],
-        [128, "image/jpeg", 0.85],
-      ];
-      let fallback = "";
-      for (const [dim, mime, q] of attempts) {
-        const c = document.createElement("canvas");
-        c.width = c.height = dim;
-        const dx = c.getContext("2d");
-        dx.imageSmoothingQuality = "high";
-        dx.drawImage(cur, 0, 0, dim, dim);
-        const out = c.toDataURL(mime, q);
-        if (!out.startsWith(`data:${mime}`)) continue; // формат не поддержан
-        if (!fallback) fallback = out;
-        if (out.length <= IMG_BUDGET) return resolve(out);
-      }
-      resolve(fallback || cur.toDataURL("image/jpeg", 0.8));
-    };
-    img.onerror = reject;
-    img.src = url;
-  });
-}
 
 export default function Create({ wallet, onConnect }) {
   const split = useSplit();
@@ -234,7 +184,7 @@ export default function Create({ wallet, onConnect }) {
     const f = e.target.files?.[0];
     if (!f) return;
     try {
-      setImage(await fileToDataUrl(f));
+      setImage(await fileToDataUrl(f, { size: IMG_SIZE, budget: IMG_BUDGET }));
     } catch {
       setError(t("Не удалось прочитать изображение"));
     }

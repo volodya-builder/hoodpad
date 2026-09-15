@@ -8,6 +8,9 @@ import { loadTokens, poolTrades, subgraphUserTrades, timeAgo, useClock } from ".
 import { currentPosition } from "../lib/position.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { useLang } from "../lib/i18n.jsx";
+import { useProfile } from "../lib/profiles.js";
+import { BigAvatar, SocialLinks } from "../components/ProfileCard.jsx";
+import ProfileEditor from "../components/ProfileEditor.jsx";
 
 // Память профиля по адресу: мгновенно при переключении вкладок и после перезагрузки.
 const _profCache = {}; // account -> state (в памяти сессии)
@@ -24,6 +27,7 @@ export default function Profile({ wallet, onConnect }) {
   const rate = useEthUsd();
   useClock(30000); // «Nч назад» в позициях обновляется само
   const acc = wallet?.account?.toLowerCase();
+  const prof = useProfile(wallet?.account);
   const [state, setState] = useState(() => (acc ? _profCache[acc] ?? null : null));
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -220,11 +224,12 @@ export default function Profile({ wallet, onConnect }) {
   return (
     <>
       <div className="pf-head">
-        <div className="pf-ava" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="30" height="30"><circle cx="12" cy="8.5" r="3.6" fill="none" stroke="currentColor" strokeWidth="1.6"/><path d="M4.8 20c.9-3.6 3.6-5.6 7.2-5.6s6.3 2 7.2 5.6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
-        </div>
+        <BigAvatar addr={wallet.account} />
         <div>
-          <div className="page-title" style={{ margin: 0 }}>{t("Профиль")}</div>
+          <div className="page-title" style={{ margin: 0, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            {prof && prof.name ? prof.name : t("Профиль")}
+            <SocialLinks addr={wallet.account} />
+          </div>
           <div className="dim mono" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             {short(wallet.account)}
             <button className="mini-btn" onClick={copyAddr} title={t("Скопировать адрес")}>
@@ -237,6 +242,7 @@ export default function Profile({ wallet, onConnect }) {
             </span>
           </div>
         </div>
+        <div className="pf-edit"><ProfileEditor wallet={wallet} /></div>
       </div>
 
       {error && <div className="error">{error}</div>}

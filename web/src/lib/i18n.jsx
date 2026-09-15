@@ -1546,6 +1546,16 @@ const EN = {
   "Сюда попадают только чемпионы дня. Каждая победа — звезда и очки лиги.": "Only champions of the day get here. Every win is a star and league points.",
   "в призовой фонд арены": "to the arena prize fund",
   "С {d} для новых монет: вам {n}%, в призовой фонд арены {a}%, команде {tm}%. Монета, запущенная раньше, останется на нынешних долях.": "From {d} for new coins: you get {n}%, the arena prize fund {a}%, the team {tm}%. A coin launched earlier keeps its current shares.",
+  "Изменить профиль": "Edit profile",
+  "Настроить профиль": "Set up profile",
+  "Загрузить аватар": "Upload avatar",
+  "аватар": "avatar",
+  "Имя (до 32 символов)": "Name (up to 32 characters)",
+  "Сайт: https://…": "Website: https://…",
+  "Профиль хранится в блокчейне — одна транзакция, пишет только ваш кошелёк. Пустое поле снимает значение.": "Your profile lives on-chain — one transaction, only your wallet can write it. An empty field clears the value.",
+  "Стереть": "Clear",
+  "Сохранить": "Save",
+  "Не удалось прочитать картинку.": "Could not read the image.",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

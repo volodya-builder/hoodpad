@@ -3657,3 +3657,25 @@ html[data-theme="light"] .coin-hero-logo { background: #f2f1ec; }
   .arena-pay-row { grid-template-columns: 28px 1fr 1fr; }
   .arena-pay-row .dim { grid-column: 2 / -1; }
 }
+
+/* Профили кошельков (15.09.2026): имя и аватар вместо адреса */
+.who { display: inline-flex; align-items: center; gap: 6px; min-width: 0; color: inherit; }
+.who-ava { border-radius: 50%; object-fit: cover; flex: none; background: #2a2a28; }
+.who-name { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+a.who:hover .who-name, a.who:hover .mono { color: var(--gold); }
+.pf-edit { margin-left: auto; }
+.pe-open { display: inline-flex; align-items: center; gap: 6px; }
+.pe { border: 1px solid var(--border); border-radius: 16px; padding: 16px; background: var(--card); margin: 0 0 18px; width: 100%; }
+.pe-row { display: flex; gap: 16px; align-items: flex-start; }
+.pe-ava { position: relative; width: 84px; height: 84px; border-radius: 20px; border: 1px dashed var(--border-gold); background: var(--bg-soft); display: flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; flex: none; color: var(--text-dim); }
+.pe-ava img { width: 100%; height: 100%; object-fit: cover; }
+.pe-ava-hint { position: absolute; bottom: 0; left: 0; right: 0; font-size: 10px; text-align: center; background: #000000aa; color: #fff; padding: 2px 0; }
+.pe-fields { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.pe-fields input { width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-soft); color: var(--text); font: inherit; }
+.pe-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.pe-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; font-size: 12px; flex-wrap: wrap; }
+.pe-btns { display: flex; gap: 8px; margin-left: auto; }
+@media (max-width: 700px) {
+  .pe-grid { grid-template-columns: 1fr; }
+  .pf-edit { margin-left: 0; width: 100%; }
+}

@@ -9,10 +9,13 @@ import { currentPosition } from "../lib/position.js";
 import { computeCreatorRep } from "../lib/creatorRep.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { useLang } from "../lib/i18n.jsx";
+import { useProfile } from "../lib/profiles.js";
+import { BigAvatar, SocialLinks } from "../components/ProfileCard.jsx";
 
 // Публичный профиль любого кошелька: статистика, позиции, история сделок,
 // запуски. Открывается кликом по адресу в активности/лидерах/держателях.
 export default function Trader({ address }) {
+  const prof = useProfile(address);
   const { t } = useLang();
   const rate = useEthUsd();
   useClock(30000);
@@ -113,12 +116,12 @@ export default function Trader({ address }) {
   return (
     <>
       <div className="pf-head" style={{ display: "flex", alignItems: "center", gap: 16, margin: "30px 0 18px" }}>
-        <div className="pf-ava" style={{ width: 56, height: 56, borderRadius: 16, background: "var(--card)",
-          border: "1px solid var(--border-gold)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>
-          <Icon name="user" size={26} style={{ margin: 0 }} />
-        </div>
+        <BigAvatar addr={address} size={56} radius={16} />
         <div>
-          <div className="page-title" style={{ margin: 0, fontSize: 26 }}>{t("Трейдер")}</div>
+          <div className="page-title" style={{ margin: 0, fontSize: 26, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            {prof && prof.name ? prof.name : t("Трейдер")}
+            <SocialLinks addr={address} />
+          </div>
           <div className="dim mono" style={{ fontSize: 13, display: "flex", gap: 8, alignItems: "center" }}>
             {short(address || "")}
             <span className="addr-copy" style={{ cursor: "pointer" }} onClick={() => copyCA(address)}>
