@@ -59,6 +59,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: staging
+          fetch-depth: 20  # немного истории, чтобы положить сборку поверх новых коммитов (rebase)
 
       - uses: actions/setup-node@v4
         with:
@@ -109,8 +110,18 @@ jobs:
           Собрано на серверах GitHub, результат прошёл проверку на внешние
           скрипты, формы, сетевые запросы и размер. Смотреть на тестовом
           сайте, в бой — обычным порядком."
-          git push origin staging
-          echo "Закоммичено в staging."
+          # Пока модель думала (минуты), в staging могли прийти чужие коммиты —
+          # тогда push отвергнут. Подтягиваем их и кладём сборку сверху:
+          # агент трогает только web/public/agents, конфликтов не бывает.
+          for i in 1 2 3; do
+            git fetch -q origin staging
+            git rebase -q origin/staging || { git rebase --abort; echo "Не смог положить сборку поверх новых коммитов."; exit 1; }
+            git push origin HEAD:staging && { echo "Закоммичено в staging."; exit 0; }
+            echo "Push отвергнут (попытка $i) — в staging что-то пришло, пробую ещё раз…"
+            sleep 5
+          done
+          echo "Не удалось запушить сборку после трёх попыток."
+          exit 1
 
       - name: Попросить пересборку тестового сайта
         if: steps.commit.outputs.built == 'true'
