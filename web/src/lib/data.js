@@ -622,10 +622,13 @@ async function splitFor(shareBps, treasury) {
     const teamBps = await publicClient.readContract({ address: FEE_SPLITTER_ADDRESS, abi: feeSplitterAbi, functionName: "teamShareBps" });
     // V5 — часть входящего уходит казне арены; у V4 такой функции нет — 0
     const arenaBps = await publicClient.readContract({ address: FEE_SPLITTER_ADDRESS, abi: feeSplitterAbi, functionName: "arenaShareBps" }).catch(() => 0n);
+    // V6 — треть остатка уходит казне выкупа монеты hood; у V5 такой функции нет — 0
+    const buybackBps = await publicClient.readContract({ address: FEE_SPLITTER_ADDRESS, abi: feeSplitterAbi, functionName: "buybackShareBps" }).catch(() => 0n);
     const team = (rest * Number(teamBps)) / 10000;
     const arena = (rest * Number(arenaBps)) / 10000;
-    const agent = rest - team - arena;
-    return { creator, team: +team.toFixed(1), arena: +arena.toFixed(1), agent: +agent.toFixed(1), buyback: 0, creatorNoAi: +(creator + agent).toFixed(1), live: true };
+    const buyback = (rest * Number(buybackBps)) / 10000;
+    const agent = Math.max(0, rest - team - arena - buyback);
+    return { creator, team: +team.toFixed(1), arena: +arena.toFixed(1), agent: +agent.toFixed(1), buyback: +buyback.toFixed(1), creatorNoAi: +(creator + agent).toFixed(1), live: true };
   }
   let team = 0;
   try {
