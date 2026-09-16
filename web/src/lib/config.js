@@ -84,7 +84,7 @@ export const isTeam = (addr) => !!addr && addr.toLowerCase() === TEAM_ADDRESS;
 // Пустой счётчик с нулями выглядит как работающая система, которой нет.
 export const AGENT_TREASURY_ADDRESS = import.meta.env.VITE_AGENT_TREASURY ?? "0xe39e61c2e2897a59dde71d75b7b84f42ed09fd0c";
 
-// ArenaTreasury — казна арены: 20% каждой комиссии (через FeeSplitterV5),
+// ArenaTreasury — казна арены: 10% каждой комиссии (через FeeSplitterV6),
 // деньги уходят только на выкуп и сжигание подиума. Пусто = ещё не
 // задеплоена: страница арены показывает фонд как «…».
 // Задеплоить: node scripts/deploy-arena-economy.js --deploy (владелец).
@@ -119,7 +119,7 @@ export const AGENT_OPERATOR =
   (import.meta.env.VITE_AGENT_OPERATOR ?? TEAM_ADDRESS).toLowerCase();
 
 // ——— Политика трат казны (решение владельца 06.08.2026) ———
-// Комиссия сделки (1%) делится контрактами: 50% создателю / 20% команде /
+// Комиссия сделки (1%) делится контрактами: 70% создателю / 10% команде / 10% выкуп hood / 10% арена //
 // 30% в казну. Дальше уже казна распределяется по направлениям:
 //   20% баланса — кошачья казна: покупка токенизированных акций и раздача
 //                 наград держателям NFT-котов;
@@ -136,7 +136,7 @@ export const AGENT_OPERATOR =
 //   vote     — contracts/VotePower.sol, BuybackVote.sol (интерфейса нет с 06.08.2026)
 //   treasury — pages/Treasury.jsx, contracts/BuybackTreasuryV2.sol
 export const FEATURES = {
-  arena: true,         // «Арена» — суточный турнир, приз: 20% всех комиссий → выкуп и сжигание подиума (возвращена 15.09.2026)
+  arena: true,         // «Арена» — суточный турнир, приз: 10% всех комиссий → выкуп и сжигание подиума (возвращена 15.09.2026)
   grandArena: false,   // месячная Гранд-Арена старой схемы казны — спрятана 15.09.2026 (код в pages/Arena.jsx)
   arenaBanner: false,  // полоска «Арена: N токенов в бою…» на главной — убрана 15.09.2026 по просьбе владельца
   leaders: false,      // блок «Лидеры» (топ создателей и трейдеров) в аналитике — убран 15.09.2026 по просьбе владельца («дешевит»); pages/Leaderboard.jsx на месте
