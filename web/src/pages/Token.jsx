@@ -9,7 +9,8 @@ import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER, QUOTE_FACTORY_ADDRESS, QUO
 import { poolTrades, invalidateTrades, loadTokens, allTrades, parseMeta, cachedToken } from "../lib/data.js";
 import { computeTrust } from "../lib/trust.js";
 import { honestVolume } from "../lib/fairvol.js";
-import { useEthUsd, useQuoteUsd, usd, moneyEth, ethOf } from "../lib/price.js";
+import { useEthUsd, useQuoteUsd, usd, moneyEth, ethOf, quoteUsd as quoteUsdOf } from "../lib/price.js";
+import DevTokens from "../components/DevTokens.jsx";
 import Chat from "./Chat.jsx";
 import Workshop from "../components/Workshop.jsx";
 import Journal from "../components/Journal.jsx";
@@ -427,6 +428,10 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     if (a > 0 && a < 0.01) return "<$0.01";
     return (v < 0 ? "-" : "") + (a >= 1e3 ? usd(a) : "$" + a.toFixed(2));
   };
+  // Доллары сделки: зафиксированные индексатором по курсу на момент сделки
+  // (не меняются вместе с курсом); если их нет — по текущему курсу.
+  const fmtUsd = (v) => { const a = Math.abs(v); if (a > 0 && a < 0.01) return "<$0.01"; return (v < 0 ? "-" : "") + (a >= 1e3 ? usd(a) : "$" + a.toFixed(2)); };
+  const tradeUsd = (tr) => (tr.usd != null && tr.usd > 0 ? fmtUsd(tr.usd) : dollars(tr.eth));
 
   // Топ держателей: восстанавливаем балансы из событий сделок
   const holders = useMemo(() => {
@@ -483,11 +488,12 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const tokStats = useMemo(() => {
     if (!history || !history.trades.length) return null;
     const now = history.now ?? Date.now();
-    const vol24 = history.trades
-      .filter((tr) => (tr.ts ?? 0) >= now - 86400e3)
-      .reduce((s2, tr) => s2 + tr.eth + tr.fee, 0);
+    const day = history.trades.filter((tr) => (tr.ts ?? 0) >= now - 86400e3);
+    const vol24 = day.reduce((s2, tr) => s2 + tr.eth + tr.fee, 0);
+    // доллары по курсу на момент сделок — если индексатор знает их для всех сделок дня
+    const vol24Usd = day.length && day.every((tr) => tr.usd != null && tr.usd > 0) ? day.reduce((s2, tr) => s2 + tr.usd, 0) : null;
     const ath = Math.max(...history.points.map((pp) => pp.mcap));
-    return { vol24, ath };
+    return { vol24, vol24Usd, ath };
   }, [history]);
 
   const chartPoints = useMemo(() => {
@@ -1278,7 +1284,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <div className="tk-cells">
               <div className="tk-cell"><span>{t("Цена")}</span><b>{ethStr(fc(data.price))} ETH</b></div>
               <div className="tk-cell"><span>{t("Собрано")}</span><b>{money(fc(data.reserve))}</b></div>
-              <div className="tk-cell"><span>{t("Объём 24ч")}</span><b>{tokStats ? money(tokStats.vol24) : "0 ETH"}</b></div>
+              <div className="tk-cell"><span>{t("Объём 24ч")}</span><b>{tokStats ? (tokStats.vol24Usd != null ? money(tokStats.vol24).replace(/\(\$[^)]*\)/, "(" + fmtUsd(tokStats.vol24Usd) + ")") : money(tokStats.vol24)) : "0 ETH"}</b></div>
               <div className="tk-cell"><span>ATH</span><b>{tokStats && curRate > 0 ? usd(tokStats.ath * curRate) : "—"}</b></div>
               {!data.graduated && (
                 <div className="tk-cell"><span>{t("До градации")}</span><b>{fmt(progress, 1)}%</b></div>
@@ -1313,7 +1319,18 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <div className={`bt-tab ${btTab === "myhist" ? "on" : ""}`} onClick={() => setBtTab("myhist")}>
               {t("История сделок")}
             </div>
+            {(() => {
+              const n = tokensList.filter((x) => (x.creator || "").toLowerCase() === (data.creator || "").toLowerCase()).length;
+              return (
+                <div className={`bt-tab ${btTab === "dev" ? "on" : ""}`} onClick={() => setBtTab("dev")}>
+                  {t("Dev-токены")}{n > 0 && <span className="bt-count">{n}</span>}
+                </div>
+              );
+            })()}
           </div>
+          {btTab === "dev" && (
+            <DevTokens creator={data.creator} tokens={tokensList} trades={platTrades} rate={rate} current={tokenAddress} />
+          )}
           {FEATURES.activityTab && btTab === "trades" && (<>
 
           {!history && <div className="dim" style={{ padding: "14px 0" }}>{t("Читаю события…")}</div>}
@@ -1343,7 +1360,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                     background: `linear-gradient(90deg, ${buy ? "#7ac74f1c" : "#e06a4a1c"} ${heat}%, transparent ${heat}%)`,
                     borderRadius: 6, padding: "4px 8px", marginLeft: -8,
                   }}>
-                    {dollars(tr.eth)}
+                    {tradeUsd(tr)}
                   </span>
                   <span className="dim">${fmtEthFine(priceUsd)}</span>
                   <span>{compactN(tr.tokens)}</span>
@@ -1509,7 +1526,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 </span>
                 <a href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer"
                    style={{ color: "inherit" }} title={t("Открыть транзакцию")}>
-                  {ethStr(tr.eth)} ETH <span className="usd-sub">({dollars(tr.eth)})</span>
+                  {ethStr(tr.eth)} ETH <span className="usd-sub">({tradeUsd(tr)})</span>
                 </a>
                 <span>{fmt(tr.tokens, 0)}</span>
                 <a className="mono" href={`${EXPLORER}/address/${tr.addr}`} target="_blank" rel="noreferrer"
@@ -1828,7 +1845,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 const heat = Math.max(6, Math.round((tr.eth / saMax) * 100));
                 return (
                   <div className={`sa-row ${buy ? "is-buy" : "is-sell"}`} key={i} {...rowHover(tr.addr)}>
-                    <span className={`sa-amt ${buy ? "side-buy" : "side-sell"}`} style={{ "--heat": `${heat}%` }}><i />{dollars(tr.eth)}</span>
+                    <span className={`sa-amt ${buy ? "side-buy" : "side-sell"}`} style={{ "--heat": `${heat}%` }}><i />{tradeUsd(tr)}</span>
                     <span className="dim">{compactN(tr.tokens)}</span>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 4, minWidth: 0 }}>
                       <Who addr={tr.addr} title={t("Открыть профиль трейдера")} style={{ color: "inherit" }} /><Badges addr={tr.addr} />
@@ -1928,7 +1945,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               <span className={`tp-type ${x.side}`}>{t(x.side === "buy" ? "Покупка" : "Продажа")}</span>
               <span className="dim">${fmtEthFine(x.tokens > 0 ? (x.eth / x.tokens) * curRate : 0)}</span>
               <span>{compactN(x.tokens)}</span>
-              <span className={x.side === "buy" ? "side-buy" : "side-sell"}>{dollars(x.eth)}</span>
+              <span className={x.side === "buy" ? "side-buy" : "side-sell"}>{tradeUsd(x)}</span>
               <a className="dim" href={`${EXPLORER}/tx/${x.tx}`} target="_blank" rel="noreferrer"
                  title={x.ts ? new Date(x.ts).toLocaleString() : ""}>
                 {shortAgo(x.ts)} ↗

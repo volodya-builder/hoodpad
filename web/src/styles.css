@@ -4280,3 +4280,38 @@ html[data-theme="light"] .docs-row { border-top-color: rgba(30,32,28,.08); }
 .sa-amt { position: relative; display: inline-block; padding: 2px 6px; margin-left: -6px; border-radius: 5px; overflow: hidden; }
 .sa-amt i { position: absolute; left: 0; top: 0; bottom: 0; width: var(--heat, 0%); border-radius: 5px; opacity: .16; background: currentColor; transform-origin: left; transition: width .35s cubic-bezier(.2,.8,.2,1), opacity .2s; }
 .sa-row:hover .sa-amt i { opacity: .28; }
+
+/* ---- Вкладка «Dev-токены» на странице монеты (как у GMGN) ---- */
+.bt-count { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: #2a2a28; color: var(--text-dim); font-size: 11px; line-height: 17px; vertical-align: 1px; }
+.bt-tab.on .bt-count { background: var(--gold); color: #0b0b0b; }
+.dev-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; margin-top: 8px; align-items: start; }
+.dev-table { min-width: 0; }
+.dev-row { display: grid; grid-template-columns: minmax(150px, 1.6fr) .8fr .9fr .9fr 1fr 1fr 1fr; gap: 12px; padding: 10px 8px; margin: 0 -8px; border-top: 1px solid var(--border); font-size: 13px; align-items: center; font-variant-numeric: tabular-nums; color: var(--text); text-decoration: none; border-radius: 8px; transition: background .15s; }
+.dev-row:not(.hdr):hover { background: rgba(255,255,255,.045); border-top-color: transparent; }
+.dev-row:not(.hdr):hover + .dev-row { border-top-color: transparent; }
+.dev-row.hdr { color: var(--text-dim); font-size: 11.5px; font-weight: 500; text-transform: uppercase; letter-spacing: .4px; border-top: none; padding-bottom: 6px; }
+.dev-row.cur { background: rgba(200,245,66,.05); }
+.dev-coin { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.dev-coin img { width: 22px; height: 22px; border-radius: 7px; object-fit: cover; flex: none; }
+.dev-coin b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dev-this { font-style: normal; font-size: 10.5px; color: var(--gold); border: 1px solid var(--gold-dim); background: var(--gold-dim); border-radius: 5px; padding: 1px 5px; }
+.dev-ok { font-style: normal; color: var(--leaf); display: inline-flex; align-items: center; gap: 5px; }
+.dev-row i.dim { font-style: normal; }
+.dev-ath { color: var(--gold); }
+.dev-side { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; padding: 16px 18px; border: 1px solid var(--border); border-radius: 14px; background: linear-gradient(160deg, rgba(255,255,255,.05), rgba(255,255,255,.015)); }
+.dev-k { font-size: 11.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .4px; }
+.dev-v { font-size: 13px; margin: 3px 0 10px; }
+.dev-stats > div { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 3px 0; }
+.dev-stats span { color: var(--text-dim); display: inline-flex; align-items: center; gap: 7px; }
+.dev-stats b { font-weight: 500; font-variant-numeric: tabular-nums; }
+.dev-dot { display: inline-block; width: 8px; height: 8px; border-radius: 3px; background: var(--border); }
+.dev-dot.on { background: var(--gold); }
+.dev-line { font-size: 12.5px; margin-top: 8px; line-height: 1.5; }
+.dev-line a { color: var(--text); text-decoration: none; }
+.dev-line a:hover { color: var(--gold); }
+.dev-ring { position: relative; width: 118px; height: 118px; }
+.dev-ring-txt { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
+.dev-ring-txt b { font-family: var(--font-display-round); font-size: 24px; font-weight: 600; letter-spacing: -.02em; }
+.dev-ring-txt span { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+@media (max-width: 1100px) { .dev-wrap { grid-template-columns: 1fr; } .dev-side { order: -1; } }
+@media (max-width: 720px) { .dev-table { overflow-x: auto; } .dev-row { min-width: 720px; } }
