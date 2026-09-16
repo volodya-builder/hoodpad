@@ -2231,8 +2231,10 @@ html[data-theme="light"] .vr-bar { background: #00000010; }
 .wb { font-size: 12px; margin-left: 3px; cursor: help; position: relative; display: inline-block; }
 .wb::after {
   content: attr(data-tip);
-  position: absolute; bottom: calc(100% + 9px); left: 50%;
-  transform: translateX(-50%) translateY(3px);
+  /* метки стоят у правого края строки — подсказка растёт влево, чтобы не
+     уезжать за границу панели (стрелка остаётся под иконкой) */
+  position: absolute; bottom: calc(100% + 9px); right: -6px;
+  transform: translateY(3px);
   width: max-content; max-width: 230px;
   background: linear-gradient(160deg, #1d1e1a, #141512);
   border: 1px solid var(--border-gold); border-radius: 10px;
@@ -2255,7 +2257,7 @@ html[data-theme="light"] .vr-bar { background: #00000010; }
   transition: opacity .1s ease;
   z-index: 61;
 }
-.wb:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+.wb:hover::after { opacity: 1; transform: translateY(0); }
 .wb:hover::before { opacity: 1; }
 html[data-theme="light"] .wb::after { background: #fffdf7; color: #1c1c1a; box-shadow: 0 14px 34px -18px #00000055; }
 html[data-theme="light"] .wb::before { background: #fffdf7; }
