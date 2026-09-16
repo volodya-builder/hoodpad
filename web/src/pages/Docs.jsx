@@ -23,167 +23,145 @@ const SUBGRAPH = "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u
 const REPO = "https://github.com/volodya-builder/hoodpad";
 const RPC = "https://rpc.mainnet.chain.robinhood.com";
 
-const T = (ru, en) => ({ ru, en });
+const T = (ru, en, zh) => ({ ru, en, zh });
 
 /** Разделы. Каждый: id, заголовок, абзацы (строка — абзац; массив — список;
  *  {k,v} — таблица «параметр — значение»). */
 const SECTIONS = [
   {
-    id: "overview", title: T("Что такое hood", "What is hood"),
+    id: "overview", title: T("Что такое hood", "What is hood", "什么是 hood"),
     body: [
-      T("hood — лаунчпад на Robinhood Chain. Любой запускает монету в одну транзакцию: 1 миллиард штук, цена растёт по бондинг-кривой, при пороге — переезд на Uniswap V3 с навсегда запертой ликвидностью.",
-        "hood is a launchpad on Robinhood Chain. Anyone launches a coin in one transaction: 1 billion supply, price follows a bonding curve, and at the threshold the coin graduates to Uniswap V3 with liquidity locked forever."),
-      T("Особенность площадки — монеты за акции и крипту: валютой кривой может быть токенизированная акция (NVDA, AAPL, GME…) или USDG, WETH, cbBTC. Покупают и продают за ETH одной транзакцией, а держатели такой монеты получают дивиденды в этой акции.",
-        "What makes it different: coins priced in stocks and crypto. The curve currency can be a tokenized stock (NVDA, AAPL, GME…) or USDG, WETH, cbBTC. Buying and selling still happens in ETH in one transaction, and holders of such a coin earn dividends in that stock."),
-      T("Кошелёк подписывает каждую транзакцию сам. hood не хранит активы, не имеет доступа к деньгам пользователей и не может изменить ни одну запущенную монету.",
-        "Your wallet signs every transaction. hood holds no assets, has no access to user funds, and cannot alter any launched coin."),
+      T("hood — лаунчпад на Robinhood Chain. Любой запускает монету в одну транзакцию: 1 миллиард штук, цена растёт по бондинг-кривой, при пороге — переезд на Uniswap V3 с навсегда запертой ликвидностью.", "hood is a launchpad on Robinhood Chain. Anyone launches a coin in one transaction: 1 billion supply, price follows a bonding curve, and at the threshold the coin graduates to Uniswap V3 with liquidity locked forever.", "hood 是 Robinhood Chain 上的发行平台。任何人都可以一笔交易发行代币：总量 10 亿，价格沿联合曲线上涨，达到阈值后毕业至 Uniswap V3，流动性永久锁定。"),
+      T("Особенность площадки — монеты за акции и крипту: валютой кривой может быть токенизированная акция (NVDA, AAPL, GME…) или USDG, WETH, cbBTC. Покупают и продают за ETH одной транзакцией, а держатели такой монеты получают дивиденды в этой акции.", "What makes it different: coins priced in stocks and crypto. The curve currency can be a tokenized stock (NVDA, AAPL, GME…) or USDG, WETH, cbBTC. Buying and selling still happens in ETH in one transaction, and holders of such a coin earn dividends in that stock.", "平台的特色是以股票和加密资产计价的代币：曲线计价货币可以是代币化股票（NVDA、AAPL、GME……）或 USDG、WETH、cbBTC。买卖仍以 ETH 一笔交易完成，而此类代币的持有者以该股票获得分红。"),
+      T("Кошелёк подписывает каждую транзакцию сам. hood не хранит активы, не имеет доступа к деньгам пользователей и не может изменить ни одну запущенную монету.", "Your wallet signs every transaction. hood holds no assets, has no access to user funds, and cannot alter any launched coin.", "每笔交易都由您的钱包自行签名。hood 不托管资产，无法接触用户资金，也无法更改任何已发行的代币。"),
     ],
   },
   {
-    id: "curve", title: T("Бондинг-кривая", "Bonding curve"),
+    id: "curve", title: T("Бондинг-кривая", "Bonding curve", "联合曲线"),
     body: [
-      T("Все монеты одинаковые по механике: фиксированный сапплай, без минта, без налогов кроме комиссии площадки, без прав у создателя.",
-        "Every coin shares the same mechanics: fixed supply, no minting, no taxes except the platform fee, no creator privileges."),
+      T("Все монеты одинаковые по механике: фиксированный сапплай, без минта, без налогов кроме комиссии площадки, без прав у создателя.", "Every coin shares the same mechanics: fixed supply, no minting, no taxes except the platform fee, no creator privileges.", "所有代币机制相同：固定总量、不可增发、除平台手续费外无任何税、创建者没有特权。"),
       { type: "stats", items: [
-        { n: "1B", l: T("сапплай", "supply") },
-        { n: "80%", l: T("на кривой", "on the curve") },
-        { n: "6.5 ETH", l: T("порог градации", "graduation") },
-        { n: "20%", l: T("в ликвидность навсегда", "locked liquidity") },
+        { n: "1B", l: T("сапплай", "supply", "总量") },
+        { n: "80%", l: T("на кривой", "on the curve", "在曲线上") },
+        { n: "6.5 ETH", l: T("порог градации", "graduation", "毕业阈值") },
+        { n: "20%", l: T("в ликвидность навсегда", "locked liquidity", "永久锁定的流动性") },
       ] },
       [
-        { k: T("Формула", "Formula"), v: "x · y = k · virtual 1.625 ETH" },
-        { k: T("Порог градации (ETH-монеты)", "Graduation threshold (ETH coins)"), v: "6.5 ETH" },
-        { k: T("Порог (монеты за валюту)", "Threshold (quote coins)"), v: T("виртуальный резерв × 4, ≈ $16k в валюте на момент добавления", "virtual reserve × 4, ≈ $16k in the asset when it was listed") },
-        { k: T("Покупка создателя при запуске", "Creator buy at launch"), v: T("до 5% сапплая, в той же транзакции", "up to 5% of supply, same transaction") },
+        { k: T("Формула", "Formula", "公式"), v: "x · y = k · virtual 1.625 ETH" },
+        { k: T("Порог градации (ETH-монеты)", "Graduation threshold (ETH coins)", "毕业阈值（ETH 代币）"), v: "6.5 ETH" },
+        { k: T("Порог (монеты за валюту)", "Threshold (quote coins)", "阈值（计价货币代币）"), v: T("виртуальный резерв × 4, ≈ $16k в валюте на момент добавления", "virtual reserve × 4, ≈ $16k in the asset when it was listed", "虚拟储备 × 4，上架时约合 $16k（以该资产计）") },
+        { k: T("Покупка создателя при запуске", "Creator buy at launch", "发行时创建者买入"), v: T("до 5% сапплая, в той же транзакции", "up to 5% of supply, same transaction", "最多 5% 总量，同一笔交易") },
       ],
-      T("При градации пул отправляет резерв и 20% сапплая в мигратор, тот создаёт full-range позицию Uniswap V3 (комиссия 0.3%) и запирает NFT позиции навсегда — ликвидность нельзя вывести никому, включая команду.",
-        "At graduation the pool sends its reserve and 20% of supply to the migrator, which creates a full-range Uniswap V3 position (0.3% fee tier) and locks the position NFT forever — nobody, including the team, can withdraw that liquidity."),
+      T("При градации пул отправляет резерв и 20% сапплая в мигратор, тот создаёт full-range позицию Uniswap V3 (комиссия 0.3%) и запирает NFT позиции навсегда — ликвидность нельзя вывести никому, включая команду.", "At graduation the pool sends its reserve and 20% of supply to the migrator, which creates a full-range Uniswap V3 position (0.3% fee tier) and locks the position NFT forever — nobody, including the team, can withdraw that liquidity.", "毕业时，池子将储备金和 20% 总量交给迁移合约，后者创建 Uniswap V3 全区间头寸（0.3% 费率）并永久锁定头寸 NFT——包括团队在内，没有人能提取这部分流动性。"),
     ],
   },
   {
-    id: "stocks", title: T("Монеты за акции и крипту", "Stock & crypto coins"),
+    id: "stocks", title: T("Монеты за акции и крипту", "Stock & crypto coins", "股票与加密代币"),
     body: [
-      T("Вторая фабрика запускает монеты, у которых валюта кривой — не ETH, а ERC-20: токенизированная акция или крипта из белого списка (70+ активов). Цена монеты, резерв и порог градации считаются в этой валюте.",
-        "A second factory launches coins whose curve currency is an ERC-20 instead of ETH: a tokenized stock or a crypto asset from the whitelist (70+ assets). Price, reserve and graduation threshold are denominated in that asset."),
-      T("Пользователь платит ETH: зап (CurveZap) меняет ETH на валюту через Uniswap V3 и покупает на кривой в одной транзакции; продажа — в обратную сторону. Проскальзывание и минимальный выход задаются на сайте.",
-        "Users pay in ETH: the zap (CurveZap) swaps ETH into the asset on Uniswap V3 and buys on the curve in a single transaction; selling works in reverse. Slippage and minimum output are set on the site."),
-      T("Дивиденды: создатель включает налог 1–3% с каждой сделки. Он берётся в валюте кривой и распределяется по балансам держателей. Бот площадки выплачивает накопленное автоматически (см. «Автоматизация»); забрать вручную можно в любой момент.",
-        "Dividends: the creator can enable a 1–3% tax on every trade. It is collected in the curve asset and distributed pro-rata to holders. The platform bot pays out accrued dividends automatically (see “Automation”); manual claim is available any time."),
+      T("Вторая фабрика запускает монеты, у которых валюта кривой — не ETH, а ERC-20: токенизированная акция или крипта из белого списка (70+ активов). Цена монеты, резерв и порог градации считаются в этой валюте.", "A second factory launches coins whose curve currency is an ERC-20 instead of ETH: a tokenized stock or a crypto asset from the whitelist (70+ assets). Price, reserve and graduation threshold are denominated in that asset.", "第二个工厂发行的代币，其曲线计价货币不是 ETH，而是 ERC-20：白名单中的代币化股票或加密资产（70+ 种）。代币价格、储备和毕业阈值均以该资产计。"),
+      T("Пользователь платит ETH: зап (CurveZap) меняет ETH на валюту через Uniswap V3 и покупает на кривой в одной транзакции; продажа — в обратную сторону. Проскальзывание и минимальный выход задаются на сайте.", "Users pay in ETH: the zap (CurveZap) swaps ETH into the asset on Uniswap V3 and buys on the curve in a single transaction; selling works in reverse. Slippage and minimum output are set on the site.", "用户用 ETH 支付：zap（CurveZap）在 Uniswap V3 上把 ETH 换成该资产并在曲线上买入，一笔交易完成；卖出反向进行。滑点和最小成交量在网站上设置。"),
+      T("Дивиденды: создатель включает налог 1–3% с каждой сделки. Он берётся в валюте кривой и распределяется по балансам держателей. Бот площадки выплачивает накопленное автоматически (см. «Автоматизация»); забрать вручную можно в любой момент.", "Dividends: the creator can enable a 1–3% tax on every trade. It is collected in the curve asset and distributed pro-rata to holders. The platform bot pays out accrued dividends automatically (see “Automation”); manual claim is available any time.", "分红：创建者可开启每笔交易 1–3% 的税。税以曲线资产收取，并按持仓比例分配给持有者。平台机器人自动发放累积的分红（见“自动化”）；也可随时手动领取。"),
     ],
   },
   {
-    id: "fees", title: T("Комиссии и экономика", "Fees & economics"),
+    id: "fees", title: T("Комиссии и экономика", "Fees & economics", "手续费与经济模型"),
     body: [
-      T("Площадка берёт 1% с каждой сделки на кривой. Комиссия делится контрактами, а не людьми: доли зашиты при деплое и не меняются.",
-        "The platform charges 1% on every curve trade. The split is enforced by contracts, not people: shares are fixed at deployment and cannot change."),
-      { type: "split", title: T("Комиссия 1% с каждой сделки", "1% fee on every trade"), parts: [
-        { l: T("Создателю монеты", "Coin creator"), pct: 70, c: "var(--gold)" },
-        { l: T("Арена — выкуп подиума", "Arena — podium buyback"), pct: 10, c: "#8fd3f4" },
-        { l: T("Выкуп монеты hood", "hood buyback"), pct: 10, c: "#e6e6e3" },
-        { l: T("Команда", "Team"), pct: 10, c: "#7c7c79" },
+      T("Площадка берёт 1% с каждой сделки на кривой. Комиссия делится контрактами, а не людьми: доли зашиты при деплое и не меняются.", "The platform charges 1% on every curve trade. The split is enforced by contracts, not people: shares are fixed at deployment and cannot change.", "平台对曲线上的每笔交易收取 1%。分配由合约而非人来执行：比例在部署时固定，无法更改。"),
+      { type: "split", title: T("Комиссия 1% с каждой сделки", "1% fee on every trade", "每笔交易 1% 手续费"), parts: [
+        { l: T("Создателю монеты", "Coin creator", "代币创建者"), pct: 70, c: "var(--gold)" },
+        { l: T("Арена — выкуп подиума", "Arena — podium buyback", "竞技场——领奖台回购"), pct: 10, c: "#8fd3f4" },
+        { l: T("Выкуп монеты hood", "hood buyback", "hood 回购"), pct: 10, c: "#e6e6e3" },
+        { l: T("Команда", "Team", "团队"), pct: 10, c: "#7c7c79" },
       ] },
       [
-        { k: T("Комиссия запуска", "Launch fee"), v: T("0 — площадка ничего не берёт; ≈ 0.0005 ETH — газ сети", "0 — the platform takes nothing; ≈ 0.0005 ETH is network gas") },
-        { k: T("Кто делит", "Who splits"), v: T("FeeSplitterV6 — доли зашиты, изменить нельзя", "FeeSplitterV6 — shares are immutable") },
+        { k: T("Комиссия запуска", "Launch fee", "发行费用"), v: T("0 — площадка ничего не берёт; ≈ 0.0005 ETH — газ сети", "0 — the platform takes nothing; ≈ 0.0005 ETH is network gas", "0——平台不收取任何费用；≈ 0.0005 ETH 为网络 gas") },
+        { k: T("Кто делит", "Who splits", "由谁分配"), v: T("FeeSplitterV6 — доли зашиты, изменить нельзя", "FeeSplitterV6 — shares are immutable", "FeeSplitterV6——比例固化，无法更改") },
       ],
-      T("Доля создателя копится в пуле и забирается кнопкой на странице монеты. Остальные 30% раз в минуту собирает бот в сплиттер (FeeSplitterV6), который в той же транзакции раскладывает их по трём адресам. У монет за валюту всё это происходит в валюте кривой.",
-        "The creator share accrues in the pool and is claimed with a button on the coin page. The remaining 30% is collected by a bot into the splitter (FeeSplitterV6), which forwards it to the three addresses in the same transaction. For quote coins all of this happens in the curve asset."),
+      T("Доля создателя копится в пуле и забирается кнопкой на странице монеты. Остальные 30% раз в минуту собирает бот в сплиттер (FeeSplitterV6), который в той же транзакции раскладывает их по трём адресам. У монет за валюту всё это происходит в валюте кривой.", "The creator share accrues in the pool and is claimed with a button on the coin page. The remaining 30% is collected by a bot into the splitter (FeeSplitterV6), which forwards it to the three addresses in the same transaction. For quote coins all of this happens in the curve asset.", "创建者份额在池中累积，在代币页面一键领取。其余 30% 由机器人每分钟收集到分配合约（FeeSplitterV6），后者在同一笔交易中转给三个地址。计价货币代币的这一切都以曲线资产进行。"),
     ],
   },
   {
-    id: "arena", title: T("Арена", "Arena"),
+    id: "arena", title: T("Арена", "Arena", "竞技场"),
     body: [
-      T("Арена — ежедневный бой монет по честному объёму. Каждые сутки (UTC) все неградуировавшие монеты сражаются; на чекпоинтах внутри дня выбывает слабейшая, последняя выжившая — чемпион дня. Выбывание — витрина, торговля не останавливается.",
-        "The Arena is a daily battle of coins by fair volume. Each UTC day every non-graduated coin competes; at checkpoints during the day the weakest drops out, and the last one standing is the Champion of the Day. Elimination is for show — trading never stops."),
-      T("Очки боя = честный объём × (1 + прирост цены за день). Честный объём считается по кошелькам как |покупки − продажи|: накрутка туда-сюда не даёт очков, сделки создателя не считаются, вклад одного кошелька ограничен 25%.",
-        "Battle score = fair volume × (1 + price growth for the day). Fair volume is |buys − sells| per wallet: wash trading earns nothing, creator trades don’t count, and one wallet contributes at most 25%."),
-      { type: "split", title: T("Призовой фонд дня — вся казна арены", "Daily prize — the whole arena treasury"), parts: [
-        { l: T("1 место", "1st place"), pct: 70, c: "var(--gold)" },
-        { l: T("2 место", "2nd place"), pct: 20, c: "#e6e6e3" },
-        { l: T("3 место", "3rd place"), pct: 10, c: "#7c7c79" },
+      T("Арена — ежедневный бой монет по честному объёму. Каждые сутки (UTC) все неградуировавшие монеты сражаются; на чекпоинтах внутри дня выбывает слабейшая, последняя выжившая — чемпион дня. Выбывание — витрина, торговля не останавливается.", "The Arena is a daily battle of coins by fair volume. Each UTC day every non-graduated coin competes; at checkpoints during the day the weakest drops out, and the last one standing is the Champion of the Day. Elimination is for show — trading never stops.", "竞技场是每日按真实交易量进行的代币对战。每个 UTC 日，所有未毕业的代币参战；日内检查点淘汰最弱者，最后幸存者即日冠军。淘汰只是展示——交易不会停止。"),
+      T("Очки боя = честный объём × (1 + прирост цены за день). Честный объём считается по кошелькам как |покупки − продажи|: накрутка туда-сюда не даёт очков, сделки создателя не считаются, вклад одного кошелька ограничен 25%.", "Battle score = fair volume × (1 + price growth for the day). Fair volume is |buys − sells| per wallet: wash trading earns nothing, creator trades don’t count, and one wallet contributes at most 25%.", "战斗积分 = 真实交易量 ×（1 + 当日价格涨幅）。真实交易量按钱包计算 |买入 − 卖出|：刷量不得分，创建者交易不计入，单个钱包贡献最多 25%。"),
+      { type: "split", title: T("Призовой фонд дня — вся казна арены", "Daily prize — the whole arena treasury", "每日奖金——整个竞技场金库"), parts: [
+        { l: T("1 место", "1st place", "第 1 名"), pct: 70, c: "var(--gold)" },
+        { l: T("2 место", "2nd place", "第 2 名"), pct: 20, c: "#e6e6e3" },
+        { l: T("3 место", "3rd place", "第 3 名"), pct: 10, c: "#7c7c79" },
       ] },
-      T("Утром (00:25 UTC) бот тратит всё, что лежит в казне арены, на вчерашний подиум: 70% первому месту, 20% второму, 10% третьему — выкуп монеты с рынка и сжигание в той же транзакции. Монеты за валюту выкупаются из той же валюты в казне. Одна корона на монету: выигравшая однажды больше не участвует.",
-        "In the morning (00:25 UTC) the bot spends everything in the arena treasury on yesterday’s podium: 70% to 1st, 20% to 2nd, 10% to 3rd — buying the coin off the market and burning it in the same transaction. Quote coins are bought from the matching asset held by the treasury. One crown per coin: a past winner never competes again."),
-      { type: "note", text: T("Из казны арены нельзя вывести ни копейки — контракт умеет только покупать монеты площадки и сжигать их.", "Nothing can be withdrawn from the arena treasury — the contract can only buy platform coins and burn them.") },
+      T("Утром (00:25 UTC) бот тратит всё, что лежит в казне арены, на вчерашний подиум: 70% первому месту, 20% второму, 10% третьему — выкуп монеты с рынка и сжигание в той же транзакции. Монеты за валюту выкупаются из той же валюты в казне. Одна корона на монету: выигравшая однажды больше не участвует.", "In the morning (00:25 UTC) the bot spends everything in the arena treasury on yesterday’s podium: 70% to 1st, 20% to 2nd, 10% to 3rd — buying the coin off the market and burning it in the same transaction. Quote coins are bought from the matching asset held by the treasury. One crown per coin: a past winner never competes again.", "早晨（00:25 UTC）机器人将竞技场金库中的全部资金用于昨日领奖台：70% 给第 1 名，20% 给第 2 名，10% 给第 3 名——从市场买入代币并在同一笔交易中销毁。计价货币代币用金库中对应的资产买入。一枚代币只能夺冠一次：曾经的赢家不再参赛。"),
+      { type: "note", text: T("Из казны арены нельзя вывести ни копейки — контракт умеет только покупать монеты площадки и сжигать их.", "Nothing can be withdrawn from the arena treasury — the contract can only buy platform coins and burn them.", "竞技场金库中的资金无法提取——合约只能买入平台代币并销毁。") },
     ],
   },
   {
-    id: "hood", title: T("Монета hood", "The hood coin"),
+    id: "hood", title: T("Монета hood", "The hood coin", "hood 代币"),
     body: [
-      T("hood — первая монета площадки, запущена командой на общих условиях (ETH-кривая, 1% комиссия, те же контракты). Никаких особых прав у неё нет.",
-        "hood is the platform’s first coin, launched by the team under the same rules as everyone (ETH curve, 1% fee, same contracts). It has no special privileges."),
-      T("10% каждой комиссии площадки приходят в казну выкупа hood. Раз в сутки бот покупает на всё накопленное монету hood и сжигает её. Из казны нельзя вывести ничего — только выкуп и сжигание.",
-        "10% of every platform fee goes to the hood buyback treasury. Once a day the bot spends everything accumulated to buy hood and burn it. Nothing can be withdrawn from the treasury — only buyback and burn."),
-      [{ k: T("Адрес монеты", "Token address"), v: HOOD_TOKEN, addr: true }],
+      T("hood — первая монета площадки, запущена командой на общих условиях (ETH-кривая, 1% комиссия, те же контракты). Никаких особых прав у неё нет.", "hood is the platform’s first coin, launched by the team under the same rules as everyone (ETH curve, 1% fee, same contracts). It has no special privileges.", "hood 是平台的第一枚代币，由团队按与所有人相同的规则发行（ETH 曲线、1% 手续费、相同合约）。它没有任何特权。"),
+      T("10% каждой комиссии площадки приходят в казну выкупа hood. Раз в сутки бот покупает на всё накопленное монету hood и сжигает её. Из казны нельзя вывести ничего — только выкуп и сжигание.", "10% of every platform fee goes to the hood buyback treasury. Once a day the bot spends everything accumulated to buy hood and burn it. Nothing can be withdrawn from the treasury — only buyback and burn.", "平台每笔手续费的 10% 进入 hood 回购金库。机器人每天用累积的全部资金买入 hood 并销毁。金库中的资金无法提取——只能回购和销毁。"),
+      [{ k: T("Адрес монеты", "Token address", "代币地址"), v: HOOD_TOKEN, addr: true }],
     ],
   },
   {
-    id: "contracts", title: T("Контракты", "Deployed contracts"),
+    id: "contracts", title: T("Контракты", "Deployed contracts", "已部署合约"),
     body: [
-      T("Все контракты задеплоены 16.09.2026 на Robinhood Chain. Исходники — в репозитории на GitHub (папка contracts/).",
-        "All contracts were deployed on 16 Sep 2026 on Robinhood Chain. Source code is in the GitHub repository (contracts/ folder)."),
+      T("Все контракты задеплоены 16.09.2026 на Robinhood Chain. Исходники — в репозитории на GitHub (папка contracts/).", "All contracts were deployed on 16 Sep 2026 on Robinhood Chain. Source code is in the GitHub repository (contracts/ folder).", "所有合约于 2026 年 9 月 16 日部署在 Robinhood Chain 上。源代码在 GitHub 仓库（contracts/ 目录）。"),
       [
-        { k: T("Сеть", "Network"), v: "Robinhood Chain · chainId 4663" },
+        { k: T("Сеть", "Network", "网络"), v: "Robinhood Chain · chainId 4663" },
         { k: "RPC", v: RPC },
-        { k: T("Обозреватель", "Explorer"), v: EXPLORER },
+        { k: T("Обозреватель", "Explorer", "区块浏览器"), v: EXPLORER },
       ],
       [
         { k: "LaunchpadFactoryV2 — " + "ETH", v: FACTORY_ADDRESS, addr: true },
-        { k: "LaunchpadFactoryQuote — " + T("акции и крипта", "stocks & crypto"), v: QUOTE_FACTORY_ADDRESS, addr: true },
-        { k: "CurveZap — " + T("ETH ↔ валюта в одной транзакции", "ETH ↔ asset in one transaction"), v: ZAP_ADDRESS, addr: true },
-        { k: "FeeSplitterV6 — " + T("делёж комиссий", "fee split"), v: FEE_SPLITTER_ADDRESS, addr: true },
-        { k: "ArenaTreasury — " + T("казна арены", "arena treasury"), v: ARENA_TREASURY_ADDRESS, addr: true },
-        { k: "ArenaTreasury — " + T("казна выкупа hood", "hood buyback treasury"), v: BUYBACK_TREASURY_ADDRESS, addr: true },
-        { k: "UniswapV3Migrator — " + T("градация ETH-монет", "ETH coin graduation"), v: MIGRATOR_ETH, addr: true },
-        { k: "UniswapV3MigratorQuote — " + T("градация монет за валюту", "quote coin graduation"), v: MIGRATOR_QUOTE, addr: true },
-        { k: T("Кошелёк команды", "Team wallet"), v: TEAM_WALLET, addr: true },
+        { k: "LaunchpadFactoryQuote — " + T("акции и крипта", "stocks & crypto", "股票与加密资产"), v: QUOTE_FACTORY_ADDRESS, addr: true },
+        { k: "CurveZap — " + T("ETH ↔ валюта в одной транзакции", "ETH ↔ asset in one transaction", "ETH ↔ 资产，一笔交易"), v: ZAP_ADDRESS, addr: true },
+        { k: "FeeSplitterV6 — " + T("делёж комиссий", "fee split", "手续费分配"), v: FEE_SPLITTER_ADDRESS, addr: true },
+        { k: "ArenaTreasury — " + T("казна арены", "arena treasury", "竞技场金库"), v: ARENA_TREASURY_ADDRESS, addr: true },
+        { k: "ArenaTreasury — " + T("казна выкупа hood", "hood buyback treasury", "hood 回购金库"), v: BUYBACK_TREASURY_ADDRESS, addr: true },
+        { k: "UniswapV3Migrator — " + T("градация ETH-монет", "ETH coin graduation", "ETH 代币毕业"), v: MIGRATOR_ETH, addr: true },
+        { k: "UniswapV3MigratorQuote — " + T("градация монет за валюту", "quote coin graduation", "计价货币代币毕业"), v: MIGRATOR_QUOTE, addr: true },
+        { k: T("Кошелёк команды", "Team wallet", "团队钱包"), v: TEAM_WALLET, addr: true },
         { k: "WETH", v: WETH_ADDRESS, addr: true },
         { k: "USDG", v: USDG_ADDRESS, addr: true },
       ],
-      T("Каждая монета — это два контракта: токен (ERC-20, фиксированный сапплай) и её пул (кривая). Адреса обоих показаны на странице монеты.",
-        "Each coin is two contracts: the token (ERC-20, fixed supply) and its pool (the curve). Both addresses are shown on the coin page."),
+      T("Каждая монета — это два контракта: токен (ERC-20, фиксированный сапплай) и её пул (кривая). Адреса обоих показаны на странице монеты.", "Each coin is two contracts: the token (ERC-20, fixed supply) and its pool (the curve). Both addresses are shown on the coin page.", "每枚代币由两个合约组成：代币本身（ERC-20，固定总量）和它的池子（曲线）。两个地址都显示在代币页面。"),
     ],
   },
   {
-    id: "data", title: T("Данные и API", "Data & API"),
+    id: "data", title: T("Данные и API", "Data & API", "数据与 API"),
     body: [
-      T("Все сделки, монеты и события индексирует публичный сабграф на Goldsky (GraphQL). Им же пользуется сайт — можно строить свои дашборды и ботов.",
-        "All trades, coins and events are indexed by a public Goldsky subgraph (GraphQL). The site itself uses it — you can build your own dashboards and bots on top."),
+      T("Все сделки, монеты и события индексирует публичный сабграф на Goldsky (GraphQL). Им же пользуется сайт — можно строить свои дашборды и ботов.", "All trades, coins and events are indexed by a public Goldsky subgraph (GraphQL). The site itself uses it — you can build your own dashboards and bots on top.", "所有交易、代币和事件由公开的 Goldsky 子图（GraphQL）索引。网站本身也使用它——您可以在此之上构建自己的看板和机器人。"),
       [{ k: "GraphQL", v: SUBGRAPH, addr: false, link: SUBGRAPH }],
-      T("Пример: { tokens(first: 10, orderBy: createdBlock, orderDirection: desc) { id symbol pool createdAt } trades(first: 5) { trader ethAmount tokenAmount isBuy timestamp } }",
-        "Example: { tokens(first: 10, orderBy: createdBlock, orderDirection: desc) { id symbol pool createdAt } trades(first: 5) { trader ethAmount tokenAmount isBuy timestamp } }"),
+      T("Пример: { tokens(first: 10, orderBy: createdBlock, orderDirection: desc) { id symbol pool createdAt } trades(first: 5) { trader ethAmount tokenAmount isBuy timestamp } }", "Example: { tokens(first: 10, orderBy: createdBlock, orderDirection: desc) { id symbol pool createdAt } trades(first: 5) { trader ethAmount tokenAmount isBuy timestamp } }", "示例：{ tokens(first: 10, orderBy: createdBlock, orderDirection: desc) { id symbol pool createdAt } trades(first: 5) { trader ethAmount tokenAmount isBuy timestamp } }"),
     ],
   },
   {
-    id: "bots", title: T("Автоматизация", "Automation"),
+    id: "bots", title: T("Автоматизация", "Automation", "自动化"),
     body: [
-      T("Всё, что происходит по расписанию, делают открытые боты из репозитория (папка bot/). У них нет прав менять контракты — только вызывать публичные функции и тратить казны по правилам, зашитым в код казны.",
-        "Everything on a schedule is done by open-source bots from the repository (bot/ folder). They cannot change contracts — they only call public functions and spend treasuries by rules hard-coded in the treasury."),
+      T("Всё, что происходит по расписанию, делают открытые боты из репозитория (папка bot/). У них нет прав менять контракты — только вызывать публичные функции и тратить казны по правилам, зашитым в код казны.", "Everything on a schedule is done by open-source bots from the repository (bot/ folder). They cannot change contracts — they only call public functions and spend treasuries by rules hard-coded in the treasury.", "所有定时任务由仓库中的开源机器人（bot/ 目录）执行。它们无法更改合约——只能调用公开函数，并按金库代码中固化的规则支出金库。"),
       [
-        { k: T("Дивиденды и сбор комиссий", "Dividends & fee collection"), v: T("каждый час (в тесте — каждую минуту): выплата держателям от $1, сбор доли площадки в сплиттер", "hourly (every minute during testing): payouts to holders from $1, platform share into the splitter") },
-        { k: T("Арена", "Arena"), v: T("ежедневно 00:25 UTC — выкуп и сжигание вчерашнего подиума", "daily 00:25 UTC — buyback & burn of yesterday’s podium") },
-        { k: T("Выкуп hood", "hood buyback"), v: T("ежедневно 00:45 UTC — вся казна выкупа → покупка hood и сжигание", "daily 00:45 UTC — whole buyback treasury → buy hood and burn") },
+        { k: T("Дивиденды и сбор комиссий", "Dividends & fee collection", "分红与手续费收集"), v: T("каждый час (в тесте — каждую минуту): выплата держателям от $1, сбор доли площадки в сплиттер", "hourly (every minute during testing): payouts to holders from $1, platform share into the splitter", "每小时（测试期间每分钟）：向持有者发放 $1 起的分红，平台份额进入分配合约") },
+        { k: T("Арена", "Arena", "竞技场"), v: T("ежедневно 00:25 UTC — выкуп и сжигание вчерашнего подиума", "daily 00:25 UTC — buyback & burn of yesterday’s podium", "每日 00:25 UTC——回购并销毁昨日领奖台") },
+        { k: T("Выкуп hood", "hood buyback", "hood 回购"), v: T("ежедневно 00:45 UTC — вся казна выкупа → покупка hood и сжигание", "daily 00:45 UTC — whole buyback treasury → buy hood and burn", "每日 00:45 UTC——整个回购金库 → 买入 hood 并销毁") },
       ],
     ],
   },
   {
-    id: "security", title: T("Безопасность и риски", "Security & risks"),
+    id: "security", title: T("Безопасность и риски", "Security & risks", "安全与风险"),
     body: [
-      T("Монеты, пулы, мигратор, сплиттер и казны не имеют функций вывода, паузы или изменения правил. У фабрик есть владелец, который может менять только параметры будущих запусков (казна, мигратор, комиссия ≤ 5%) — через заявку с задержкой 48 часов, видимую всем в блокчейне. Уже запущенные монеты это не затрагивает.",
-        "Coins, pools, the migrator, the splitter and treasuries have no withdraw, pause or rule-change functions. The factories have an owner who can only change parameters for future launches (treasury, migrator, fee ≤ 5%) through a proposal with a 48-hour delay visible on-chain. Already launched coins are unaffected."),
-      { type: "note", text: T("Ни один контракт площадки не имеет функций паузы, вывода средств или изменения правил уже запущенных монет.", "No platform contract has pause, withdraw, or rule-change functions for already launched coins.") },
-      T("Риски: токены волатильны и могут обесцениться полностью; сделки необратимы; курс акций-токенов зависит от ликвидности пулов Uniswap в сети; hood — независимый проект, не аффилированный с Robinhood Markets, Inc.",
-        "Risks: tokens are volatile and can go to zero; transactions are irreversible; stock-token prices depend on Uniswap pool liquidity on the chain; hood is an independent project not affiliated with Robinhood Markets, Inc."),
+      T("Монеты, пулы, мигратор, сплиттер и казны не имеют функций вывода, паузы или изменения правил. У фабрик есть владелец, который может менять только параметры будущих запусков (казна, мигратор, комиссия ≤ 5%) — через заявку с задержкой 48 часов, видимую всем в блокчейне. Уже запущенные монеты это не затрагивает.", "Coins, pools, the migrator, the splitter and treasuries have no withdraw, pause or rule-change functions. The factories have an owner who can only change parameters for future launches (treasury, migrator, fee ≤ 5%) through a proposal with a 48-hour delay visible on-chain. Already launched coins are unaffected.", "代币、池子、迁移合约、分配合约和金库都没有提取、暂停或更改规则的函数。工厂有一个所有者，只能通过链上可见、延迟 48 小时的提案更改未来发行的参数（金库、迁移合约、手续费 ≤ 5%）。已发行的代币不受影响。"),
+      { type: "note", text: T("Ни один контракт площадки не имеет функций паузы, вывода средств или изменения правил уже запущенных монет.", "No platform contract has pause, withdraw, or rule-change functions for already launched coins.", "没有任何平台合约对已发行的代币具有暂停、提取或更改规则的函数。") },
+      T("Риски: токены волатильны и могут обесцениться полностью; сделки необратимы; курс акций-токенов зависит от ликвидности пулов Uniswap в сети; hood — независимый проект, не аффилированный с Robinhood Markets, Inc.", "Risks: tokens are volatile and can go to zero; transactions are irreversible; stock-token prices depend on Uniswap pool liquidity on the chain; hood is an independent project not affiliated with Robinhood Markets, Inc.", "风险：代币波动剧烈，可能归零；交易不可撤销；股票代币的价格取决于链上 Uniswap 池的流动性；hood 是独立项目，与 Robinhood Markets, Inc. 无关。"),
     ],
   },
   {
-    id: "links", title: T("Ссылки", "Links"),
+    id: "links", title: T("Ссылки", "Links", "链接"),
     body: [
       [
-        { k: T("Сайт", "Site"), v: "https://hoodandarrow.com", link: "https://hoodandarrow.com" },
+        { k: T("Сайт", "Site", "网站"), v: "https://hoodandarrow.com", link: "https://hoodandarrow.com" },
         { k: "GitHub", v: REPO, link: REPO },
         { k: "X", v: "https://x.com/hoodandarrow", link: "https://x.com/hoodandarrow" },
-        { k: T("Обозреватель", "Explorer"), v: EXPLORER, link: EXPLORER },
+        { k: T("Обозреватель", "Explorer", "区块浏览器"), v: EXPLORER, link: EXPLORER },
       ],
     ],
   },
@@ -239,7 +217,7 @@ function useScrollSpy(ids) {
 
 export default function Docs() {
   const { lang, t } = useLang();
-  const L = (x) => (x && typeof x === "object" && "ru" in x ? (lang === "ru" ? x.ru : x.en) : x);
+  const L = (x) => (x && typeof x === "object" && "ru" in x ? (lang === "ru" ? x.ru : lang === "zh" ? (x.zh || x.en) : x.en) : x);
   const ids = useMemo(() => SECTIONS.map((s) => s.id), []);
   const active = useScrollSpy(ids);
   const [copied, setCopied] = useState("");
@@ -261,9 +239,7 @@ export default function Docs() {
           <h1>{t("Документация")}</h1>
           <div className="docs-lead">{t("Как устроен hood: кривая, комиссии, арена, контракты. Обновлено 16.09.2026.")}</div>
           <div className="docs-hero-chips">
-            <a href="#/docs" onClick={go("contracts")}>{t("Контракты")} →</a>
-            <a href="#/docs" onClick={go("fees")}>{t("Комиссии и экономика")} →</a>
-            <a href="#/docs" onClick={go("data")}>{t("Данные и API")} →</a>
+            {["contracts", "fees", "data"].map((id) => <a key={id} href="#/docs" onClick={go(id)}>{L(SECTIONS.find((s) => s.id === id).title)} →</a>)}
           </div>
         </div>
         {SECTIONS.map((s) => (
