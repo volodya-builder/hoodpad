@@ -811,6 +811,7 @@ const EN = {
   "Дев": "Dev",
   "Источник": "Funding source",
   "Кошелёк комиссий": "Fee wallet",
+  "фонда": "of the fund",
   "Dev-токены": "Dev tokens",
   "ATH капа": "ATH MCap",
   "эта": "this",

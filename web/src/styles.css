@@ -4422,3 +4422,19 @@ html[data-theme="light"] .arena-pot-place.p1 { background: rgba(232,198,90,.18);
 .arena-pot-place:nth-child(2) .v { justify-content: center; }
 .arena-pot-place:nth-child(2) .l { margin-left: 0; }
 @media (max-width: 900px) { .arena-pot-places { flex-direction: column; gap: 10px; } .arena-pot-place, .arena-pot-place:last-child, .arena-pot-place:nth-child(2) { text-align: left; } .arena-pot-place .v { justify-content: flex-start !important; } .arena-pot-place .l { margin-left: 16px !important; } }
+
+/* Арена, подиум: наведение — сегмент вырастает, остальные гаснут, в подписи сумма и доля */
+.arena-pot-bar { overflow: visible; height: 12px; }
+.arena-pot-bar span { position: relative; display: flex; align-items: center; justify-content: center; cursor: default; border-radius: 3px;
+  transition: transform .22s cubic-bezier(.2,.8,.2,1), opacity .22s, filter .22s; transform-origin: center; }
+.arena-pot-bar span:first-child { border-radius: 999px 3px 3px 999px; }
+.arena-pot-bar span:last-child { border-radius: 3px 999px 999px 3px; }
+.arena-pot-bar span em { font-style: normal; font-size: 10px; font-weight: 500; color: #0b0b0b; opacity: 0; transform: translateY(2px); transition: opacity .18s, transform .18s; font-variant-numeric: tabular-nums; pointer-events: none; }
+.arena-pot-split.has-hi .arena-pot-bar span { opacity: .4; filter: saturate(.5); }
+.arena-pot-split.has-hi .arena-pot-bar span.hi { opacity: 1; filter: none; transform: scaleY(1.5); z-index: 1; }
+.arena-pot-bar span.hi em { opacity: 1; transform: none; }
+.arena-pot-split.has-hi .arena-pot-place { opacity: .45; transition: opacity .2s; }
+.arena-pot-split.has-hi .arena-pot-place.hi { opacity: 1; }
+.arena-pot-place { transition: opacity .2s; cursor: default; }
+.arena-pot-cur { display: inline-block; animation: docsFade .18s ease; color: var(--text-dim); }
+.arena-pot-cur b { color: var(--text); font-weight: 500; }

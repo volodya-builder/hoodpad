@@ -27,6 +27,7 @@ const MONTHS = ["янв", "фев", "мар", "апр", "май", "июн", "и�
 
 function useTick() {
   const [, setT] = useState(0);
+  const [potHi, setPotHi] = useState(null); // наведённый сегмент подиума (0..2)
   useEffect(() => {
     const id = setInterval(() => setT((x) => x + 1), 1000);
     return () => clearInterval(id);
@@ -201,14 +202,25 @@ export default function Arena() {
               {ARENA_LIVE && pot !== null && <div className="s dim">{potSub}</div>}
             </div>
             <div className="arena-pot-arrow" aria-hidden="true">→</div>
-            <div className="arena-pot-split">
-              <div className="k">{t("Утром делится между подиумом")}</div>
+            <div className={`arena-pot-split ${potHi !== null ? "has-hi" : ""}`} onMouseLeave={() => setPotHi(null)}>
+              <div className="k">
+                {potHi === null ? t("Утром делится между подиумом") : (
+                  <span className="arena-pot-cur" key={potHi}>
+                    {potHi + 1} {t("место")} · {SPLIT[potHi]}% {t("фонда")} · <b>{ARENA_LIVE ? potD(SPLIT[potHi] / 100) : "—"}</b>
+                  </span>
+                )}
+              </div>
               <div className="arena-pot-bar">
-                {SPLIT.map((pct, i) => <span key={pct} className={`p${i + 1}`} style={{ width: `${pct}%` }} />)}
+                {SPLIT.map((pct, i) => (
+                  <span key={pct} className={`p${i + 1} ${potHi === i ? "hi" : ""}`} style={{ width: `${pct}%` }}
+                        onMouseEnter={() => setPotHi(i)}>
+                    <em>{pct}%</em>
+                  </span>
+                ))}
               </div>
               <div className="arena-pot-places">
                 {SPLIT.map((pct, i) => (
-                  <div className={`arena-pot-place p${i + 1}`} key={pct}>
+                  <div className={`arena-pot-place p${i + 1} ${potHi === i ? "hi" : ""}`} key={pct} onMouseEnter={() => setPotHi(i)}>
                     <div className="v"><i />{ARENA_LIVE ? potD(pct / 100) : "—"}</div>
                     <div className="l">{i + 1} {t("место")} · {pct}%</div>
                   </div>
