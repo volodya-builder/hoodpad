@@ -805,6 +805,8 @@ const EN = {
   "Баланс": "Balance",
   "Комиссии": "Fees",
   "История сделок": "Trade history",
+  "Тяните, чтобы переместить · двойной клик — вернуть на место": "Drag to move · double-click to reset",
+  "Других монет у этого кошелька нет.": "This wallet has no other coins.",
   "Dev-токены": "Dev tokens",
   "ATH капа": "ATH MCap",
   "эта": "this",

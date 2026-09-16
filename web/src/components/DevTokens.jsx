@@ -3,7 +3,7 @@ import { formatEther, formatUnits } from "viem";
 import Icon from "./Icon.jsx";
 import Who from "./Who.jsx";
 import { usd, quoteUsd } from "../lib/price.js";
-import { timeAgo, prefetchToken } from "../lib/data.js";
+import { timeAgo, prefetchToken, loadCreatorTokens } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 
 // ============================================================================
@@ -44,11 +44,31 @@ function Ring({ pct, label }) {
 export default function DevTokens({ creator, tokens, trades, rate, current }) {
   const { t } = useLang();
   const cre = (creator || "").toLowerCase();
-  const mine = useMemo(
-    () => (tokens || []).filter((x) => (x.creator || "").toLowerCase() === cre)
-      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
-    [tokens, cre],
-  );
+  // Источник — индексатор: все монеты этого кошелька из обеих фабрик, без
+  // ограничений общего списка. Пока ответа нет (или индексатор молчит) —
+  // то, что уже есть в списке платформы.
+  const [fromIdx, setFromIdx] = useState(null);
+  useEffect(() => {
+    if (!cre) return;
+    let alive = true;
+    setFromIdx(null);
+    loadCreatorTokens(cre).then((x) => alive && setFromIdx(x)).catch(() => alive && setFromIdx([]));
+    return () => { alive = false; };
+  }, [cre]);
+  const mine = useMemo(() => {
+    const byAddr = {};
+    for (const x of tokens || []) byAddr[(x.token || "").toLowerCase()] = x;
+    const out = {};
+    for (const x of tokens || []) if ((x.creator || "").toLowerCase() === cre) out[(x.token || "").toLowerCase()] = x;
+    for (const x of fromIdx || []) {
+      const k = (x.token || "").toLowerCase();
+      const known = byAddr[k];
+      // из общего списка — цена, валюта и картинка точнее (у монет за валюту
+      // индексатор считает цену в единицах валюты, без курса)
+      out[k] = known ? { ...x, ...known } : (x.quoteAddr ? { ...x, price: null } : x);
+    }
+    return Object.values(out).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  }, [tokens, fromIdx, cre]);
 
   // курсы валют монет за акции/крипту — для капы в долларах
   const [qRates, setQRates] = useState({});
@@ -61,9 +81,12 @@ export default function DevTokens({ creator, tokens, trades, rate, current }) {
     return () => { alive = false; };
   }, [mine]);
 
-  const mcapUsd = (tk) => tk.q
-    ? Number(formatUnits(tk.price, tk.q.dec)) * 1e9 * (qRates[tk.q.addr] || 0)
-    : Number(formatEther(tk.price)) * 1e9 * (rate || 0);
+  const mcapUsd = (tk) => {
+    if (tk.price == null) return 0;
+    return tk.q
+      ? Number(formatUnits(tk.price, tk.q.dec)) * 1e9 * (qRates[tk.q.addr] || 0)
+      : Number(formatEther(tk.price)) * 1e9 * (rate || 0);
+  };
 
   // По сделкам платформы: объём, комиссии и ATH-капа каждой монеты.
   // Доллары — зафиксированные индексатором на момент сделки, если есть.
@@ -90,7 +113,7 @@ export default function DevTokens({ creator, tokens, trades, rate, current }) {
   const best = rows.length ? rows.reduce((b, r) => (r.ath > b.ath ? r : b), rows[0]) : null;
   const last = mine[0];
 
-  if (!mine.length) return <div className="dim" style={{ padding: "14px 0" }}>{t("Читаю события…")}</div>;
+  if (!mine.length) return <div className="dim" style={{ padding: "14px 0" }}>{fromIdx === null ? t("Читаю события…") : t("Других монет у этого кошелька нет.")}</div>;
 
   return (
     <div className="dev-wrap">

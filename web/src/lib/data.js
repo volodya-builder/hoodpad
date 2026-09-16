@@ -121,7 +121,23 @@ async function _loadTokensSubgraph() {
   const d = await gql(`{ tokens(first: 96, orderBy: createdBlock, orderDirection: desc) {
     id name symbol metadataURI creator pool createdAt graduated ethReserve tokensSold } }`);
   if (!d?.tokens) throw new Error("no tokens field");
-  return d.tokens.map((x) => {
+  return d.tokens.map(_mapSubgraphToken);
+}
+
+/** Все монеты одного создателя — прямо из индексатора (обе фабрики, без
+ *  лимита списка в 96 монет). Для вкладки «Dev-токены». У монет за валюту
+ *  цена в единицах валюты — фронт подставит запись из общего списка. */
+export async function loadCreatorTokens(creator) {
+  const qf = (await subgraphHasQuote()) ? " quote" : "";
+  const d = await gql(`{ tokens(first: 300, orderBy: createdBlock, orderDirection: desc,
+    where: { creator: "${String(creator).toLowerCase()}" }) {
+    id name symbol metadataURI creator pool createdAt graduated ethReserve tokensSold${qf} } }`);
+  if (!d?.tokens) throw new Error("no tokens field");
+  return d.tokens.map((x) => ({ ..._mapSubgraphToken(x), quoteAddr: x.quote ? String(x.quote).toLowerCase() : null }));
+}
+
+function _mapSubgraphToken(x) {
+  {
     const reserve = BigInt(x.ethReserve);
     const sold = BigInt(x.tokensSold);
     const denom = TOTAL_WEI - sold;
@@ -133,7 +149,7 @@ async function _loadTokensSubgraph() {
       createdAt: Number(x.createdAt) * 1000,
       creator: x.creator,
     };
-  });
+  }
 }
 
 export async function subgraphVotes(epoch) {

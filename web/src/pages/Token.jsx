@@ -888,6 +888,29 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
 
   // ---- выдвижная панель трейдера (наведение/клик на сделку в «Активности») ----
   const [inspect, setInspect] = useState(null); // адрес трейдера
+  // Панель трейдера можно таскать за шапку; место запоминается в браузере
+  const [tpPos, setTpPos] = useState(() => { try { return JSON.parse(localStorage.getItem("hood.tpPos") || "null"); } catch (e) { return null; } });
+  const tpDrag = useRef(null);
+  const onTpDragStart = (e) => {
+    if (e.button !== 0 || e.target.closest("a, .tp-close, button")) return;
+    const el = e.currentTarget.parentElement;
+    const r = el.getBoundingClientRect();
+    tpDrag.current = { dx: e.clientX - r.left, dy: e.clientY - r.top, w: r.width, h: r.height };
+    el.classList.add("dragging");
+    const move = (ev) => {
+      const d = tpDrag.current; if (!d) return;
+      const x = Math.min(Math.max(0, ev.clientX - d.dx), window.innerWidth - d.w);
+      const y = Math.min(Math.max(0, ev.clientY - d.dy), window.innerHeight - 48);
+      setTpPos({ x, y });
+    };
+    const up = () => {
+      tpDrag.current = null; el.classList.remove("dragging");
+      window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up);
+      setTpPos((p) => { try { localStorage.setItem("hood.tpPos", JSON.stringify(p)); } catch (err) { /* ignore */ } return p; });
+    };
+    window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);
+    e.preventDefault();
+  };
   const hovT = useRef(null);
   const [inspBal, setInspBal] = useState(null); // { tok, eth }
   useEffect(() => {
@@ -1887,8 +1910,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       const isMe = wallet && inspect.toLowerCase() === wallet.account.toLowerCase();
       const pnlCol = (v) => ({ color: v >= 0 ? "var(--leaf)" : "var(--red)" });
       return (
-        <div className="trader-panel">
-          <div className="tp-head">
+        <div className="trader-panel" style={tpPos ? { left: tpPos.x, top: tpPos.y, right: "auto" } : undefined}>
+          <div className="tp-head" onPointerDown={onTpDragStart} onDoubleClick={() => { setTpPos(null); try { localStorage.removeItem("hood.tpPos"); } catch (e) { /* ignore */ } }}
+               title={t("Тяните, чтобы переместить · двойной клик — вернуть на место")}>
             {meta.image && <img src={meta.image} alt="" style={{ width: 26, height: 26, borderRadius: 7 }} />}
             <a className="mono" href={`${EXPLORER}/address/${inspect}`} target="_blank" rel="noreferrer">
               {short(inspect)}
