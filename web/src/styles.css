@@ -4405,3 +4405,20 @@ html[data-theme="light"] .arena-pot-place.p1 { background: rgba(232,198,90,.18);
 .trader-panel.placed { animation: none; }
 .dev-row { grid-template-columns: minmax(200px, 1.9fr) .8fr .9fr .8fr .9fr .9fr .9fr; }
 .dev-coin b { flex: none; max-width: 150px; }
+
+/* Арена, подиум под полосой — минимализм: точка цвета, сумма, подпись. Без плиток и рамок. */
+.arena-pot-places { display: flex; justify-content: space-between; gap: 18px; margin-top: 14px; }
+.arena-pot-place { padding: 0 !important; background: none !important; border: 0 !important; border-radius: 0; min-width: 0; }
+.arena-pot-place.p1 { background: none !important; }
+.arena-pot-place .v { display: flex; align-items: center; gap: 8px; font-size: 20px; }
+.arena-pot-place .v i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; flex: none; background: var(--c); }
+.arena-pot-place.p1 .v i { --c: #e8c65a; } .arena-pot-place.p2 .v i { --c: #c3cbd4; } .arena-pot-place.p3 .v i { --c: #c98a55; }
+.arena-pot-place.p1 .v { color: #f3e3a3; }
+.arena-pot-place .l { display: block; margin: 3px 0 0 16px; font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+.arena-pot-place:last-child { text-align: right; }
+.arena-pot-place:last-child .v { justify-content: flex-end; }
+.arena-pot-place:last-child .l { margin-left: 0; }
+.arena-pot-place:nth-child(2) { text-align: center; }
+.arena-pot-place:nth-child(2) .v { justify-content: center; }
+.arena-pot-place:nth-child(2) .l { margin-left: 0; }
+@media (max-width: 900px) { .arena-pot-places { flex-direction: column; gap: 10px; } .arena-pot-place, .arena-pot-place:last-child, .arena-pot-place:nth-child(2) { text-align: left; } .arena-pot-place .v { justify-content: flex-start !important; } .arena-pot-place .l { margin-left: 16px !important; } }
