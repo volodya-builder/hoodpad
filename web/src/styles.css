@@ -4403,3 +4403,5 @@ html[data-theme="light"] .arena-pot-place { background: rgba(30,32,28,.05); }
 html[data-theme="light"] .arena-pot-place.p1 { background: rgba(232,198,90,.18); }
 @media (max-width: 900px) { .arena-pot-places { grid-template-columns: 1fr; gap: 8px; } }
 .trader-panel.placed { animation: none; }
+.dev-row { grid-template-columns: minmax(200px, 1.9fr) .8fr .9fr .8fr .9fr .9fr .9fr; }
+.dev-coin b { flex: none; max-width: 150px; }

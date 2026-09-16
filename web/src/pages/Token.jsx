@@ -10,7 +10,7 @@ import { poolTrades, invalidateTrades, loadTokens, allTrades, parseMeta, cachedT
 import { computeTrust } from "../lib/trust.js";
 import { honestVolume } from "../lib/fairvol.js";
 import { useEthUsd, useQuoteUsd, usd, moneyEth, ethOf, quoteUsd as quoteUsdOf } from "../lib/price.js";
-import DevTokens from "../components/DevTokens.jsx";
+import DevTokens, { useDevTokens } from "../components/DevTokens.jsx";
 import Chat from "./Chat.jsx";
 import Workshop from "../components/Workshop.jsx";
 import Journal from "../components/Journal.jsx";
@@ -353,6 +353,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [sideTab, setSideTab] = useState("act"); // боковая панель: «Активность» | «Чат»
   const [tokensList, setTokensList] = useState([]); // все токены платформы (для ИИ-судьи)
   const [platTrades, setPlatTrades] = useState(null); // сделки платформы (метки кошельков)
+  const devInfo = useDevTokens(data?.creator, tokensList, tokenAddress); // монеты дева — для счётчика на ярлыке вкладки
   useEffect(() => {
     let alive = true;
     loadTokens().then((x) => alive && setTokensList(x)).catch(() => {});
@@ -1383,14 +1384,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <div className={`bt-tab ${btTab === "myhist" ? "on" : ""}`} onClick={() => setBtTab("myhist")}>
               {t("История сделок")}
             </div>
-            {(() => {
-              const n = tokensList.filter((x) => (x.creator || "").toLowerCase() === (data.creator || "").toLowerCase()).length;
-              return (
-                <div className={`bt-tab ${btTab === "dev" ? "on" : ""}`} onClick={() => setBtTab("dev")}>
-                  {t("Dev-токены")}{n > 0 && <span className="bt-count">{n}</span>}
-                </div>
-              );
-            })()}
+            <div className={`bt-tab ${btTab === "dev" ? "on" : ""}`} onClick={() => setBtTab("dev")}>
+              {t("Dev-токены")}{devInfo.mine.length > 0 && <span className="bt-count">{devInfo.mine.length}</span>}
+            </div>
           </div>
           {btTab === "dev" && (
             <DevTokens creator={data.creator} tokens={tokensList} trades={platTrades} rate={rate} current={tokenAddress} />

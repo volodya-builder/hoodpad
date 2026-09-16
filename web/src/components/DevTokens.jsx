@@ -44,8 +44,8 @@ function Ring({ pct, label }) {
   );
 }
 
-export default function DevTokens({ creator, tokens, trades, rate, current }) {
-  const { t } = useLang();
+/** Список монет дева (и кто дев) — общий для вкладки и для счётчика на её ярлыке. */
+export function useDevTokens(creator, tokens, current) {
   const cre = (creator || "").toLowerCase();
   // Источник — индексатор: все монеты этого кошелька из обеих фабрик, без
   // ограничений общего списка. Пока ответа нет (или индексатор молчит) —
@@ -96,6 +96,12 @@ export default function DevTokens({ creator, tokens, trades, rate, current }) {
     }
     return Object.values(out).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   }, [tokens, fromIdx, legacy, cre]);
+  return { mine, dev, cre, src, loading: fromIdx === null || all === null };
+}
+
+export default function DevTokens({ creator, tokens, trades, rate, current }) {
+  const { t } = useLang();
+  const { mine, dev, cre, src, loading } = useDevTokens(creator, tokens, current);
 
   // курсы валют монет за акции/крипту — для капы в долларах
   const [qRates, setQRates] = useState({});
@@ -140,7 +146,7 @@ export default function DevTokens({ creator, tokens, trades, rate, current }) {
   const best = rows.length ? rows.reduce((b, r) => (r.ath > b.ath ? r : b), rows[0]) : null;
   const last = mine[0];
 
-  if (!mine.length) return <div className="dim" style={{ padding: "14px 0" }}>{fromIdx === null || all === null ? t("Читаю события…") : t("Других монет у этого кошелька нет.")}</div>;
+  if (!mine.length) return <div className="dim" style={{ padding: "14px 0" }}>{loading ? t("Читаю события…") : t("Других монет у этого кошелька нет.")}</div>;
 
   return (
     <div className="dev-wrap">
@@ -208,7 +214,7 @@ export default function DevTokens({ creator, tokens, trades, rate, current }) {
               <span className="dim">(ATH {dollars(best.ath)})</span>
             </div>
           )}
-          {all === null && <div className="dev-line dim">{t("Ищу монеты прошлых версий площадки…")}</div>}
+          {loading && <div className="dev-line dim">{t("Ищу монеты прошлых версий площадки…")}</div>}
           {last && (
             <div className="dev-line">
               <span className="dim">{t("Последний запуск")}</span>{" "}
