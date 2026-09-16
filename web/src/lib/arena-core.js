@@ -30,8 +30,8 @@ export function dayStart(ts = Date.now()) {
 }
 
 /** Состояние арены для дня, начинающегося в d0 (мс UTC).
- *  excluded — адрес вчерашнего чемпиона: «защита трона» — сражается вне
- *  конкурса, корона уходит лучшему из остальных (нет вечных королей).
+ *  excluded — адреса прошлых чемпионов (Set): они вне конкурса навсегда,
+ *  корона уходит лучшему из остальных (нет вечных королей).
  *  Возвращает { participants, alive, eliminated, checkpoints,
  *               nextCheckpoint, champion, excluded, finalScores } */
 export function arenaState(tokens, trades, d0, now = Date.now(), excluded = null) {
@@ -40,11 +40,15 @@ export function arenaState(tokens, trades, d0, now = Date.now(), excluded = null
   const cutoff = Math.min(now, end);
 
   // участники: неградуировавшие + созданные до конца дня.
-  // Вчерашний чемпион СЕГОДНЯ НЕ УЧАСТВУЕТ (день отдыха на троне) —
-  // если, конечно, кроме него есть кому сражаться.
+  // Бывшие чемпионы НЕ УЧАСТВУЮТ: корона одна на монету — выиграл раз и всё
+  // (решение владельца 16.09.2026; раньше чемпион пропускал только один день).
+  // excluded — адрес или множество адресов; если кроме них сражаться некому,
+  // ограничение снимается.
+  const exSet = excluded instanceof Set ? excluded : new Set(excluded ? [excluded] : []);
   let parts = tokens.filter((t) => !t.graduated && (t.createdAt || 0) < end);
-  if (excluded && parts.length > 1) {
-    parts = parts.filter((t) => t.token.toLowerCase() !== excluded);
+  if (exSet.size) {
+    const rest = parts.filter((t) => !exSet.has(t.token.toLowerCase()));
+    if (rest.length > 0) parts = rest;
   }
   if (parts.length === 0) {
     return { participants: [], alive: [], eliminated: [], checkpoints: [], nextCheckpoint: null, champion: null, finalScores: [] };
@@ -161,20 +165,21 @@ export function podium(st) {
   return out;
 }
 
-/** Цепочка дней с «защитой трона»: чемпион дня N автоматически
- *  вне конкурса в день N+1. Считается вперёд от прошлого к сегодня —
+/** Цепочка дней: чемпион дня N вне конкурса во все следующие дни
+ *  (один титул на монету). Считается вперёд от прошлого к сегодня —
  *  результат детерминирован для всех. */
 export function buildChain(tokens, trades, daysBack = ARENA_DAYS, now = Date.now()) {
   const today = dayStart(now);
   const chain = new Map(); // d0 -> state
-  let excluded = null;
+  const excluded = new Set(); // все чемпионы в окне цепочки
   for (let d0 = today - daysBack * DAY; d0 <= today; d0 += DAY) {
     const then = tokens.filter((t) => (t.createdAt || 0) < d0 + DAY);
-    if (then.length === 0) { excluded = null; continue; }
+    if (then.length === 0) continue;
     const st = arenaState(then, trades, d0, d0 === today ? now : d0 + DAY, excluded);
     chain.set(d0, st);
-    // защита трона на следующий день; день без чемпиона сбрасывает её
-    excluded = st.champion ? st.champion.token.toLowerCase() : null;
+    // титул засчитан только за настоящую победу (очки > 0): «мёртвый» день
+    // без сделок корону не тратит
+    if (st.champion && (st.champion.score ?? 0) > 0) excluded.add(st.champion.token.toLowerCase());
   }
   return { chain, today };
 }
