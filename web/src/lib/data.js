@@ -389,7 +389,12 @@ async function _loadTokensFresh() {
   // сабграф 3.1+ тоже знает монеты за валюту — чтобы не было дублей,
   // из его списка их убираем (с цепи они приходят с курсом и валютой)
   const qs = new Set(q.map((x) => x.token.toLowerCase()));
-  return [...q, ...eth.filter((x) => !qs.has(x.token.toLowerCase()))];
+  const all = [...q, ...eth.filter((x) => !qs.has(x.token.toLowerCase()))];
+  // Общий порядок — по времени создания, новые первыми: иначе монеты за
+  // валюту всегда стояли впереди ETH-монет, и свежая ETH-монета оказывалась
+  // ниже вчерашних. Без дат (RPC-запасной путь) порядок оставляем как есть.
+  if (all.every((x) => x.createdAt > 0)) all.sort((a, b) => b.createdAt - a.createdAt);
+  return all;
 }
 
 /** Монеты quote-фабрики. Строка — как у ETH-монет, плюс q = {addr, sym, dec}:
