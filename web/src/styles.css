@@ -16,11 +16,11 @@
   --leaf-dim: #4caf6d1f;
   --red: #e05c5c;
   --radius: 16px;
-  --font-ui: "Inter", "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-ui: "Inter", "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
   /* движение: одна кривая и одна длительность на весь сайт (как у Pons) */
   --ease: cubic-bezier(.22, 1, .36, 1);
   --dur: .18s;
-  --font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
+  --font-display: "Instrument Serif", Georgia, "Times New Roman", "Songti SC", "Noto Serif SC", "SimSun", serif;
   font-family: var(--font-ui);
 }
 /* Серив (Instrument Serif) — только у бренда, как у pons: футер-логотип. */
@@ -1336,6 +1336,9 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
 .lang-btn { width: auto !important; padding: 0 11px; font-size: 12px; font-weight: 800; letter-spacing: .5px; }
 .lang-btn span { opacity: .4; transition: opacity .15s, color .15s; }
 .lang-btn span.on { opacity: 1; color: var(--gold); }
+.lang-btn .lang-opt { background: none; border: 0; padding: 0 3px; margin: 0; cursor: pointer; font: inherit; color: inherit; opacity: .4; transition: opacity .15s, color .15s; line-height: 1; }
+.lang-btn .lang-opt:hover { opacity: .85; }
+.lang-btn .lang-opt.on { opacity: 1; color: var(--gold); }
 .lang-btn .sep { opacity: .25; margin: 0 4px; }
 .ref-link-box {
   display: flex; gap: 10px; align-items: center; flex-wrap: wrap;

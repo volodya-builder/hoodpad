@@ -565,14 +565,15 @@ export default function App() {
                 )}
               </div>
             )}
-            <button className="icon-btn lang-btn" onClick={() => setLang(lang === "ru" ? "en" : lang === "en" ? "zh" : "ru")}
-                    title="Язык / Language / 语言">
-              <span className={lang === "ru" ? "on" : ""}>RU</span>
-              <span className="sep">/</span>
-              <span className={lang === "en" ? "on" : ""}>EN</span>
-              <span className="sep">/</span>
-              <span className={lang === "zh" ? "on" : ""}>中文</span>
-            </button>
+            {/* язык: каждый пункт — отдельная кнопка, а не перебор по кругу */}
+            <div className="icon-btn lang-btn" role="group" title="Язык / Language / 语言">
+              {[["ru", "RU"], ["en", "EN"], ["zh", "中文"]].map(([k, lbl], i) => (
+                <React.Fragment key={k}>
+                  {i > 0 && <span className="sep">/</span>}
+                  <button type="button" className={`lang-opt ${lang === k ? "on" : ""}`} onClick={() => setLang(k)} aria-pressed={lang === k}>{lbl}</button>
+                </React.Fragment>
+              ))}
+            </div>
             <button className="icon-btn" onClick={() => setTheme(theme === "light" ? "" : "light")}
                     title={theme === "light" ? t("Тёмная тема") : t("Светлая тема")}>
               {theme === "light" ? "☾" : "☀"}
