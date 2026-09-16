@@ -4438,3 +4438,7 @@ html[data-theme="light"] .arena-pot-place.p1 { background: rgba(232,198,90,.18);
 .arena-pot-place { transition: opacity .2s; cursor: default; }
 .arena-pot-cur { display: inline-block; animation: docsFade .18s ease; color: var(--text-dim); }
 .arena-pot-cur b { color: var(--text); font-weight: 500; }
+
+/* строка позиции: явная серая подсветка при наведении */
+.pos-row:hover { background: rgba(255,255,255,.07); box-shadow: 0 0 0 1px rgba(255,255,255,.08) inset; }
+html[data-theme="light"] .pos-row:hover { background: rgba(30,32,28,.07); box-shadow: 0 0 0 1px rgba(30,32,28,.08) inset; }
