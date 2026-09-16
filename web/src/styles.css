@@ -4358,3 +4358,10 @@ html[data-theme="light"] .tp-row:hover { background: rgba(30,32,28,.04); }
 .trader-panel.dragging { animation: none; transition: none; }
 .trader-panel.dragging .tp-head { cursor: grabbing; }
 .trader-panel.dragging { box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 40px 100px -30px #000, 0 0 0 1px rgba(200,245,66,.25); }
+
+/* панель трейдера растягивается за правый нижний угол */
+.trader-panel { resize: both; min-width: 340px; min-height: 260px; max-width: calc(100vw - 24px); }
+.trader-panel::after { content: ""; position: absolute; right: 7px; bottom: 7px; width: 10px; height: 10px; pointer-events: none; opacity: .5;
+  border-right: 2px solid var(--text-dim); border-bottom: 2px solid var(--text-dim); border-radius: 0 0 3px 0; }
+.trader-panel::-webkit-resizer { background: transparent; }
+@media (max-width: 720px) { .trader-panel { resize: none; } .trader-panel::after { display: none; } }

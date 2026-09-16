@@ -891,6 +891,27 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   // Панель трейдера можно таскать за шапку; место запоминается в браузере
   const [tpPos, setTpPos] = useState(() => { try { return JSON.parse(localStorage.getItem("hood.tpPos") || "null"); } catch (e) { return null; } });
   const tpDrag = useRef(null);
+  // и растягивать за правый нижний угол (браузерный resize); размер тоже помним
+  const [tpSize, setTpSize] = useState(() => { try { return JSON.parse(localStorage.getItem("hood.tpSize") || "null"); } catch (e) { return null; } });
+  const tpRef = useRef(null);
+  useEffect(() => {
+    const el = tpRef.current;
+    if (!el || !inspect || typeof ResizeObserver === "undefined") return;
+    let t0 = 0;
+    const ro = new ResizeObserver(() => {
+      clearTimeout(t0);
+      t0 = setTimeout(() => {
+        const w = Math.round(el.offsetWidth), h = Math.round(el.offsetHeight);
+        if (w < 200 || h < 200) return;
+        const cur = tpSize || {};
+        if (cur.w === w && cur.h === h) return;
+        setTpSize({ w, h });
+        try { localStorage.setItem("hood.tpSize", JSON.stringify({ w, h })); } catch (e) { /* ignore */ }
+      }, 150);
+    });
+    ro.observe(el);
+    return () => { ro.disconnect(); clearTimeout(t0); };
+  }, [inspect]); // eslint-disable-line
   const onTpDragStart = (e) => {
     if (e.button !== 0 || e.target.closest("a, .tp-close, button")) return;
     const el = e.currentTarget.parentElement;
@@ -1910,8 +1931,10 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       const isMe = wallet && inspect.toLowerCase() === wallet.account.toLowerCase();
       const pnlCol = (v) => ({ color: v >= 0 ? "var(--leaf)" : "var(--red)" });
       return (
-        <div className="trader-panel" style={tpPos ? { left: tpPos.x, top: tpPos.y, right: "auto" } : undefined}>
-          <div className="tp-head" onPointerDown={onTpDragStart} onDoubleClick={() => { setTpPos(null); try { localStorage.removeItem("hood.tpPos"); } catch (e) { /* ignore */ } }}>
+        <div className="trader-panel" ref={tpRef}
+             style={{ ...(tpPos ? { left: tpPos.x, top: tpPos.y, right: "auto" } : {}), ...(tpSize ? { width: tpSize.w, height: tpSize.h, maxHeight: "none" } : {}) }}>
+          <div className="tp-head" onPointerDown={onTpDragStart}
+               onDoubleClick={() => { setTpPos(null); setTpSize(null); try { localStorage.removeItem("hood.tpPos"); localStorage.removeItem("hood.tpSize"); } catch (e) { /* ignore */ } }}>
             {meta.image && <img src={meta.image} alt="" style={{ width: 26, height: 26, borderRadius: 7 }} />}
             <a className="mono" href={`${EXPLORER}/address/${inspect}`} target="_blank" rel="noreferrer">
               {short(inspect)}
