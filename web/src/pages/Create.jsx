@@ -106,6 +106,8 @@ export default function Create({ wallet, onConnect }) {
   const [qcfg, setQcfg] = useState(null); // { threshold, cap } в единицах валюты
   useEffect(() => {
     if (!QUOTE_LIVE || !quoteAddr) { setQcfg(null); return; }
+    // при смене валюты — сразу «…», а не порог предыдущей акции с новым курсом
+    setQcfg(null);
     let on = true;
     publicClient.readContract({ address: QUOTE_FACTORY_ADDRESS, abi: quoteFactoryAbi, functionName: "quoteConfig", args: [quoteAddr] })
       .then(([allowedQ, virt, cap]) => {

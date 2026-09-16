@@ -194,6 +194,8 @@ export function useQuoteUsd(addr) {
   const a = String(addr || "").toLowerCase();
   const [rate, setRate] = useState(quoteCache[a]?.v ?? 0);
   useEffect(() => {
+    // при смене адреса не держим курс прошлой валюты: кэш или 0 («…»)
+    setRate(quoteCache[a]?.v ?? 0);
     if (!a) return;
     let alive = true;
     quoteUsd(a).then((v) => alive && setRate(v));
