@@ -4381,3 +4381,12 @@ html[data-theme="light"] .tp-row:hover { background: rgba(30,32,28,.04); }
 .trader-panel { max-width: min(760px, calc(100vw - 24px)); }
 .dev-old { font-style: normal; font-size: 10.5px; color: var(--text-dim); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; white-space: nowrap; }
 .dev-row.old { opacity: .85; }
+
+/* Панель трейдера: без системных полос прокрутки (прокрутка есть, ползунок скрыт), содержимое ужимается, а не уезжает вбок */
+.trader-panel { overflow-x: hidden !important; overflow-y: auto !important; scrollbar-width: none !important; -ms-overflow-style: none; }
+.trader-panel::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.tp-row { grid-template-columns: 72px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 56px; }
+.tp-row > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tp-cell b, .tp-cell span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tp-head { flex-wrap: nowrap; min-width: 0; }
+.tp-head .mono { overflow: hidden; text-overflow: ellipsis; }
