@@ -22,7 +22,7 @@ const SECTIONS = [
 
 export default function CatsGuide({ lang, rarities, onTab, t: tr }) {
   const [open, setOpen] = useState(null);
-  const T = (ru, en) => (lang === "en" ? en : ru);
+  const T = (ru, en) => (lang !== "ru" ? en : ru);
   const go = (id) => document.getElementById(`g-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   const faq = [

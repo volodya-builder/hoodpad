@@ -62,7 +62,7 @@ function Doc({ title, updated, sections }) {
 
 export function Privacy() {
   const { lang } = useLang();
-  if (lang === "en") {
+  if (lang !== "ru") {
     return (
       <Doc
         title="Privacy Policy"
@@ -156,7 +156,7 @@ export function Privacy() {
 
 export function Terms() {
   const { lang } = useLang();
-  if (lang === "en") {
+  if (lang !== "ru") {
     return (
       <Doc
         title="Terms of Use"

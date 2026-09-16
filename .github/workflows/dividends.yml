@@ -30,7 +30,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 355
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -42,24 +42,43 @@ jobs:
           TREASURER_PRIVATE_KEY: ${{ secrets.TREASURER_PRIVATE_KEY }}
           MIN_PAYOUT_USD: "0.1"   # тест: платим от 10 центов (потом вернуть 1)
           MIN_SWEEP_USD: "0.1"
+          # Как часто платить, секунд. Тест (16.09.2026): 60 — каждую минуту,
+          # бот крутится внутри одного захода до 5,5 ч, потом эстафета сразу
+          # запускает следующий. Боевой режим: Settings → Variables →
+          # DIVIDENDS_EVERY = 3600 (раз в час, как раньше).
+          EVERY: ${{ vars.DIVIDENDS_EVERY || '60' }}
         run: |
           set -o pipefail   # иначе tee прячет ошибку бота, и заход выглядит успешным
           if [ "${{ github.event.inputs.mode }}" = "dry" ]; then
-            node bot/dividends/dividends.mjs | tee -a "$GITHUB_STEP_SUMMARY"
-          else
-            node bot/dividends/dividends.mjs --run | tee -a "$GITHUB_STEP_SUMMARY"
+            node bot/dividends/dividends.mjs | tee -a "$GITHUB_STEP_SUMMARY"; exit 0
           fi
+          if [ "$EVERY" -ge 3600 ]; then
+            node bot/dividends/dividends.mjs --run | tee -a "$GITHUB_STEP_SUMMARY"; exit 0
+          fi
+          # цикл: заход живёт ~5,5 ч (потолок GitHub 6 ч), в отчёт — последний прогон
+          END=$(( $(date -u +%s) + 330 * 60 )); N=0
+          while :; do
+            N=$((N + 1)); echo "=== прогон $N · $(date -u +%H:%M:%S) UTC"
+            node bot/dividends/dividends.mjs --run > last-run.log 2>&1 || echo "прогон $N завершился с ошибкой"
+            cat last-run.log
+            [ $(date -u +%s) -ge "$END" ] && break
+            sleep "$EVERY"
+          done
+          { echo "Прогонов за заход: $N · последний:"; echo; cat last-run.log; } >> "$GITHUB_STEP_SUMMARY"
       # Эстафета: ждём до начала следующего часа (+2 мин) и запускаем следующий заход.
       - name: Передать эстафету
         if: always() && github.event.inputs.mode != 'dry'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELAY: ${{ vars.DIVIDENDS_RELAY }}
+          EVERY: ${{ vars.DIVIDENDS_EVERY || '60' }}
         run: |
           if [ "$RELAY" = "off" ]; then echo "Эстафета выключена (DIVIDENDS_RELAY=off)."; exit 0; fi
           NOW=$(date -u +%s)
           NEXT=$(( (NOW / 3600 + 1) * 3600 + 120 ))
           WAIT=$(( NEXT - NOW ))
+          # тестовый режим (чаще раза в час): следующий заход сразу, без ожидания
+          [ "${EVERY:-60}" -lt 3600 ] && WAIT=0
           OTHERS=$(gh run list --workflow dividends.yml --limit 20 --json status --jq '[.[] | select(.status=="queued" or .status=="pending" or .status=="waiting" or .status=="requested")] | length' || echo 0)
           if [ "$OTHERS" != "0" ]; then echo "В очереди уже есть запуск — эстафету не передаю."; exit 0; fi
           echo "Следующий заход через $((WAIT / 60)) мин…"; sleep "$WAIT"
