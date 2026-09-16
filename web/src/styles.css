@@ -4214,3 +4214,29 @@ b, strong { font-weight: 500; }
 .ana-stat .n, .ana-panel-val, .pf-usd, .tok-mcap, .big-num { font-weight: 400; letter-spacing: -.03em; }
 .btn-primary, .btn.btn-primary { font-weight: 500; letter-spacing: .01em; }
 .nav-pill { font-weight: 500; }
+
+/* арена: фонд → подиум одной картинкой */
+.arena-pot { display: grid; grid-template-columns: minmax(200px, 1fr) auto minmax(0, 2fr); gap: 26px; align-items: center;
+  border: 1px solid var(--border); border-radius: 18px; background: var(--card); padding: 22px 26px; margin: 0 0 26px; }
+.arena-pot .k { font-size: 12.5px; color: var(--text-dim); margin-bottom: 8px; }
+.arena-pot-main .n { font-size: 44px; font-weight: 400; letter-spacing: -.03em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.arena-pot-main .s { font-size: 13px; margin-top: 8px; }
+.arena-pot-arrow { font-size: 26px; color: var(--text-dim); opacity: .55; }
+.arena-pot-bar { display: flex; height: 12px; border-radius: 999px; overflow: hidden; gap: 3px; background: var(--bg); }
+.arena-pot-bar span { display: block; height: 100%; }
+.arena-pot-bar .p1, .arena-pot-place.p1 i { background: #e8c65a; }
+.arena-pot-bar .p2, .arena-pot-place.p2 i { background: #c3cbd4; }
+.arena-pot-bar .p3, .arena-pot-place.p3 i { background: #c98a55; }
+.arena-pot-places { display: flex; gap: 12px; margin-top: 12px; }
+.arena-pot-place { min-width: 0; }
+.arena-pot-place .v { font-size: 22px; font-weight: 400; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.arena-pot-place .l { font-size: 12px; color: var(--text-dim); margin-top: 4px; white-space: nowrap; }
+.arena-pot-place .l i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; vertical-align: -1px; margin-right: 2px; }
+.arena-pot-place.p1 .v { color: #f3e3a3; }
+@media (max-width: 900px) {
+  .arena-pot { grid-template-columns: 1fr; gap: 16px; padding: 18px; }
+  .arena-pot-arrow { display: none; }
+  .arena-pot-main .n { font-size: 36px; }
+  .arena-pot-places { flex-wrap: wrap; }
+  .arena-pot-place { flex-basis: auto !important; flex: 1 1 30%; }
+}
