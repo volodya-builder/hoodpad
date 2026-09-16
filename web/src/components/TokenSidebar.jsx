@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Icon from "./Icon.jsx";
 import { formatEther, formatUnits } from "viem";
-import { loadTokens, subgraphStats24 } from "../lib/data.js";
+import { loadTokens, subgraphStats24, prefetchToken } from "../lib/data.js";
 import { useEthUsd, usd, quoteUsd } from "../lib/price.js";
 import { fmtEth, fmt } from "../lib/web3.js";
 import { useLang } from "../lib/i18n.jsx";
@@ -94,7 +94,7 @@ export default function TokenSidebar({ current }) {
           const v = volOf(x);
           const ch = chgOf(x);
           return (
-            <a key={x.token} className={`ts-row ${active ? "on" : ""}`} href={`#/token/${x.token}`}>
+            <a key={x.token} className={`ts-row ${active ? "on" : ""}`} href={`#/token/${x.token}`} onMouseEnter={() => prefetchToken(x.token)}>
               <span className={`ts-fav ${favs.has(x.token) ? "on" : ""}`}
                     title={t(favs.has(x.token) ? "Убрать из избранного" : "В избранное")}
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFav(x.token); }}>

@@ -558,6 +558,18 @@ export function invalidateTrades(pool) {
 // cur — валюта кривой для монет за ERC20 (quote-фабрика): { dec, virt }.
 // Без cur — ETH-пул (18 знаков, виртуал 1.625 ETH). Сабграф индексирует
 // только ETH-фабрику, поэтому монеты за валюту читаем прямо из логов.
+/** Прогрев страницы монеты при наведении на карточку: сделки и график
+ *  подтягиваются заранее, клик открывает страницу уже с данными. */
+const _prefetched = new Set();
+export function prefetchToken(token) {
+  const k = String(token || "").toLowerCase();
+  if (!k || _prefetched.has(k)) return;
+  _prefetched.add(k);
+  const tk = (_tok.v || []).find((x) => (x.token || "").toLowerCase() === k);
+  if (!tk?.pool) return;
+  poolTrades(tk.pool, tk.q ? { dec: tk.q.dec, virt: tk.q.virt, token: tk.token } : null).catch(() => {});
+}
+
 export async function poolTrades(pool, cur = null) {
   // Кэш — по пулу И виртуалу: у монеты за валюту virt приходит с сетью позже
   // кэша (сначала 0) — иначе первый расчёт с 1.625 «ETH» оседал в кэше и
