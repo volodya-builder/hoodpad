@@ -18,11 +18,13 @@
   --radius: 16px;
   /* моноширинный: явные латинские шрифты до generic monospace — иначе при lang=zh Windows подставляет SimSun и цифры «плывут» */
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "Roboto Mono", "Courier New", monospace;
-  --font-ui: "Inter", "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  /* Шрифт сайта (16.09.2026): Nunito Sans для текста, Nunito для заголовков и
+     крупных цифр — мягкая геометрия, как в новой версии Pons. Inter — запасной. */
+  --font-ui: "Nunito Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
   /* движение: одна кривая и одна длительность на весь сайт (как у Pons) */
   --ease: cubic-bezier(.22, 1, .36, 1);
   --dur: .18s;
-  --font-display: "Instrument Serif", Georgia, "Times New Roman", "Songti SC", "Noto Serif SC", "SimSun", serif;
+  --font-display: "Nunito", "Nunito Sans", "Inter", -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   font-family: var(--font-ui);
 }
 /* Серив (Instrument Serif) — только у бренда, как у pons: футер-логотип. */
@@ -3678,8 +3680,8 @@ a.who:hover .who-name, a.who:hover .mono { color: var(--gold); }
    Шрифт Inter, крупные цифры обычным начертанием с плотным трекингом,
    заголовки 500, подписи 500 без «жирного капса», переходы 180 мс. */
 body { font-feature-settings: "cv11", "ss01", "tnum"; }
-.page-title { font-weight: 400; letter-spacing: -.025em; }
-h1, h2, h3, .card-title h3, .sec-h2, .sec-h3 { font-weight: 400; letter-spacing: -.015em; }
+.page-title { font-weight: 700; letter-spacing: -.025em; }
+h1, h2, h3, .card-title h3, .sec-h2, .sec-h3 { font-family: var(--font-display-round); font-weight: 700; letter-spacing: -.015em; }
 .btn, .bt-tab, .nav-pill, .fpill, .chip, .badge, .card, .arena-row, .tcard, .quote-chip, .cp-btn, .soc-btn, .mini-btn, input, textarea, select {
   transition: color var(--dur) var(--ease), background var(--dur) var(--ease), border-color var(--dur) var(--ease), opacity var(--dur) var(--ease), transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
@@ -3726,8 +3728,9 @@ h1, h2, h3, .card-title h3, .sec-h2, .sec-h3 { font-weight: 400; letter-spacing:
 /* по скриншоту новой версии Pons: округлый дисплейный шрифт у заголовков и
    крупных цифр, столбики серые с подсветкой сверху, «сейчас» — зелёный,
    под мышью — почти белый */
-:root { --font-display-round: "Nunito", "Inter", -apple-system, sans-serif; }
-.page-title, .ana-stat .n, .ana-panel-val { font-family: var(--font-display-round); font-weight: 500; letter-spacing: -.01em; }
+:root { --font-display-round: "Nunito", "Nunito Sans", "Inter", -apple-system, sans-serif; }
+.page-title, .ana-stat .n, .ana-panel-val { font-family: var(--font-display-round); font-weight: 700; letter-spacing: -.02em; }
+.ana-stat .n, .ana-panel-val, .pf-usd, .ana-card .v, .stat-card .v, .arena-pot-main .n, .arena-pot-place .v, .docs-stat .n { font-family: var(--font-display-round); font-weight: 600; letter-spacing: -.02em; }
 .page-title { font-size: 30px; }
 .ana-stat .n { font-weight: 500; }
 .ana-svg-bar { fill: url(#anaBarGrad); }
@@ -3939,7 +3942,7 @@ html[data-theme="light"] .fpill.on, html[data-theme="light"] .mode-tab.on { back
 html[data-theme="light"] input, html[data-theme="light"] textarea, html[data-theme="light"] select { background: #fff; border-color: rgba(0,0,0,.12); }
 label { text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 13px; margin: 18px 0 8px; }
 .panel { background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); border-radius: 22px; box-shadow: inset 0 1px 0 rgba(255,255,255,.04); }
-.panel h2, .create-layout h2 { font-family: var(--font-display-round); font-weight: 500; font-size: 26px; letter-spacing: -.01em; }
+.panel h2, .create-layout h2 { font-family: var(--font-display-round); font-weight: 700; font-size: 26px; letter-spacing: -.01em; }
 html[data-theme="light"] .panel { background: #fff; border-color: rgba(0,0,0,.08); box-shadow: none; }
 /* купить/продать: капсула-переключатель, активная — лайм или красный текст */
 .tabs { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06); border-radius: 999px; padding: 3px; gap: 2px; }
@@ -4060,7 +4063,7 @@ html[data-theme="light"] .sr-menu-it:hover, html[data-theme="light"] .sr-menu-it
 /* согласие с условиями — в общем стиле: без «героя» и чипов */
 .tos-modal { width: min(520px, 92vw); background: #131313; border: 1px solid rgba(255,255,255,.1); border-radius: 22px; box-shadow: 0 30px 80px -20px #000; }
 .tos-body { padding: 28px 28px 26px; }
-.tos-title { font-family: var(--font-display-round); font-weight: 500; font-size: 24px; letter-spacing: -.01em; margin: 0 0 8px; }
+.tos-title { font-family: var(--font-display-round); font-weight: 700; font-size: 24px; letter-spacing: -.01em; margin: 0 0 8px; }
 .tos-sub { color: var(--text-dim); font-size: 14px; line-height: 1.6; margin: 0 0 20px; }
 .tos-check { background: transparent; border: 0; border-top: 1px solid rgba(255,255,255,.08); border-radius: 0; padding: 14px 0; margin: 0; font-weight: 400; font-size: 14.5px; gap: 12px; }
 .tos-check:last-of-type { border-bottom: 1px solid rgba(255,255,255,.08); }
@@ -4121,14 +4124,14 @@ html[data-theme="light"] .tos-box { border-color: rgba(0,0,0,.3); }
 .docs-hero::before { content: ""; position: absolute; inset: -40px -60px auto -60px; height: 260px; pointer-events: none;
   background: radial-gradient(520px 200px at 18% 40%, #c8f54216, transparent 70%); }
 .docs-eyebrow { font-size: 11px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; color: var(--gold); margin-bottom: 14px; }
-.docs-hero h1 { font-family: var(--font-display); font-weight: 400; font-size: 54px; line-height: 1.02; letter-spacing: -.02em; margin: 0 0 14px; }
+.docs-hero h1 { font-family: var(--font-display); font-weight: 800; font-size: 50px; line-height: 1.04; letter-spacing: -.025em; margin: 0 0 14px; }
 .docs-lead { font-size: 16px; color: var(--text-dim); max-width: 560px; line-height: 1.6; }
 .docs-hero-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
 .docs-hero-chips a { font-size: 13px; font-weight: 500; color: var(--text); text-decoration: none; padding: 8px 14px; border: 1px solid var(--border); border-radius: 999px; background: var(--card); transition: border-color .15s, color .15s; }
 .docs-hero-chips a:hover { border-color: var(--gold); color: var(--gold); }
 .docs-sec { position: relative; margin-top: 56px; padding-top: 8px; }
 .docs-num { font-family: var(--font-mono); font-size: 12px; color: var(--gold); letter-spacing: .12em; margin-bottom: 8px; opacity: .9; }
-.docs-sec h2 { font-family: var(--font-display); font-weight: 400; font-size: 32px; letter-spacing: -.015em; margin: 0 0 16px; }
+.docs-sec h2 { font-family: var(--font-display); font-weight: 700; font-size: 28px; letter-spacing: -.02em; margin: 0 0 16px; }
 .docs-sec p { color: var(--text-dim); font-size: 15px; line-height: 1.75; }
 .docs-sec p strong { color: var(--text); }
 .docs-nav-item { display: flex; align-items: baseline; gap: 10px; }
