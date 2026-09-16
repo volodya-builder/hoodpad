@@ -4180,3 +4180,25 @@ html[data-theme="light"] .tos-box { border-color: rgba(0,0,0,.3); }
   .docs-hero h1 { font-size: 40px; }
   .docs-stats { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* фирменная подсказка для всех title (lib/tooltip.js) — как у меток кошельков */
+.hood-tip {
+  position: absolute; top: 0; left: 0; z-index: 9000;
+  max-width: 260px; padding: 7px 11px;
+  background: linear-gradient(160deg, #1d1e1a, #141512);
+  border: 1px solid var(--border-gold); border-radius: 10px;
+  color: var(--text); font-family: var(--font-ui); font-size: 11.5px; font-weight: 600; line-height: 1.45; letter-spacing: .1px;
+  box-shadow: 0 14px 34px -14px #000e, 0 0 0 1px #00000033;
+  opacity: 0; pointer-events: none; transition: opacity .1s ease;
+  white-space: normal; text-align: left;
+}
+.hood-tip.on { opacity: 1; }
+.hood-tip::before {
+  content: ""; position: absolute; left: var(--ax, 50%); bottom: -5px; margin-left: -4px;
+  width: 8px; height: 8px; transform: rotate(45deg);
+  background: #171814; border-right: 1px solid var(--border-gold); border-bottom: 1px solid var(--border-gold);
+}
+.hood-tip.below::before { bottom: auto; top: -5px; border: 0; border-left: 1px solid var(--border-gold); border-top: 1px solid var(--border-gold); }
+html[data-theme="light"] .hood-tip { background: #fffdf7; color: #1c1c1a; box-shadow: 0 14px 34px -18px #00000055; }
+html[data-theme="light"] .hood-tip::before { background: #fffdf7; }
+@media (hover: none) { .hood-tip { display: none; } }

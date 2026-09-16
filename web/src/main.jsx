@@ -2,7 +2,10 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
 import { LangProvider } from "./lib/i18n.jsx";
+import { installTooltips } from "./lib/tooltip.js";
 import "./styles.css";
+
+installTooltips();
 
 // Вместо «чёрного экрана смерти» показываем текст ошибки — и пользователю понятнее,
 // и чинить по скриншоту можно сразу.
