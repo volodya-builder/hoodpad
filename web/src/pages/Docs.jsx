@@ -44,11 +44,14 @@ const SECTIONS = [
     body: [
       T("Все монеты одинаковые по механике: фиксированный сапплай, без минта, без налогов кроме комиссии площадки, без прав у создателя.",
         "Every coin shares the same mechanics: fixed supply, no minting, no taxes except the platform fee, no creator privileges."),
+      { type: "stats", items: [
+        { n: "1B", l: T("сапплай", "supply") },
+        { n: "80%", l: T("на кривой", "on the curve") },
+        { n: "6.5 ETH", l: T("порог градации", "graduation") },
+        { n: "20%", l: T("в ликвидность навсегда", "locked liquidity") },
+      ] },
       [
-        { k: T("Сапплай", "Supply"), v: "1 000 000 000" },
-        { k: T("На кривой", "Sold on the curve"), v: T("800 000 000 (80%)", "800,000,000 (80%)") },
-        { k: T("В ликвидность при градации", "To liquidity at graduation"), v: T("200 000 000 (20%)", "200,000,000 (20%)") },
-        { k: T("Формула", "Formula"), v: "x · y = k · " + "virtual 1.625 ETH" },
+        { k: T("Формула", "Formula"), v: "x · y = k · virtual 1.625 ETH" },
         { k: T("Порог градации (ETH-монеты)", "Graduation threshold (ETH coins)"), v: "6.5 ETH" },
         { k: T("Порог (монеты за валюту)", "Threshold (quote coins)"), v: T("виртуальный резерв × 4, ≈ $16k в валюте на момент добавления", "virtual reserve × 4, ≈ $16k in the asset when it was listed") },
         { k: T("Покупка создателя при запуске", "Creator buy at launch"), v: T("до 5% сапплая, в той же транзакции", "up to 5% of supply, same transaction") },
@@ -73,12 +76,15 @@ const SECTIONS = [
     body: [
       T("Площадка берёт 1% с каждой сделки на кривой. Комиссия делится контрактами, а не людьми: доли зашиты при деплое и не меняются.",
         "The platform charges 1% on every curve trade. The split is enforced by contracts, not people: shares are fixed at deployment and cannot change."),
+      { type: "split", title: T("Комиссия 1% с каждой сделки", "1% fee on every trade"), parts: [
+        { l: T("Создателю монеты", "Coin creator"), pct: 70, c: "var(--gold)" },
+        { l: T("Арена — выкуп подиума", "Arena — podium buyback"), pct: 10, c: "#8fd3f4" },
+        { l: T("Выкуп монеты hood", "hood buyback"), pct: 10, c: "#e6e6e3" },
+        { l: T("Команда", "Team"), pct: 10, c: "#7c7c79" },
+      ] },
       [
-        { k: T("Создателю монеты", "Coin creator"), v: "70%" },
-        { k: T("Казна арены — выкуп и сжигание подиума", "Arena treasury — podium buyback & burn"), v: "10%" },
-        { k: T("Казна выкупа монеты hood", "hood buyback treasury"), v: "10%" },
-        { k: T("Команда", "Team"), v: "10%" },
         { k: T("Комиссия запуска", "Launch fee"), v: T("0 — площадка ничего не берёт; ≈ 0.0005 ETH — газ сети", "0 — the platform takes nothing; ≈ 0.0005 ETH is network gas") },
+        { k: T("Кто делит", "Who splits"), v: "FeeSplitterV6 — " + T("доли зашиты, изменить нельзя", "shares are immutable") },
       ],
       T("Доля создателя копится в пуле и забирается кнопкой на странице монеты. Остальные 30% раз в минуту собирает бот в сплиттер (FeeSplitterV6), который в той же транзакции раскладывает их по трём адресам. У монет за валюту всё это происходит в валюте кривой.",
         "The creator share accrues in the pool and is claimed with a button on the coin page. The remaining 30% is collected by a bot into the splitter (FeeSplitterV6), which forwards it to the three addresses in the same transaction. For quote coins all of this happens in the curve asset."),
@@ -91,8 +97,14 @@ const SECTIONS = [
         "The Arena is a daily battle of coins by fair volume. Each UTC day every non-graduated coin competes; at checkpoints during the day the weakest drops out, and the last one standing is the Champion of the Day. Elimination is for show — trading never stops."),
       T("Очки боя = честный объём × (1 + прирост цены за день). Честный объём считается по кошелькам как |покупки − продажи|: накрутка туда-сюда не даёт очков, сделки создателя не считаются, вклад одного кошелька ограничен 25%.",
         "Battle score = fair volume × (1 + price growth for the day). Fair volume is |buys − sells| per wallet: wash trading earns nothing, creator trades don’t count, and one wallet contributes at most 25%."),
+      { type: "split", title: T("Призовой фонд дня — вся казна арены", "Daily prize — the whole arena treasury"), parts: [
+        { l: T("1 место", "1st place"), pct: 70, c: "var(--gold)" },
+        { l: T("2 место", "2nd place"), pct: 20, c: "#e6e6e3" },
+        { l: T("3 место", "3rd place"), pct: 10, c: "#7c7c79" },
+      ] },
       T("Утром (00:25 UTC) бот тратит всё, что лежит в казне арены, на вчерашний подиум: 70% первому месту, 20% второму, 10% третьему — выкуп монеты с рынка и сжигание в той же транзакции. Монеты за валюту выкупаются из той же валюты в казне. Одна корона на монету: выигравшая однажды больше не участвует.",
         "In the morning (00:25 UTC) the bot spends everything in the arena treasury on yesterday’s podium: 70% to 1st, 20% to 2nd, 10% to 3rd — buying the coin off the market and burning it in the same transaction. Quote coins are bought from the matching asset held by the treasury. One crown per coin: a past winner never competes again."),
+      { type: "note", text: T("Из казны арены нельзя вывести ни копейки — контракт умеет только покупать монеты площадки и сжигать их.", "Nothing can be withdrawn from the arena treasury — the contract can only buy platform coins and burn them.") },
     ],
   },
   {
@@ -159,6 +171,7 @@ const SECTIONS = [
     body: [
       T("Монеты, пулы, мигратор, сплиттер и казны не имеют функций вывода, паузы или изменения правил. У фабрик есть владелец, который может менять только параметры будущих запусков (казна, мигратор, комиссия ≤ 5%) — через заявку с задержкой 48 часов, видимую всем в блокчейне. Уже запущенные монеты это не затрагивает.",
         "Coins, pools, the migrator, the splitter and treasuries have no withdraw, pause or rule-change functions. The factories have an owner who can only change parameters for future launches (treasury, migrator, fee ≤ 5%) through a proposal with a 48-hour delay visible on-chain. Already launched coins are unaffected."),
+      { type: "note", text: T("Ни один контракт площадки не имеет функций паузы, вывода средств или изменения правил уже запущенных монет.", "No platform contract has pause, withdraw, or rule-change functions for already launched coins.") },
       T("Риски: токены волатильны и могут обесцениться полностью; сделки необратимы; курс акций-токенов зависит от ликвидности пулов Uniswap в сети; hood — независимый проект, не аффилированный с Robinhood Markets, Inc.",
         "Risks: tokens are volatile and can go to zero; transactions are irreversible; stock-token prices depend on Uniswap pool liquidity on the chain; hood is an independent project not affiliated with Robinhood Markets, Inc."),
     ],
@@ -205,17 +218,38 @@ export default function Docs() {
       <aside className="docs-nav">
         <div className="docs-nav-title">{t("Документация")}</div>
         {SECTIONS.map((s) => (
-          <a key={s.id} href={`#/docs`} className={`docs-nav-item ${active === s.id ? "on" : ""}`} onClick={go(s.id)}>{L(s.title)}</a>
+          <a key={s.id} href={`#/docs`} className={`docs-nav-item ${active === s.id ? "on" : ""}`} onClick={go(s.id)}><i>{String(SECTIONS.indexOf(s) + 1).padStart(2, "0")}</i>{L(s.title)}</a>
         ))}
         <a className="docs-nav-item docs-nav-ext" href={REPO} target="_blank" rel="noreferrer">GitHub ↗</a>
       </aside>
       <div className="docs-body">
-        <h1 className="page-title">{t("Документация")}</h1>
-        <div className="page-sub">{t("Как устроен hood: кривая, комиссии, арена, контракты. Обновлено 16.09.2026.")}</div>
+        <div className="docs-hero">
+          <div className="docs-eyebrow">hood · docs · Robinhood Chain</div>
+          <h1>{t("Документация")}</h1>
+          <div className="docs-lead">{t("Как устроен hood: кривая, комиссии, арена, контракты. Обновлено 16.09.2026.")}</div>
+          <div className="docs-hero-chips">
+            <a href="#/docs" onClick={go("contracts")}>{t("Контракты")} →</a>
+            <a href="#/docs" onClick={go("fees")}>{t("Комиссии и экономика")} →</a>
+            <a href="#/docs" onClick={go("data")}>{t("Данные и API")} →</a>
+          </div>
+        </div>
         {SECTIONS.map((s) => (
           <section key={s.id} id={"doc-" + s.id} className="docs-sec">
+            <div className="docs-num">{String(SECTIONS.indexOf(s) + 1).padStart(2, "0")}</div>
             <h2>{L(s.title)}</h2>
-            {s.body.map((b, i) => Array.isArray(b) ? (
+            {s.body.map((b, i) => b && b.type === "stats" ? (
+              <div className="docs-stats" key={i}>
+                {b.items.map((it, j) => <div className="docs-stat" key={j}><div className="n">{it.n}</div><div className="l">{L(it.l)}</div></div>)}
+              </div>
+            ) : b && b.type === "split" ? (
+              <div className="docs-split" key={i}>
+                <div className="docs-split-title">{L(b.title)}</div>
+                <div className="docs-split-bar">{b.parts.map((p, j) => <span key={j} style={{ width: `${p.pct}%`, background: p.c }} title={`${L(p.l)} · ${p.pct}%`} />)}</div>
+                <div className="docs-split-legend">{b.parts.map((p, j) => <span key={j}><i style={{ background: p.c }} />{L(p.l)} <b>{p.pct}%</b></span>)}</div>
+              </div>
+            ) : b && b.type === "note" ? (
+              <div className="docs-note" key={i}>{L(b.text)}</div>
+            ) : Array.isArray(b) ? (
               <div className="docs-table" key={i}>
                 {b.map((row, j) => (
                   <div className="docs-row" key={j}>
