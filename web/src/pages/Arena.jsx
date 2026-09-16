@@ -9,6 +9,7 @@ import { useLang } from "../lib/i18n.jsx";
 import { FEATURES, ARENA_LIVE, EXPLORER } from "../lib/config.js";
 import Icon from "../components/Icon.jsx";
 import Who from "../components/Who.jsx";
+import QuoteLogo from "../components/QuoteLogo.jsx";
 
 // Арена — суточный бой на выживание по честному объёму торгов.
 // Экономика (решение владельца 15.09.2026): 20% каждой комиссии платформы
@@ -84,16 +85,18 @@ export default function Arena() {
     ["rules", t("Правила")],
   ];
 
-  const Row = ({ p, i, trend = true, right, sub, dim }) => {
+  const Row = ({ p, i, trend = true, right, sub, dim, podium }) => {
     // монета за валюту: капа через курс валюты, а не ETH
     const qPrice = useQuoteUsd(p.q?.addr);
     const mcap = p.q ? Number(formatUnits(p.price, p.q.dec)) * 1e9 * qPrice : mcapOf(p);
     return (
-    <a className={`lt-row ${dim ? "dim" : ""}`} href={`#/token/${p.token}`}>
+    <a className={`lt-row ${dim ? "dim" : ""} ${podium ? `podium podium-${podium}` : ""}`} href={`#/token/${p.token}`}>
       <span className="lt-rank">{i != null ? i + 1 : ""}</span>
       <Logo src={p.meta?.image} />
       <span className="lt-tok">
-        <span className="lt-name">{p.name || p.symbol} <em>${p.symbol}</em></span>
+        <span className="lt-name">{p.name || p.symbol} <em>${p.symbol}</em>
+          {p.q && <em className="lt-q" title={p.divBps > 0 ? t("дивиденды холдерам с каждой сделки") : t("валюта курвы")}><QuoteLogo q={p.q} size={14} withSym />{p.divBps > 0 ? ` · ${p.divBps / 100}%` : ""}</em>}
+        </span>
         <span className="lt-sub">
           {p.creator && <Who addr={p.creator} size={14} />}
           {p.creator && p.createdAt ? " · " : ""}
@@ -143,7 +146,7 @@ export default function Arena() {
         <div className="rules-min">
           <div>
             <h3>{t("Как проходит день")}</h3>
-            <p>{t("В 00:00 UTC в бой вступают все неградуировавшие токены. День делится на чекпоинты — по числу участников; на каждом выбывает токен с наименьшими очками боя. Последний выживший — чемпион дня. Выбывание — витрина: торговля не останавливается. Наутро чемпион отдыхает на троне — у остальных честный шанс.")}</p>
+            <p>{t("В 00:00 UTC в бой вступают все неградуировавшие токены. День делится на чекпоинты — по числу участников; на каждом выбывает токен с наименьшими очками боя. Последний выживший — чемпион дня. Выбывание — витрина: торговля не останавливается. Чемпион больше не участвует — одна корона на монету, у остальных честный шанс.")}</p>
           </div>
           <div>
             <h3>{t("Очки боя")}</h3>
@@ -211,7 +214,7 @@ export default function Arena() {
                 : danger
                   ? <span className="lt-tag bad">{t("выбывает")} <span className="mono">{clock(nextCp)}</span></span>
                   : i === 0 ? <span className="lt-tag gold">{t("лидер")}</span> : null;
-              return <Row key={p.token} p={p} i={i} right={right} />;
+              return <Row key={p.token} p={p} i={i} right={right} podium={i < 3 ? i + 1 : 0} />;
             })}
             {st.eliminated.slice().reverse().map(({ token: p, at }) => (
               <Row key={p.token} p={p} dim
