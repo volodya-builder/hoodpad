@@ -18,9 +18,9 @@
   --radius: 16px;
   /* моноширинный: явные латинские шрифты до generic monospace — иначе при lang=zh Windows подставляет SimSun и цифры «плывут» */
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "Roboto Mono", "Courier New", monospace;
-  /* Шрифт сайта (16.09.2026): Nunito Sans для текста, Nunito для заголовков и
-     крупных цифр — мягкая геометрия, как в новой версии Pons. Inter — запасной. */
-  --font-ui: "Nunito Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  /* Шрифт сайта (16.09.2026): текст — Inter, заголовки и крупные цифры —
+     Nunito (мягкая геометрия, как у Pons). */
+  --font-ui: "Inter", "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
   /* движение: одна кривая и одна длительность на весь сайт (как у Pons) */
   --ease: cubic-bezier(.22, 1, .36, 1);
   --dur: .18s;
