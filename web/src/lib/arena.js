@@ -71,7 +71,8 @@ export {
 // Кэш исходных данных арены в localStorage: страница рисуется мгновенно из
 // прошлого захода, свежие данные подтягиваются следом (владелец 15.09.2026:
 // «читаю блокчейн» на пару секунд — недопустимо).
-const ARENA_LS = "hood_cache_arena_v1";
+// Ключ кэша привязан к фабрике: после перезапуска старые монеты из кэша не всплывают
+const ARENA_LS = "hood_cache_arena_v2_" + String(FACTORY_ADDRESS || "").slice(2, 10);
 const _bigR = (k, v) => (typeof v === "bigint" ? { __b: v.toString() } : v);
 const _bigV = (k, v) => (v && typeof v === "object" && "__b" in v ? BigInt(v.__b) : v);
 function readArenaCache() {

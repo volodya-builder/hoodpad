@@ -49,7 +49,7 @@ const SUBGRAPH_BASE = "https://api.goldsky.com/api/public/project_cmrrkubk3ngb40
 const SUBGRAPH_VERSIONS = ["4.0.0"];
 export let SUBGRAPH_URL = SUBGRAPH_BASE + SUBGRAPH_VERSIONS[0] + "/gn";
 let _sgPick = null;
-const SG_LS = "hood_subgraph_pick_v1";
+const SG_LS = "hood_subgraph_pick_v2";
 async function pickSubgraph() {
   if (_sgPick) return _sgPick;
   // выбор помним 10 минут — без лишней пробы при каждом заходе
@@ -253,8 +253,53 @@ export async function allTrades() {
     await toEthEquivalent(out);
     _allTr = { v: out, t: Date.now(), p: null };
     return out;
-  })().catch((e) => { _allTr.p = null; if (_allTr.v) return _allTr.v; throw e; });
+  })().catch(async (e) => {
+    // Индексатор недоступен (например, новая версия ещё не задеплоена после
+    // перезапуска) — читаем сделки с цепи по каждому пулу. Монет после
+    // перезапуска мало, это дёшево; арена и аналитика живут без сабграфа.
+    try {
+      const v = await _allTradesRpc();
+      _allTr = { v, t: Date.now(), p: null };
+      return v;
+    } catch (e2) { _allTr.p = null; if (_allTr.v) return _allTr.v; throw e; }
+  });
   return _allTr.p;
+}
+
+async function _allTradesRpc() {
+  const tokens = await loadTokens();
+  const out = [];
+  for (const t of tokens.slice(0, 40)) {
+    if (!t.pool) continue;
+    const cur = t.q ? { dec: t.q.dec, virt: t.q.virt || 0, token: t.token } : null;
+    const h = await poolTrades(t.pool, cur).catch(() => null);
+    if (!h) continue;
+    const dec = t.q ? t.q.dec : 18;
+    for (const tr of h.trades) {
+      out.push({
+        pool: t.pool.toLowerCase(), side: tr.side, addr: tr.addr,
+        eth: tr.eth, tokens: tr.tokens, fee: tr.fee,
+        ts: tr.ts || 0, block: tr.block, tx: tr.tx,
+        quote: t.q ? String(t.q.addr).toLowerCase() : null,
+        // toEthEquivalent ждёт сырые единицы валюты
+        ethRaw: t.q ? String(Math.round(tr.eth * 10 ** dec)) : null,
+        feeRaw: t.q ? String(Math.round(tr.fee * 10 ** dec)) : null,
+      });
+    }
+  }
+  // Время сделок: интерполяция по блокам (2 RPC-вызова), как на странице монеты
+  const noTs = out.filter((x) => !x.ts);
+  if (noTs.length) {
+    const blocks = noTs.map((x) => Number(x.block));
+    const minB = Math.min(...blocks);
+    const [latest, oldest] = await Promise.all([publicClient.getBlock(), publicClient.getBlock({ blockNumber: BigInt(minB) })]);
+    const span = Number(latest.number) - minB;
+    const avg = span > 0 ? (Number(latest.timestamp) - Number(oldest.timestamp)) / span : 0;
+    for (const x of noTs) x.ts = (Number(oldest.timestamp) + (Number(x.block) - minB) * avg) * 1000;
+  }
+  out.sort((a, b) => b.ts - a.ts);
+  await toEthEquivalent(out);
+  return out;
 }
 
 /** Все сделки одного пользователя одним запросом (для профиля). */
@@ -305,7 +350,7 @@ export async function subgraphTreasuryOps() {
 // получает данные мгновенно (пусть и чуть устаревшие), а свежие
 // подтягиваются в фоне. Кэш переживает перезагрузку через localStorage.
 let _tok = { v: null, t: 0, p: null };
-const TOK_LS = "hood_cache_tokens_v1";
+const TOK_LS = "hood_cache_tokens_v2_" + FACTORY_ADDRESS.slice(2, 10); // ключ по фабрике: старые монеты после перезапуска не всплывают
 
 const bigReplacer = (k, v) => (typeof v === "bigint" ? { __b: v.toString() } : v);
 const bigReviver = (k, v) => (v && typeof v === "object" && "__b" in v ? BigInt(v.__b) : v);
@@ -683,7 +728,7 @@ export function useSplit() {
 // Сколько ETH казна потратила на выкуп каждого токена (+ общий счётчик)
 // и сколько токенов сожгла. Источник — treasuryOps из Goldsky, SWR-кэш.
 let _sup = { v: null, t: 0, p: null };
-const SUP_LS = "hood_cache_support_v1";
+const SUP_LS = "hood_cache_support_v2_" + FACTORY_ADDRESS.slice(2, 10);
 try {
   const rawSup = localStorage.getItem(SUP_LS);
   if (rawSup) _sup.v = JSON.parse(rawSup);
