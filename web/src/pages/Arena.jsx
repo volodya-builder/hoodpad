@@ -191,17 +191,30 @@ export default function Arena() {
 
       {st && st.participants.length > 0 && view === "day" && (
         <>
-          <div className="ana-strip arena-strip">
-            <div className="ana-stat">
+          {/* Фонд → как делится: одна карточка, слева сумма, справа полоса 70/20/10
+              в цветах подиума с суммами под сегментами. Раньше четыре одинаковые
+              цифры в ряд — было не понять, что три правые вытекают из левой. */}
+          <div className="arena-pot">
+            <div className="arena-pot-main">
+              <div className="k">{t("Призовой фонд")} <span className="dim">· {t("сегодня")}</span></div>
               <div className="n">{ARENA_LIVE ? potD() : "—"}</div>
-              <div className="l">{t("Призовой фонд")}{ARENA_LIVE && pot !== null && <span className="dim">· {potSub}</span>}</div>
+              {ARENA_LIVE && pot !== null && <div className="s dim">{potSub}</div>}
             </div>
-            {SPLIT.map((pct, i) => (
-              <div className="ana-stat" key={pct}>
-                <div className="n">{ARENA_LIVE ? potD(pct / 100) : "—"}</div>
-                <div className="l">{i + 1} {t("место")} <span className="dim">· {pct}%</span></div>
+            <div className="arena-pot-arrow" aria-hidden="true">→</div>
+            <div className="arena-pot-split">
+              <div className="k">{t("Утром делится между подиумом")}</div>
+              <div className="arena-pot-bar">
+                {SPLIT.map((pct, i) => <span key={pct} className={`p${i + 1}`} style={{ width: `${pct}%` }} />)}
               </div>
-            ))}
+              <div className="arena-pot-places">
+                {SPLIT.map((pct, i) => (
+                  <div className={`arena-pot-place p${i + 1}`} key={pct} style={{ flexBasis: `${pct}%` }}>
+                    <div className="v">{ARENA_LIVE ? potD(pct / 100) : "—"}</div>
+                    <div className="l"><i /> {i + 1} {t("место")} · {pct}%</div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="lt">

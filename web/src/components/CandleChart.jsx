@@ -212,8 +212,7 @@ export default function CandleChart({ points, trades, rate, marks, lines, defaul
         </div>
       </div>
       <div className="chart-area" style={{ position: "relative" }}>
-        <div ref={ref} className="chart-resize"
-             title={t("Потяните за правый нижний угол, чтобы изменить размер")} />
+        <div ref={ref} className="chart-resize" />
         <div ref={legendRef} className="chart-legend" />
         <div className={`chart-log-btn ${logScale ? "on" : ""}`}
              onClick={() => setLogScale(!logScale)}
