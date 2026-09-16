@@ -4232,7 +4232,9 @@ b, strong { font-weight: 500; }
 .arena-pot-bar .p2, .arena-pot-place.p2 i { background: #c3cbd4; }
 .arena-pot-bar .p3, .arena-pot-place.p3 i { background: #c98a55; }
 .arena-pot-places { display: flex; gap: 12px; margin-top: 12px; }
-.arena-pot-place { min-width: 0; }
+.arena-pot-place { min-width: max-content; flex-shrink: 0; }
+.arena-pot-place:first-child { flex-shrink: 1; min-width: 0; }
+.arena-pot-place:last-child { text-align: right; }
 .arena-pot-place .v { font-size: 22px; font-weight: 400; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.1; }
 .arena-pot-place .l { font-size: 12px; color: var(--text-dim); margin-top: 4px; white-space: nowrap; }
 .arena-pot-place .l i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; vertical-align: -1px; margin-right: 2px; }
