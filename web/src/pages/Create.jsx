@@ -785,9 +785,6 @@ export default function Create({ wallet, onConnect }) {
           <div className="row"><span className="k">{t("Градация")}</span><span className="v">
             {quote === "ETH" ? "6.5 ETH" : qcfg ? moneyQ(qcfg.threshold) : "…"}
           </span></div>
-          {quote !== "ETH" && qcfg && (
-            <div className="row"><span className="k">{t("Лимит покупки создателя")}</span><span className="v">{moneyQ(qcfg.cap)}</span></div>
-          )}
           {quote !== "ETH" && divBps > 0 && (
             <div className="row"><span className="k">{t("Дивиденды холдерам")}</span><span className="v">{divBps / 100}%</span></div>
           )}
