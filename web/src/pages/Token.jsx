@@ -893,8 +893,16 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       publicClient.getBalance({ address: inspect }).catch(() => 0n),
     ]).then(([tok, eth]) => { if (alive) setInspBal({ tok, eth }); });
     const onKey = (e) => { if (e.key === "Escape") setInspect(null); };
+    // клик мимо панели закрывает её (клик по другой сделке — просто переключает трейдера)
+    const onDown = (e) => {
+      const el = e.target;
+      if (!(el instanceof Element)) return;
+      if (el.closest(".trader-panel, .sa-row, .arow-hov, .hood-tip")) return;
+      setInspect(null);
+    };
     window.addEventListener("keydown", onKey);
-    return () => { alive = false; window.removeEventListener("keydown", onKey); };
+    document.addEventListener("pointerdown", onDown, true);
+    return () => { alive = false; window.removeEventListener("keydown", onKey); document.removeEventListener("pointerdown", onDown, true); };
   }, [inspect, tokenAddress]);
   // панель открывается только по клику на сделку
   const rowHover = (addr) => ({
