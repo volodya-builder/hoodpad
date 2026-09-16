@@ -12,6 +12,8 @@ installTooltips();
 const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1500));
 idle(() => {
   import("./pages/Arena.jsx"); import("./pages/Docs.jsx"); import("./components/CandleChart.jsx");
+  // данные арены (сделки, фонд, выплаты) — тоже заранее: вкладка открывается готовой
+  import("./lib/arena.js").then((m) => m.warmArena?.()).catch(() => {});
 });
 
 // Service worker: хэшированные ассеты кэшируются навсегда (повторный заход —

@@ -14,36 +14,60 @@ setSystemAddresses([TREASURY_ADDRESS, FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, AR
  *  монет за валюту (USDG, акции, крипта — сплиттер отдаёт долю в той же
  *  валюте, что торговалась). Возвращает { eth, usd, assets:[{addr,sym,amt,usd}] }
  *  — usd это всё вместе в долларах; null — казны нет / ошибка. */
+const POT_LS = "hood_cache_arena_pot_v1_" + String(ARENA_TREASURY_ADDRESS || "").slice(2, 10);
+let _pot = { v: null, t: 0, p: null };
+try { const c = JSON.parse(localStorage.getItem(POT_LS) || "null"); if (c && c.v) _pot = { v: c.v, t: 0, p: null }; } catch (e) { /* ignore */ }
+/** Фонд арены с памятью на 30 с и снимком в localStorage: страница арены
+ *  показывает цифру сразу, свежая подтягивается следом. */
+export function loadArenaPot() {
+  if (_pot.v && Date.now() - _pot.t < 30_000) return Promise.resolve(_pot.v);
+  if (_pot.p) return _pot.p;
+  _pot.p = _loadArenaPotFresh().then((v) => { _pot = { v, t: Date.now(), p: null }; try { localStorage.setItem(POT_LS, JSON.stringify({ v })); } catch (e) { /* ignore */ } return v; })
+    .catch((e) => { _pot.p = null; if (_pot.v) return _pot.v; throw e; });
+  return _pot.p;
+}
+async function _loadArenaPotFresh() {
+  const [bal, tokens, { ethUsd, quoteUsd }] = await Promise.all([
+    publicClient.getBalance({ address: ARENA_TREASURY_ADDRESS }),
+    loadTokens().catch(() => []),
+    import("./price.js"),
+  ]);
+  const rate = await ethUsd().catch(() => 0);
+  const eth = Number(bal) / 1e18;
+  const seen = new Map();
+  for (const tk of tokens) if (tk.q?.addr && !seen.has(tk.q.addr)) seen.set(tk.q.addr, tk.q);
+  const assets = [];
+  await Promise.all([...seen.values()].map(async (q) => {
+    try {
+      const raw = await publicClient.readContract({ address: q.addr, abi: erc20Abi, functionName: "balanceOf", args: [ARENA_TREASURY_ADDRESS] });
+      if (raw === 0n) return;
+      const amt = Number(raw) / 10 ** (q.dec ?? 18);
+      const px = await quoteUsd(q.addr).catch(() => 0);
+      assets.push({ addr: q.addr, sym: q.sym, amt, usd: amt * (px || 0) });
+    } catch (e) { /* валюта не ответила — не показываем */ }
+  }));
+  assets.sort((a, b) => b.usd - a.usd);
+  return { eth, usd: eth * rate + assets.reduce((s, a) => s + a.usd, 0), assets };
+}
+
+/** Прогрев арены в простое (main.jsx): сделки, фонд, выплаты — чтобы вкладка
+ *  открывалась с готовыми данными даже в первый заход. */
+export function warmArena() {
+  if (!ARENA_LIVE) return;
+  Promise.all([loadTokens(), allTrades()]).then(([tokens, trades]) => writeArenaCache(tokens, trades)).catch(() => {});
+  loadArenaPot().catch(() => {});
+  loadArenaPayouts().catch(() => {});
+}
+
 export function useArenaPot() {
-  const [pot, setPot] = useState(null);
+  const [pot, setPot] = useState(() => _pot.v);
   useEffect(() => {
     if (!ARENA_LIVE) return undefined;
     let alive = true;
     const pull = async () => {
       try {
-        const [bal, tokens, { ethUsd, quoteUsd }] = await Promise.all([
-          publicClient.getBalance({ address: ARENA_TREASURY_ADDRESS }),
-          loadTokens().catch(() => []),
-          import("./price.js"),
-        ]);
-        const rate = await ethUsd().catch(() => 0);
-        const eth = Number(bal) / 1e18;
-        // валюты, которыми вообще торгуют на площадке — одна проверка на валюту
-        const seen = new Map();
-        for (const tk of tokens) if (tk.q?.addr && !seen.has(tk.q.addr)) seen.set(tk.q.addr, tk.q);
-        const assets = [];
-        await Promise.all([...seen.values()].map(async (q) => {
-          try {
-            const raw = await publicClient.readContract({ address: q.addr, abi: erc20Abi, functionName: "balanceOf", args: [ARENA_TREASURY_ADDRESS] });
-            if (raw === 0n) return;
-            const amt = Number(raw) / 10 ** (q.dec ?? 18);
-            const px = await quoteUsd(q.addr).catch(() => 0);
-            assets.push({ addr: q.addr, sym: q.sym, amt, usd: amt * (px || 0) });
-          } catch (e) { /* валюта не ответила — не показываем */ }
-        }));
-        assets.sort((a, b) => b.usd - a.usd);
-        const usd = eth * rate + assets.reduce((s, a) => s + a.usd, 0);
-        if (alive) setPot({ eth, usd, assets });
+        const v = await loadArenaPot();
+        if (alive) setPot(v);
       } catch (e) { /* казна не ответила — оставляем прошлое значение */ }
     };
     pull();
@@ -55,8 +79,15 @@ export function useArenaPot() {
 
 /** Выкупы казны арены за последние дни — из событий Buyback (пометка
  *  «arena <день> <место> $SYM»). Сгруппировано по дню, новые первыми. */
+let _payouts = { v: null, t: 0, p: null };
 export async function loadArenaPayouts() {
   if (!ARENA_LIVE) return [];
+  if (_payouts.v && Date.now() - _payouts.t < 60_000) return _payouts.v;
+  if (_payouts.p) return _payouts.p;
+  _payouts.p = _loadArenaPayoutsFresh().then((v) => { _payouts = { v, t: Date.now(), p: null }; return v; }).catch((e) => { _payouts.p = null; throw e; });
+  return _payouts.p;
+}
+async function _loadArenaPayoutsFresh() {
   const fromBlock = await recentFromBlock();
   const ev = arenaTreasuryAbi.find((x) => x.type === "event" && x.name === "Buyback");
   const logs = await publicClient.getLogs({ address: ARENA_TREASURY_ADDRESS, event: ev, fromBlock, toBlock: "latest" });
