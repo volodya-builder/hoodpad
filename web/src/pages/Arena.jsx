@@ -89,7 +89,7 @@ export default function Arena() {
     const qPrice = useQuoteUsd(p.q?.addr);
     const mcap = p.q ? Number(formatUnits(p.price, p.q.dec)) * 1e9 * qPrice : mcapOf(p);
     return (
-    <a className={`lt-row ${dim ? "dim" : ""} ${podium ? "podium" : ""}`} href={`#/token/${p.token}`}>
+    <a className={`lt-row ${dim ? "dim" : ""} ${podium ? `podium podium-${podium}` : ""}`} href={`#/token/${p.token}`}>
       <span className="lt-rank">{i != null ? i + 1 : ""}</span>
       <Logo src={p.meta?.image} />
       <span className="lt-tok">
@@ -211,7 +211,7 @@ export default function Arena() {
                 : danger
                   ? <span className="lt-tag bad">{t("выбывает")} <span className="mono">{clock(nextCp)}</span></span>
                   : i === 0 ? <span className="lt-tag gold">{t("лидер")}</span> : null;
-              return <Row key={p.token} p={p} i={i} right={right} podium={i < 3} />;
+              return <Row key={p.token} p={p} i={i} right={right} podium={i < 3 ? i + 1 : 0} />;
             })}
             {st.eliminated.slice().reverse().map(({ token: p, at }) => (
               <Row key={p.token} p={p} dim
