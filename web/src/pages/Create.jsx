@@ -205,7 +205,7 @@ export default function Create({ wallet, onConnect }) {
   // «Комиссия запуска» — фиксированная цифра по решению владельца (16.09.2026):
   // это ориентир на газ сети, платформа за запуск ничего не берёт.
   const LAUNCH_FEE_ETH = 0.0005;
-  const launchFeeStr = `${LAUNCH_FEE_ETH} ETH${ethUsd > 0 ? ` (${usdFine(LAUNCH_FEE_ETH * ethUsd)})` : ""}`;
+  const launchFeeStr = `${LAUNCH_FEE_ETH} ETH`;
   const symbolOk = /^[A-Z0-9]*$/.test(form.symbol);
   const buyOk = buyValue <= MAX_DEV_BUY_ETH;
   const walletOk =
