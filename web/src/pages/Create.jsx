@@ -80,7 +80,14 @@ export default function Create({ wallet, onConnect }) {
   const [crypto, setCrypto] = useState(null);
   // Белый список фабрики: за что запуск реально пройдёт. Пуст, пока
   // quote-фабрика не задеплоена, — и форма говорит об этом прямо.
-  const [allowed, setAllowed] = useState(new Set());
+  // Белый список фабрики: пока не прочитан — список валют не показываем,
+  // иначе на секунду мелькают валюты обозревателя, которых на площадке нет.
+  // Прошлый ответ держим в localStorage — при следующем заходе мгновенно.
+  const ALLOWED_LS = "hood_allowed_quotes_v1_" + QUOTE_FACTORY_ADDRESS.slice(2, 10);
+  const [allowed, setAllowed] = useState(() => {
+    try { const v = JSON.parse(localStorage.getItem(ALLOWED_LS) || "null"); return v && Array.isArray(v.list) ? new Set(v.list) : new Set(); } catch (e) { return new Set(); }
+  });
+  const [allowedReady, setAllowedReady] = useState(() => allowed.size > 0);
   const [customAddr, setCustomAddr] = useState("");
   const [custom, setCustom] = useState(null); // валюта по своему адресу
   const [customBusy, setCustomBusy] = useState(false);
@@ -95,7 +102,9 @@ export default function Create({ wallet, onConnect }) {
       // Показываем только то, что можно купить за ETH: у покупателя на
       // кошельке ETH, а не TAO. Валюта без маршрута — мёртвая монета.
       const zapOk = await loadZapQuotes(x);
-      if (on) setAllowed(zapOk);
+      if (!on) return;
+      setAllowed(zapOk); setAllowedReady(true);
+      try { localStorage.setItem(ALLOWED_LS, JSON.stringify({ t: Date.now(), list: [...zapOk] })); } catch (e) { /* ignore */ }
     });
     return () => { on = false; };
   }, []);
@@ -415,7 +424,7 @@ export default function Create({ wallet, onConnect }) {
               <button type="button" className={`quote-chip ${quote === "ETH" ? "on" : ""}`} onClick={pickEth}>
                 <Logo cls="q-logo" src={CHAIN_LOGOS.ethereum} />ETH
               </button>
-              {(cryptoSearch
+              {(QUOTE_LIVE && !allowedReady ? [] : cryptoSearch
                 ? (crypto || []).filter((q) => (!QUOTE_LIVE || allowed.has(q.addr)) && matchQuote(q, cryptoSearch)).slice(0, 18)
                 : featuredQuotes(crypto, allowed)
               ).map((q) => {
@@ -429,7 +438,7 @@ export default function Create({ wallet, onConnect }) {
                     </button>
                   );
                 })}
-              {crypto === null && <span className="dim" style={{ padding: "8px 4px", fontSize: 13 }}>{t("Читаю валюты сети…")}</span>}
+              {(crypto === null || (QUOTE_LIVE && !allowedReady)) && <span className="dim" style={{ padding: "8px 4px", fontSize: 13 }}>{t("Читаю валюты сети…")}</span>}
             </div>
 
             {/* Свой адрес — как на flap: любой ERC20 сети. Но решает белый
