@@ -806,6 +806,8 @@ const EN = {
   "Комиссии": "Fees",
   "История сделок": "Trade history",
   "Других монет у этого кошелька нет.": "This wallet has no other coins.",
+  "прошлая версия": "previous version",
+  "Ищу монеты прошлых версий площадки…": "Looking for coins from previous platform versions…",
   "Dev-токены": "Dev tokens",
   "ATH капа": "ATH MCap",
   "эта": "this",

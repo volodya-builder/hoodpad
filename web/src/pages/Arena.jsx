@@ -208,7 +208,7 @@ export default function Arena() {
               </div>
               <div className="arena-pot-places">
                 {SPLIT.map((pct, i) => (
-                  <div className={`arena-pot-place p${i + 1}`} key={pct} style={{ flexBasis: `${pct}%` }}>
+                  <div className={`arena-pot-place p${i + 1}`} key={pct}>
                     <div className="v">{ARENA_LIVE ? potD(pct / 100) : "—"}</div>
                     <div className="l"><i /> {i + 1} {t("место")} · {pct}%</div>
                   </div>

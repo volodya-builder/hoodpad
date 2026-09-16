@@ -5,6 +5,8 @@ import Who from "./Who.jsx";
 import { usd, quoteUsd } from "../lib/price.js";
 import { timeAgo, prefetchToken, loadCreatorTokens } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
+import { loadLegacyCreatorTokens } from "../lib/legacy.js";
+import { EXPLORER } from "../lib/config.js";
 
 // ============================================================================
 //  Вкладка «Dev-токены» на странице монеты (как у GMGN, 16.09.2026):
@@ -48,11 +50,14 @@ export default function DevTokens({ creator, tokens, trades, rate, current }) {
   // ограничений общего списка. Пока ответа нет (или индексатор молчит) —
   // то, что уже есть в списке платформы.
   const [fromIdx, setFromIdx] = useState(null);
+  // и монеты со старых фабрик — прямо из блокчейна (события старых фабрик)
+  const [legacy, setLegacy] = useState(null);
   useEffect(() => {
     if (!cre) return;
     let alive = true;
-    setFromIdx(null);
+    setFromIdx(null); setLegacy(null);
     loadCreatorTokens(cre).then((x) => alive && setFromIdx(x)).catch(() => alive && setFromIdx([]));
+    loadLegacyCreatorTokens(cre).then((x) => alive && setLegacy(x)).catch(() => alive && setLegacy([]));
     return () => { alive = false; };
   }, [cre]);
   const mine = useMemo(() => {
@@ -67,8 +72,12 @@ export default function DevTokens({ creator, tokens, trades, rate, current }) {
       // индексатор считает цену в единицах валюты, без курса)
       out[k] = known ? { ...x, ...known } : (x.quoteAddr ? { ...x, price: null } : x);
     }
+    for (const x of legacy || []) {
+      const k = (x.token || "").toLowerCase();
+      if (!out[k]) out[k] = x;
+    }
     return Object.values(out).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-  }, [tokens, fromIdx, cre]);
+  }, [tokens, fromIdx, legacy, cre]);
 
   // курсы валют монет за акции/крипту — для капы в долларах
   const [qRates, setQRates] = useState({});
@@ -113,7 +122,7 @@ export default function DevTokens({ creator, tokens, trades, rate, current }) {
   const best = rows.length ? rows.reduce((b, r) => (r.ath > b.ath ? r : b), rows[0]) : null;
   const last = mine[0];
 
-  if (!mine.length) return <div className="dim" style={{ padding: "14px 0" }}>{fromIdx === null ? t("Читаю события…") : t("Других монет у этого кошелька нет.")}</div>;
+  if (!mine.length) return <div className="dim" style={{ padding: "14px 0" }}>{fromIdx === null || legacy === null ? t("Читаю события…") : t("Других монет у этого кошелька нет.")}</div>;
 
   return (
     <div className="dev-wrap">
@@ -130,12 +139,15 @@ export default function DevTokens({ creator, tokens, trades, rate, current }) {
         {rows.map(({ tk, cur, ath, vol, fees }) => {
           const isCur = (tk.token || "").toLowerCase() === (current || "").toLowerCase();
           return (
-            <a className={`dev-row ${isCur ? "cur" : ""}`} key={tk.token} href={`#/token/${tk.token}`}
-               onMouseEnter={() => prefetchToken(tk.token)}>
+            <a className={`dev-row ${isCur ? "cur" : ""} ${tk.legacy ? "old" : ""}`} key={tk.token}
+               href={tk.legacy ? `${EXPLORER}/token/${tk.token}` : `#/token/${tk.token}`}
+               target={tk.legacy ? "_blank" : undefined} rel={tk.legacy ? "noreferrer" : undefined}
+               onMouseEnter={() => !tk.legacy && prefetchToken(tk.token)}>
               <span className="dev-coin">
                 {tk.meta?.image ? <img src={tk.meta.image} alt="" /> : <span className="ts-ph"><Icon name="image" style={{ margin: 0 }} /></span>}
                 <b>${tk.symbol}</b>
                 {isCur && <em className="dev-this">{t("эта")}</em>}
+                {tk.legacy && <em className="dev-old">{t("прошлая версия")}</em>}
               </span>
               <span className="dim">{tk.createdAt ? timeAgo(tk.createdAt) : "—"}</span>
               <span>{tk.graduated
@@ -166,6 +178,7 @@ export default function DevTokens({ creator, tokens, trades, rate, current }) {
               <span className="dim">(ATH {dollars(best.ath)})</span>
             </div>
           )}
+          {legacy === null && <div className="dev-line dim">{t("Ищу монеты прошлых версий площадки…")}</div>}
           {last && (
             <div className="dev-line">
               <span className="dim">{t("Последний запуск")}</span>{" "}
