@@ -4402,3 +4402,4 @@ html[data-theme="light"] .tp-row:hover { background: rgba(30,32,28,.04); }
 html[data-theme="light"] .arena-pot-place { background: rgba(30,32,28,.05); }
 html[data-theme="light"] .arena-pot-place.p1 { background: rgba(232,198,90,.18); }
 @media (max-width: 900px) { .arena-pot-places { grid-template-columns: 1fr; gap: 8px; } }
+.trader-panel.placed { animation: none; }

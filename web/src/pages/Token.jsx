@@ -910,6 +910,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   // Панель трейдера можно таскать за шапку; место запоминается в браузере
   const [tpPos, setTpPos] = useState(() => { try { return JSON.parse(localStorage.getItem("hood.tpPos") || "null"); } catch (e) { return null; } });
   const tpDrag = useRef(null);
+  const [tpDragging, setTpDragging] = useState(false); // класс через состояние: иначе React снимал его на каждом рендере и анимация появления дёргала панель
   // и растягивать за правый нижний угол (браузерный resize); размер тоже помним
   const [tpSize, setTpSize] = useState(() => { try { return JSON.parse(localStorage.getItem("hood.tpSize") || "null"); } catch (e) { return null; } });
   const tpRef = useRef(null);
@@ -936,7 +937,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     const el = e.currentTarget.parentElement;
     const r = el.getBoundingClientRect();
     tpDrag.current = { dx: e.clientX - r.left, dy: e.clientY - r.top, w: r.width, h: r.height };
-    el.classList.add("dragging");
+    setTpDragging(true);
     const move = (ev) => {
       const d = tpDrag.current; if (!d) return;
       const x = Math.min(Math.max(0, ev.clientX - d.dx), window.innerWidth - d.w);
@@ -944,7 +945,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       setTpPos({ x, y });
     };
     const up = () => {
-      tpDrag.current = null; el.classList.remove("dragging");
+      tpDrag.current = null; setTpDragging(false);
       window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up);
       setTpPos((p) => { try { localStorage.setItem("hood.tpPos", JSON.stringify(p)); } catch (err) { /* ignore */ } return p; });
     };
@@ -1950,7 +1951,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       const isMe = wallet && inspect.toLowerCase() === wallet.account.toLowerCase();
       const pnlCol = (v) => ({ color: v >= 0 ? "var(--leaf)" : "var(--red)" });
       return (
-        <div className="trader-panel" ref={tpRef}
+        <div className={`trader-panel ${tpDragging ? "dragging" : ""} ${tpPos || tpSize ? "placed" : ""}`} ref={tpRef}
              style={{ ...(tpPos ? { left: tpPos.x, top: tpPos.y, right: "auto" } : {}), ...(tpSize ? { width: tpSize.w, height: tpSize.h, maxHeight: "none" } : {}) }}>
           <div className="tp-head" onPointerDown={onTpDragStart}
                onDoubleClick={() => { setTpPos(null); setTpSize(null); try { localStorage.removeItem("hood.tpPos"); localStorage.removeItem("hood.tpSize"); } catch (e) { /* ignore */ } }}>
