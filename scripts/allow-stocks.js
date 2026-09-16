@@ -191,8 +191,12 @@ async function main() {
   const ethFee = ethPool ? ethPool.fee : 500;
   console.log(`ETH ≈ $${ethUsd.toFixed(0)} (пул WETH/USDG, fee ${ethFee}) · порог градации $${TARGET_USD} · минимальная глубина пула $${MIN_DEPTH_USD}\n`);
 
+  // --only=COIN,MSFT — проверить/поправить только эти тикеры (быстро)
+  const onlyArg = process.argv.find((x) => x.startsWith("--only="));
+  const only = onlyArg ? new Set(onlyArg.slice(7).split(",").map((x) => x.trim().toUpperCase()).filter(Boolean)) : null;
   const plan = [];
   for (const s of STOCKS) {
+    if (only && !only.has(s.sym.toUpperCase())) continue;
     const dec = Number(await read(s.addr, erc20, "decimals").catch(() => 18));
     const [u, w, cfg, route] = await Promise.all([
       bestPool(s.addr, USDG, 6), bestPool(s.addr, WETH, 18),
