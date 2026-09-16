@@ -716,10 +716,10 @@ export default function Create({ wallet, onConnect }) {
         <div className={`hint ${quote === "ETH" && !buyOk ? "bad" : ""}`}>
           {quote !== "ETH"
             ? (qcfg
-                ? t("Кап создателя — {cap} за всё время кривой (10% порога). {how} Перебор откатит контракт.")
+                ? t("Лимит покупки создателя — {cap} за всё время кривой (10% порога). {how} Перебор откатит контракт.")
                     .replace("{cap}", moneyQ(qcfg.cap))
                     .replace("{how}", ZAP_LIVE ? t("Платите ETH, одной транзакцией.") : t("Нужен {q} на кошельке и разрешение пулу.").replace("{q}", quote))
-                : t("Кап создателя задаёт фабрика для каждой валюты. Перебор откатит контракт."))
+                : t("Лимит покупки создателя задаёт фабрика для каждой валюты. Перебор откатит контракт."))
             : (buyOk
                 ? t("Макс {max} ETH · 5% сапплая. Исполняется в той же транзакции — защита от снайперов.")
                 : t("Больше лимита: максимум {max} ETH (5% сапплая).")
@@ -786,7 +786,7 @@ export default function Create({ wallet, onConnect }) {
             {quote === "ETH" ? "6.5 ETH" : qcfg ? moneyQ(qcfg.threshold) : "…"}
           </span></div>
           {quote !== "ETH" && qcfg && (
-            <div className="row"><span className="k">{t("Кап создателя")}</span><span className="v">{moneyQ(qcfg.cap)}</span></div>
+            <div className="row"><span className="k">{t("Лимит покупки создателя")}</span><span className="v">{moneyQ(qcfg.cap)}</span></div>
           )}
           {quote !== "ETH" && divBps > 0 && (
             <div className="row"><span className="k">{t("Дивиденды холдерам")}</span><span className="v">{divBps / 100}%</span></div>

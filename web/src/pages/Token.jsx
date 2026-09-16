@@ -628,6 +628,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   // trades + chart from on-chain events; treasury/creator extras
   const loadExtras = useCallback(async () => {
     if (!data?.pool) return;
+    // Монета за валюту: ждём виртуал из сети — без него сделки считались бы
+    // как у ETH-монеты (1.625) и график врал в разы.
+    if (data.q && !(data.q.virt > 0)) return;
     const [h, creatorFees, treasuryOwner, treasuryHeld, burned, createdMap] = await Promise.all([
       poolTrades(data.pool, data.q ? { dec: data.q.dec, virt: data.q.virt, token: tokenAddress } : null),
       publicClient.readContract({ address: data.pool, abi: poolExtraAbi, functionName: "creatorFeesAccrued" }),

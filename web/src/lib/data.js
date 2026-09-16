@@ -490,29 +490,33 @@ const _trades = new Map(); // pool -> { v, t, p }
 
 /** Сбросить кэш сделок пула — следующий poolTrades() пойдёт за свежими данными. */
 export function invalidateTrades(pool) {
-  _trades.delete(pool);
+  for (const k of [..._trades.keys()]) if (k === pool || k.startsWith(pool + ":")) _trades.delete(k);
 }
 
 // cur — валюта кривой для монет за ERC20 (quote-фабрика): { dec, virt }.
 // Без cur — ETH-пул (18 знаков, виртуал 1.625 ETH). Сабграф индексирует
 // только ETH-фабрику, поэтому монеты за валюту читаем прямо из логов.
 export async function poolTrades(pool, cur = null) {
-  const c = _trades.get(pool);
+  // Кэш — по пулу И виртуалу: у монеты за валюту virt приходит с сетью позже
+  // кэша (сначала 0) — иначе первый расчёт с 1.625 «ETH» оседал в кэше и
+  // график монеты за AAPL показывал капу в разы меньше шапки.
+  const key = cur ? `${pool}:${cur.virt || 0}:${cur.dec ?? 18}` : pool;
+  const c = _trades.get(key);
   if (c?.v) {
     // мгновенный ответ + тихое обновление в фоне
     if (Date.now() - c.t > 10_000 && !c.p) {
       const p = _poolTradesFresh(pool, cur)
-        .then((v) => { _trades.set(pool, { v, t: Date.now(), p: null }); return v; })
-        .catch(() => { _trades.set(pool, { ...c, p: null }); return c.v; });
-      _trades.set(pool, { ...c, p });
+        .then((v) => { _trades.set(key, { v, t: Date.now(), p: null }); return v; })
+        .catch(() => { _trades.set(key, { ...c, p: null }); return c.v; });
+      _trades.set(key, { ...c, p });
     }
     return c.v;
   }
   if (c?.p) return c.p;
   const p = _poolTradesFresh(pool, cur)
-    .then((v) => { _trades.set(pool, { v, t: Date.now(), p: null }); return v; })
-    .catch((e) => { _trades.set(pool, { p: null }); throw e; });
-  _trades.set(pool, { p });
+    .then((v) => { _trades.set(key, { v, t: Date.now(), p: null }); return v; })
+    .catch((e) => { _trades.set(key, { p: null }); throw e; });
+  _trades.set(key, { p });
   return p;
 }
 
