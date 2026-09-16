@@ -16,6 +16,8 @@
   --leaf-dim: #4caf6d1f;
   --red: #e05c5c;
   --radius: 16px;
+  /* моноширинный: явные латинские шрифты до generic monospace — иначе при lang=zh Windows подставляет SimSun и цифры «плывут» */
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "Roboto Mono", "Courier New", monospace;
   --font-ui: "Inter", "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
   /* движение: одна кривая и одна длительность на весь сайт (как у Pons) */
   --ease: cubic-bezier(.22, 1, .36, 1);
@@ -447,7 +449,7 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
 .notice { background: var(--gold-dim); border: 1px solid var(--border-gold); color: var(--gold); border-radius: 12px; padding: 13px 17px; font-size: 14px; font-weight: 700; margin-bottom: 16px; line-height: 1.5; }
 .dim { color: var(--text-dim); font-size: 13px; }
 .center { text-align: center; padding: 48px 0; color: var(--text-dim); }
-.mono { font-family: ui-monospace, monospace; }
+.mono { font-family: var(--font-mono); }
 .token-head-img { width: 68px; height: 68px; border-radius: 15px; object-fit: cover; background: var(--bg-soft); border: 1px solid var(--border); }
 
 /* ---------------- pons-style token page */
@@ -753,7 +755,7 @@ html[data-theme="light"] .grad-wrap { background: radial-gradient(700px 260px at
 .fpill.on { background: var(--bg-soft); color: var(--gold); }
 .search-fake { display: flex; align-items: center; gap: 9px; color: var(--text-dim); border: 1px solid var(--border); background: #111210; border-radius: 11px; padding: 9px 14px; cursor: pointer; font-size: 13px; font-weight: 600; }
 .search-fake:hover { border-color: var(--border-gold); }
-.kbd { font-size: 11px; border: 1px solid var(--border); border-radius: 5px; padding: 1px 7px; background: var(--card); font-family: ui-monospace, monospace; }
+.kbd { font-size: 11px; border: 1px solid var(--border); border-radius: 5px; padding: 1px 7px; background: var(--card); font-family: var(--font-mono); }
 
 /* ---------------- search modal */
 .modal-back { position: fixed; inset: 0; background: #000a; backdrop-filter: blur(4px); z-index: 50; display: none; align-items: flex-start; justify-content: center; padding-top: 12vh; }
@@ -788,7 +790,7 @@ html[data-theme="light"] .grad-wrap { background: radial-gradient(700px 260px at
   font-size: 11.5px; color: var(--text-dim);
 }
 .sr-keys kbd {
-  display: inline-block; font-family: var(--font-mono, monospace); font-size: 10.5px;
+  display: inline-block; font-family: var(--font-mono); font-size: 10.5px;
   border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; margin: 0 1px;
   color: var(--text-dim); background: var(--bg-soft);
 }
@@ -1624,7 +1626,7 @@ html[data-theme="light"] .trs-row, html[data-theme="light"] .lb-row { border-col
 html[data-theme="light"] .verify-note { border-color: #cfcec6; }
 
 /* -------- token chart v2 -------- */
-.chart-axis { font-size: 10px; fill: currentColor; opacity: .45; font-family: ui-monospace, monospace; }
+.chart-axis { font-size: 10px; fill: currentColor; opacity: .45; font-family: var(--font-mono); }
 .chart-tip {
   position: absolute; top: 6px; transform: translateX(-50%);
   background: var(--card, #1a1a19); border: 1px solid var(--border);
@@ -2663,7 +2665,7 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .quote-chip.q-off.on { opacity: .85; }
 /* Свой адрес контракта под сеткой валют */
 .quote-custom { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 6px; }
-.quote-custom .quote-search { flex: 1 1 260px; margin: 0; font-family: var(--mono, monospace); }
+.quote-custom .quote-search { flex: 1 1 260px; margin: 0; font-family: var(--font-mono); }
 .quote-custom-found { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
 .quote-custom-found .q-logo { margin-right: 0; }
 
@@ -2711,7 +2713,7 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .rev-ticker-head { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-dim); margin-bottom: 10px; }
 .rev-live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--leaf); box-shadow: 0 0 0 0 var(--leaf); animation: revpulse 1.6s infinite; }
 @keyframes revpulse { 0% { box-shadow: 0 0 0 0 #4caf6d88; } 70% { box-shadow: 0 0 0 6px #4caf6d00; } 100% { box-shadow: 0 0 0 0 #4caf6d00; } }
-.rev-tick-row { display: flex; align-items: center; gap: 10px; font-size: 13px; padding: 5px 0; font-family: var(--font-mono, monospace); border-top: 1px solid var(--border); transition: opacity .4s; }
+.rev-tick-row { display: flex; align-items: center; gap: 10px; font-size: 13px; padding: 5px 0; font-family: var(--font-mono); border-top: 1px solid var(--border); transition: opacity .4s; }
 .rev-tick-row:first-of-type { animation: revslide .4s ease; }
 @keyframes revslide { from { opacity: 0; transform: translateY(-4px); } }
 .rev-tick-agent { color: var(--text-dim); }
@@ -2784,7 +2786,7 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .cm-foot { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 10px; }
 .cm-foot b { font-size: 15px; }
 .sm-btn { padding: 7px 14px; font-size: 13px; }
-.cm-seller { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono, monospace); }
+.cm-seller { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); }
 
 /* Мем-арт старших редкостей котов */
 .cats-tier-img { border-radius: 12px; object-fit: contain; border: 1px solid transparent; background: #ffffff0a; flex: none; }
@@ -2824,7 +2826,7 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .hold-row:hover { background: var(--card-hover); }
 .hold-row.top .hold-rank { color: var(--gold); font-weight: 800; }
 .hold-rank { font-weight: 700; color: var(--text-dim); }
-.hold-addr { font-family: var(--font-mono, monospace); font-size: 12.5px; }
+.hold-addr { font-family: var(--font-mono); font-size: 12.5px; }
 @media (max-width: 700px) {
   .hold-head, .hold-row { grid-template-columns: 32px 1.4fr 0.7fr 0.9fr; font-size: 12px; }
   .hold-head span:nth-child(5), .hold-head span:nth-child(6),
@@ -2880,7 +2882,7 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .sbx-grid b { display: block; font-size: 16px; }
 .sbx-grid span { font-size: 10.5px; color: var(--text-dim); }
 .sbx-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.sbx-log { margin-top: 10px; font-size: 11.5px; color: var(--text-dim); font-family: var(--font-mono, monospace); display: flex; flex-direction: column; gap: 2px; }
+.sbx-log { margin-top: 10px; font-size: 11.5px; color: var(--text-dim); font-family: var(--font-mono); display: flex; flex-direction: column; gap: 2px; }
 .sbx-log span { color: var(--gold); margin-right: 6px; }
 .cm-mine { box-shadow: 0 0 0 1px var(--gold) inset; }
 .cm-mine-tag { font-size: 10px; background: var(--gold-dim); color: var(--gold); border-radius: 99px; padding: 1px 7px; margin-left: 4px; vertical-align: middle; }
@@ -3123,7 +3125,7 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
   gap: 7px; padding: 5px 8px; border-radius: 8px; background: #ffffff08; font-size: 11.5px; overflow: hidden; }
 .ck-bd.me { background: #c8f54226; border: 1px solid #c8f54266; }
 .ck-bd-n { color: var(--text-dim); font-size: 10px; text-align: center; }
-.ck-bd-a { font-family: ui-monospace, "SF Mono", Menlo, monospace; color: var(--text-dim);
+.ck-bd-a { font-family: var(--font-mono); color: var(--text-dim);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ck-bd.me .ck-bd-a { color: #dcff6e; font-weight: 800; font-family: inherit; }
 .ck-bd-p { color: var(--text); font-variant-numeric: tabular-nums; }
@@ -3137,7 +3139,7 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
   padding: 5px 7px; border-radius: 8px; background: #ffffff08; font-size: 11.5px; }
 .ck-win.me { background: #c8f54222; border: 1px solid #c8f54255; }
 .ck-win img { width: 22px; height: 22px; border-radius: 6px; object-fit: contain; }
-.ck-win-addr { font-family: ui-monospace, "SF Mono", Menlo, monospace; color: var(--text); }
+.ck-win-addr { font-family: var(--font-mono); color: var(--text); }
 .ck-win.me .ck-win-addr { color: #dcff6e; font-weight: 800; font-family: inherit; }
 .ck-win-pts { color: var(--gold); font-weight: 700; }
 .ck-win-ts { color: var(--text-dim); font-variant-numeric: tabular-nums; }
@@ -3160,7 +3162,7 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 
 /* Стакан заявок рядом с графиком */
 .pc-row { display: grid; grid-template-columns: 1fr 260px; gap: 14px; align-items: start; }
-.ob { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px; padding: 10px; font-family: var(--font-mono, monospace); }
+.ob { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px; padding: 10px; font-family: var(--font-mono); }
 .ob-head { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); margin-bottom: 6px; }
 .ob-side { display: flex; flex-direction: column; gap: 1px; }
 .ob-row { position: relative; display: flex; justify-content: space-between; align-items: center; padding: 3px 7px; font-size: 12px; border-radius: 4px; overflow: hidden; }
@@ -3287,7 +3289,7 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .box-feed { display: flex; flex-direction: column; gap: 5px; max-height: 300px; overflow-y: auto; }
 .box-feed-row { display: grid; grid-template-columns: 28px 44px 1fr auto; align-items: center; gap: 9px;
   padding: 6px 9px; border-radius: 9px; background: #ffffff08; border-left: 3px solid; font-size: 12px; }
-.box-feed-id { font-family: ui-monospace, Menlo, monospace; color: var(--text-dim); }
+.box-feed-id { font-family: var(--font-mono); color: var(--text-dim); }
 .box-feed-sym { display: inline-flex; align-items: center; gap: 5px; color: var(--text-dim); }
 .box-batch { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-top: 14px; }
 .box-batch-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 15px; }
@@ -3318,7 +3320,7 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .hold-pod.p1 { border-color: var(--border-gold); }
 .hold-pod.me { background: #c8f54214; }
 .hold-pod-medal { font-size: 26px; }
-.hold-pod-addr { font-family: ui-monospace, Menlo, monospace; font-size: 13px; margin: 6px 0 10px; }
+.hold-pod-addr { font-family: var(--font-mono); font-size: 13px; margin: 6px 0 10px; }
 .hold-pod-kv { display: flex; justify-content: center; gap: 14px; font-size: 11px; color: var(--text-dim); }
 .hold-pod-kv b { display: block; font-size: 15px; color: var(--text); }
 .hold-myrank { margin-left: auto; align-self: center; font-size: 12px; color: var(--text-dim); }

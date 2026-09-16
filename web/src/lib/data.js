@@ -152,15 +152,24 @@ let _st24 = { v: null, t: 0 };
 export async function subgraphStats24() {
   if (_st24.v && Date.now() - _st24.t < 60_000) return _st24.v;
   const since = Math.floor(Date.now() / 1000) - 86400;
+  const qf = (await subgraphHasQuote()) ? " quote fee" : " fee";
   const d = await gql(`{ trades(first: 1000, orderBy: timestamp, orderDirection: asc,
-    where: { timestamp_gt: "${since}" }) { pool ethAmount tokenAmount } }`);
+    where: { timestamp_gt: "${since}" }) { pool ethAmount tokenAmount${qf} } }`);
+  // Монеты за валюту: объём приходит в валюте (GME, USDG…), а не в ETH —
+  // пересчитываем в ETH по курсам, иначе 16 GME показывались как «$39k».
+  const rows = (d.trades || []).map((tr) => ({
+    pool: tr.pool.toLowerCase(), quote: tr.quote ? String(tr.quote).toLowerCase() : null,
+    ethRaw: tr.ethAmount, feeRaw: tr.fee || "0", eth: Number(tr.ethAmount) / 1e18, fee: 0,
+    tokens: Number(tr.tokenAmount) / 1e18,
+  }));
+  await toEthEquivalent(rows);
   const vol = {}, first = {};
-  for (const tr of d.trades || []) {
-    const p = tr.pool.toLowerCase();
-    const eth = Number(tr.ethAmount) / 1e18;
-    const tok = Number(tr.tokenAmount) / 1e18;
-    vol[p] = (vol[p] || 0) + eth;
-    if (first[p] == null && tok > 0) first[p] = eth / tok;
+  for (const tr of rows) {
+    const p = tr.pool;
+    vol[p] = (vol[p] || 0) + tr.eth;
+    // первая цена дня — в единицах валюты пула (для % изменения сравнивается с ценой в тех же единицах)
+    const q0 = tr.quote ? Number(tr.ethRaw) / 1e18 : tr.eth;
+    if (first[p] == null && tr.tokens > 0) first[p] = q0 / tr.tokens;
   }
   _st24 = { v: { vol, first }, t: Date.now() };
   return _st24.v;
@@ -797,11 +806,21 @@ function cacheSet(addr, ts) {
 }
 
 async function creationTimeViaExplorer(addr) {
-  const a = await fetch(`${EXPLORER}/api/v2/addresses/${addr}`).then((r) => r.json());
+  // обозреватель за Cloudflare отвечает по 5–9 с — не ждём дольше 4 с на запрос
+  const a = await fetch(`${EXPLORER}/api/v2/addresses/${addr}`, { signal: AbortSignal.timeout(4000) }).then((r) => r.json());
   const tx = a.creation_tx_hash || a.creation_transaction_hash;
   if (!tx) return null;
-  const t = await fetch(`${EXPLORER}/api/v2/transactions/${tx}`).then((r) => r.json());
+  const t = await fetch(`${EXPLORER}/api/v2/transactions/${tx}`, { signal: AbortSignal.timeout(4000) }).then((r) => r.json());
   return t.timestamp ? new Date(t.timestamp).getTime() : null;
+}
+
+/** Даты создания из индексатора — одним запросом, быстро. Нет — {}. */
+async function creationTimesViaSubgraph(keys) {
+  const ids = keys.map((k) => `"${k}"`).join(",");
+  const d = await gql(`{ tokens(first: ${keys.length}, where: { id_in: [${ids}] }) { id createdAt } }`);
+  const out = {};
+  for (const t of d?.tokens || []) if (Number(t.createdAt) > 0) out[t.id.toLowerCase()] = Number(t.createdAt) * 1000;
+  return out;
 }
 
 export async function loadCreationTimes(addrs) {
@@ -812,7 +831,15 @@ export async function loadCreationTimes(addrs) {
     const c = cacheGet(k);
     if (c) out[k] = c; else missing.push(k);
   }
-  await Promise.all(missing.map(async (k) => {
+  // сначала индексатор: один быстрый запрос на все адреса
+  if (missing.length) {
+    try {
+      const sg = await creationTimesViaSubgraph(missing);
+      for (const k of Object.keys(sg)) { out[k] = sg[k]; cacheSet(k, sg[k]); }
+    } catch (e) { /* индексатор недоступен — ниже обозреватель и события */ }
+  }
+  const viaExplorer = missing.filter((k) => !out[k]);
+  await Promise.all(viaExplorer.map(async (k) => {
     try {
       const ts = await creationTimeViaExplorer(k);
       if (ts) { out[k] = ts; cacheSet(k, ts); }
