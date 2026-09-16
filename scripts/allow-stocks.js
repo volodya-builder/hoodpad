@@ -107,7 +107,18 @@ const STOCKS = [
   { sym: "VTI", name: "Vanguard Morningstar Total Stock Market ETF", addr: "0x0594134DF3f171a354D9C85eBD65b7A6148F6D09" },
   { sym: "WULF", name: "TeraWulf", addr: "0x348Be1A8663f15edDe5CDf8A96BB69078f7aB6Fd" },
   { sym: "WYFI", name: "WhiteFiber, Inc.", addr: "0x9e7ABD3C9139D14E4c86DcE0e455AAB7A0C2FB3E" },
+  // Крипта из белого списка (порог тоже к $16k; знаки читаем с контракта —
+  // у cbBTC их 8). WETH/USDG/USDe не трогаем: там порог задан руками и верен.
+  { sym: "cbBTC", name: "Coinbase Wrapped BTC", addr: "0xCEC185eB182c47d1bA1EFc84e6959e18cd620Be4" },
+  { sym: "LINK", name: "Chainlink", addr: "0x492641F648a4986844848E0beFE66D14817bCE34" },
+  { sym: "TAO", name: "Bittensor", addr: "0xf3081494B87e8D5fb7960f066E931D1D0e6E3d67" },
+  { sym: "PENDLE", name: "Pendle", addr: "0x5E49E1f85813F2B65858860A3FA231b4186f2e0E" },
+  { sym: "VIRTUAL", name: "Virtuals Protocol", addr: "0xc6911796042b15d7Fa4F6CDe69e245DdCd3d9c31" },
 ];
+// Уже разрешённая валюта пересчитывается (--fix), если её порог в долларах
+// ушёл от цели больше чем на FIX_TOL: первые валюты были заведены руками
+// круглыми числами (COIN 20 шт ≈ $3.5k вместо $16k).
+const FIX_TOL = Number(process.env.FIX_TOL || 0.2);
 
 function loadCfg(needKey) {
   let cfg = {};
@@ -124,6 +135,7 @@ function loadCfg(needKey) {
 
 async function main() {
   const send = process.argv.includes("--send");
+  const fix = process.argv.includes("--fix");
   const { createPublicClient, createWalletClient, http, defineChain, parseAbi, formatUnits, parseUnits } = require("viem");
   const { privateKeyToAccount } = require("viem/accounts");
   const { rpc, pk } = loadCfg(send);
@@ -181,6 +193,7 @@ async function main() {
 
   const plan = [];
   for (const s of STOCKS) {
+    const dec = Number(await read(s.addr, erc20, "decimals").catch(() => 18));
     const [u, w, cfg, route] = await Promise.all([
       bestPool(s.addr, USDG, 6), bestPool(s.addr, WETH, 18),
       read(QUOTE_FACTORY, qfAbi, "quoteConfig", [s.addr]), read(ZAP, zapAbi, "hasRoute", [s.addr]),
@@ -189,24 +202,29 @@ async function main() {
     const viaWeth = wDepth > uDepth;
     const depth = Math.max(uDepth, wDepth);
     let price = 0;
-    if (viaWeth) price = (await priceOf(w.p, s.addr, 18, 18)) * ethUsd;
-    else if (u) price = await priceOf(u.p, s.addr, 18, 6);
+    if (viaWeth) price = (await priceOf(w.p, s.addr, dec, 18)) * ethUsd;
+    else if (u) price = await priceOf(u.p, s.addr, dec, 6);
     const skip = depth < MIN_DEPTH_USD ? `пул тонкий ($${depth.toFixed(0)})` : !(price > 0) ? "нет цены" : "";
     const shares = price > 0 ? TARGET_USD / price : 0;
-    const virtual = shares > 0 ? parseUnits((shares / 4).toFixed(6), 18) : 0n;
-    const cap = shares > 0 ? parseUnits((shares / 10).toFixed(6), 18) : 0n;
+    const fd = Math.min(6, dec);
+    const virtual = shares > 0 ? parseUnits((shares / 4).toFixed(fd), dec) : 0n;
+    const cap = shares > 0 ? parseUnits((shares / 10).toFixed(fd), dec) : 0n;
     const routeArgs = viaWeth ? [s.addr, ZERO, w.fee, 0, true] : (u ? [s.addr, USDG, ethFee, u.fee, true] : null);
-    const row = { ...s, depth, price, shares, virtual, cap, allowed: cfg[0], hasRoute: route, routeArgs, viaWeth, skip };
+    // текущий порог в долларах — для --fix
+    const curUsd = cfg[0] ? Number(formatUnits(cfg[1] * 4n, dec)) * price : 0;
+    const off = cfg[0] && price > 0 && Math.abs(curUsd - TARGET_USD) / TARGET_USD > FIX_TOL;
+    const allowed = cfg[0] && !(fix && off);
+    const row = { ...s, dec, depth, price, shares, virtual, cap, allowed, hasRoute: route, routeArgs, viaWeth, skip };
     plan.push(row);
     const what = skip ? `— пропуск: ${skip}` :
-      `$${price.toFixed(2)} · порог ${shares.toFixed(2)} шт · ${viaWeth ? `WETH/${w.fee}` : `WETH→USDG→${u.fee}`} · ${row.allowed ? "уже разрешена" : "setQuote"} · ${route ? "маршрут есть" : "setRoute"}`;
+      `$${price.toFixed(2)} · порог ${shares.toFixed(2)} шт · ${viaWeth ? `WETH/${w.fee}` : `WETH→USDG→${u.fee}`} · ${cfg[0] ? (off ? `сейчас $${curUsd.toFixed(0)}${fix ? " → setQuote" : " (--fix поправит)"}` : "уже верно") : "setQuote"} · ${route ? "маршрут есть" : "setRoute"}`;
     console.log(`${s.sym.padEnd(6)} глубина $${String(Math.round(depth)).padStart(8)}  ${what}`);
   }
 
   const todoQuote = plan.filter((r) => !r.skip && !r.allowed);
   const todoRoute = plan.filter((r) => !r.skip && !r.hasRoute && r.routeArgs);
   console.log(`\nИтого: setQuote — ${todoQuote.length}, setRoute — ${todoRoute.length}, пропущено — ${plan.filter((r) => r.skip).length}`);
-  if (!send) { console.log("Сухой прогон — ничего не отправлено. Отправить: node scripts/allow-stocks.js --send"); return; }
+  if (!send) { console.log("Сухой прогон — ничего не отправлено. Отправить: node scripts/allow-stocks.js --send [--fix]"); return; }
 
   let n = 0;
   for (const r of todoQuote) {
