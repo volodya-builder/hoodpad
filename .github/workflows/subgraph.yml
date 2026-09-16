@@ -1,0 +1,43 @@
+name: subgraph
+
+# Деплой сабграфа на Goldsky кнопкой: Actions → subgraph → Run workflow.
+# Нужен секрет GOLDSKY_API_KEY (Settings → Secrets and variables → Actions →
+# Secrets). Версия — поле version (по умолчанию 4.0.0 = перезапуск 16.09.2026).
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Версия сабграфа (hood-mainnet/<version>)"
+        required: true
+        default: "4.0.0"
+
+concurrency:
+  group: subgraph
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Секрет на месте?
+        env:
+          HAS_KEY: ${{ secrets.GOLDSKY_API_KEY != '' }}
+        run: '[ "$HAS_KEY" = "true" ] || { echo "::error::Нет секрета GOLDSKY_API_KEY (Settings → Secrets and variables → Actions → Secrets)"; exit 1; }'
+      - name: Сборка
+        working-directory: subgraph
+        run: |
+          npm ci --no-audit --no-fund
+          npm run codegen
+          npm run build
+      - name: Деплой на Goldsky
+        working-directory: subgraph
+        env:
+          GOLDSKY_TOKEN: ${{ secrets.GOLDSKY_API_KEY }}
+        run: |
+          npm i -g @goldskycom/cli --no-audit --no-fund
+          goldsky login --token "$GOLDSKY_TOKEN"
+          goldsky subgraph deploy "hood-mainnet/${{ github.event.inputs.version }}" --path .
