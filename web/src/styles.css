@@ -4111,3 +4111,35 @@ html[data-theme="light"] .tos-box { border-color: rgba(0,0,0,.3); }
 /* позиция: выплаченные дивиденды — логотип акции + сумма в акции + доллары */
 .pos-row .pos-div > b { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; color: var(--gold); }
 .pos-row .pos-div .pos-div-usd { color: var(--text-dim); font-weight: 500; font-size: 12px; }
+
+/* ---------------------------------------------------------------- docs */
+.docs { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 40px; align-items: start; padding-bottom: 70px; }
+.docs-nav { position: sticky; top: 92px; display: flex; flex-direction: column; gap: 2px; padding-top: 44px; }
+.docs-nav-title { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--text-dim); margin: 0 0 10px 12px; }
+.docs-nav-item { display: block; padding: 8px 12px; border-radius: 10px; font-size: 14px; font-weight: 600; color: var(--text-dim); text-decoration: none; border-left: 2px solid transparent; transition: color .15s, background .15s; }
+.docs-nav-item:hover { color: var(--text); background: var(--card-hover); }
+.docs-nav-item.on { color: var(--gold); background: var(--gold-dim); border-left-color: var(--gold); border-radius: 0 10px 10px 0; }
+.docs-nav-ext { margin-top: 10px; opacity: .8; }
+.docs-body { max-width: 780px; }
+.docs-sec { margin-top: 44px; scroll-margin-top: 90px; }
+.docs-sec h2 { font-family: var(--font-ui); font-size: 22px; font-weight: 600; letter-spacing: -.02em; margin: 0 0 14px; }
+.docs-sec p { margin: 0 0 12px; font-size: 15px; line-height: 1.7; color: var(--text); }
+.docs-sec p + p { margin-top: 2px; }
+.docs-table { border: 1px solid var(--border); border-radius: 14px; background: var(--card); margin: 12px 0 16px; overflow: hidden; }
+.docs-row { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(0, 1.4fr); gap: 16px; padding: 12px 16px; border-top: 1px solid var(--border); font-size: 14px; align-items: center; }
+.docs-row:first-child { border-top: 0; }
+.docs-k { color: var(--text-dim); font-weight: 600; }
+.docs-v { text-align: right; color: var(--text); word-break: break-all; }
+.docs-v.mono { font-size: 12.5px; }
+.docs-v a { color: var(--text); text-decoration: none; border-bottom: 1px solid var(--border); }
+.docs-v a:hover { color: var(--gold); border-bottom-color: var(--gold); }
+.docs-copy { background: none; border: 0; color: var(--text-dim); cursor: pointer; font-size: 13px; margin-left: 8px; padding: 0; }
+.docs-copy:hover { color: var(--gold); }
+@media (max-width: 900px) {
+  .docs { grid-template-columns: 1fr; gap: 12px; }
+  .docs-nav { position: static; flex-direction: row; flex-wrap: wrap; padding-top: 24px; gap: 6px; }
+  .docs-nav-title { width: 100%; margin-left: 0; }
+  .docs-nav-item { border-left: 0 !important; border-radius: 999px !important; padding: 7px 12px; font-size: 13px; }
+  .docs-row { grid-template-columns: 1fr; gap: 4px; }
+  .docs-v { text-align: left; }
+}

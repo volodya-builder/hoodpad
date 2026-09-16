@@ -1609,6 +1609,8 @@ const EN = {
   "Казна, аудитория, модерация.": "Treasury, audience, moderation.",
   "Несобранные комиссии": "Unclaimed fees",
   "Казна арены": "Arena treasury",
+  "Документация": "Docs",
+  "Как устроен hood: кривая, комиссии, арена, контракты. Обновлено 16.09.2026.": "How hood works: the curve, fees, arena, contracts. Updated 16 Sep 2026.",
   "Кошелёк команды": "Team wallet",
   "Создателям 70%": "Creators 70%",
   "Команде 10%": "Team 10%",
