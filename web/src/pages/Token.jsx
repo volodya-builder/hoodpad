@@ -1486,9 +1486,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               );
             }
             return [(
-              <div className="pos-row" key="sum" title={`${data.name} — ${t("Открыть страницу токена")}`}
+              <div className="pos-row" key="sum"
                    onClick={() => { window.location.hash = `#/token/${tokenAddress}`; window.scrollTo({ top: 0, behavior: "smooth" }); }}>
-                <a className="pos-id tk-cell" href={`#/token/${tokenAddress}`} title={`${data.name} — ${t("Открыть страницу токена")}`}>
+                <a className="pos-id tk-cell" href={`#/token/${tokenAddress}`}>
                   <span>{t("Токен / Активность")}</span>
                   <span className="pos-id-body">
                     <span className={`tok-star ${isFavTok ? "on" : ""}`} style={{ fontSize: 14 }}

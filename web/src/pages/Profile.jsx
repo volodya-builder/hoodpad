@@ -402,8 +402,7 @@ export default function Profile({ wallet, onConnect }) {
               const pnlCol = (v) => ({ color: v >= 0 ? "var(--leaf)" : "var(--red)" });
               return (
                 <div className="pos-row" key={p.token}
-                     onClick={() => { window.location.hash = `#/token/${p.token}`; window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                     title={`${p.symbol} — ${t("Открыть страницу токена")}`}>
+                     onClick={() => { window.location.hash = `#/token/${p.token}`; window.scrollTo({ top: 0, behavior: "smooth" }); }}>
                   <span className="pos-id tk-cell">
                     <span>{t("Токен / Активность")}</span>
                     <span className="pos-id-body">
