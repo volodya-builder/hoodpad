@@ -5,7 +5,7 @@ import { factoryAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi, zapAbi, feeSplitte
 import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, FEATURES, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE, CREATOR_FEE_PCT } from "../lib/config.js";
 import { useSplit, injectNewToken } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
-import { useEthUsd, useQuoteUsd, moneyEth } from "../lib/price.js";
+import { useEthUsd, useQuoteUsd, moneyEth, ethOf, usdFine } from "../lib/price.js";
 import { RWA_TOKENS, RWA_POPULAR, stockLogo, CHAIN_LOGOS } from "../lib/rwa.js";
 import { loadCryptoQuotes, loadAllowedQuotes, loadZapQuotes, lookupQuote, matchQuote, featuredQuotes, short as shortAddr } from "../lib/quotes.js";
 import { loadModels, featured, matchModel, modelLogo, costLabel, AI_AUTO } from "../lib/models.mjs";
@@ -46,8 +46,13 @@ const MAX_DEV_BUY_ETH = 1.625 * 0.05e9 / 0.95e9 / 0.99; // ≈ 0.0864
  *  512px WebP with a stepped (2x-per-pass) downscale — sharp on retina cards,
  *  no JPEG mush on flat meme graphics. Falls back to smaller sizes if the
  *  result would bloat the tx calldata too much. */
-const IMG_SIZE = 512;
-const IMG_BUDGET = 120_000; // max data-URL chars (~90KB binary) per image
+const IMG_SIZE = 256;
+// Картинка уходит в цепь в metadataURI и оплачивается газом создателя: у сети
+// потолок ~32M газа на транзакцию, это ≈41k символов URI (проверено 16.09.2026
+// на живой фабрике; 120k символов — «транзакция не удастся»). Картинка внутри
+// JSON кодируется base64 ещё раз (×1.33), поэтому бюджет 24k → URI ≈ 33k.
+const IMG_BUDGET = 24_000;
+const MAX_URI_CHARS = 40_000; // выше — транзакция не влезает в лимит газа сети
 
 
 export default function Create({ wallet, onConnect }) {
@@ -118,6 +123,10 @@ export default function Create({ wallet, onConnect }) {
   const ethUsd = useEthUsd();
   const quoteUsd = useQuoteUsd(quoteAddr);
   const moneyQ = (n) => moneyEth(n, quoteUsd, ethUsd);
+  // Порог градации монеты за акцию задан в штуках акции (≈$15.7k на момент
+  // включения), в ETH он плавает с курсами — показываем округлённо и с «≈»,
+  // чтобы не выглядело как «6.51» против ровных 6.5 у ETH-монет.
+  const gradQ = (n) => { const e = ethOf(n, quoteUsd, ethUsd); return e == null ? "…" : `≈ ${e.toFixed(1)} ETH (${usdFine(e * ethUsd)})`; };
   const pickEth = () => { setQuote("ETH"); setQuoteAddr(""); setQuoteDec(18); };
   const quoteAllowed = quote === "ETH" || (QUOTE_LIVE && allowed.has(quoteAddr));
   const quoteIcon = quoteTab === "rwa"
@@ -236,6 +245,10 @@ export default function Create({ wallet, onConnect }) {
       const uri =
         "data:application/json;base64," +
         btoa(unescape(encodeURIComponent(JSON.stringify(metadata))));
+      if (uri.length > MAX_URI_CHARS) {
+        setBusy(false);
+        return setError(t("Метаданные слишком большие для сети — уменьшите картинку или описание."));
+      }
 
       const byQuote = quote !== "ETH";
       let hash;
@@ -783,7 +796,7 @@ export default function Create({ wallet, onConnect }) {
             {quote === "ETH" ? "ETH" : <><Logo cls="pv-qlogo" src={quoteIcon} />{quote}</>}
           </span></div>
           <div className="row"><span className="k">{t("Градация")}</span><span className="v">
-            {quote === "ETH" ? "6.5 ETH" : qcfg ? moneyQ(qcfg.threshold) : "…"}
+            {quote === "ETH" ? "6.5 ETH" : qcfg ? gradQ(qcfg.threshold) : "…"}
           </span></div>
           {quote !== "ETH" && divBps > 0 && (
             <div className="row"><span className="k">{t("Дивиденды холдерам")}</span><span className="v">{divBps / 100}%</span></div>

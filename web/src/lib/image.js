@@ -15,24 +15,29 @@ export function fileToDataUrl(file, { size = 512, budget = 120_000 } = {}) {
       cx.imageSmoothingQuality = "high";
       cx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, s, s);
       // 2) stepped downscale (halve until близко к цели) — без «лесенки»
-      let size = s;
-      while (size / 2 >= size) {
-        size = Math.floor(size / 2);
+      // (раньше условие цикла сравнивало переменную саму с собой и уменьшение
+      // не работало — картинка уходила в цепь в исходном размере)
+      let dim0 = s;
+      while (dim0 / 2 >= size) {
+        dim0 = Math.floor(dim0 / 2);
         const next = document.createElement("canvas");
-        next.width = next.height = size;
+        next.width = next.height = dim0;
         const nx = next.getContext("2d");
         nx.imageSmoothingQuality = "high";
-        nx.drawImage(cur, 0, 0, size, size);
+        nx.drawImage(cur, 0, 0, dim0, dim0);
         cur = next;
       }
+      const target = Math.min(dim0, size);
       // 3) финальный размер + подбор формата/качества под бюджет
       const attempts = [
-        [size, "image/webp", 0.90],
-        [size, "image/webp", 0.80],
-        [size, "image/jpeg", 0.85], // Safari без WebP-энкодера вернёт png → пропустит
-        [256, "image/webp", 0.85],
-        [256, "image/jpeg", 0.85],
-        [128, "image/jpeg", 0.85],
+        [target, "image/webp", 0.85],
+        [target, "image/webp", 0.70],
+        [target, "image/jpeg", 0.80], // Safari без WebP-энкодера вернёт png → пропустит
+        [256, "image/webp", 0.75],
+        [256, "image/jpeg", 0.75],
+        [192, "image/jpeg", 0.75],
+        [128, "image/jpeg", 0.75],
+        [96, "image/jpeg", 0.70],
       ];
       let fallback = "";
       for (const [dim, mime, q] of attempts) {
