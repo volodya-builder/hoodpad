@@ -9,6 +9,7 @@ import { useLang } from "../lib/i18n.jsx";
 import { FEATURES, ARENA_LIVE, EXPLORER } from "../lib/config.js";
 import Icon from "../components/Icon.jsx";
 import Who from "../components/Who.jsx";
+import QuoteLogo from "../components/QuoteLogo.jsx";
 
 // Арена — суточный бой на выживание по честному объёму торгов.
 // Экономика (решение владельца 15.09.2026): 20% каждой комиссии платформы
@@ -93,7 +94,9 @@ export default function Arena() {
       <span className="lt-rank">{i != null ? i + 1 : ""}</span>
       <Logo src={p.meta?.image} />
       <span className="lt-tok">
-        <span className="lt-name">{p.name || p.symbol} <em>${p.symbol}</em></span>
+        <span className="lt-name">{p.name || p.symbol} <em>${p.symbol}</em>
+          {p.q && <em className="lt-q" title={p.divBps > 0 ? t("дивиденды холдерам с каждой сделки") : t("валюта курвы")}><QuoteLogo q={p.q} size={14} withSym />{p.divBps > 0 ? ` · ${p.divBps / 100}%` : ""}</em>}
+        </span>
         <span className="lt-sub">
           {p.creator && <Who addr={p.creator} size={14} />}
           {p.creator && p.createdAt ? " · " : ""}
