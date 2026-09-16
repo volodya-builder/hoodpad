@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { parseEther, formatEther, parseUnits, decodeEventLog } from "viem";
+import { parseEther, formatEther, parseUnits, decodeEventLog, encodeFunctionData } from "viem";
 import { publicClient } from "../lib/web3.js";
 import { factoryAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi, zapAbi, feeSplitterAbi } from "../lib/abi.js";
 import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, FEATURES, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE, CREATOR_FEE_PCT } from "../lib/config.js";
@@ -184,6 +184,49 @@ export default function Create({ wallet, onConnect }) {
     setForm({ ...form, [k]: k === "symbol" ? e.target.value.toUpperCase() : e.target.value });
 
   const buyValue = parseFloat(form.initialBuy) || 0;
+  // Метаданные монеты — data-URL с JSON, картинка внутри. Один и тот же
+  // сборщик для отправки и для оценки газа.
+  const buildUri = () => {
+    const metadata = {
+      description: form.description.trim(),
+      image, // self-contained data URL — no external hosting
+      x: form.x.trim(),
+      telegram: form.telegram.trim(),
+      website: form.website.trim(),
+      github: form.github.trim(),
+      youtube: form.youtube.trim(),
+      // Модель ИИ монеты. Пишем только когда выбрали: пустое поле — лишние
+      // байты в calldata, за которые платит создатель. Имя кладём рядом,
+      // чтобы страница монеты показывала его, не ходя в каталог.
+      ...(ai ? { ai, aiName: aiPick?.name || ai } : {}),
+    };
+    return "data:application/json;base64," + btoa(unescape(encodeURIComponent(JSON.stringify(metadata))));
+  };
+  // Газ сети за запуск — живая оценка той же транзакции (картинка хранится
+  // в цепи, поэтому цена зависит от её размера). Платформа за запуск не
+  // берёт ничего (решение владельца 16.09.2026) — показываем именно газ.
+  const [gasEth, setGasEth] = useState(null);
+  useEffect(() => {
+    let on = true;
+    const id = setTimeout(async () => {
+      try {
+        const byQ = quote !== "ETH";
+        if (byQ && (!QUOTE_LIVE || !quoteAddr)) { if (on) setGasEth(null); return; }
+        const uri = buildUri();
+        const name = form.name.trim() || "token", sym = form.symbol.trim() || "TKN";
+        const data = byQ
+          ? encodeFunctionData({ abi: quoteFactoryAbi, functionName: "createToken", args: [name, sym, uri, quoteAddr, ZERO, divBps] })
+          : encodeFunctionData({ abi: factoryAbi, functionName: "createToken", args: [name, sym, uri, ZERO] });
+        const from = wallet?.account || "0x0000000000000000000000000000000000000001";
+        const [gas, price] = await Promise.all([
+          publicClient.estimateGas({ account: from, to: byQ ? QUOTE_FACTORY_ADDRESS : FACTORY_ADDRESS, data }),
+          publicClient.getGasPrice(),
+        ]);
+        if (on) setGasEth(Number(formatEther(gas * price)));
+      } catch { if (on) setGasEth(null); }
+    }, 700);
+    return () => { on = false; clearTimeout(id); };
+  }, [image, form.description, form.name, form.symbol, quote, quoteAddr, divBps, ai, wallet?.account]);
   const symbolOk = /^[A-Z0-9]*$/.test(form.symbol);
   const buyOk = buyValue <= MAX_DEV_BUY_ETH;
   const walletOk =
@@ -229,22 +272,7 @@ export default function Create({ wallet, onConnect }) {
 
     setBusy(true);
     try {
-      const metadata = {
-        description: form.description.trim(),
-        image, // self-contained data URL — no external hosting
-        x: form.x.trim(),
-        telegram: form.telegram.trim(),
-        website: form.website.trim(),
-        github: form.github.trim(),
-        youtube: form.youtube.trim(),
-        // Модель ИИ монеты. Пишем только когда выбрали: пустое поле — лишние
-        // байты в calldata, за которые платит создатель. Имя кладём рядом,
-        // чтобы страница монеты показывала его, не ходя в каталог.
-        ...(ai ? { ai, aiName: aiPick?.name || ai } : {}),
-      };
-      const uri =
-        "data:application/json;base64," +
-        btoa(unescape(encodeURIComponent(JSON.stringify(metadata))));
+      const uri = buildUri();
       if (uri.length > MAX_URI_CHARS) {
         setBusy(false);
         return setError(t("Метаданные слишком большие для сети — уменьшите картинку или описание."));
@@ -773,7 +801,7 @@ export default function Create({ wallet, onConnect }) {
 
         <div className="due-row">
           <span>{t("Uniswap V3 после градации · ликвидность запирается навсегда")}</span>
-          <span><b style={{ color: "var(--accent)" }}>{t("Комиссия запуска")}: 0 ETH</b></span>
+          <span><b style={{ color: "var(--accent)" }}>{t("Комиссия запуска")}: 0 ETH</b>{gasEth != null && <span className="dim"> · {t("газ сети")} ≈ {gasEth.toFixed(4)} ETH{ethUsd > 0 ? ` (${usdFine(gasEth * ethUsd)})` : ""}</span>}</span>
         </div>
 
         <button className="btn btn-primary btn-block" disabled={busy}>{ctaLabel}</button>
@@ -786,6 +814,7 @@ export default function Create({ wallet, onConnect }) {
         <div className="preview-ticker">{form.symbol ? `$${form.symbol}` : t("тикер")}</div>
         <div className="preview-stats">
           <div className="row"><span className="k">{t("Комиссия запуска")}</span><span className="v green">0 ETH</span></div>
+          <div className="row"><span className="k">{t("Газ сети")}</span><span className="v">{gasEth != null ? `≈ ${gasEth.toFixed(4)} ETH${ethUsd > 0 ? ` (${usdFine(gasEth * ethUsd)})` : ""}` : "…"}</span></div>
           {/* Комиссия — простыми словами: одна строка «сколько берётся» и
               кому уходит, без bps и долей от долей. Цифры — с цепи. */}
           <div className="row"><span className="k">{t("Комиссия с каждой сделки")}</span><span className="v">1%</span></div>
