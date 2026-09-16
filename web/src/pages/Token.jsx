@@ -1911,8 +1911,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       const pnlCol = (v) => ({ color: v >= 0 ? "var(--leaf)" : "var(--red)" });
       return (
         <div className="trader-panel" style={tpPos ? { left: tpPos.x, top: tpPos.y, right: "auto" } : undefined}>
-          <div className="tp-head" onPointerDown={onTpDragStart} onDoubleClick={() => { setTpPos(null); try { localStorage.removeItem("hood.tpPos"); } catch (e) { /* ignore */ } }}
-               title={t("Тяните, чтобы переместить · двойной клик — вернуть на место")}>
+          <div className="tp-head" onPointerDown={onTpDragStart} onDoubleClick={() => { setTpPos(null); try { localStorage.removeItem("hood.tpPos"); } catch (e) { /* ignore */ } }}>
             {meta.image && <img src={meta.image} alt="" style={{ width: 26, height: 26, borderRadius: 7 }} />}
             <a className="mono" href={`${EXPLORER}/address/${inspect}`} target="_blank" rel="noreferrer">
               {short(inspect)}
