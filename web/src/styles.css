@@ -1336,9 +1336,10 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
 .lang-btn { width: auto !important; padding: 0 11px; font-size: 12px; font-weight: 800; letter-spacing: .5px; }
 .lang-btn span { opacity: .4; transition: opacity .15s, color .15s; }
 .lang-btn span.on { opacity: 1; color: var(--gold); }
-.lang-btn .lang-opt { background: none; border: 0; padding: 0 3px; margin: 0; cursor: pointer; font: inherit; color: inherit; opacity: .4; transition: opacity .15s, color .15s; line-height: 1; }
-.lang-btn .lang-opt:hover { opacity: .85; }
-.lang-btn .lang-opt.on { opacity: 1; color: var(--gold); }
+.lang-menu { min-width: 170px; }
+.lang-menu .lang-short { display: inline-block; min-width: 30px; font-size: 11px; font-weight: 800; letter-spacing: .5px; color: var(--text-dim); }
+.lang-menu .net-item { cursor: pointer; }
+.lang-menu .net-item.on .lang-short { color: var(--gold); }
 .lang-btn .sep { opacity: .25; margin: 0 4px; }
 .ref-link-box {
   display: flex; gap: 10px; align-items: center; flex-wrap: wrap;

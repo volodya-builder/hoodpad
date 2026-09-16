@@ -27,6 +27,9 @@ import { useEthUsd, usd } from "./lib/price.js";
 import { useLang } from "./lib/i18n.jsx";
 import { formatEther, formatUnits } from "viem";
 
+// Языки интерфейса: ключ, короткая метка в шапке, название в списке
+const LANG_LIST = [["ru", "RU", "Русский"], ["en", "EN", "English"], ["zh", "中文", "简体中文"]];
+
 function useHashRoute() {
   const [hash, setHash] = useState(window.location.hash || "#/");
   useEffect(() => {
@@ -284,9 +287,10 @@ export default function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [netMenu, setNetMenu] = useState(false);
+  const [langMenu, setLangMenu] = useState(false);
   const [moreMenu, setMoreMenu] = useState(false);
   useEffect(() => {
-    const close = () => { setNetMenu(false); setMoreMenu(false); };
+    const close = () => { setNetMenu(false); setMoreMenu(false); setLangMenu(false); };
     document.addEventListener("click", close);
     return () => document.removeEventListener("click", close);
   }, []);
@@ -565,14 +569,21 @@ export default function App() {
                 )}
               </div>
             )}
-            {/* язык: каждый пункт — отдельная кнопка, а не перебор по кругу */}
-            <div className="icon-btn lang-btn" role="group" title="Язык / Language / 语言">
-              {[["ru", "RU"], ["en", "EN"], ["zh", "中文"]].map(([k, lbl], i) => (
-                <React.Fragment key={k}>
-                  {i > 0 && <span className="sep">/</span>}
-                  <button type="button" className={`lang-opt ${lang === k ? "on" : ""}`} onClick={() => setLang(k)} aria-pressed={lang === k}>{lbl}</button>
-                </React.Fragment>
-              ))}
+            {/* язык: кнопка с текущим языком, по нажатию — список вниз (как выбор сети) */}
+            <div className="net-wrap">
+              <button className="icon-btn net-btn lang-btn" onClick={(e) => { e.stopPropagation(); setLangMenu(!langMenu); }} title="Язык / Language / 语言">
+                {LANG_LIST.find(([k]) => k === lang)?.[1] || "RU"} <span className="chev">▾</span>
+              </button>
+              {langMenu && (
+                <div className="net-menu lang-menu" onClick={(e) => e.stopPropagation()}>
+                  {LANG_LIST.map(([k, short, name]) => (
+                    <div key={k} className={`net-item ${lang === k ? "on" : ""}`} onClick={() => { setLang(k); setLangMenu(false); }}>
+                      <span className="lang-short">{short}</span>{name}
+                      {lang === k && <span className="net-check">✓</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <button className="icon-btn" onClick={() => setTheme(theme === "light" ? "" : "light")}
                     title={theme === "light" ? t("Тёмная тема") : t("Светлая тема")}>
