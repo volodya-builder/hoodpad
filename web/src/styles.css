@@ -4052,6 +4052,7 @@ html[data-theme="light"] .sr-menu-it:hover, html[data-theme="light"] .sr-menu-it
 .footer-disclaimer a:hover { color: var(--text); }
 /* админка */
 .adm-svg { height: 220px; }
+.adm-fee-views { margin: 4px 0 10px; flex-wrap: wrap; }
 .adm-val-sub { font-family: var(--font-ui); font-size: 14px; font-weight: 400; color: var(--text-dim); }
 .adm-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 22px; align-items: start; }
 .adm-search { margin-bottom: 12px; padding: 10px 16px; }

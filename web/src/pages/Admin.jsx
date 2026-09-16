@@ -34,6 +34,14 @@ const RANGES = [
 ];
 const ZERO = "0x0000000000000000000000000000000000000000";
 const PLATFORM_SHARE = 0.3; // 30% комиссии — платформе (арена 10 / выкуп hood 10 / команда 10)
+// Срезы графика комиссий: кому какая доля каждой сделки
+const FEE_VIEWS = [
+  ["all", "Все", 1],
+  ["creators", "Создателям 70%", 0.7],
+  ["team", "Команде 10%", 0.1],
+  ["buyback", "Выкуп hood 10%", 0.1],
+  ["arena", "Арена 10%", 0.1],
+];
 
 // ArenaTreasury (контракт казны арены и казны выкупа hood): выкуп и сжигание в одной транзакции
 const treasuryAbi = parseAbi([
@@ -134,6 +142,7 @@ export default function Admin({ wallet, onConnect }) {
   const [range, setRange] = useState("day");
   const [hover, setHover] = useState(null);
   const [feeRange, setFeeRange] = useState("day");
+  const [feeView, setFeeView] = useState("all");
   const [feeHover, setFeeHover] = useState(null);
   const [trades, setTrades] = useState(null);
   const [tab, setTab] = useState("buyback");
@@ -214,21 +223,22 @@ export default function Admin({ wallet, onConnect }) {
     return () => { alive = false; clearInterval(id); };
   }, [isOwner]);
 
-  // график комиссий: сумма комиссий (все, 100%) по корзинам периода, в $
+  // график комиссий: сумма комиссий по корзинам периода, в $, × доля выбранного среза
   const fees = useMemo(() => {
     if (!trades || !(rate > 0)) return null;
     const { t0, end, N, width } = binsOf(feeRange);
+    const share = FEE_VIEWS.find(([k]) => k === feeView)[2];
     const bars = Array(N).fill(0);
     let period = 0, total = 0, count = 0;
     for (const tr of trades) {
-      const v = (tr.fee || 0) * rate;
+      const v = (tr.fee || 0) * rate * share;
       total += v;
       if (tr.ts < t0 || tr.ts >= end) continue;
       const i = Math.min(N - 1, Math.floor((tr.ts - t0) / width));
       bars[i] += v; period += v; count++;
     }
-    return { bars, bins: bars.map((_, i) => t0 + i * width), period, total, count, width, capped: trades.length >= 3000 };
-  }, [trades, feeRange, rate]);
+    return { bars, bins: bars.map((_, i) => t0 + i * width), period, total, count, width, share, capped: trades.length >= 3000 };
+  }, [trades, feeRange, feeView, rate]);
   const feeAxis = axisFmt(fees ? fees.width : 3_600_000);
 
   // Бан-лист подписывается кошельком владельца (без газа) — иначе базу не
@@ -289,9 +299,11 @@ export default function Admin({ wallet, onConnect }) {
     const seen = new Map();
     for (const tk of tokens) if (tk.q?.addr && !seen.has(tk.q.addr)) seen.set(tk.q.addr, tk.q);
     const quotes = [...seen.values()];
-    const [arena, buyback, accrued] = await Promise.all([
+    const teamAddr = await publicClient.readContract({ address: FEE_SPLITTER_ADDRESS, abi: feeSplitterAbi, functionName: "team" }).catch(() => null);
+    const [arena, buyback, team, accrued] = await Promise.all([
       treasuryHoldings(ARENA_TREASURY_ADDRESS, quotes, rate),
       BUYBACK_TREASURY_ADDRESS ? treasuryHoldings(BUYBACK_TREASURY_ADDRESS, quotes, rate) : null,
+      teamAddr ? treasuryHoldings(teamAddr, quotes, rate) : null,
       Promise.all(tokens.map((tk) =>
         publicClient.readContract({ address: tk.pool, abi: poolExtraAbi, functionName: "protocolFeesAccrued" }).catch(() => 0n))),
     ]);
@@ -304,7 +316,7 @@ export default function Admin({ wallet, onConnect }) {
       return { ...tk, accrued: raw, accruedUsd };
     }).sort((a, b) => b.accruedUsd - a.accruedUsd || Number(b.createdAt || 0) - Number(a.createdAt || 0));
     const unclaimedUsd = list.reduce((s, x) => s + x.accruedUsd, 0);
-    setData({ list, arena, buyback, unclaimedUsd });
+    setData({ list, arena, buyback, team, unclaimedUsd });
   }, [isOwner, rate]);
 
   useEffect(() => {
@@ -422,7 +434,7 @@ export default function Admin({ wallet, onConnect }) {
         <div className="ana-strip">
           <div className="ana-stat"><div className="n">{dollars(data.arena.usd)}</div><div className="l">{t("Казна арены")} <span className="dim">· {holdingsSub(data.arena)}</span></div></div>
           <div className="ana-stat"><div className="n">{data.buyback ? dollars(data.buyback.usd) : "—"}</div><div className="l">{t("Казна выкупа hood")}{data.buyback && <span className="dim"> · {holdingsSub(data.buyback)}</span>}</div></div>
-          <div className="ana-stat"><div className="n">{fees ? dollars(fees.total) : "…"}</div><div className="l">{t("Комиссии за всё время")}{fees && <span className="dim"> · {t("платформе")} {dollars(fees.total * PLATFORM_SHARE)}</span>}</div></div>
+          <div className="ana-stat"><div className="n">{data.team ? dollars(data.team.usd) : "—"}</div><div className="l">{t("Кошелёк команды")}{data.team && <span className="dim"> · {holdingsSub(data.team)}</span>}</div></div>
           <div className="ana-stat"><div className="n">{dollars(data.unclaimedUsd)}</div><div className="l">{t("Несобранные комиссии")} <span className="dim">· {t("в пулах")}</span></div></div>
         </div>
       )}
@@ -433,11 +445,11 @@ export default function Admin({ wallet, onConnect }) {
           <div>
             <div className="ana-panel-val">
               {fhv ? dollars(fhv.v) : fees ? dollars(fees.period) : "…"}
-              <span className="adm-val-sub"> {fhv ? t("комиссий") : `${t("комиссий")} · ${feeRangeLbl.toLowerCase()}`}</span>
+              <span className="adm-val-sub"> {feeView === "all" ? t("комиссий") : t(FEE_VIEWS.find(([k]) => k === feeView)[1]).toLowerCase()} · {fhv ? feeAxis(fhv.ts) : feeRangeLbl.toLowerCase()}</span>
             </div>
             <div className="ana-panel-sub">
-              {fhv ? feeAxis(fhv.ts) : fees
-                ? <>{t("создателям")} {dollars(fees.period * (1 - PLATFORM_SHARE))} · {t("платформе")} {dollars(fees.period * PLATFORM_SHARE)} · {fees.count} {t("сделок")}</>
+              {fees
+                ? <>{t("за всё время")} {dollars(fees.total)} · {fees.count} {t("сделок")} {t("за период")}{feeView === "all" && <> · {t("создателям")} {dollars(fees.period * (1 - PLATFORM_SHARE))} · {t("платформе")} {dollars(fees.period * PLATFORM_SHARE)}</>}</>
                 : t("Загружаю…")}
             </div>
           </div>
@@ -446,6 +458,11 @@ export default function Admin({ wallet, onConnect }) {
               <button key={k} type="button" className={`seg-btn ${feeRange === k ? "on" : ""}`} onClick={() => setFeeRange(k)}>{t(lbl)}</button>
             ))}
           </div>
+        </div>
+        <div className="seg adm-fee-views">
+          {FEE_VIEWS.map(([k, lbl]) => (
+            <button key={k} type="button" className={`seg-btn ${feeView === k ? "on" : ""}`} onClick={() => setFeeView(k)}>{t(lbl)}</button>
+          ))}
         </div>
         {fees ? <Bars data={fees.bars} bins={fees.bins} hover={feeHover} setHover={setFeeHover} fmtAxis={feeAxis} money /> : <div className="ana-svg" />}
         <div className="ana-panel-sub" style={{ marginTop: 6 }}>
