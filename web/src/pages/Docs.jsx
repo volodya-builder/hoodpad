@@ -84,7 +84,7 @@ const SECTIONS = [
       ] },
       [
         { k: T("Комиссия запуска", "Launch fee"), v: T("0 — площадка ничего не берёт; ≈ 0.0005 ETH — газ сети", "0 — the platform takes nothing; ≈ 0.0005 ETH is network gas") },
-        { k: T("Кто делит", "Who splits"), v: "FeeSplitterV6 — " + T("доли зашиты, изменить нельзя", "shares are immutable") },
+        { k: T("Кто делит", "Who splits"), v: T("FeeSplitterV6 — доли зашиты, изменить нельзя", "FeeSplitterV6 — shares are immutable") },
       ],
       T("Доля создателя копится в пуле и забирается кнопкой на странице монеты. Остальные 30% раз в минуту собирает бот в сплиттер (FeeSplitterV6), который в той же транзакции раскладывает их по трём адресам. У монет за валюту всё это происходит в валюте кривой.",
         "The creator share accrues in the pool and is claimed with a button on the coin page. The remaining 30% is collected by a bot into the splitter (FeeSplitterV6), which forwards it to the three addresses in the same transaction. For quote coins all of this happens in the curve asset."),
@@ -189,6 +189,39 @@ const SECTIONS = [
   },
 ];
 
+/** Полоса долей: доли «выезжают» при появлении на экране; наведение на
+ *  сегмент или подпись подсвечивает его, остальные приглушаются, внутри
+ *  сегмента проступает процент. */
+function Split({ b, L }) {
+  const ref = useRef(null);
+  const [seen, setSeen] = useState(false);
+  const [hi, setHi] = useState(null);
+  useEffect(() => {
+    const el = ref.current; if (!el) return undefined;
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { setSeen(true); io.disconnect(); } }, { threshold: 0.35 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return (
+    <div className={`docs-split ${seen ? "in" : ""} ${hi !== null ? "has-hi" : ""}`} ref={ref} onMouseLeave={() => setHi(null)}>
+      <div className="docs-split-title">{L(b.title)}{hi !== null && <span className="docs-split-cur">{L(b.parts[hi].l)} · <b>{b.parts[hi].pct}%</b></span>}</div>
+      <div className="docs-split-bar">
+        {b.parts.map((p, j) => (
+          <span key={j} className={`seg ${hi === j ? "hi" : ""}`} style={{ "--w": `${p.pct}%`, "--c": p.c, transitionDelay: seen ? `${j * 90}ms` : "0ms" }}
+                onMouseEnter={() => setHi(j)}>
+            <em>{p.pct}%</em>
+          </span>
+        ))}
+      </div>
+      <div className="docs-split-legend">
+        {b.parts.map((p, j) => (
+          <span key={j} className={hi === j ? "hi" : ""} onMouseEnter={() => setHi(j)}><i style={{ background: p.c }} />{L(p.l)} <b>{p.pct}%</b></span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function useScrollSpy(ids) {
   const [active, setActive] = useState(ids[0]);
   useEffect(() => {
@@ -242,11 +275,7 @@ export default function Docs() {
                 {b.items.map((it, j) => <div className="docs-stat" key={j}><div className="n">{it.n}</div><div className="l">{L(it.l)}</div></div>)}
               </div>
             ) : b && b.type === "split" ? (
-              <div className="docs-split" key={i}>
-                <div className="docs-split-title">{L(b.title)}</div>
-                <div className="docs-split-bar">{b.parts.map((p, j) => <span key={j} style={{ width: `${p.pct}%`, background: p.c }} title={`${L(p.l)} · ${p.pct}%`} />)}</div>
-                <div className="docs-split-legend">{b.parts.map((p, j) => <span key={j}><i style={{ background: p.c }} />{L(p.l)} <b>{p.pct}%</b></span>)}</div>
-              </div>
+              <Split key={i} b={b} L={L} />
             ) : b && b.type === "note" ? (
               <div className="docs-note" key={i}>{L(b.text)}</div>
             ) : Array.isArray(b) ? (
