@@ -63,7 +63,7 @@ function Spark({ trades, pool, from }) {
 }
 
 export default function Arena() {
-  const [potHi, setPotHi] = useState(null); // наведённый сегмент подиума (0..2)
+  const [potHi, setPotHi] = useState(null); // наведённый сегмент подиума (0..2); состояние живёт здесь, в Arena, — не в useTick
   const { t } = useLang();
   const rate = useEthUsd();
   useClock(1000);
