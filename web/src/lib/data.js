@@ -848,9 +848,17 @@ export function useClock(every = 1000) {
 }
 
 export function timeAgo(ms) {
-  let en = false;
-  try { en = localStorage.getItem("hood_lang") === "en"; } catch (e) { /* ignore */ }
+  let lang = "ru";
+  try { lang = localStorage.getItem("hood_lang") || "ru"; } catch (e) { /* ignore */ }
   const s = Math.max(0, (Date.now() - ms) / 1000);
+  if (lang === "zh") {
+    if (s < 15) return "刚刚";
+    if (s < 60) return `${Math.floor(s)}秒前`;
+    if (s < 3600) return `${Math.floor(s / 60)}分钟前`;
+    if (s < 86400) return `${Math.floor(s / 3600)}小时前`;
+    return `${Math.floor(s / 86400)}天前`;
+  }
+  const en = lang === "en";
   const ago = en ? "ago" : "назад";
   if (s < 15) return en ? "just now" : "только что";
   if (s < 60) return `${Math.floor(s)}${en ? "s" : "с"} ${ago}`;
