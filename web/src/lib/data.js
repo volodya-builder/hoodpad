@@ -152,15 +152,24 @@ let _st24 = { v: null, t: 0 };
 export async function subgraphStats24() {
   if (_st24.v && Date.now() - _st24.t < 60_000) return _st24.v;
   const since = Math.floor(Date.now() / 1000) - 86400;
+  const qf = (await subgraphHasQuote()) ? " quote fee" : " fee";
   const d = await gql(`{ trades(first: 1000, orderBy: timestamp, orderDirection: asc,
-    where: { timestamp_gt: "${since}" }) { pool ethAmount tokenAmount } }`);
+    where: { timestamp_gt: "${since}" }) { pool ethAmount tokenAmount${qf} } }`);
+  // Монеты за валюту: объём приходит в валюте (GME, USDG…), а не в ETH —
+  // пересчитываем в ETH по курсам, иначе 16 GME показывались как «$39k».
+  const rows = (d.trades || []).map((tr) => ({
+    pool: tr.pool.toLowerCase(), quote: tr.quote ? String(tr.quote).toLowerCase() : null,
+    ethRaw: tr.ethAmount, feeRaw: tr.fee || "0", eth: Number(tr.ethAmount) / 1e18, fee: 0,
+    tokens: Number(tr.tokenAmount) / 1e18,
+  }));
+  await toEthEquivalent(rows);
   const vol = {}, first = {};
-  for (const tr of d.trades || []) {
-    const p = tr.pool.toLowerCase();
-    const eth = Number(tr.ethAmount) / 1e18;
-    const tok = Number(tr.tokenAmount) / 1e18;
-    vol[p] = (vol[p] || 0) + eth;
-    if (first[p] == null && tok > 0) first[p] = eth / tok;
+  for (const tr of rows) {
+    const p = tr.pool;
+    vol[p] = (vol[p] || 0) + tr.eth;
+    // первая цена дня — в единицах валюты пула (для % изменения сравнивается с ценой в тех же единицах)
+    const q0 = tr.quote ? Number(tr.ethRaw) / 1e18 : tr.eth;
+    if (first[p] == null && tr.tokens > 0) first[p] = q0 / tr.tokens;
   }
   _st24 = { v: { vol, first }, t: Date.now() };
   return _st24.v;
