@@ -1530,7 +1530,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                   </div>
                 );
               })()}
-              <span className="sort-h dim" style={{ fontSize: 12, fontWeight: 700 }}
+              <span className="sort-h dim" style={{ fontSize: 12, fontWeight: 500 }}
                     onClick={() => setHSort((s) => (s === "desc" ? "asc" : "desc"))}>
                 {t("Доля")} <i>{hSort === "desc" ? "▼" : "▲"}</i>
               </span>
