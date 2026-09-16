@@ -46,7 +46,7 @@ const SUBGRAPH_BASE = "https://api.goldsky.com/api/public/project_cmrrkubk3ngb40
 // 4.0.0 = перезапуск 16.09.2026 (новые фабрики 0xbe3e…/0x4b55…). Старые версии
 // НЕ подставляем: они индексируют старые фабрики и показали бы старые монеты.
 // Пока 4.0.0 не задеплоен на Goldsky, сайт читает фабрики напрямую (RPC).
-const SUBGRAPH_VERSIONS = ["4.0.1"]; // 4.0.0 был с graft от старых фабрик — не использовать
+const SUBGRAPH_VERSIONS = ["4.0.2", "4.0.1"]; // 4.0.2: трейдер через зап = отправитель tx (PnL); первая отвечающая версия // 4.0.0 был с graft от старых фабрик — не использовать
 export let SUBGRAPH_URL = SUBGRAPH_BASE + SUBGRAPH_VERSIONS[0] + "/gn";
 let _sgPick = null;
 const SG_LS = "hood_subgraph_pick_v2";

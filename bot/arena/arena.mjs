@@ -38,7 +38,7 @@ const FACTORY = (process.env.FACTORY || "0xbe3e7ca55b6c4fc9e759bc8b43734b57a582d
 const QUOTE_FACTORY = (process.env.QUOTE_FACTORY || "0x4b55954a2910cfbb04f49e90e727fb1540b3a940").toLowerCase();
 const TREASURY = (process.env.ARENA_TREASURY || "").toLowerCase();
 const SUBGRAPH = process.env.SUBGRAPH ||
-  "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/4.0.1/gn";
+  "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/4.0.2/gn";
 const SPLIT = [0.7, 0.2, 0.1];                          // 1 / 2 / 3 места
 const DUST_ETH = Number(process.env.DUST_ETH || 0.0003); // меньше — не тратим газ, копим
 const SLIPPAGE_BPS = BigInt(process.env.SLIPPAGE_BPS || 300); // 3% от симуляции: анти-MEV

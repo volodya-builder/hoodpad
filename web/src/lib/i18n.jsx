@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { ZH } from "./i18n-zh.js";
 
-// RU — базовый язык интерфейса; словарь переводит на EN.
+// RU — базовый язык интерфейса; словарь переводит на EN. Китайский — в
+// i18n-zh.js (те же ключи); чего там нет — берём английский.
+export const LANGS = ["ru", "en", "zh"];
 const EN = {
   "Обзор": "Explore",
   "Поиск токенов": "Search tokens",
@@ -1654,13 +1657,13 @@ const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });
 
 export function LangProvider({ children }) {
   const [lang, setLang] = useState(() => {
-    try { return localStorage.getItem("hood_lang") || "ru"; } catch (e) { return "ru"; }
+    try { const v = localStorage.getItem("hood_lang"); return LANGS.includes(v) ? v : "ru"; } catch (e) { return "ru"; }
   });
   useEffect(() => {
     try { localStorage.setItem("hood_lang", lang); } catch (e) { /* ignore */ }
     document.documentElement.lang = lang;
   }, [lang]);
-  const t = useCallback((s) => (lang === "en" ? (EN[s] ?? s) : s), [lang]);
+  const t = useCallback((s) => (lang === "zh" ? (ZH[s] ?? EN[s] ?? s) : lang === "en" ? (EN[s] ?? s) : s), [lang]);
   useEffect(() => { window.__hoodT = t; }, [t]);
   return <LangCtx.Provider value={{ lang, t, setLang }}>{children}</LangCtx.Provider>;
 }

@@ -565,11 +565,13 @@ export default function App() {
                 )}
               </div>
             )}
-            <button className="icon-btn lang-btn" onClick={() => setLang(lang === "en" ? "ru" : "en")}
-                    title="Язык / Language">
-              <span className={lang !== "en" ? "on" : ""}>RU</span>
+            <button className="icon-btn lang-btn" onClick={() => setLang(lang === "ru" ? "en" : lang === "en" ? "zh" : "ru")}
+                    title="Язык / Language / 语言">
+              <span className={lang === "ru" ? "on" : ""}>RU</span>
               <span className="sep">/</span>
               <span className={lang === "en" ? "on" : ""}>EN</span>
+              <span className="sep">/</span>
+              <span className={lang === "zh" ? "on" : ""}>中文</span>
             </button>
             <button className="icon-btn" onClick={() => setTheme(theme === "light" ? "" : "light")}
                     title={theme === "light" ? t("Тёмная тема") : t("Светлая тема")}>

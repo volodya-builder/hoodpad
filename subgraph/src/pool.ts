@@ -3,6 +3,15 @@ import { Buy, Sell, Graduated } from "../generated/templates/BondingCurvePool/Bo
 import { Token, Trade } from "../generated/schema";
 import { loadProtocol } from "./factory";
 
+// CurveZap (перезапуск 16.09.2026): покупка/продажа монеты за валюту за ETH
+// идёт через зап, и в событии пула стороной сделки стоит сам зап. Настоящий
+// трейдер — тот, кто отправил транзакцию. Без этого PnL и «честный объём»
+// считали продажи через зап чужими (профиль показывал −100%).
+const ZAP = "0x939f933ab01277e7fde73c0d4d7dec885242d44c";
+function realTrader(party: Bytes, from: Bytes): Bytes {
+  return party.toHexString().toLowerCase() == ZAP ? from : party;
+}
+
 function tokenId(): string {
   return dataSource.context().getString("token");
 }
@@ -21,7 +30,7 @@ export function handleBuy(e: Buy): void {
   let tr = new Trade(e.transaction.hash.toHexString() + "-" + e.logIndex.toString());
   tr.token = t.id;
   tr.pool = e.address;
-  tr.trader = e.params.buyer;
+  tr.trader = realTrader(e.params.buyer, e.transaction.from);
   tr.isBuy = true;
   tr.quote = quoteOf();
   tr.ethAmount = e.params.ethIn;
@@ -56,7 +65,7 @@ export function handleSell(e: Sell): void {
   let tr = new Trade(e.transaction.hash.toHexString() + "-" + e.logIndex.toString());
   tr.token = t.id;
   tr.pool = e.address;
-  tr.trader = e.params.seller;
+  tr.trader = realTrader(e.params.seller, e.transaction.from);
   tr.isBuy = false;
   tr.quote = quoteOf();
   tr.ethAmount = e.params.ethOut;
