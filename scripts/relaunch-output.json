@@ -1,0 +1,14 @@
+{
+  "chainId": 4663,
+  "deployer": "0xD3d14c10020ad9C582404669a2Fa11AfF2386255",
+  "team": "0x79182232155dd09fBC53dd2Bb0380479F96EB11c",
+  "at": "2026-09-16T14:34:24.226Z",
+  "migrator": "0x01f1ca21fc5e64c8dc9c90bc2891e2b9776f1b66",
+  "factory": "0xbe3e7ca55b6c4fc9e759bc8b43734b57a582da01",
+  "migratorQ": "0x76fe74640daca66c861856ea3a6295f4b2d47801",
+  "quoteFactory": "0x4b55954a2910cfbb04f49e90e727fb1540b3a940",
+  "zap": "0x939f933ab01277e7fde73c0d4d7dec885242d44c",
+  "arena": "0x3cecc31c6db73ea1b31a5e1726c3e5e595b59a0a",
+  "hoodTreasury": "0x64bb9fd0b86489eb037f496a37528a37a6c5187b",
+  "splitter": "0x82a083e8a99b0f434c03b5c513c8b8c071bcf6e7"
+}

@@ -28,8 +28,8 @@ const WETH = "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73";
 const USDG = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168";
 const V3 = "0x1f7d7550b1b028f7571e69a784071f0205fd2efa";
 // После перезапуска — новые адреса через QUOTE_FACTORY=… ZAP=… (см. scripts/relaunch.js)
-const QUOTE_FACTORY = process.env.QUOTE_FACTORY || "0xd7299e03c5e7d4f9f4c62f305a0b619359cf9a4f";
-const ZAP = process.env.ZAP || "0xab963a68f495097aa434fff8e183de5ab86d5099";
+const QUOTE_FACTORY = process.env.QUOTE_FACTORY || "0x4b55954a2910cfbb04f49e90e727fb1540b3a940";
+const ZAP = process.env.ZAP || "0x939f933ab01277e7fde73c0d4d7dec885242d44c";
 const FEES = [100, 500, 3000, 10000];
 const TARGET_USD = Number(process.env.TARGET_USD || 16000); // порог градации, как у USDG
 const MIN_DEPTH_USD = Number(process.env.MIN_DEPTH_USD || 2000); // тоньше — не открываем

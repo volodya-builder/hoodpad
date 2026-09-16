@@ -53,7 +53,7 @@ export const NATIVE_SYMBOL = CHAIN.nativeCurrency.symbol;
 // hood v2 (мейннет, передеплой 24.07.2026 на новом кошельке): 50/20/30,
 // «голос за шкуру». Прошлые фабрики выведены из конфига — чистый лист.
 export const FACTORY_ADDRESS =
-  import.meta.env.VITE_FACTORY_ADDRESS ?? "0x08a887196fc31b89305ae03aa991917f6b1d23ec";
+  import.meta.env.VITE_FACTORY_ADDRESS ?? "0xbe3e7ca55b6c4fc9e759bc8b43734b57a582da01";
 
 // При смене сети ИЛИ адреса фабрики чистим весь кэш данных — иначе после
 // переезда на v2 в localStorage остаются старые токены с прошлой фабрики.
@@ -67,9 +67,10 @@ try {
   }
 } catch (e) { /* ignore */ }
 
-// BuybackTreasuryV2 (60% комиссий; ETH уходит только на выкупы; выкуп→сжигание)
+// Перезапуск 16.09.2026: казна арены (ArenaTreasury) — по её owner() открывается
+// админка; старая BuybackTreasuryV2 0xb456… ушла вместе со старыми фабриками.
 export const TREASURY_ADDRESS =
-  import.meta.env.VITE_TREASURY_ADDRESS ?? "0xb45661df6625decdc697dd2fa0556c2637ea063a";
+  import.meta.env.VITE_TREASURY_ADDRESS ?? "0x3cecc31c6db73ea1b31a5e1726c3e5e595b59a0a";
 
 // Кошелёк команды (владелец контрактов). По нему открываются админ-панели
 // на фронте — то, что не должно видеть большинство посетителей.
@@ -87,7 +88,7 @@ export const AGENT_TREASURY_ADDRESS = import.meta.env.VITE_AGENT_TREASURY ?? "0x
 // деньги уходят только на выкуп и сжигание подиума. Пусто = ещё не
 // задеплоена: страница арены показывает фонд как «…».
 // Задеплоить: node scripts/deploy-arena-economy.js --deploy (владелец).
-export const ARENA_TREASURY_ADDRESS = import.meta.env.VITE_ARENA_TREASURY ?? "";
+export const ARENA_TREASURY_ADDRESS = import.meta.env.VITE_ARENA_TREASURY ?? "0x3cecc31c6db73ea1b31a5e1726c3e5e595b59a0a";
 export const ARENA_LIVE = /^0x[0-9a-fA-F]{40}$/.test(ARENA_TREASURY_ADDRESS);
 
 // ProfileRegistry — имя, аватар, соцсети кошелька в блокчейне. Задеплоен
@@ -107,7 +108,7 @@ export const FEE_CLAIMER_ADDRESS = import.meta.env.VITE_FEE_CLAIMER ?? "0x167538
 // создателя, навсегда). Задеплоен владельцем 14.09.2026; ETH-фабрика
 // переключена на него сразу, фабрика за валюту — заявка, вступает
 // 16.09.2026 (applyConfig). Пусто = сайт живёт по старой схеме.
-export const FEE_SPLITTER_ADDRESS = import.meta.env.VITE_FEE_SPLITTER ?? "0x4b4ca78517a48876a4341cbbfbd96e15c9d99491";
+export const FEE_SPLITTER_ADDRESS = import.meta.env.VITE_FEE_SPLITTER ?? "0x82a083e8a99b0f434c03b5c513c8b8c071bcf6e7";
 export const SPLITTER_LIVE = Boolean(FEE_SPLITTER_ADDRESS);
 
 // Кошелёк, чьей подписью заверяются записи журнала агента (lib/journal.js).
@@ -193,7 +194,7 @@ export const CATS_LIVE = Boolean(CATS_ADDRESS && CAT_BOX_ADDRESS);
 // Задеплоена владельцем 14.09.2026, проверена на цепи: MAX_DIV_BPS=300,
 // 15 валют в белом списке, USDG в 6 знаках. Мигратор: 0xa487…1fd0.
 export const QUOTE_FACTORY_ADDRESS =
-  import.meta.env.VITE_QUOTE_FACTORY_ADDRESS ?? "0xd7299e03c5e7d4f9f4c62f305a0b619359cf9a4f";
+  import.meta.env.VITE_QUOTE_FACTORY_ADDRESS ?? "0x4b55954a2910cfbb04f49e90e727fb1540b3a940";
 export const QUOTE_LIVE = Boolean(QUOTE_FACTORY_ADDRESS);
 
 // CurveZap — «купить/продать монету за валюту, платя ETH»: меняет ETH на
@@ -202,7 +203,7 @@ export const QUOTE_LIVE = Boolean(QUOTE_FACTORY_ADDRESS);
 // Задеплоен владельцем 14.09.2026, проверен на цепи: смотрит на quote-фабрику
 // 0xd729…9a4f, WETH и Uniswap V3 Factory сети; 12 маршрутов (LINK/PENDLE —
 // без пулов, маршрута нет). Владелец — кошелёк команды.
-export const ZAP_ADDRESS = import.meta.env.VITE_ZAP_ADDRESS ?? "0xab963a68f495097aa434fff8e183de5ab86d5099";
+export const ZAP_ADDRESS = import.meta.env.VITE_ZAP_ADDRESS ?? "0x939f933ab01277e7fde73c0d4d7dec885242d44c";
 export const ZAP_LIVE = Boolean(ZAP_ADDRESS);
 export const WETH_ADDRESS = "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73";
 

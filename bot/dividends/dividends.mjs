@@ -27,11 +27,11 @@ import { createPublicClient, createWalletClient, http, defineChain, parseAbi, fo
 import { privateKeyToAccount } from "viem/accounts";
 
 const RPC_URL = process.env.RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
-const QUOTE_FACTORY = (process.env.QUOTE_FACTORY || "0xd7299e03c5e7d4f9f4c62f305a0b619359cf9a4f").toLowerCase();
-const FEE_SPLITTER = (process.env.FEE_SPLITTER || "0x4b4ca78517a48876a4341cbbfbd96e15c9d99491").toLowerCase();
+const QUOTE_FACTORY = (process.env.QUOTE_FACTORY || "0x4b55954a2910cfbb04f49e90e727fb1540b3a940").toLowerCase();
+const FEE_SPLITTER = (process.env.FEE_SPLITTER || "0x82a083e8a99b0f434c03b5c513c8b8c071bcf6e7").toLowerCase();
 const BLOCKSCOUT = process.env.BLOCKSCOUT || "https://robinhoodchain.blockscout.com";
 // Блок деплоя quote-фабрики: раньше него её событий не бывает.
-const FACTORY_FROM_BLOCK = BigInt(process.env.FACTORY_FROM_BLOCK || 62_800_000);
+const FACTORY_FROM_BLOCK = BigInt(process.env.FACTORY_FROM_BLOCK || 64_580_000);
 const MIN_PAYOUT_USD = Number(process.env.MIN_PAYOUT_USD || 1);
 const MIN_SWEEP_USD = Number(process.env.MIN_SWEEP_USD || 0.5);
 const MAX_TX = Number(process.env.MAX_TX || 150);
