@@ -41,17 +41,35 @@ const shape = (t) => ({
  * тем, что люди реально держат и меняют, иначе цена монеты будет
  * привязана к пустоте.
  */
+const CRYPTO_LS = "hood_crypto_quotes_v1";
+const CRYPTO_TTL = 24 * 3600_000;
+let _cryptoP = null;
 export async function loadCryptoQuotes(limit = 60, onProgress) {
   if (!EXPLORER) return [];
+  // Обозреватель отвечает по 1–3 с на страницу, а список валют меняется
+  // редко: держим его сутки в localStorage и отдаём сразу, обновляя в фоне.
+  let cached = null;
+  try { const v = JSON.parse(localStorage.getItem(CRYPTO_LS) || "null"); if (v && Array.isArray(v.list) && v.list.length) cached = v; } catch (e) { /* ignore */ }
+  if (cached) {
+    // есть кэш — отдаём сразу; протух (старше суток) — обновляем в фоне и
+    // досылаем свежий список через onProgress
+    const stale = Date.now() - (cached.t || 0) > CRYPTO_TTL;
+    if (stale && !_cryptoP) _cryptoP = _loadCryptoQuotesNet(limit, null).then((list) => { _cryptoP = null; if (list.length) onProgress?.(list); return list; });
+    return cached.list.slice(0, limit);
+  }
+  return _cryptoP || (_cryptoP = _loadCryptoQuotesNet(limit, onProgress).then((list) => { _cryptoP = null; return list; }));
+}
+async function _loadCryptoQuotesNet(limit, onProgress) {
   const out = [];
   let url = `${EXPLORER}/api/v2/tokens?type=ERC-20`;
   const snapshot = () => [...out].sort((a, b) => b.volume - a.volume).slice(0, limit);
+  const remember = (list) => { try { if (list.length) localStorage.setItem(CRYPTO_LS, JSON.stringify({ t: Date.now(), list })); } catch (e) { /* ignore */ } };
   try {
     // Страницы у обозревателя курсорные, читать можно только по очереди.
     // Поэтому отдаём результат по мере чтения: первая страница — это уже
     // WETH, USDG и прочие крупные, и ждать остальные пять незачем.
-    for (let page = 0; page < 6 && url; page++) {
-      const j = await fetch(url).then((r) => (r.ok ? r.json() : null));
+    for (let page = 0; page < 4 && url; page++) {
+      const j = await fetch(url, { signal: AbortSignal.timeout(6000) }).then((r) => (r.ok ? r.json() : null));
       if (!j) break;
       for (const t of j.items || []) {
         if (isStock(t) || t.reputation !== "ok" || !(num(t.exchange_rate) > 0)) continue;
@@ -62,7 +80,9 @@ export async function loadCryptoQuotes(limit = 60, onProgress) {
       url = `${EXPLORER}/api/v2/tokens?type=ERC-20&${new URLSearchParams(j.next_page_params)}`;
     }
   } catch { /* обозреватель лёг — вернём что успели */ }
-  return snapshot();
+  const list = snapshot();
+  remember(list);
+  return list;
 }
 
 /**
