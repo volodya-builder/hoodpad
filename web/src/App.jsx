@@ -19,6 +19,7 @@ const Treasury = lazy(() => import("./pages/Treasury.jsx"));
 const Admin = lazy(() => import("./pages/Admin.jsx"));
 const Revenue = lazy(() => import("./pages/Revenue.jsx"));
 const Cats = lazy(() => import("./pages/Cats.jsx"));
+const Docs = lazy(() => import("./pages/Docs.jsx"));
 import { connectWallet, reconnectWallet, hasWallet, short, fmt, fmtEth, publicClient } from "./lib/web3.js";
 import { CHAIN, FACTORY_ADDRESS, TREASURY_ADDRESS, CHAT_DB_URL, FEATURES } from "./lib/config.js";
 import { treasuryAbi } from "./lib/abi.js";
@@ -491,6 +492,8 @@ export default function App() {
     page = <AI wallet={wallet} onConnect={connect} />;
   } else if (route === "/about" && FEATURES.about) {
     page = <About />;
+  } else if (route.startsWith("/docs")) {
+    page = <Docs />;
   } else if (route === "/privacy") {
     page = <Privacy />;
   } else if (route === "/terms") {
@@ -516,7 +519,7 @@ export default function App() {
             </span>
           )}
           <div className={`nav-pills ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(false)}>
-            <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/leaderboard") && !route.startsWith("/profile") && !route.startsWith("/treasury") && !route.startsWith("/about") && !route.startsWith("/arena") ? "on" : ""}`} href="#/">{t("Обзор")}</a>
+            <a className={`nav-pill ${!route.startsWith("/analytics") && !route.startsWith("/leaderboard") && !route.startsWith("/profile") && !route.startsWith("/treasury") && !route.startsWith("/about") && !route.startsWith("/arena") && !route.startsWith("/docs") ? "on" : ""}`} href="#/">{t("Обзор")}</a>
             {FEATURES.arena && (
               <a className={`nav-pill ${route.startsWith("/arena") ? "on" : ""}`} href="#/arena">{t("Арена")}</a>
             )}
@@ -530,6 +533,7 @@ export default function App() {
               <a className={`nav-pill ${route.startsWith("/ai") ? "on" : ""}`} href="#/ai">{t("ИИ")}</a>
             )}
             <a className={`nav-pill ${route.startsWith("/analytics") ? "on" : ""}`} href="#/analytics">{t("Аналитика")}</a>
+            <a className={`nav-pill ${route.startsWith("/docs") ? "on" : ""}`} href="#/docs">{t("Документация")}</a>
             {FEATURES.about && (
               <a className={`nav-pill ${route.startsWith("/about") ? "on" : ""}`} href="#/about">{t("О нас")}</a>
             )}
@@ -653,6 +657,7 @@ export default function App() {
               {FEATURES.arena && <a href="#/arena">{t("Арена")}</a>}
               {FEATURES.treasury && <a href="#/treasury">{t("Казна")}</a>}
               <a href="#/analytics">{t("Аналитика")}</a>
+              <a href="#/docs">{t("Документация")}</a>
             </div>
             <div className="fcol">
               <h4>{t("Правовое")}</h4>
