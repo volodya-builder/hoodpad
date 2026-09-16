@@ -4442,3 +4442,11 @@ html[data-theme="light"] .arena-pot-place.p1 { background: rgba(232,198,90,.18);
 /* строка позиции: явная серая подсветка при наведении */
 .pos-row:hover { background: rgba(255,255,255,.07); box-shadow: 0 0 0 1px rgba(255,255,255,.08) inset; }
 html[data-theme="light"] .pos-row:hover { background: rgba(30,32,28,.07); box-shadow: 0 0 0 1px rgba(30,32,28,.08) inset; }
+
+/* подписи подиума стоят ровно под своими сегментами полосы: 70% / 20% / 10% */
+.arena-pot-places { display: grid; grid-template-columns: 70% 20% 10%; gap: 0; position: relative; }
+.arena-pot-place:nth-child(2) { text-align: left; padding-left: 2px; }
+.arena-pot-place:nth-child(2) .v { justify-content: flex-start; }
+.arena-pot-place:nth-child(2) .l { margin-left: 16px; }
+.arena-pot-place:last-child { position: absolute; right: 0; top: 0; text-align: right; }
+@media (max-width: 900px) { .arena-pot-places { display: flex; } .arena-pot-place:last-child { position: static; } }
