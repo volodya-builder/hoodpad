@@ -5,7 +5,7 @@ import { factoryAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi, zapAbi, feeSplitte
 import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, FEATURES, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE, CREATOR_FEE_PCT } from "../lib/config.js";
 import { useSplit, injectNewToken } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
-import { useEthUsd, useQuoteUsd, moneyEth } from "../lib/price.js";
+import { useEthUsd, useQuoteUsd, moneyEth, ethOf, usdFine } from "../lib/price.js";
 import { RWA_TOKENS, RWA_POPULAR, stockLogo, CHAIN_LOGOS } from "../lib/rwa.js";
 import { loadCryptoQuotes, loadAllowedQuotes, loadZapQuotes, lookupQuote, matchQuote, featuredQuotes, short as shortAddr } from "../lib/quotes.js";
 import { loadModels, featured, matchModel, modelLogo, costLabel, AI_AUTO } from "../lib/models.mjs";
@@ -118,6 +118,10 @@ export default function Create({ wallet, onConnect }) {
   const ethUsd = useEthUsd();
   const quoteUsd = useQuoteUsd(quoteAddr);
   const moneyQ = (n) => moneyEth(n, quoteUsd, ethUsd);
+  // Порог градации монеты за акцию задан в штуках акции (≈$15.7k на момент
+  // включения), в ETH он плавает с курсами — показываем округлённо и с «≈»,
+  // чтобы не выглядело как «6.51» против ровных 6.5 у ETH-монет.
+  const gradQ = (n) => { const e = ethOf(n, quoteUsd, ethUsd); return e == null ? "…" : `≈ ${e.toFixed(1)} ETH (${usdFine(e * ethUsd)})`; };
   const pickEth = () => { setQuote("ETH"); setQuoteAddr(""); setQuoteDec(18); };
   const quoteAllowed = quote === "ETH" || (QUOTE_LIVE && allowed.has(quoteAddr));
   const quoteIcon = quoteTab === "rwa"
@@ -783,7 +787,7 @@ export default function Create({ wallet, onConnect }) {
             {quote === "ETH" ? "ETH" : <><Logo cls="pv-qlogo" src={quoteIcon} />{quote}</>}
           </span></div>
           <div className="row"><span className="k">{t("Градация")}</span><span className="v">
-            {quote === "ETH" ? "6.5 ETH" : qcfg ? moneyQ(qcfg.threshold) : "…"}
+            {quote === "ETH" ? "6.5 ETH" : qcfg ? gradQ(qcfg.threshold) : "…"}
           </span></div>
           {quote !== "ETH" && divBps > 0 && (
             <div className="row"><span className="k">{t("Дивиденды холдерам")}</span><span className="v">{divBps / 100}%</span></div>
