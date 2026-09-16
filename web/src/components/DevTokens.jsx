@@ -5,7 +5,8 @@ import Who from "./Who.jsx";
 import { usd, quoteUsd } from "../lib/price.js";
 import { timeAgo, prefetchToken, loadCreatorTokens } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
-import { loadLegacyCreatorTokens } from "../lib/legacy.js";
+import { loadAllCreations, creationsOf, fundingSource } from "../lib/legacy.js";
+import { short } from "../lib/web3.js";
 import { EXPLORER } from "../lib/config.js";
 
 // ============================================================================
@@ -50,16 +51,31 @@ export default function DevTokens({ creator, tokens, trades, rate, current }) {
   // ограничений общего списка. Пока ответа нет (или индексатор молчит) —
   // то, что уже есть в списке платформы.
   const [fromIdx, setFromIdx] = useState(null);
-  // и монеты со старых фабрик — прямо из блокчейна (события старых фабрик)
-  const [legacy, setLegacy] = useState(null);
+  // Как GMGN: дев — тот, кто ОТПРАВИЛ транзакцию создания (а не только
+  // кошелёк комиссий). Читаем все создания со всех фабрик (старых и новых)
+  // из блокчейна и берём монеты, где кошелёк был отправителем или
+  // получателем комиссий — так видны связи между кошельками.
+  const [all, setAll] = useState(null);
   useEffect(() => {
-    if (!cre) return;
     let alive = true;
-    setFromIdx(null); setLegacy(null);
-    loadCreatorTokens(cre).then((x) => alive && setFromIdx(x)).catch(() => alive && setFromIdx([]));
-    loadLegacyCreatorTokens(cre).then((x) => alive && setLegacy(x)).catch(() => alive && setLegacy([]));
+    setFromIdx(null); setAll(null);
+    if (cre) loadCreatorTokens(cre).then((x) => alive && setFromIdx(x)).catch(() => alive && setFromIdx([]));
+    loadAllCreations().then((x) => alive && setAll(x)).catch(() => alive && setAll([]));
     return () => { alive = false; };
   }, [cre]);
+  const curL = (current || "").toLowerCase();
+  const thisOne = useMemo(() => (all || []).find((x) => x.token === curL) || null, [all, curL]);
+  const dev = thisOne?.sender || cre;               // дев — отправитель транзакции создания
+  const wallets = useMemo(() => [...new Set([cre, thisOne?.sender].filter(Boolean))], [cre, thisOne]);
+  const legacy = useMemo(() => (all ? creationsOf(all, wallets) : null), [all, wallets]);
+  // откуда у дева первый ETH — связь с другим кошельком (обозреватель, в фоне)
+  const [src, setSrc] = useState(undefined);
+  useEffect(() => {
+    if (!dev) return;
+    let alive = true; setSrc(undefined);
+    fundingSource(dev).then((v) => alive && setSrc(v)).catch(() => alive && setSrc(null));
+    return () => { alive = false; };
+  }, [dev]);
   const mine = useMemo(() => {
     const byAddr = {};
     for (const x of tokens || []) byAddr[(x.token || "").toLowerCase()] = x;
@@ -74,7 +90,9 @@ export default function DevTokens({ creator, tokens, trades, rate, current }) {
     }
     for (const x of legacy || []) {
       const k = (x.token || "").toLowerCase();
-      if (!out[k]) out[k] = x;
+      const known = byAddr[k];
+      if (!out[k]) out[k] = known ? { ...x, ...known, legacy: false } : x;
+      else out[k] = { ...out[k], sender: x.sender };
     }
     return Object.values(out).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   }, [tokens, fromIdx, legacy, cre]);
@@ -122,7 +140,7 @@ export default function DevTokens({ creator, tokens, trades, rate, current }) {
   const best = rows.length ? rows.reduce((b, r) => (r.ath > b.ath ? r : b), rows[0]) : null;
   const last = mine[0];
 
-  if (!mine.length) return <div className="dim" style={{ padding: "14px 0" }}>{fromIdx === null || legacy === null ? t("Читаю события…") : t("Других монет у этого кошелька нет.")}</div>;
+  if (!mine.length) return <div className="dim" style={{ padding: "14px 0" }}>{fromIdx === null || all === null ? t("Читаю события…") : t("Других монет у этого кошелька нет.")}</div>;
 
   return (
     <div className="dev-wrap">
@@ -164,8 +182,20 @@ export default function DevTokens({ creator, tokens, trades, rate, current }) {
 
       <div className="dev-side">
         <div className="dev-side-main">
-          <div className="dev-k">{t("Создатель")}</div>
-          <div className="dev-v"><Who addr={creator} title={t("Открыть профиль трейдера")} style={{ color: "var(--gold)" }} /></div>
+          <div className="dev-k">{t("Дев")}</div>
+          <div className="dev-v"><Who addr={dev} title={t("Открыть профиль трейдера")} style={{ color: "var(--gold)" }} /></div>
+          {dev !== cre && (
+            <div className="dev-line" style={{ marginTop: 0, marginBottom: 8 }}>
+              <span className="dim">{t("Кошелёк комиссий")}</span>{" "}
+              <Who addr={creator} title={t("Открыть профиль трейдера")} style={{ color: "var(--text)" }} />
+            </div>
+          )}
+          <div className="dev-line" style={{ marginTop: 0, marginBottom: 8 }}>
+            <span className="dim">{t("Источник")}</span>{" "}
+            {src === undefined ? <span className="dim">…</span>
+              : src ? <><a className="mono" href={`${EXPLORER}/address/${src.from}`} target="_blank" rel="noreferrer">{short(src.from)}</a> <span className="dim">· {src.eth >= 0.001 ? src.eth.toFixed(3) : "<0.001"} ETH{src.ts ? ` · ${timeAgo(src.ts)}` : ""}</span></>
+              : <span className="dim">—</span>}
+          </div>
           <div className="dev-stats">
             <div><span>{t("Всего монет")}</span><b>{mine.length}</b></div>
             <div><span><i className="dev-dot on" />{t("Градуировали")}</span><b>{grads}</b></div>
@@ -178,7 +208,7 @@ export default function DevTokens({ creator, tokens, trades, rate, current }) {
               <span className="dim">(ATH {dollars(best.ath)})</span>
             </div>
           )}
-          {legacy === null && <div className="dev-line dim">{t("Ищу монеты прошлых версий площадки…")}</div>}
+          {all === null && <div className="dev-line dim">{t("Ищу монеты прошлых версий площадки…")}</div>}
           {last && (
             <div className="dev-line">
               <span className="dim">{t("Последний запуск")}</span>{" "}

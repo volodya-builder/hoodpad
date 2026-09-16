@@ -4390,3 +4390,15 @@ html[data-theme="light"] .tp-row:hover { background: rgba(30,32,28,.04); }
 .tp-cell b, .tp-cell span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tp-head { flex-wrap: nowrap; min-width: 0; }
 .tp-head .mono { overflow: hidden; text-overflow: ellipsis; }
+
+/* Арена, разбивка подиума: три ровных блока в ряд, подпись сверху, сумма снизу */
+.arena-pot-places { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.arena-pot-place { padding: 10px 12px; border-left: 0; border-radius: 10px; background: rgba(255,255,255,.035); text-align: left !important; }
+.arena-pot-place .l { font-size: 12px; color: var(--text-dim); margin: 0 0 4px; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+.arena-pot-place .l i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin: 0; }
+.arena-pot-place .l .pct { margin-left: auto; color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; }
+.arena-pot-place .v { font-size: 20px; }
+.arena-pot-place.p1 { background: rgba(232,198,90,.08); }
+html[data-theme="light"] .arena-pot-place { background: rgba(30,32,28,.05); }
+html[data-theme="light"] .arena-pot-place.p1 { background: rgba(232,198,90,.18); }
+@media (max-width: 900px) { .arena-pot-places { grid-template-columns: 1fr; gap: 8px; } }
