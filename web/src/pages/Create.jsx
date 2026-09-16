@@ -46,8 +46,13 @@ const MAX_DEV_BUY_ETH = 1.625 * 0.05e9 / 0.95e9 / 0.99; // ≈ 0.0864
  *  512px WebP with a stepped (2x-per-pass) downscale — sharp on retina cards,
  *  no JPEG mush on flat meme graphics. Falls back to smaller sizes if the
  *  result would bloat the tx calldata too much. */
-const IMG_SIZE = 512;
-const IMG_BUDGET = 120_000; // max data-URL chars (~90KB binary) per image
+const IMG_SIZE = 256;
+// Картинка уходит в цепь в metadataURI и оплачивается газом создателя: у сети
+// потолок ~32M газа на транзакцию, это ≈41k символов URI (проверено 16.09.2026
+// на живой фабрике; 120k символов — «транзакция не удастся»). Картинка внутри
+// JSON кодируется base64 ещё раз (×1.33), поэтому бюджет 24k → URI ≈ 33k.
+const IMG_BUDGET = 24_000;
+const MAX_URI_CHARS = 40_000; // выше — транзакция не влезает в лимит газа сети
 
 
 export default function Create({ wallet, onConnect }) {
@@ -240,6 +245,10 @@ export default function Create({ wallet, onConnect }) {
       const uri =
         "data:application/json;base64," +
         btoa(unescape(encodeURIComponent(JSON.stringify(metadata))));
+      if (uri.length > MAX_URI_CHARS) {
+        setBusy(false);
+        return setError(t("Метаданные слишком большие для сети — уменьшите картинку или описание."));
+      }
 
       const byQuote = quote !== "ETH";
       let hash;

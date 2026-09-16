@@ -1318,6 +1318,7 @@ const EN = {
   "Лимит покупки создателя задаёт фабрика для каждой валюты. Перебор откатит контракт.": "The creator buy limit is set by the factory per asset. Going over it reverts the transaction.",
   "Кап создателя — {cap} {q} за всё время кривой (10% порога). {how} Перебор откатит контракт.": "Creator cap — {cap} {q} over the whole curve (10% of the threshold). {how} Going over it reverts the transaction.",
   "Лимит покупки создателя": "Creator buy limit",
+  "Метаданные слишком большие для сети — уменьшите картинку или описание.": "Metadata is too large for the network — use a smaller image or description.",
   "Комиссия площадки 1% с каждой сделки; половина — создателю": "Platform fee is 1% of every trade; half goes to the creator",
   "Модель ИИ монеты": "The coin's AI model",
   "Можно включить налог 1–3% с каждой сделки: он берётся в {q} и раздаётся холдерам по балансу. Держишь — капает, продал — перестало.": "You can enable a 1–3% tax on every trade: it is taken in {q} and shared among holders by balance. Hold — it drips in; sell — it stops.",
