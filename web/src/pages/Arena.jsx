@@ -27,7 +27,6 @@ const MONTHS = ["янв", "фев", "мар", "апр", "май", "июн", "и�
 
 function useTick() {
   const [, setT] = useState(0);
-  const [potHi, setPotHi] = useState(null); // наведённый сегмент подиума (0..2)
   useEffect(() => {
     const id = setInterval(() => setT((x) => x + 1), 1000);
     return () => clearInterval(id);
@@ -64,6 +63,7 @@ function Spark({ trades, pool, from }) {
 }
 
 export default function Arena() {
+  const [potHi, setPotHi] = useState(null); // наведённый сегмент подиума (0..2)
   const { t } = useLang();
   const rate = useEthUsd();
   useClock(1000);
