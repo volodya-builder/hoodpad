@@ -50,7 +50,9 @@ TREASURY), `bot/arena/arena.mjs`, `bot/dividends/dividends.mjs`, `bot/config.jso
 
 ## Что ещё не сделано (по приоритету)
 
-1. Бот выкупа монеты hood из казны (10%) — по расписанию, как арена. Пока
-   казна копит; выкуп можно делать вручную из админки/скриптом.
+1. Бот выкупа hood — готов: `bot/buyback/buyback.mjs`, workflow
+   `.github/workflows/buyback.yml` (каждый день 00:45 UTC, всё накопленное →
+   выкуп hood с кривой и сжигание). Чтобы заработал: GitHub → Settings →
+   Secrets and variables → Actions → Variables → `HOOD_TOKEN` = адрес монеты hood.
 2. Выкуп hood после её градации (Uniswap) — казна сейчас умеет покупать только
-   на кривой; добавить маршрут через Uniswap.
+   на кривой; добавить маршрут через Uniswap. До этого бот просто копит.

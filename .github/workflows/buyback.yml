@@ -1,0 +1,51 @@
+name: hood buyback
+
+# Выкуп монеты hood из казны выкупа (10% всех комиссий платформы).
+# Раз в сутки: всё, что накопилось в казне, покупает монету hood с кривой
+# и сжигает. Нужны: секрет ARENA_PRIVATE_KEY (владелец казны, тот же, что у
+# арены) и переменная HOOD_TOKEN (адрес монеты hood — Settings → Variables).
+# Адрес казны выкупа — переменная BUYBACK_TREASURY (необязательно: по умолчанию
+# зашит в bot/buyback/buyback.mjs).
+on:
+  workflow_dispatch:
+    inputs:
+      dry:
+        description: "Сухой прогон — только показать, без транзакций"
+        type: boolean
+        default: false
+  schedule:
+    - cron: '45 0 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: buyback
+  cancel-in-progress: false
+
+jobs:
+  buy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Поставить viem
+        run: npm ci --prefix bot --omit=optional --no-audit --no-fund
+      - name: Проверить настройки
+        env:
+          HOOD_TOKEN: ${{ vars.HOOD_TOKEN }}
+          HAS_KEY: ${{ secrets.ARENA_PRIVATE_KEY != '' }}
+        run: |
+          [ -n "$HOOD_TOKEN" ] || { echo "::error::Нет переменной HOOD_TOKEN (Settings → Variables) — адрес монеты hood"; exit 1; }
+          [ "$HAS_KEY" = "true" ] || { echo "::error::Нет секрета ARENA_PRIVATE_KEY"; exit 1; }
+      - name: Выкупить hood
+        env:
+          ARENA_PRIVATE_KEY: ${{ secrets.ARENA_PRIVATE_KEY }}
+          HOOD_TOKEN: ${{ vars.HOOD_TOKEN }}
+          BUYBACK_TREASURY: ${{ vars.BUYBACK_TREASURY }}
+        run: node bot/buyback/buyback.mjs ${{ inputs.dry && '--dry' || '' }}
