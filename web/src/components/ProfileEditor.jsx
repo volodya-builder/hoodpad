@@ -11,11 +11,14 @@ import Icon from "./Icon.jsx";
 const AVA_SIZE = 256;
 const AVA_BUDGET = 40_000; // символов data-URI (~30 КБ)
 
-export default function ProfileEditor({ wallet, onDone }) {
+export default function ProfileEditor({ wallet, onDone, open: openProp, onOpenChange, noTrigger }) {
   const { t } = useLang();
   const addr = wallet?.account;
   const cur = useProfile(addr);
-  const [open, setOpen] = useState(false);
+  const [openS, setOpenS] = useState(false);
+  // Открытием может управлять родитель (страница профиля: клик по аватарке)
+  const open = openProp ?? openS;
+  const setOpen = (v) => { setOpenS(v); onOpenChange?.(v); };
   const [f, setF] = useState({ name: "", avatar: "", x: "", telegram: "", website: "" });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -42,6 +45,7 @@ export default function ProfileEditor({ wallet, onDone }) {
   };
 
   if (!open) {
+    if (noTrigger) return null;
     return (
       <button className="btn pe-open" onClick={() => setOpen(true)}>
         <Icon name="user" size={14} /> {cur && cur.name ? t("Изменить профиль") : t("Настроить профиль")}

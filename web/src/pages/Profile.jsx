@@ -30,6 +30,7 @@ export default function Profile({ wallet, onConnect }) {
   const prof = useProfile(wallet?.account);
   const [state, setState] = useState(() => (acc ? _profCache[acc] ?? null : null));
   const [error, setError] = useState("");
+  const [editOpen, setEditOpen] = useState(false); // редактор профиля — по клику на аватарку
   const [copied, setCopied] = useState(false);
   const [claiming, setClaiming] = useState("");
   const [reload, setReload] = useState(0);
@@ -227,7 +228,11 @@ export default function Profile({ wallet, onConnect }) {
   return (
     <>
       <div className="pf-head">
-        <BigAvatar addr={wallet.account} />
+        {/* аватарка — и есть кнопка редактирования: карандаш при наведении */}
+        <button type="button" className={`pf-ava-btn ${editOpen ? "on" : ""}`} onClick={() => setEditOpen(!editOpen)} title={t("Изменить профиль")}>
+          <BigAvatar addr={wallet.account} />
+          <span className="pf-ava-edit"><Icon name="pencil" size={13} style={{ margin: 0 }} /></span>
+        </button>
         <div>
           <div className="page-title" style={{ margin: 0, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             {prof && prof.name ? prof.name : t("Профиль")}
@@ -243,10 +248,14 @@ export default function Profile({ wallet, onConnect }) {
             <span>
               · {t("баланс")} {state ? <>{fmtEth(Number(formatEther(state.ethBal)))} ETH {U(Number(formatEther(state.ethBal)))}</> : "…"}
             </span>
+            <span>·</span>
+            <button type="button" className="pf-edit-link" onClick={() => setEditOpen(!editOpen)}>
+              {prof && prof.name ? t("Изменить профиль") : t("Настроить профиль")}
+            </button>
           </div>
         </div>
-        <div className="pf-edit"><ProfileEditor wallet={wallet} /></div>
       </div>
+      {editOpen && <div className="pf-edit"><ProfileEditor wallet={wallet} open onOpenChange={setEditOpen} noTrigger /></div>}
 
       {error && <div className="error">{error}</div>}
       {!state && !error && <div className="center">{t("Читаю блокчейн…")}</div>}

@@ -4202,3 +4202,14 @@ html[data-theme="light"] .tos-box { border-color: rgba(0,0,0,.3); }
 html[data-theme="light"] .hood-tip { background: #fffdf7; color: #1c1c1a; box-shadow: 0 14px 34px -18px #00000055; }
 html[data-theme="light"] .hood-tip::before { background: #fffdf7; }
 @media (hover: none) { .hood-tip { display: none; } }
+
+/* профиль: аватарка = кнопка редактирования, ссылка «Изменить профиль» у адреса */
+.pf-ava-btn { position: relative; background: none; border: 0; padding: 0; cursor: pointer; border-radius: 18px; display: block; line-height: 0; }
+.pf-ava-btn .pf-ava { transition: filter .15s, box-shadow .15s; }
+.pf-ava-btn:hover .pf-ava, .pf-ava-btn.on .pf-ava { filter: brightness(.85); box-shadow: 0 0 0 2px var(--gold); }
+.pf-ava-edit { position: absolute; right: -6px; bottom: -6px; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: var(--card); border: 1px solid var(--border); color: var(--text-dim); box-shadow: 0 6px 16px -8px #000c; transition: color .15s, border-color .15s, background .15s; }
+.pf-ava-btn:hover .pf-ava-edit, .pf-ava-btn.on .pf-ava-edit { color: #0b0b0b; background: var(--gold); border-color: var(--gold); }
+.pf-edit-link { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; font-family: var(--font-ui); color: var(--text-dim); text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px; transition: color .15s, text-decoration-color .15s; }
+.pf-edit-link:hover { color: var(--gold); text-decoration-color: var(--gold); }
+.pf-edit { margin: 0 0 8px; width: 100%; }
