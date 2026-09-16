@@ -13,14 +13,10 @@ try {
   if (saved?.v) cached = { v: saved.v, t: 0 }; // t=0 → обновится в фоне
 } catch (e) { /* ignore */ }
 
+// Источники курса ETH. Coingecko убран: с сайта он режется CORS-ом
+// (каждый запрос падал и засорял консоль, курс шёл со второго источника
+// с задержкой). Binance и Coinbase отдают CORS-заголовки.
 const SOURCES = [
-  async () => {
-    const j = await (await fetch(
-      "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd",
-      { signal: AbortSignal.timeout(5000) }
-    )).json();
-    return j?.ethereum?.usd;
-  },
   async () => {
     const j = await (await fetch(
       "https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT",

@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { ZH } from "./i18n-zh.js";
+// Китайский словарь (≈110 КБ) грузится только когда выбран 中文 — русским
+// и английским посетителям он не нужен на каждой странице.
+let ZH = null;
 
 // RU — базовый язык интерфейса; словарь переводит на EN. Китайский — в
 // i18n-zh.js (те же ключи); чего там нет — берём английский.
@@ -1671,7 +1673,12 @@ export function LangProvider({ children }) {
     try { localStorage.setItem("hood_lang", lang); } catch (e) { /* ignore */ }
     document.documentElement.lang = lang;
   }, [lang]);
-  const t = useCallback((s) => (lang === "zh" ? (ZH[s] ?? EN[s] ?? s) : lang === "en" ? (EN[s] ?? s) : s), [lang]);
+  const [zhReady, setZhReady] = useState(!!ZH);
+  useEffect(() => {
+    if (lang !== "zh" || ZH) return;
+    import("./i18n-zh.js").then((m) => { ZH = m.ZH; setZhReady(true); }).catch(() => {});
+  }, [lang]);
+  const t = useCallback((s) => (lang === "zh" ? (ZH?.[s] ?? EN[s] ?? s) : lang === "en" ? (EN[s] ?? s) : s), [lang, zhReady]);
   useEffect(() => { window.__hoodT = t; }, [t]);
   return <LangCtx.Provider value={{ lang, t, setLang }}>{children}</LangCtx.Provider>;
 }
