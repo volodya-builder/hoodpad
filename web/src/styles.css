@@ -4450,3 +4450,12 @@ html[data-theme="light"] .pos-row:hover { background: rgba(30,32,28,.07); box-sh
 .arena-pot-place:nth-child(2) .l { margin-left: 16px; }
 .arena-pot-place:last-child { position: absolute; right: 0; top: 0; text-align: right; }
 @media (max-width: 900px) { .arena-pot-places { display: flex; } .arena-pot-place:last-child { position: static; } }
+
+/* подиум как на main: сумма сверху, под ней цветная точка и «1 место · 70%», ровно под сегментами */
+.arena-pot-place .v { display: block; font-size: 22px; }
+.arena-pot-place .l { display: flex; align-items: center; gap: 6px; margin: 4px 0 0 0 !important; font-size: 12px; color: var(--text-dim); }
+.arena-pot-place .l i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin: 0; background: var(--c); }
+.arena-pot-place.p1 .l i { --c: #e8c65a; } .arena-pot-place.p2 .l i { --c: #c3cbd4; } .arena-pot-place.p3 .l i { --c: #c98a55; }
+.arena-pot-place:last-child .l { justify-content: flex-end; }
+.arena-pot-place:nth-child(2) .l { justify-content: flex-start; }
+@media (max-width: 900px) { .arena-pot-place:last-child .l { justify-content: flex-start; } }

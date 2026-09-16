@@ -221,8 +221,8 @@ export default function Arena() {
               <div className="arena-pot-places">
                 {SPLIT.map((pct, i) => (
                   <div className={`arena-pot-place p${i + 1} ${potHi === i ? "hi" : ""}`} key={pct} onMouseEnter={() => setPotHi(i)}>
-                    <div className="v"><i />{ARENA_LIVE ? potD(pct / 100) : "—"}</div>
-                    <div className="l">{i + 1} {t("место")} · {pct}%</div>
+                    <div className="v">{ARENA_LIVE ? potD(pct / 100) : "—"}</div>
+                    <div className="l"><i /> {i + 1} {t("место")} · {pct}%</div>
                   </div>
                 ))}
               </div>
