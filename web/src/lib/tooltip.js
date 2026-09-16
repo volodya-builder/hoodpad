@@ -33,11 +33,9 @@ function place(el) {
   x = Math.max(8, Math.min(vw - w - 8, x));
   let y = r.top - h - gap, below = false;
   if (y < 6) { y = r.bottom + gap; below = true; }
-  b.style.transform = `translate(${Math.round(x)}px, ${Math.round(y + window.scrollY)}px)`;
+  // position: fixed — координаты окна как есть, без поправки на прокрутку
+  b.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
   b.classList.toggle("below", below);
-  // стрелка — под серединой элемента
-  const ax = r.left + r.width / 2 - x;
-  b.style.setProperty("--ax", `${Math.round(Math.max(10, Math.min(w - 10, ax)))}px`);
 }
 
 function show(el) {
@@ -81,6 +79,6 @@ export function installTooltips() {
   document.addEventListener("focusin", (e) => { const el = target(e); if (el) show(el); });
   document.addEventListener("focusout", () => hide());
   document.addEventListener("click", () => hide(), true);
-  window.addEventListener("scroll", () => { if (current) place(current); }, { passive: true });
+  window.addEventListener("scroll", () => hide(), { passive: true, capture: true });
   // на тач-экранах подсказок нет — там нет наведения
 }

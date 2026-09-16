@@ -2242,29 +2242,20 @@ html[data-theme="light"] .vr-bar { background: #00000010; }
   position: absolute; bottom: calc(100% + 9px); right: -6px;
   transform: translateY(3px);
   width: max-content; max-width: 230px;
-  background: linear-gradient(160deg, #1d1e1a, #141512);
-  border: 1px solid var(--border-gold); border-radius: 10px;
-  padding: 7px 11px;
-  font-size: 11.5px; font-weight: 600; line-height: 1.45;
+  background: #1a1b18;
+  border: 1px solid #2f302c; border-radius: 8px;
+  padding: 5px 9px;
+  font-size: 11.5px; font-weight: 500; line-height: 1.4;
   color: var(--text); text-align: left; white-space: normal;
   letter-spacing: .1px;
-  box-shadow: 0 14px 34px -14px #000e, 0 0 0 1px #00000033;
+  box-shadow: 0 8px 24px -12px #000c;
   opacity: 0; pointer-events: none;
-  transition: opacity .1s ease, transform .1s ease;
+  transition: opacity .08s ease, transform .1s ease;
   z-index: 60;
 }
-.wb::before {
-  content: "";
-  position: absolute; bottom: calc(100% + 4px); left: 50%;
-  transform: translateX(-50%) rotate(45deg);
-  width: 8px; height: 8px;
-  background: #171814; border-right: 1px solid var(--border-gold); border-bottom: 1px solid var(--border-gold);
-  opacity: 0; pointer-events: none;
-  transition: opacity .1s ease;
-  z-index: 61;
-}
+.wb::before { display: none; }
 .wb:hover::after { opacity: 1; transform: translateY(0); }
-.wb:hover::before { opacity: 1; }
+
 html[data-theme="light"] .wb::after { background: #fffdf7; color: #1c1c1a; box-shadow: 0 14px 34px -18px #00000055; }
 html[data-theme="light"] .wb::before { background: #fffdf7; }
 
@@ -4181,35 +4172,17 @@ html[data-theme="light"] .tos-box { border-color: rgba(0,0,0,.3); }
   .docs-stats { grid-template-columns: repeat(2, 1fr); }
 }
 
-/* фирменная подсказка для всех title (lib/tooltip.js) — как у меток кошельков */
+/* фирменная подсказка для всех title (lib/tooltip.js): тихая, маленькая, без стрелки */
 .hood-tip {
-  position: absolute; top: 0; left: 0; z-index: 9000;
-  max-width: 260px; padding: 7px 11px;
-  background: linear-gradient(160deg, #1d1e1a, #141512);
-  border: 1px solid var(--border-gold); border-radius: 10px;
-  color: var(--text); font-family: var(--font-ui); font-size: 11.5px; font-weight: 600; line-height: 1.45; letter-spacing: .1px;
-  box-shadow: 0 14px 34px -14px #000e, 0 0 0 1px #00000033;
-  opacity: 0; pointer-events: none; transition: opacity .1s ease;
+  position: fixed; top: 0; left: 0; z-index: 9000;
+  max-width: 240px; padding: 5px 9px;
+  background: #1a1b18; border: 1px solid #2f302c; border-radius: 8px;
+  color: var(--text); font-family: var(--font-ui); font-size: 11.5px; font-weight: 500; line-height: 1.4; letter-spacing: .1px;
+  box-shadow: 0 8px 24px -12px #000c;
+  opacity: 0; pointer-events: none; transform-origin: 50% 100%;
+  transition: opacity .08s ease;
   white-space: normal; text-align: left;
 }
 .hood-tip.on { opacity: 1; }
-.hood-tip::before {
-  content: ""; position: absolute; left: var(--ax, 50%); bottom: -5px; margin-left: -4px;
-  width: 8px; height: 8px; transform: rotate(45deg);
-  background: #171814; border-right: 1px solid var(--border-gold); border-bottom: 1px solid var(--border-gold);
-}
-.hood-tip.below::before { bottom: auto; top: -5px; border: 0; border-left: 1px solid var(--border-gold); border-top: 1px solid var(--border-gold); }
-html[data-theme="light"] .hood-tip { background: #fffdf7; color: #1c1c1a; box-shadow: 0 14px 34px -18px #00000055; }
-html[data-theme="light"] .hood-tip::before { background: #fffdf7; }
+html[data-theme="light"] .hood-tip { background: #ffffff; border-color: #ddddd4; color: #1c1c1a; box-shadow: 0 8px 24px -14px #00000055; }
 @media (hover: none) { .hood-tip { display: none; } }
-
-/* профиль: аватарка = кнопка редактирования, ссылка «Изменить профиль» у адреса */
-.pf-ava-btn { position: relative; background: none; border: 0; padding: 0; cursor: pointer; border-radius: 18px; display: block; line-height: 0; }
-.pf-ava-btn .pf-ava { transition: filter .15s, box-shadow .15s; }
-.pf-ava-btn:hover .pf-ava, .pf-ava-btn.on .pf-ava { filter: brightness(.85); box-shadow: 0 0 0 2px var(--gold); }
-.pf-ava-edit { position: absolute; right: -6px; bottom: -6px; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  background: var(--card); border: 1px solid var(--border); color: var(--text-dim); box-shadow: 0 6px 16px -8px #000c; transition: color .15s, border-color .15s, background .15s; }
-.pf-ava-btn:hover .pf-ava-edit, .pf-ava-btn.on .pf-ava-edit { color: #0b0b0b; background: var(--gold); border-color: var(--gold); }
-.pf-edit-link { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; font-family: var(--font-ui); color: var(--text-dim); text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px; transition: color .15s, text-decoration-color .15s; }
-.pf-edit-link:hover { color: var(--gold); text-decoration-color: var(--gold); }
-.pf-edit { margin: 0 0 8px; width: 100%; }
