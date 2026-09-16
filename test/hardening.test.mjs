@@ -111,9 +111,18 @@ test("таймлок: конфигурацию нельзя сменить мг�
     [treasury.address, user.address, zero, 100, 5000]).then(() => null).catch((e) => e);
   assert.ok(e0, "initConfig после первого токена должен быть закрыт");
 
+  // адреса без кода не принимаются: пустой мигратор заморозил бы градацию,
+  // хук без кода — все сделки (аудит 15.09.2026)
+  const eNoCode = await write(deployer, factory, "proposeConfig",
+    [treasury.address, user.address, zero, 100, 5000]).then(() => null).catch((e) => e);
+  assert.ok(eNoCode, "мигратор без кода должен отклоняться");
+  const eHook = await write(deployer, factory, "proposeConfig",
+    [treasury.address, treasury.address, user.address, 100, 5000]).then(() => null).catch((e) => e);
+  assert.ok(eHook, "votePower без кода должен отклоняться");
+
   // заявка проходит, но применить сразу нельзя
   const rc = await write(deployer, factory, "proposeConfig",
-    [treasury.address, user.address, zero, 100, 5000]);
+    [treasury.address, treasury.address, zero, 100, 5000]);
   assert.equal(rc.status, "success");
 
   const e1 = await write(deployer, factory, "applyConfig").then(() => null).catch((e) => e);
@@ -148,4 +157,47 @@ test("клейм комиссий на нулевой адрес запрещё�
   const err = await write(deployer, pool, "claimCreatorFees",
     ["0x0000000000000000000000000000000000000000"]).then(() => null).catch((e) => e);
   assert.ok(err, "нулевой получатель должен отклоняться");
+});
+
+// ---- защиты по аудиту 15.09.2026 ------------------------------------------
+
+test("запуск монет закрыт, пока владелец не вызвал initConfig (чужой createToken не запирает настройку)", async () => {
+  const mig = await deploy(deployer, "MockMigrator");
+  const f = await deploy(deployer, "LaunchpadFactoryV2", [deployer.address, mig.address]);
+  const e = await write(user, f, "createToken", ["Early", "EARLY", "", user.address]).then(() => null).catch((x) => x);
+  assert.ok(e, "до initConfig createToken должен отклоняться");
+  assert.equal(await read(f, "configured"), false);
+  await write(deployer, f, "initConfig", [deployer.address, mig.address, "0x0000000000000000000000000000000000000000", 100, 6000]);
+  assert.equal(await read(f, "configured"), true);
+  const rc = await write(user, f, "createToken", ["Late", "LATE", "", user.address]);
+  assert.equal(rc.status, "success");
+});
+
+test("заявка на смену конфигурации протухает через неделю после готовности", async () => {
+  const mig = await deploy(deployer, "MockMigrator");
+  const f = await deploy(deployer, "LaunchpadFactoryV2", [deployer.address, mig.address]);
+  await write(deployer, f, "initConfig", [deployer.address, mig.address, "0x0000000000000000000000000000000000000000", 100, 6000]);
+  await write(deployer, f, "createToken", ["A", "A", "", deployer.address]);
+  await write(deployer, f, "proposeConfig", [deployer.address, mig.address, "0x0000000000000000000000000000000000000000", 100, 6500]);
+  const delay = Number(await read(f, "CONFIG_DELAY"));
+  const grace = Number(await read(f, "CONFIG_GRACE"));
+  await pub.request({ method: "evm_increaseTime", params: [delay + grace + 3600] });
+  await pub.request({ method: "evm_mine", params: [] });
+  const e = await write(deployer, f, "applyConfig").then(() => null).catch((x) => x);
+  assert.ok(e, "просроченную заявку применить нельзя");
+  assert.equal(await read(f, "creatorFeeShareBps"), 6000, "конфигурация не изменилась");
+});
+
+test("хук голосования без кода (ошибочный адрес) не замораживает сделки", async () => {
+  const mig = await deploy(deployer, "MockMigrator");
+  const f = await deploy(deployer, "LaunchpadFactoryV2", [deployer.address, mig.address]);
+  // initConfig адрес без кода отклоняет — проверяем сам пул: хук с кодом,
+  // который потом «исчез», моделируем контрактом-заглушкой без recordFee
+  const dummy = await deploy(deployer, "MockMigrator"); // есть код, нет recordFee → catch
+  await write(deployer, f, "initConfig", [deployer.address, mig.address, dummy.address, 100, 6000]);
+  const rc = await write(user, f, "createToken", ["H", "H", "", user.address]);
+  const poolAddr = await read(f, "poolOf", [rc.logs[0].address]);
+  const pool = { address: poolAddr, abi: ART("BondingCurvePoolV2").abi };
+  const buy = await write(user, pool, "buy", [0n, user.address], parseEther("0.01"));
+  assert.equal(buy.status, "success", "сделка проходит, хотя хук ломается");
 });

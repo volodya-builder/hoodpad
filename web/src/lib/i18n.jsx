@@ -1623,6 +1623,9 @@ const EN = {
   "Продолжить": "Continue",
   "Валюта курвы и дивиденды холдерам с каждой сделки": "Curve currency and holder dividends on every trade",
   "сборка": "build",
+  "Название слишком длинное для контракта — укоротите (эмодзи и кириллица считаются за несколько знаков).": "Name is too long for the contract — shorten it (emoji and non-Latin letters count as several characters).",
+  "Тикер слишком длинный для контракта — укоротите.": "Ticker is too long for the contract — shorten it.",
+  "Запас на чужие сделки между оценкой и исполнением: 2% на кривой, 5% через обмен": "Buffer for other trades between quote and execution: 2% on the curve, 5% via swap",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

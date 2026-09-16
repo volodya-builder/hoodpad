@@ -52,7 +52,9 @@ async function pickSubgraph() {
   // выбор помним 10 минут — без лишней пробы при каждом заходе
   try {
     const c = JSON.parse(localStorage.getItem(SG_LS) || "null");
-    if (c && c.u && Date.now() - c.t < 600_000) { SUBGRAPH_URL = c.u; _sgPick = Promise.resolve(c.u); return _sgPick; }
+    // из кэша берём только адрес нашего же индексатора — чужой адрес в
+    // localStorage не должен уводить запросы сайта
+    if (c && typeof c.u === "string" && c.u.startsWith(SUBGRAPH_BASE) && Date.now() - c.t < 600_000) { SUBGRAPH_URL = c.u; _sgPick = Promise.resolve(c.u); return _sgPick; }
   } catch (e) { /* ignore */ }
   _sgPick = (async () => {
     for (const v of SUBGRAPH_VERSIONS) {

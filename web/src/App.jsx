@@ -40,6 +40,7 @@ function useHashRoute() {
 
 /** Подсветка совпавшего куска — чтобы глазом было видно, почему строка нашлась. */
 function Mark({ text, q }) {
+  text = String(text ?? "");
   if (!q) return <>{text}</>;
   const i = text.toLowerCase().indexOf(q.toLowerCase());
   if (i < 0) return <>{text}</>;

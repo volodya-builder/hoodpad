@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @title CurveZap — купить и продать монету за валюту, платя ETH
@@ -30,7 +30,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 ///         каждой валюты задаёт владелец: один хоп через WETH-пул или два —
 ///         через USDG (у MSFT WETH-пула нет). Подбирать маршрут на лету в
 ///         транзакции нельзя: лишний газ и лишняя поверхность для манипуляции.
-contract CurveZap is Ownable, ReentrancyGuard {
+contract CurveZap is Ownable2Step, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     IWETH9Z public immutable weth;

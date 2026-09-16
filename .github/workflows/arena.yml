@@ -46,7 +46,7 @@ jobs:
         with:
           node-version: '22'
       - name: Поставить viem
-        run: npm install viem --no-save --silent
+        run: npm ci --prefix bot --omit=optional --no-audit --no-fund   # версии из bot/package-lock.json
       - name: Проверить настройки
         env:
           ARENA_TREASURY: ${{ vars.ARENA_TREASURY }}

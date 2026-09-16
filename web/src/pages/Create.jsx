@@ -210,6 +210,10 @@ export default function Create({ wallet, onConnect }) {
     if (!wallet) return onConnect();
     if (!image) return setError(t("Добавьте картинку токена."));
     if (!form.name.trim() || !form.symbol.trim()) return setError(t("Нужны название и тикер."));
+    // контракт считает байты (64 / 12), а поле — символы: эмодзи и кириллица весят 2–4 байта
+    const bytes = (x) => new TextEncoder().encode(x).length;
+    if (bytes(form.name.trim()) > 64) return setError(t("Название слишком длинное для контракта — укоротите (эмодзи и кириллица считаются за несколько знаков)."));
+    if (bytes(form.symbol.trim()) > 12) return setError(t("Тикер слишком длинный для контракта — укоротите."));
     if (!symbolOk) return setError(t("Тикер: только буквы и цифры."));
     if (quote === "ETH" && !buyOk) return setError(t("Покупка создателя ограничена {max} ETH (5% сапплая).").replace("{max}", MAX_DEV_BUY_ETH.toFixed(4)));
     if (!walletOk) return setError(t("Кошелёк создателя: неверный адрес (нужен 0x… из 42 символов)."));
@@ -270,9 +274,19 @@ export default function Create({ wallet, onConnect }) {
         // Первая покупка создателя — за ETH через zap: он сам меняет ETH на
         // валюту и покупает на кривой. Кап создателя проверяет пул.
         const deadline = BigInt(Math.floor(Date.now() / 1000) + 600);
+        // minOut из симуляции того же вызова (−5% на чужие сделки и обмен):
+        // с нулём первую покупку создателя можно было зажать сэндвичем
+        let minOut = 0n;
+        try {
+          const { result } = await publicClient.simulateContract({
+            account: wallet.account, address: ZAP_ADDRESS, abi: zapAbi, functionName: "buyWithEth",
+            args: [created.args.token, 0n, deadline], value: parseEther(form.initialBuy),
+          });
+          minOut = (BigInt(result) * 95n) / 100n;
+        } catch { /* оценка не удалась — идём без минимума, как раньше */ }
         const b = await wallet.walletClient.writeContract({
           address: ZAP_ADDRESS, abi: zapAbi, functionName: "buyWithEth",
-          args: [created.args.token, 0n, deadline], value: parseEther(form.initialBuy),
+          args: [created.args.token, minOut, deadline], value: parseEther(form.initialBuy),
         });
         await publicClient.waitForTransactionReceipt({ hash: b });
       } else if (byQuote && buyValue > 0) {
@@ -283,8 +297,13 @@ export default function Create({ wallet, onConnect }) {
           address: quoteAddr, abi: erc20Abi, functionName: "approve", args: [pool, amount],
         });
         await publicClient.waitForTransactionReceipt({ hash: a });
+        let minOut = 0n;
+        try {
+          const out = await publicClient.readContract({ address: pool, abi: quotePoolAbi, functionName: "quoteBuy", args: [amount] });
+          minOut = (BigInt(out) * 97n) / 100n;
+        } catch { /* без минимума */ }
         const b = await wallet.walletClient.writeContract({
-          address: pool, abi: quotePoolAbi, functionName: "buy", args: [amount, 0n, wallet.account],
+          address: pool, abi: quotePoolAbi, functionName: "buy", args: [amount, minOut, wallet.account],
         });
         await publicClient.waitForTransactionReceipt({ hash: b });
       }

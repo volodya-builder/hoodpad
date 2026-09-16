@@ -209,8 +209,15 @@ export function buildMessages(info, history, ideas, built, address, text) {
 }
 
 // ------------------------------------------------------------------ модель
+// Потолок цены модели ($ за 1M токенов): модель выбирает создатель монеты,
+// и без потолка кто угодно мог бы жечь ключ OpenRouter самой дорогой моделью
+// (аудит 15.09.2026). OpenRouter отклонит провайдера дороже max_price.
+const MAX_PRICE = { prompt: 3, completion: 15 };
 export async function askModel(env, model, messages) {
-  const body = { model, messages, max_tokens: MAX_TOKENS, temperature: 0.8, usage: { include: true } };
+  const body = {
+    model, messages, max_tokens: MAX_TOKENS, temperature: 0.8, usage: { include: true },
+    provider: { max_price: { prompt: Number(env.MAX_PROMPT_PRICE) || MAX_PRICE.prompt, completion: Number(env.MAX_COMPLETION_PRICE) || MAX_PRICE.completion } },
+  };
   const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: { "content-type": "application/json", Authorization: `Bearer ${env.OPENROUTER_KEY}`, "HTTP-Referer": env.SITE_URL || "", "X-Title": "hood coin chat" },

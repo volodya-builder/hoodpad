@@ -2,93 +2,99 @@
   "rules": {
     ".read": false,
     ".write": false,
+
     "chats": {
       ".read": true,
       "$room": {
+        ".indexOn": ["ts"],
         "$msg": {
-          ".write": "!data.exists()",
-          ".validate": "newData.hasChildren(['who','text','ts']) && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 280 && newData.child('who').isString() && newData.child('who').val().length <= 42 && newData.child('ts').val() <= now"
+          ".write": "!data.exists() && $room.matches(/^0x[0-9a-f]{40}$/) && $msg.matches(/^-[A-Za-z0-9_-]{19}$/)",
+          ".validate": "newData.hasChildren(['who', 'text', 'ts'])",
+          "who":  { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 42" },
+          "text": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 280" },
+          "ts":   { ".validate": "newData.isNumber() && newData.val() <= now && newData.val() >= now - 300000" },
+          "w":    { ".validate": "newData.isNumber() && (newData.val() == 0 || newData.val() == 1)" },
+          "$other": { ".validate": false }
         }
       }
     },
+
     "bans": {
       ".read": true,
-      ".write": false
+      "$ts": {
+        ".write": "!data.exists() && $ts.matches(/^[0-9]{13}$/)",
+        ".validate": "newData.hasChildren(['p', 's'])",
+        "p": { ".validate": "newData.isString() && newData.val().length < 20000" },
+        "s": { ".validate": "newData.isString() && newData.val().matches(/^0x[0-9a-fA-F]{130}$/)" },
+        "$other": { ".validate": false }
+      }
     },
+
     "presence": {
       ".read": true,
       "$pid": {
-        ".write": true,
-        ".validate": "newData.hasChild('ts') && newData.child('ts').val() <= now + 300000"
+        ".write": "$pid.matches(/^[a-z0-9]{1,16}$/) && (newData.exists() || !data.exists() || data.child('ts').val() < now - 3600000)",
+        ".validate": "newData.hasChildren(['ts'])",
+        "ts": { ".validate": "newData.isNumber() && newData.val() <= now + 300000 && newData.val() >= now - 300000" },
+        "w":  { ".validate": "newData.isNumber() && (newData.val() == 0 || newData.val() == 1)" },
+        "$other": { ".validate": false }
       }
     },
-    "visitors": {
-      ".read": false,
-      "$pid": {
-        ".write": true
-      }
-    },
+
     "activity": {
       ".read": true,
       "$slot": {
-        ".write": true
+        ".write": "$slot.matches(/^[0-9]{1,12}$/) && !newData.exists() && (!data.hasChild('b') || data.child('b').val() < now / 300000 - 8928)",
+        "b": {
+          ".write": "$slot.matches(/^[0-9]{1,12}$/) && (!data.exists() || newData.val() == data.val())",
+          ".validate": "newData.isNumber()"
+        },
+        "p": {
+          "$pid": {
+            ".write": "$slot.matches(/^[0-9]{1,12}$/) && $pid.matches(/^[a-z0-9]{1,16}$/) && (!data.exists() || newData.val() == 2)",
+            ".validate": "newData.val() == 1 || newData.val() == 2"
+          }
+        },
+        "$other": { ".validate": false }
       }
     },
+
     "revenue_waitlist": {
       ".read": false,
       "$id": {
         ".write": "!data.exists()",
-        ".validate": "newData.hasChildren(['svc','contact','ts']) && newData.child('svc').isString() && newData.child('svc').val().length <= 80 && newData.child('contact').isString() && newData.child('contact').val().length <= 120 && newData.child('ts').val() <= now"
+        ".validate": "newData.hasChildren(['svc', 'contact', 'ts'])",
+        "svc":     { ".validate": "newData.isString() && newData.val().length <= 80" },
+        "contact": { ".validate": "newData.isString() && newData.val().length <= 120" },
+        "ts":      { ".validate": "newData.isNumber() && newData.val() <= now" },
+        "$other":  { ".validate": false }
       }
     },
+
     "aichat": {
       ".read": true,
       "$coin": {
-        "messages": {
-          ".write": false
-        },
-        "stats": {
-          ".write": false
-        }
+        "messages": { ".write": false },
+        "stats":    { ".write": false }
       }
     },
+
     "profiles": {
       ".read": true,
       "$addr": {
         "$ts": {
           ".write": "!data.exists() && $addr.matches(/^0x[0-9a-f]{40}$/) && $ts.matches(/^[0-9]{13}$/)",
-          ".validate": "newData.hasChildren(['p','s']) && newData.child('p').isString() && newData.child('p').val().length < 70000 && newData.child('s').isString() && newData.child('s').val().length == 132"
+          ".validate": "newData.hasChildren(['p', 's'])",
+          "p": { ".validate": "newData.isString() && newData.val().length < 70000" },
+          "s": { ".validate": "newData.isString() && newData.val().matches(/^0x[0-9a-fA-F]{130}$/)" },
+          "$other": { ".validate": false }
         }
       }
     },
+
     "workshop": {
       ".read": true,
-      "board": {
-        "$token": {
-          ".write": true
-        }
-      },
-      "proposals": {
-        "$token": {
-          ".write": true
-        }
-      },
-      "votes": {
-        "$token": {
-          ".write": true
-        }
-      },
-      "journal": {
-        "$token": {
-          ".write": true
-        }
-      },
-      "agent": {
-        "heartbeat": {
-          ".write": true,
-          ".validate": "newData.hasChildren(['at','state']) && newData.child('at').val() <= now + 60000 && newData.child('state').isString()"
-        }
-      }
+      ".write": false
     }
   }
 }

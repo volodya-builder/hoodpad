@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ILiquidityMigratorQuote} from "./interfaces/ILiquidityMigratorQuote.sol";
 
@@ -66,14 +66,16 @@ interface INonfungiblePositionManagerQ {
 /// @notice Зеркало UniswapV3Migrator для кривых с ERC20-валютой (акции RWA,
 ///         стейблы): на градации создаёт full-range позицию «токен/quote» в
 ///         Uniswap V3 и навсегда запирает NFT здесь. Все защиты цены — как в
-///         боевом ETH-миграторе (см. его шапку):
-///           1. quote при выравнивании не тратится НИКОГДА — только продажа
-///              наших токенов при завышенной цене;
-///           2. бюджет выравнивания ограничен ALIGN_BUDGET_BPS;
+///         ETH-миграторе (см. его шапку):
+///           1. выравнивание только сделками в сторону расчётной цены: при
+///              завышенной продаём наш токен, при заниженной покупаем его за
+///              quote — обе сделки выгодны нам относительно расчётной цены;
+///           2. бюджет выравнивания ограничен alignBudgetBps и от токенов, и
+///              от quote; пустой пул двигается даром (колбэк с нулями);
 ///           3. ликвидность льётся только по цене в допуске, иначе revert и
 ///              миграцию можно повторить;
 ///           4. излишки — в казну (dustSink), не создателю.
-contract UniswapV3MigratorQuote is ILiquidityMigratorQuote, Ownable {
+contract UniswapV3MigratorQuote is ILiquidityMigratorQuote, Ownable2Step {
     using SafeERC20 for IERC20;
 
     INonfungiblePositionManagerQ public immutable positionManager;
@@ -83,13 +85,15 @@ contract UniswapV3MigratorQuote is ILiquidityMigratorQuote, Ownable {
 
     uint256 public constant MAX_SQRT_DEVIATION_BPS = 100; // 1%
     uint256 public constant MIN_DEPOSIT_BPS = 9_000;      // 90%
-    uint256 public constant ALIGN_BUDGET_BPS = 100;       // 1%
+    uint256 public constant MAX_ALIGN_BUDGET_BPS = 500;   // 5%
+    uint256 public alignBudgetBps = 100;                  // 1%
 
     address public dustSink;
 
-    address private _swapPool;
-    address private _swapToken; // каким токеном платим в колбэке (наш токен)
-    address private _swapQuote; // парный quote — для определения стороны token0/token1
+    address private _swapPool;     // пул, у которого мы прямо сейчас двигаем цену
+    address private _swapPayToken; // чем платим в колбэке (наш токен или quote)
+    uint256 private _swapMaxPay;   // и не больше этой суммы
+    bool private _swapZeroForOne;  // платим token0 (true) или token1
 
     error PoolPriceManipulated(uint160 expectedSqrtPriceX96, uint160 actualSqrtPriceX96);
     error UnknownPool();
@@ -103,6 +107,7 @@ contract UniswapV3MigratorQuote is ILiquidityMigratorQuote, Ownable {
         uint256 quoteAmount
     );
     event PriceAligned(address indexed v3Pool, uint160 fromSqrtPriceX96, uint160 toSqrtPriceX96);
+    event AlignBudgetSet(uint256 bps);
     event DustSwept(address indexed token, uint256 tokenAmount, uint256 quoteAmount);
 
     constructor(address positionManager_) Ownable(msg.sender) {
@@ -114,6 +119,13 @@ contract UniswapV3MigratorQuote is ILiquidityMigratorQuote, Ownable {
         require(dustSink == address(0), "already set");
         require(sink != address(0), "zero addr");
         dustSink = sink;
+    }
+
+    /// @notice Бюджет выравнивания цены (bps от переданных сумм), не выше потолка.
+    function setAlignBudget(uint256 bps) external onlyOwner {
+        require(bps <= MAX_ALIGN_BUDGET_BPS, "budget>max");
+        alignBudgetBps = bps;
+        emit AlignBudgetSet(bps);
     }
 
     function migrateQuote(address token, address quote, uint256 tokenAmount, uint256 quoteAmount)
@@ -128,22 +140,24 @@ contract UniswapV3MigratorQuote is ILiquidityMigratorQuote, Ownable {
             revert UnknownPool();
         }
 
-        (address token0, address token1) = token < quote ? (token, quote) : (quote, token);
-        (uint256 amount0, uint256 amount1) = token < quote
-            ? (tokenAmount, quoteAmount)
-            : (quoteAmount, tokenAmount);
+        uint160 sqrtPriceX96;
+        uint256 positionId;
+        {
+            (address token0, address token1) = token < quote ? (token, quote) : (quote, token);
+            (uint256 amount0, uint256 amount1) = token < quote
+                ? (tokenAmount, quoteAmount)
+                : (quoteAmount, tokenAmount);
 
-        uint160 sqrtPriceX96 = uint160(Math.sqrt(Math.mulDiv(amount1, 1 << 192, amount0)));
+            sqrtPriceX96 = uint160(Math.sqrt(Math.mulDiv(amount1, 1 << 192, amount0)));
 
-        v3Pool = positionManager.createAndInitializePoolIfNecessary(
-            token0, token1, POOL_FEE, sqrtPriceX96
-        );
+            v3Pool = positionManager.createAndInitializePoolIfNecessary(
+                token0, token1, POOL_FEE, sqrtPriceX96
+            );
 
-        _swapQuote = quote;
-        _alignPrice(v3Pool, token, tokenAmount, sqrtPriceX96, token < quote);
-        _swapQuote = address(0);
+            _alignPrice(v3Pool, token, quote, tokenAmount, quoteAmount, sqrtPriceX96);
 
-        uint256 positionId = _mintLocked(token0, token1, amount0, amount1, sqrtPriceX96, v3Pool);
+            positionId = _mintLocked(token0, token1, amount0, amount1, sqrtPriceX96, v3Pool);
+        }
         _sweepDust(token, quote);
 
         emit LiquidityLocked(token, quote, v3Pool, positionId, tokenAmount, quoteAmount);
@@ -151,31 +165,31 @@ contract UniswapV3MigratorQuote is ILiquidityMigratorQuote, Ownable {
 
     // ------------------------------------------------------------- internal
 
-    /// @dev Как в ETH-миграторе: продаём ТОЛЬКО наш токен и только когда цена
-    ///      завышена. Quote не тратится никогда — иначе выкупали бы мешок у
-    ///      манипулятора за собранные акции.
+    /// @dev Как в ETH-миграторе: сделка в сторону цели с ограниченным бюджетом.
+    ///      Цена выше цели — продаём token0 (zeroForOne), ниже — token1; чем
+    ///      платим (наш токен или quote) — зависит от порядка адресов.
     function _alignPrice(
         address v3Pool,
         address token,
+        address quote,
         uint256 tokenAmount,
-        uint160 target,
-        bool tokenIsZero
+        uint256 quoteAmount,
+        uint160 target
     ) internal {
         (uint160 cur, , , , , , ) = IUniswapV3PoolStateQ(v3Pool).slot0();
         if (_within(cur, target)) return;
 
-        bool emptyPool = IUniswapV3PoolStateQ(v3Pool).liquidity() == 0;
-
-        bool sellDirection = tokenIsZero ? cur > target : cur < target;
-        if (!emptyPool && !sellDirection) return;
-
-        bool zeroForOne = emptyPool ? cur > target : tokenIsZero;
-        uint256 budget = emptyPool ? 1 : (tokenAmount * ALIGN_BUDGET_BPS) / 10_000;
-        if (budget == 0) return;
+        bool zeroForOne = cur > target;
+        bool payWithToken = zeroForOne == (token < quote);
+        uint256 budget = payWithToken
+            ? (tokenAmount * alignBudgetBps) / 10_000
+            : (quoteAmount * alignBudgetBps) / 10_000;
+        if (budget == 0) budget = 1;
 
         _swapPool = v3Pool;
-        _swapToken = token;
-        _swapTokenIsZero = tokenIsZero; // наш токен — token0 пула?
+        _swapPayToken = payWithToken ? token : quote;
+        _swapMaxPay = budget;
+        _swapZeroForOne = zeroForOne;
         try IUniswapV3PoolStateQ(v3Pool).swap(
             address(this),
             zeroForOne,
@@ -184,7 +198,8 @@ contract UniswapV3MigratorQuote is ILiquidityMigratorQuote, Ownable {
             abi.encode(token)
         ) {} catch { /* не вышло — ниже сработает проверка цены */ }
         _swapPool = address(0);
-        _swapToken = address(0);
+        _swapPayToken = address(0);
+        _swapMaxPay = 0;
 
         (uint160 after_, , , , , , ) = IUniswapV3PoolStateQ(v3Pool).slot0();
         emit PriceAligned(v3Pool, cur, after_);
@@ -245,24 +260,19 @@ contract UniswapV3MigratorQuote is ILiquidityMigratorQuote, Ownable {
         emit DustSwept(token, tokLeft, qLeft);
     }
 
-    /// @dev Оплата нашего же свапа: платим ТОЛЬКО нашим токеном. Наш токен —
-    ///      token0, если _swapTokenIsZero. Пул может потребовать оплату лишь
-    ///      той стороны, что соответствует нашему токену; попытка списать quote
-    ///      (другую сторону) отклоняется — quote не тратится никогда.
-    function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata data) external {
+    /// @dev Оплата нашего же свапа: пул и сторона — из памяти контракта, не из
+    ///      calldata. Платим только тем, что продаём, не больше бюджета; нули
+    ///      (пустой пул) допустимы; обе стороны сразу — никогда.
+    function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata) external {
         require(msg.sender == _swapPool && _swapPool != address(0), "bad pool");
-        address token = abi.decode(data, (address));
-        require(token == _swapToken, "bad token");
-        if (_swapTokenIsZero) {
-            require(amount0Delta > 0 && amount1Delta <= 0, "quote spend blocked");
-            IERC20(token).safeTransfer(msg.sender, uint256(amount0Delta));
-        } else {
-            require(amount1Delta > 0 && amount0Delta <= 0, "quote spend blocked");
-            IERC20(token).safeTransfer(msg.sender, uint256(amount1Delta));
-        }
+        require(amount0Delta <= 0 || amount1Delta <= 0, "both sides");
+        int256 owed = _swapZeroForOne ? amount0Delta : amount1Delta;
+        int256 other = _swapZeroForOne ? amount1Delta : amount0Delta;
+        require(other <= 0, "wrong side");
+        if (owed <= 0) return;
+        require(uint256(owed) <= _swapMaxPay, "over budget");
+        IERC20(_swapPayToken).safeTransfer(msg.sender, uint256(owed));
     }
-
-    bool private _swapTokenIsZero;
 
     receive() external payable {}
 

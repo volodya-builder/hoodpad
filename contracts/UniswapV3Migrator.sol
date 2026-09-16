@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ILiquidityMigrator} from "./interfaces/ILiquidityMigrator.sol";
 
@@ -76,19 +76,27 @@ interface INonfungiblePositionManager {
 /// @dev БЕЗОПАСНОСТЬ ЦЕНЫ. Пул Uniswap V3 может инициализировать кто угодно и
 ///      бесплатно, поэтому на момент градации цена в пуле может быть чужой.
 ///      Правила, которым следует этот контракт:
-///        1. Никогда не покупаем токены за ETH при выравнивании. Токены у нас
-///           уже есть; тратя ETH, мы бы выкупали мешок у того, кто подстроил
-///           цену. Разрешён только один безопасный тип свапа — продажа токенов,
-///           когда цена завышена.
-///        2. Бюджет выравнивания жёстко ограничен ALIGN_BUDGET_BPS.
+///        1. Выравнивание — только сделками В СТОРОНУ расчётной цены: при
+///           завышенной цене продаём токены (дороже справедливого), при
+///           заниженной — покупаем токены за ETH (дешевле справедливого). Обе
+///           сделки выгодны нам относительно расчётной цены, невыгодны тому,
+///           кто её подстроил. Свап останавливается ровно на расчётной цене
+///           (sqrtPriceLimit), дальше не идёт.
+///        2. Бюджет выравнивания жёстко ограничен: не больше alignBudgetBps
+///           от переданных токенов и от переданного ETH. Колбэк платит только
+///           в пределах этого бюджета и только той стороной, которую мы
+///           продаём; пустой пул двигается даром (колбэк с нулями — норма).
 ///        3. Ликвидность заливается только по цене в пределах допуска; иначе
 ///           транзакция отменяется, средства остаются в бондинг-пуле и
-///           миграцию можно повторить (в пустом пуле цену возвращает любой
-///           свап на пыль, атакующему приходится держать реальный капитал,
-///           который съедают арбитражники).
+///           миграцию можно повторить. Чтобы держать цену чужой, атакующему
+///           нужна реальная ликвидность больше нашего бюджета, и каждая наша
+///           попытка забирает её у него по невыгодной ему цене. Владелец может
+///           поднять бюджет (до 5%) — трейды в сторону цены остаются выгодными.
 ///        4. Излишки уходят в казну выкупа, а не создателю — чтобы манипуляция
 ///           ценой не была способом что-то себе выручить.
-contract UniswapV3Migrator is ILiquidityMigrator, Ownable {
+///      Проверено против настоящего Uniswap V3 (test/migrator-real.test.mjs):
+///      пустой пул с чужой ценой, крошечная чужая ликвидность ниже и выше цены.
+contract UniswapV3Migrator is ILiquidityMigrator, Ownable2Step {
     using SafeERC20 for IERC20;
 
     INonfungiblePositionManager public immutable positionManager;
@@ -101,13 +109,19 @@ contract UniswapV3Migrator is ILiquidityMigrator, Ownable {
     uint256 public constant MAX_SQRT_DEVIATION_BPS = 100; // 1%
     /// @notice Позиция обязана принять не меньше этой доли средств.
     uint256 public constant MIN_DEPOSIT_BPS = 9_000;      // 90%
-    /// @notice Максимум токенов на выравнивание цены (доля от переданных).
-    uint256 public constant ALIGN_BUDGET_BPS = 100;       // 1%
+    /// @notice Потолок бюджета выравнивания (доля от переданных сумм).
+    uint256 public constant MAX_ALIGN_BUDGET_BPS = 500;   // 5%
+    /// @notice Бюджет выравнивания: не больше этой доли токенов И этой доли
+    ///         ETH может уйти на возврат цены. Владелец меняет в пределах потолка.
+    uint256 public alignBudgetBps = 100;                  // 1%
 
     /// @notice Куда уходят излишки. Ставится один раз после деплоя казны.
     address public dustSink;
 
-    address private _swapPool; // пул, у которого мы прямо сейчас двигаем цену
+    address private _swapPool;     // пул, у которого мы прямо сейчас двигаем цену
+    address private _swapPayToken; // чем платим в колбэке (наш токен или WETH)
+    uint256 private _swapMaxPay;   // и не больше этой суммы
+    bool private _swapZeroForOne;  // платим token0 (true) или token1
 
     error PoolPriceManipulated(uint160 expectedSqrtPriceX96, uint160 actualSqrtPriceX96);
     error UnknownPool();
@@ -120,6 +134,7 @@ contract UniswapV3Migrator is ILiquidityMigrator, Ownable {
         uint256 ethAmount
     );
     event PriceAligned(address indexed v3Pool, uint160 fromSqrtPriceX96, uint160 toSqrtPriceX96);
+    event AlignBudgetSet(uint256 bps);
     event DustSwept(address indexed token, uint256 tokenAmount, uint256 ethAmount);
 
     constructor(address positionManager_, address weth_) Ownable(msg.sender) {
@@ -133,6 +148,13 @@ contract UniswapV3Migrator is ILiquidityMigrator, Ownable {
         require(dustSink == address(0), "already set");
         require(sink != address(0), "zero addr");
         dustSink = sink;
+    }
+
+    /// @notice Бюджет выравнивания цены (bps от переданных сумм), не выше потолка.
+    function setAlignBudget(uint256 bps) external onlyOwner {
+        require(bps <= MAX_ALIGN_BUDGET_BPS, "budget>max");
+        alignBudgetBps = bps;
+        emit AlignBudgetSet(bps);
     }
 
     function migrate(address token, uint256 tokenAmount) external payable override {
@@ -160,7 +182,7 @@ contract UniswapV3Migrator is ILiquidityMigrator, Ownable {
             token0, token1, POOL_FEE, sqrtPriceX96
         );
 
-        _alignPrice(v3Pool, token, tokenAmount, sqrtPriceX96, token < address(weth));
+        _alignPrice(v3Pool, token, tokenAmount, ethAmount, sqrtPriceX96, token < address(weth));
 
         uint256 positionId = _mintLocked(token0, token1, amount0, amount1, sqrtPriceX96, v3Pool);
         _sweepDust(token);
@@ -170,36 +192,34 @@ contract UniswapV3Migrator is ILiquidityMigrator, Ownable {
 
     // ------------------------------------------------------------- internal
 
-    /// @dev Возврат цены к расчётной. Продаём ТОЛЬКО токены и только когда
-    ///      цена завышена: так мы получаем ETH по цене выше справедливой.
-    ///      Обратное направление (тратить ETH) запрещено — именно там пряталась
-    ///      возможность выкупить мешок у манипулятора за все 6.5 ETH.
+    /// @dev Возврат цены к расчётной сделкой в сторону цели с ограниченным
+    ///      бюджетом. Направление: цена выше цели — продаём token0 (zeroForOne),
+    ///      ниже — продаём token1. Наш это токен или WETH — зависит от порядка
+    ///      адресов; платим тем, что продаём, в пределах бюджета этой стороны.
+    ///      Пустой пул (или пустой участок до цели) двигается даром: настоящий
+    ///      Uniswap зовёт колбэк с нулями — это допустимо.
     function _alignPrice(
         address v3Pool,
         address token,
         uint256 tokenAmount,
+        uint256 ethAmount,
         uint160 target,
         bool tokenIsZero
     ) internal {
         (uint160 cur, , , , , , ) = IUniswapV3PoolState(v3Pool).slot0();
         if (_within(cur, target)) return;
 
-        // В ПУСТОМ пуле (ликвидность 0) цена двигается в любую сторону даром:
-        // платить некому. Это самый частый случай — атакующий инициализировал
-        // пул бесплатно. Возвращаем цену пылинкой в нужном направлении.
-        bool emptyPool = IUniswapV3PoolState(v3Pool).liquidity() == 0;
-
-        // При наличии чужой ликвидности разрешён ТОЛЬКО безопасный свап:
-        // продажа наших токенов при завышенной цене. Покупать токены за ETH
-        // нельзя — так мы выкупали бы мешок у того, кто подстроил цену.
-        bool sellDirection = tokenIsZero ? cur > target : cur < target;
-        if (!emptyPool && !sellDirection) return; // ниже сработает проверка цены
-
-        bool zeroForOne = emptyPool ? cur > target : tokenIsZero;
-        uint256 budget = emptyPool ? 1 : (tokenAmount * ALIGN_BUDGET_BPS) / 10_000;
-        if (budget == 0) return;
+        bool zeroForOne = cur > target;                 // сбиваем цену — продаём token0
+        bool payWithToken = zeroForOne == tokenIsZero;  // продаём наш токен, иначе WETH
+        uint256 budget = payWithToken
+            ? (tokenAmount * alignBudgetBps) / 10_000
+            : (ethAmount * alignBudgetBps) / 10_000;
+        if (budget == 0) budget = 1;                    // пустой пул двигается и «пылинкой»
 
         _swapPool = v3Pool;
+        _swapPayToken = payWithToken ? token : address(weth);
+        _swapMaxPay = budget;
+        _swapZeroForOne = zeroForOne;
         try IUniswapV3PoolState(v3Pool).swap(
             address(this),
             zeroForOne,
@@ -208,6 +228,8 @@ contract UniswapV3Migrator is ILiquidityMigrator, Ownable {
             abi.encode(token)
         ) {} catch { /* не вышло — ниже сработает проверка цены */ }
         _swapPool = address(0);
+        _swapPayToken = address(0);
+        _swapMaxPay = 0;
 
         (uint160 after_, , , , , , ) = IUniswapV3PoolState(v3Pool).slot0();
         emit PriceAligned(v3Pool, cur, after_);
@@ -277,15 +299,20 @@ contract UniswapV3Migrator is ILiquidityMigrator, Ownable {
         emit DustSwept(token, tokLeft, wethLeft);
     }
 
-    /// @dev Оплата нашего же свапа. Пул берём из памяти контракта, а не из
-    ///      calldata — иначе колбэк был бы открытым входом для вывода токенов.
-    function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata data) external {
+    /// @dev Оплата нашего же свапа. Пул и сторона оплаты берутся из памяти
+    ///      контракта, а не из calldata — колбэк не может стать входом для
+    ///      вывода средств. Платим только тем, что продаём (token0 при
+    ///      zeroForOne, иначе token1), не больше бюджета; нули (пустой пул) —
+    ///      допустимы; обе стороны сразу — никогда.
+    function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata) external {
         require(msg.sender == _swapPool && _swapPool != address(0), "bad pool");
-        address token = abi.decode(data, (address));
-        // платим только токеном — ETH при выравнивании не тратится никогда
-        if (amount0Delta > 0 && token < address(weth)) IERC20(token).safeTransfer(msg.sender, uint256(amount0Delta));
-        else if (amount1Delta > 0 && token > address(weth)) IERC20(token).safeTransfer(msg.sender, uint256(amount1Delta));
-        else revert("eth spend blocked");
+        require(amount0Delta <= 0 || amount1Delta <= 0, "both sides");
+        int256 owed = _swapZeroForOne ? amount0Delta : amount1Delta;
+        int256 other = _swapZeroForOne ? amount1Delta : amount0Delta;
+        require(other <= 0, "wrong side");
+        if (owed <= 0) return; // пустой пул: цена сдвинулась даром
+        require(uint256(owed) <= _swapMaxPay, "over budget");
+        IERC20(_swapPayToken).safeTransfer(msg.sender, uint256(owed));
     }
 
     receive() external payable {}

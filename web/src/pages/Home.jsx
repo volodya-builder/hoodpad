@@ -17,7 +17,7 @@ function TokenCard({ t, fav, onFav, cushion = 0 }) {
   const { t: tr } = useLang();
   const rate = useEthUsd();
   const [cp, setCp] = useState(false);
-  const progress = Number((t.sold * 10000n) / t.cap) / 100;
+  const progress = t.cap > 0n ? Number((t.sold * 10000n) / t.cap) / 100 : 0;
   // Монета за валюту: цена в знаках валюты, капитализацию в долларах
   // считаем через её курс, а не через ETH. Курса нет — покажем в валюте.
   const q = t.q || null;
@@ -87,7 +87,7 @@ function TokenCard({ t, fav, onFav, cushion = 0 }) {
 function TokenRow({ t, fav, onFav, cushion = 0 }) {
   const { t: tr } = useLang();
   const rate = useEthUsd();
-  const progress = Number((t.sold * 10000n) / t.cap) / 100;
+  const progress = t.cap > 0n ? Number((t.sold * 10000n) / t.cap) / 100 : 0;
   const q = t.q || null;
   const qPrice = useQuoteUsd(q?.addr);
   const priceUnits = q ? Number(formatUnits(t.price, q.dec)) : Number(formatEther(t.price));

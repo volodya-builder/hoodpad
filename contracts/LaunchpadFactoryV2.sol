@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {LaunchToken} from "./LaunchToken.sol";
 import {BondingCurvePoolV2} from "./BondingCurvePoolV2.sol";
 
@@ -11,7 +11,7 @@ import {BondingCurvePoolV2} from "./BondingCurvePoolV2.sol";
 ///         VotePower — «голос за шкуру». Curve: 1B supply, 800M on the
 ///         curve, graduation at 6.5 ETH into a permanently locked DEX
 ///         position.
-contract LaunchpadFactoryV2 is Ownable {
+contract LaunchpadFactoryV2 is Ownable2Step {
     // ------------------------------------------------------------- config
     uint256 public constant TOTAL_SUPPLY = 1_000_000_000e18;
     uint256 public constant SALE_CAP     =   800_000_000e18;
@@ -33,6 +33,9 @@ contract LaunchpadFactoryV2 is Ownable {
     ///         ликвидность негradуировавших пулов — у всех есть 48 часов,
     ///         чтобы увидеть заявку и выйти.
     uint256 public constant CONFIG_DELAY = 48 hours;
+    /// @notice Заявка действует столько после готовности; старую надо подать заново,
+    ///         чтобы люди видели свежее предупреждение, а не применение месячной давности.
+    uint256 public constant CONFIG_GRACE = 7 days;
 
     uint16 public feeBps = 100;              // 1% per trade
     uint16 public creatorFeeShareBps = 5000; // creator 50%; остальные 50% идут в
@@ -58,6 +61,10 @@ contract LaunchpadFactoryV2 is Ownable {
     address[] public allTokens;
     mapping(address => address) public poolOf; // token => pool
     mapping(address => bool) public isPool;    // pool => registered (VotePower auth)
+    /// @notice Пока владелец не вызвал initConfig, запуск монет закрыт — иначе
+    ///         чужой createToken сразу после деплоя запирал бы первичную
+    ///         настройку и первая монета площадки рождалась бы с дефолтами.
+    bool public configured;
 
     event TokenCreated(
         address indexed token,
@@ -90,6 +97,7 @@ contract LaunchpadFactoryV2 is Ownable {
         require(bytes(symbol).length > 0 && bytes(symbol).length <= MAX_SYMBOL_LEN, "symbol len");
         require(bytes(metadataURI).length <= MAX_URI_LEN, "uri len");
         require(msg.value <= CREATOR_MAX_FIRST_BUY, "first buy > cap");
+        require(configured, "not configured");
         address creator_ = creatorWallet == address(0) ? msg.sender : creatorWallet;
         BondingCurvePoolV2 pool = new BondingCurvePoolV2(
             _predictTokenAddress(),
@@ -155,9 +163,7 @@ contract LaunchpadFactoryV2 is Ownable {
         uint16 feeBps_,
         uint16 creatorFeeShareBps_
     ) external onlyOwner {
-        require(treasury_ != address(0) && migrator_ != address(0), "zero addr");
-        require(feeBps_ <= 500, "fee>5%");
-        require(creatorFeeShareBps_ <= 10_000, "share>100%");
+        _checkConfig(treasury_, migrator_, votePower_, feeBps_, creatorFeeShareBps_);
         pendingConfig = PendingConfig({
             treasury: treasury_,
             migrator: migrator_,
@@ -174,6 +180,7 @@ contract LaunchpadFactoryV2 is Ownable {
         PendingConfig memory p = pendingConfig;
         require(p.readyAt != 0, "no pending");
         require(block.timestamp >= p.readyAt, "timelock");
+        require(block.timestamp <= p.readyAt + CONFIG_GRACE, "expired");
         treasury = p.treasury;
         migrator = p.migrator;
         votePower = p.votePower;
@@ -199,15 +206,31 @@ contract LaunchpadFactoryV2 is Ownable {
         uint16 creatorFeeShareBps_
     ) external onlyOwner {
         require(allTokens.length == 0, "already launched");
-        require(treasury_ != address(0) && migrator_ != address(0), "zero addr");
-        require(feeBps_ <= 500, "fee>5%");
-        require(creatorFeeShareBps_ <= 10_000, "share>100%");
+        _checkConfig(treasury_, migrator_, votePower_, feeBps_, creatorFeeShareBps_);
         treasury = treasury_;
         migrator = migrator_;
         votePower = votePower_;
         feeBps = feeBps_;
         creatorFeeShareBps = creatorFeeShareBps_;
+        configured = true;
         emit ConfigUpdated(treasury_, migrator_, votePower_, feeBps_, creatorFeeShareBps_);
+    }
+
+    /// @dev Общие проверки конфигурации. Адреса — только с кодом: пустой адрес
+    ///      мигратора заморозил бы градацию, а хук без кода — все сделки
+    ///      (проверка extcodesize у try/catch не ловится).
+    function _checkConfig(
+        address treasury_,
+        address migrator_,
+        address votePower_,
+        uint16 feeBps_,
+        uint16 creatorFeeShareBps_
+    ) internal view {
+        require(treasury_ != address(0) && migrator_ != address(0), "zero addr");
+        require(migrator_.code.length > 0, "migrator: no code");
+        require(votePower_ == address(0) || votePower_.code.length > 0, "votePower: no code");
+        require(feeBps_ <= 500, "fee>5%");
+        require(creatorFeeShareBps_ <= 10_000, "share>100%");
     }
 
     /// @dev Возврат сдачи от пула, если первая покупка упёрлась в кривую:

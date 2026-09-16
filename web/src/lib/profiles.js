@@ -37,7 +37,11 @@ function persist() {
 function notify() { version++; for (const l of listeners) l(); }
 
 const okAvatar = (a) => /^data:image\/(png|jpeg|jpg|webp|gif);base64,/.test(a || "") || /^https:\/\//.test(a || "");
-const dbUrl = (addr) => `${CHAT_DB_URL}/profiles/${addr}.json?orderBy="$key"&limitToLast=8`;
+// Ключи — миллисекунды. Смотрим последние 24 записи не дальше «сейчас + минута»:
+// чужие записи с ключами из будущего отсекаются, а мусор с текущими ключами
+// (правила базы записи от чужих не отличают) просто не проходит проверку
+// подписи. Полностью от такого мусора защитит только запись через воркер.
+const dbUrl = (addr) => `${CHAT_DB_URL}/profiles/${addr}.json?orderBy="$key"&endAt="${Date.now() + 60_000}"&limitToLast=24`;
 
 /** Собрать текст, который подписывает кошелёк. Поля — в фиксированном порядке. */
 export function profilePayload(addr, f, ts) {

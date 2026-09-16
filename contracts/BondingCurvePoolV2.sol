@@ -244,12 +244,15 @@ contract BondingCurvePoolV2 is ReentrancyGuard {
         protocolFeesAccrued += fee - creatorCut;
     }
 
-    /// @dev Fee => voting power. Never blocks a trade: if the hook is unset
-    ///      or reverts, the trade proceeds without power accrual.
+    /// @dev Fee => voting power. Never blocks a trade: if the hook is unset,
+    ///      has no code, reverts or burns gas, the trade proceeds without
+    ///      power accrual. (Без проверки кода revert «нет контракта» не
+    ///      ловится catch-ом и замораживал бы все сделки; без лимита газа
+    ///      прожорливый хук валил бы сделки по газу.)
     function _reportFee(address trader, uint256 fee) internal {
         address hook = IFactoryConfigV2(factory).votePower();
-        if (hook == address(0) || fee == 0) return;
-        try IVotePowerHook(hook).recordFee(trader, fee) {} catch {}
+        if (hook == address(0) || fee == 0 || hook.code.length == 0) return;
+        try IVotePowerHook(hook).recordFee{gas: 150_000}(trader, fee) {} catch {}
     }
 
     function _sendEth(address to, uint256 amount) internal {

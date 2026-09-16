@@ -31,7 +31,13 @@ import "react-resizable/css/styles.css";
 
 const Grid = WidthProvider(RGL);
 
-const SLIPPAGE_CHOICES = [0.5, 1, 3, 5]; // %
+// Слиппедж «Авто». Оценка сделки — точная симуляция того же вызова, так
+// что запас нужен только на чужие сделки между оценкой и исполнением:
+// кривая — 2%, через зап (плюс два обмена на Uniswap) — 5%. Раньше стояло
+// 40% — с таким запасом сэндвич забирал бы до трети покупки (аудит 15.09.2026).
+const AUTO_SLIP_CURVE = 2;  // %
+const AUTO_SLIP_ZAP = 5;    // %
+const MAX_SLIP = 20;        // % — потолок ручного ввода
 
 const MONTHS_RU = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
 const MONTHS_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -406,7 +412,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     try {
       const v = localStorage.getItem("hood_slip");
       if (v === null || v === "auto") return "auto";
-      return Number(v) || "auto";
+      const n = Number(v);
+      return n > 0 && n <= MAX_SLIP ? n : "auto";
     } catch (e) { return "auto"; }
   });
   const setSlipSave = (s2) => {
@@ -751,7 +758,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     if (!quote) return;
     setBusy(true);
     try {
-      const slipPct = slip === "auto" ? 40 : Number(slip);
+      const slipPct = slip === "auto" ? (viaZap ? AUTO_SLIP_ZAP : AUTO_SLIP_CURVE) : Math.min(MAX_SLIP, Number(slip));
       const slipBps = BigInt(Math.round(slipPct * 100));
       let hash;
       const deadline = BigInt(Math.floor(Date.now() / 1000) + 600);
@@ -906,7 +913,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
 
   if (!data) return <div className="center">{error || t("Загружаю…")}</div>;
 
-  const progress = Number((data.sold * 10000n) / data.cap) / 100;
+  const progress = data.cap > 0n ? Number((data.sold * 10000n) / data.cap) / 100 : 0;
   // Капитализация = цена × 1 млрд. У монеты за валюту цена — в валюте
   // (AAPL, USDG), и умножать её на курс ETH нельзя: получалось «$25k» у
   // монеты, стоящей 10 AAPL. Считаем через курс самой валюты; курса нет —
@@ -1536,7 +1543,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 <span className="hr-pct">{fmt(holders.unsoldPct, 1)}%</span>
               </div>
               {(hSort === "desc" ? holders.list : [...holders.list].reverse()).map((h, i) => {
-                const isCre = h.addr === data.creator.toLowerCase();
+                const isCre = h.addr === String(data.creator || "").toLowerCase();
                 const isTre = h.addr === TREASURY_ADDRESS.toLowerCase();
                 const isMe = wallet && h.addr === wallet.account.toLowerCase();
                 return (
@@ -1694,8 +1701,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               <div className="slip-seg">
                 <div className={`slip-opt ${slip === "auto" ? "on" : ""}`}
                      onClick={() => setSlipSave("auto")}
-                     title={t("Подбирается автоматически под размер сделки")}>
-                  <Icon name="bolt" size={12} /> {t("Авто")} 40%
+                     title={t("Запас на чужие сделки между оценкой и исполнением: 2% на кривой, 5% через обмен")}>
+                  <Icon name="bolt" size={12} /> {t("Авто")} {viaZap ? AUTO_SLIP_ZAP : AUTO_SLIP_CURVE}%
                 </div>
                 <div className="slip-div" />
                 <label className={`slip-opt slip-opt-custom ${typeof slip === "number" ? "on" : ""}`}>
@@ -1705,7 +1712,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                            const v = e.target.value.replace(",", ".");
                            if (v === "") { setSlipSave("auto"); return; }
                            const n = Number(v);
-                           if (n > 0 && n <= 50) setSlipSave(n);
+                           if (n > 0 && n <= MAX_SLIP) setSlipSave(n);
                          }} />
                   <span>%</span>
                 </label>
