@@ -1,24 +1,29 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { formatEther, parseEther } from "viem";
+import { formatEther, formatUnits, parseUnits } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
-import { treasuryAbi, tokenAbi, poolExtraAbi, feeClaimerAbi } from "../lib/abi.js";
-import { TREASURY_ADDRESS, EXPLORER, CHAT_DB_URL, FEE_CLAIMER_ADDRESS } from "../lib/config.js";
-import { loadTokens, subgraphVotes, subgraphTreasuryOps, timeAgo, useClock, dataSource } from "../lib/data.js";
-import { useEthUsd, usd } from "../lib/price.js";
+import { tokenAbi, poolExtraAbi, feeSplitterAbi, erc20Abi } from "../lib/abi.js";
+import { ARENA_TREASURY_ADDRESS, BUYBACK_TREASURY_ADDRESS, FEE_SPLITTER_ADDRESS, CHAT_DB_URL, EXPLORER } from "../lib/config.js";
+import { loadTokens, allTrades, useClock, dataSource } from "../lib/data.js";
+import { useEthUsd, usd, quoteUsd } from "../lib/price.js";
 import { loadBans, saveBans } from "../lib/bans.js";
 import { useLang } from "../lib/i18n.jsx";
 import Icon from "../components/Icon.jsx";
+import { parseAbi } from "viem";
 
 // Админка владельца — в том же принципе, что весь сайт (15.09.2026): полоса
-// цифр казны, одна карточка аудитории с графиком как в аналитике (час /
-// 24ч / неделя / месяц, наведение меняет цифру в шапке), вкладки текстом:
-// выкуп и сжигание с казны, модерация чата.
+// цифр казны, карточки с графиком как в аналитике (час / 24ч / неделя /
+// месяц, наведение меняет цифру в шапке), вкладки текстом: выкуп с казны
+// арены, модерация чата.
+//
+// Перезапуск 16.09.2026: комиссия 1% → 70% создателю, 30% в сплиттер, тот
+// делит на казну арены / казну выкупа hood / команду. Монеты за валюту
+// (USDG, акции, крипта) платят комиссию в СВОЕЙ валюте — все суммы здесь
+// считаются в долларах по курсу, а не «как будто это ETH».
 //
 // Аудитория считается по анонимным 5-минутным корзинам `activity/{корзина}`
 // (пишет каждый открытый сайт, см. App.jsx): id браузера → 1, с кошельком → 2.
 // Никаких IP и персональных данных. Корзины старше 31 дня админка сама чистит.
 
-const EPOCH_LEN = 7 * 86400;
 const BUCKET = 300_000;                 // 5 минут
 const KEEP_MS = 31 * 86400_000;
 const RANGES = [
@@ -27,15 +32,27 @@ const RANGES = [
   ["week", "Неделя", 7, 86_400_000],    // 7 × 1 день
   ["month", "Месяц", 30, 86_400_000],   // 30 × 1 день
 ];
+const ZERO = "0x0000000000000000000000000000000000000000";
+const PLATFORM_SHARE = 0.3; // 30% комиссии — платформе (арена 10 / выкуп hood 10 / команда 10)
 
-/** Столбики уникальных посетителей — как в аналитике. */
-function Bars({ data, bins, hover, setHover, fmtAxis }) {
+// ArenaTreasury (контракт казны арены и казны выкупа hood): выкуп и сжигание в одной транзакции
+const treasuryAbi = parseAbi([
+  "function owner() view returns (address)",
+  "function totalEthSpent() view returns (uint256)",
+  "function buybackEth(address token, uint256 ethAmount, uint256 minTokensOut, string note) returns (uint256)",
+  "function buybackQuote(address token, uint256 quoteAmount, uint256 minTokensOut, string note) returns (uint256)",
+  "event Buyback(address indexed token, address indexed asset, uint256 amountIn, uint256 tokensOut, string note)",
+]);
+
+/** Столбики — как в аналитике. money=true: подписи оси в долларах. */
+function Bars({ data, bins, hover, setHover, fmtAxis, money }) {
   const max = Math.max(...data, 0);
-  const W = 1000, H = 220, PAD_R = 44, PAD_B = 24, TOP = 8;
+  const W = 1000, H = 220, PAD_R = money ? 64 : 44, PAD_B = 24, TOP = 8;
   const n = data.length;
   const slot = (W - PAD_R) / n, gap = Math.max(3, Math.min(10, slot * 0.28)), bw = slot - gap;
   const yOf = (v) => TOP + (1 - (max > 0 ? v / max : 0)) * (H - PAD_B - TOP);
   const grid = max > 0 ? [0.5, 1] : [];
+  const lbl = (v) => (money ? (v >= 1000 ? usd(v) : `$${v.toFixed(v >= 10 ? 0 : 2)}`) : Math.round(v));
   return (
     <svg className="ana-svg adm-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" onMouseLeave={() => setHover(null)}>
       <defs>
@@ -46,7 +63,7 @@ function Bars({ data, bins, hover, setHover, fmtAxis }) {
       {grid.map((g) => (
         <g key={g}>
           <line x1="0" x2={W - PAD_R - 6} y1={yOf(max * g)} y2={yOf(max * g)} className="ana-grid-line" />
-          <text x={W - PAD_R + 4} y={yOf(max * g) + 4} className="ana-grid-lbl">{Math.round(max * g)}</text>
+          <text x={W - PAD_R + 4} y={yOf(max * g) + 4} className="ana-grid-lbl">{lbl(max * g)}</text>
         </g>
       ))}
       {data.map((v, i) => {
@@ -70,6 +87,32 @@ function Bars({ data, bins, hover, setHover, fmtAxis }) {
   );
 }
 
+/** Границы корзин периода: [t0, end, N, width] */
+function binsOf(range) {
+  const [, , N, width] = RANGES.find(([k]) => k === range);
+  const now = Date.now();
+  const end = width >= 86_400_000 ? new Date(now).setHours(24, 0, 0, 0) : Math.floor(now / width) * width + width;
+  return { t0: end - N * width, end, N, width };
+}
+
+/** Что казна держит: ETH + валюты монет за валюту, всё в долларах. */
+async function treasuryHoldings(addr, quotes, rate) {
+  const bal = await publicClient.getBalance({ address: addr });
+  const eth = Number(bal) / 1e18;
+  const assets = [];
+  await Promise.all(quotes.map(async (q) => {
+    try {
+      const raw = await publicClient.readContract({ address: q.addr, abi: erc20Abi, functionName: "balanceOf", args: [addr] });
+      if (raw === 0n) return;
+      const amt = Number(raw) / 10 ** (q.dec ?? 18);
+      const px = await quoteUsd(q.addr).catch(() => 0);
+      assets.push({ addr: q.addr, sym: q.sym, dec: q.dec ?? 18, raw, amt, usd: amt * (px || 0), px: px || 0 });
+    } catch (e) { /* валюта не ответила */ }
+  }));
+  assets.sort((a, b) => b.usd - a.usd);
+  return { addr, bal, eth, assets, usd: eth * rate + assets.reduce((s, a) => s + a.usd, 0) };
+}
+
 export default function Admin({ wallet, onConnect }) {
   useClock(5000);
   const { t } = useLang();
@@ -80,8 +123,6 @@ export default function Admin({ wallet, onConnect }) {
   const [q, setQ] = useState("");
   const [amt, setAmt] = useState("");
   const [buyPct, setBuyPct] = useState(0);
-  const [burnAmt, setBurnAmt] = useState("");
-  const [burnPct, setBurnPct] = useState(0);
   const [busy, setBusy] = useState(false);
   const [copiedCA, setCopiedCA] = useState("");
   const [error, setError] = useState("");
@@ -92,6 +133,9 @@ export default function Admin({ wallet, onConnect }) {
   const [activity, setActivity] = useState(null);   // { bucket: { b, p: { pid: 1|2 } } }
   const [range, setRange] = useState("day");
   const [hover, setHover] = useState(null);
+  const [feeRange, setFeeRange] = useState("day");
+  const [feeHover, setFeeHover] = useState(null);
+  const [trades, setTrades] = useState(null);
   const [tab, setTab] = useState("buyback");
 
   // владелец подтверждён по цепи (owner() казны) — только тогда грузим
@@ -138,10 +182,7 @@ export default function Admin({ wallet, onConnect }) {
   // график аудитории: уникальные id по корзинам выбранного периода
   const aud = useMemo(() => {
     if (!activity) return null;
-    const [, , N, width] = RANGES.find(([k]) => k === range);
-    const now = Date.now();
-    const end = width >= 86_400_000 ? new Date(now).setHours(24, 0, 0, 0) : Math.floor(now / width) * width + width;
-    const t0 = end - N * width;
+    const { t0, end, N, width } = binsOf(range);
     const sets = Array.from({ length: N }, () => new Set());
     const all = new Set(); const withWallet = new Set();
     for (const [k, slot] of Object.entries(activity)) {
@@ -154,11 +195,41 @@ export default function Admin({ wallet, onConnect }) {
     }
     return { bars: sets.map((s) => s.size), bins: sets.map((_, i) => t0 + i * width), uniq: all.size, wallet: withWallet.size, width };
   }, [activity, range]);
-  const fmtAxis = (ts) => {
+  const axisFmt = (width) => (ts) => {
     const d = new Date(ts); const p = (x) => String(x).padStart(2, "0");
-    return aud && aud.width >= 86_400_000 ? `${d.getDate()} ${["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"][d.getMonth()]}` : `${p(d.getHours())}:${p(d.getMinutes())}`;
+    return width >= 86_400_000 ? `${d.getDate()} ${["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"][d.getMonth()]}` : `${p(d.getHours())}:${p(d.getMinutes())}`;
   };
+  const fmtAxis = axisFmt(aud ? aud.width : 3_600_000);
   useEffect(() => { setHover(null); }, [range]);
+  useEffect(() => { setFeeHover(null); }, [feeRange]);
+
+  // сделки платформы — для графика комиссий (fee уже в ETH-эквиваленте,
+  // монеты за валюту пересчитаны по курсу в data.js → toEthEquivalent)
+  useEffect(() => {
+    if (!isOwner) return undefined;
+    let alive = true;
+    const pull = () => allTrades().then((v) => alive && setTrades(v)).catch(() => {});
+    pull();
+    const id = setInterval(pull, 60_000);
+    return () => { alive = false; clearInterval(id); };
+  }, [isOwner]);
+
+  // график комиссий: сумма комиссий (все, 100%) по корзинам периода, в $
+  const fees = useMemo(() => {
+    if (!trades || !(rate > 0)) return null;
+    const { t0, end, N, width } = binsOf(feeRange);
+    const bars = Array(N).fill(0);
+    let period = 0, total = 0, count = 0;
+    for (const tr of trades) {
+      const v = (tr.fee || 0) * rate;
+      total += v;
+      if (tr.ts < t0 || tr.ts >= end) continue;
+      const i = Math.min(N - 1, Math.floor((tr.ts - t0) / width));
+      bars[i] += v; period += v; count++;
+    }
+    return { bars, bins: bars.map((_, i) => t0 + i * width), period, total, count, width, capped: trades.length >= 3000 };
+  }, [trades, feeRange, rate]);
+  const feeAxis = axisFmt(fees ? fees.width : 3_600_000);
 
   // Бан-лист подписывается кошельком владельца (без газа) — иначе базу не
   // убедить, что писал именно владелец. Ошибка записи показывается, а не
@@ -188,17 +259,24 @@ export default function Admin({ wallet, onConnect }) {
     try { navigator.clipboard.writeText(addr); } catch (err) { /* ignore */ }
     setCopiedCA(addr); setTimeout(() => setCopiedCA(""), 1200);
   };
-  const dollars = (e) => {
-    const v = e * rate, a = Math.abs(v);
+  const dollars = (v) => {
+    const a = Math.abs(v);
     if (a > 0 && a < 0.01) return "<$0.01";
     return a >= 1e3 ? usd(v) : "$" + v.toFixed(2);
   };
+  /** Сумма в активе монеты: «0.0123 ETH» или «0.034 GME». */
+  const inAsset = (tk, raw) => {
+    if (tk.q) { const n = Number(formatUnits(raw, tk.q.dec)); return `${n >= 1000 ? Math.round(n) : +n.toPrecision(4)} ${tk.q.sym}`; }
+    return `${fmtEth(Number(formatEther(raw)))} ETH`;
+  };
+  /** Состав казны подписью: «0.002 ETH · 0.03 GME». */
+  const holdingsSub = (h) => [`${fmtEth(h.eth)} ETH`, ...h.assets.map((a) => `${a.amt >= 1000 ? Math.round(a.amt) : +a.amt.toPrecision(3)} ${a.sym}`)].join(" · ");
 
   // Сначала — только владелец казны (один дешёвый вызов): пока кошелёк не
   // подтверждён, страница ничего больше не читает.
   useEffect(() => {
     let alive = true;
-    publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "owner" })
+    publicClient.readContract({ address: ARENA_TREASURY_ADDRESS, abi: treasuryAbi, functionName: "owner" })
       .then((o) => { if (alive) setOwner(o); })
       .catch((e) => { if (alive) setError(e.shortMessage || e.message); });
     return () => { alive = false; };
@@ -206,26 +284,28 @@ export default function Admin({ wallet, onConnect }) {
 
   const load = useCallback(async () => {
     if (!isOwner) return;
-    const [tokens, bal, received, spent] = await Promise.all([
-      loadTokens(),
-      publicClient.getBalance({ address: TREASURY_ADDRESS }),
-      publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "totalReceived" }).catch(() => 0n),
-      publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "totalSpent" }).catch(() => 0n),
+    const tokens = await loadTokens();
+    // валюты, которыми торгуют на площадке — одна проверка на валюту
+    const seen = new Map();
+    for (const tk of tokens) if (tk.q?.addr && !seen.has(tk.q.addr)) seen.set(tk.q.addr, tk.q);
+    const quotes = [...seen.values()];
+    const [arena, buyback, accrued] = await Promise.all([
+      treasuryHoldings(ARENA_TREASURY_ADDRESS, quotes, rate),
+      BUYBACK_TREASURY_ADDRESS ? treasuryHoldings(BUYBACK_TREASURY_ADDRESS, quotes, rate) : null,
+      Promise.all(tokens.map((tk) =>
+        publicClient.readContract({ address: tk.pool, abi: poolExtraAbi, functionName: "protocolFeesAccrued" }).catch(() => 0n))),
     ]);
-    const ep = BigInt(Math.floor(Date.now() / 1000 / EPOCH_LEN));
-    const votes = await subgraphVotes(ep).catch(() => []);
-    const tally = {};
-    votes.forEach((v) => { tally[v.token] = (tally[v.token] ?? 0) + 1; });
-    const held = await Promise.all(tokens.map((tk) =>
-      publicClient.readContract({ address: tk.token, abi: tokenAbi, functionName: "balanceOf", args: [TREASURY_ADDRESS] }).catch(() => 0n)));
-    const accrued = await Promise.all(tokens.map((tk) =>
-      publicClient.readContract({ address: tk.pool, abi: poolExtraAbi, functionName: "protocolFeesAccrued" }).catch(() => 0n)));
-    const ops = await subgraphTreasuryOps().catch(() => []);
-    const list = tokens.map((tk, i) => ({ ...tk, held: held[i], accrued: accrued[i], voteCount: tally[tk.token.toLowerCase()] ?? 0 }))
-      .sort((a, b) => b.voteCount - a.voteCount || Number(b.reserve - a.reserve));
-    const unclaimed = accrued.reduce((s2, a) => s2 + a, 0n);
-    setData({ list, bal, received, spent, unclaimed, ops: ops.slice(0, 12) });
-  }, [isOwner]);
+    // несобранное — в валюте пула; в доллары по курсу валюты (ETH — по курсу ETH)
+    const px = {};
+    await Promise.all(quotes.map(async (qq) => { px[qq.addr] = await quoteUsd(qq.addr).catch(() => 0); }));
+    const list = tokens.map((tk, i) => {
+      const raw = accrued[i];
+      const accruedUsd = tk.q ? Number(formatUnits(raw, tk.q.dec)) * (px[tk.q.addr] || 0) : Number(formatEther(raw)) * rate;
+      return { ...tk, accrued: raw, accruedUsd };
+    }).sort((a, b) => b.accruedUsd - a.accruedUsd || Number(b.createdAt || 0) - Number(a.createdAt || 0));
+    const unclaimedUsd = list.reduce((s, x) => s + x.accruedUsd, 0);
+    setData({ list, arena, buyback, unclaimedUsd });
+  }, [isOwner, rate]);
 
   useEffect(() => {
     load().catch((e) => setError(e.shortMessage || e.message));
@@ -239,6 +319,13 @@ export default function Admin({ wallet, onConnect }) {
     return data.list.filter((tk) => !n || tk.symbol.toLowerCase().includes(n) || tk.name.toLowerCase().includes(n) || tk.token.toLowerCase().includes(n));
   }, [data, q]);
   const selected = useMemo(() => (sel && data ? data.list.find((x) => x.token === sel) : null), [sel, data]);
+  // из чего платится выкуп выбранной монеты: ETH казны или её валюта в казне
+  const selAsset = useMemo(() => {
+    if (!selected || !data) return null;
+    if (!selected.q) return { sym: "ETH", dec: 18, bal: data.arena.eth, raw: data.arena.bal, px: rate };
+    const a = data.arena.assets.find((x) => x.addr === selected.q.addr);
+    return { sym: selected.q.sym, dec: selected.q.dec, bal: a ? a.amt : 0, raw: a ? a.raw : 0n, px: a ? a.px : 0 };
+  }, [selected, data, rate]);
 
   async function run(fn, okText) {
     setError(""); setOk(""); setBusy(true);
@@ -246,38 +333,40 @@ export default function Admin({ wallet, onConnect }) {
       const hash = await fn();
       await publicClient.waitForTransactionReceipt({ hash });
       setOk(okText + " · " + short(hash));
-      setAmt(""); setBurnAmt("");
+      setAmt("");
       await load();
       setTimeout(() => load().catch(() => {}), 3000);
     } catch (e) { setError(e.shortMessage || e.message); } finally { setBusy(false); }
   }
-  // выкуп: сначала симуляция — сколько монет даст кривая, и не меньше 97% от
-  // этого в minTokensOut (раньше стоял 0 — казну можно было зажать сэндвичем)
+  // выкуп с казны арены: ETH-монета — за ETH, монета за валюту — из той же
+  // валюты. Сначала симуляция — сколько монет даст кривая, и не меньше 97%
+  // от этого в minTokensOut (иначе казну можно зажать сэндвичем).
   const doBuyback = () => run(async () => {
+    const value = parseUnits(amt, selAsset.dec);
+    const fn = selected.q ? "buybackQuote" : "buybackEth";
+    const note = `manual ${new Date().toISOString().slice(0, 10)}`;
     const { result } = await publicClient.simulateContract({
-      account: wallet.account, address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "buyback",
-      args: [selected.token, parseEther(amt), 0n],
+      account: wallet.account, address: ARENA_TREASURY_ADDRESS, abi: treasuryAbi, functionName: fn,
+      args: [selected.token, value, 0n, note],
     });
     const minOut = (BigInt(result) * 97n) / 100n;
-    return wallet.walletClient.writeContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "buyback", args: [selected.token, parseEther(amt), minOut] });
+    return wallet.walletClient.writeContract({ address: ARENA_TREASURY_ADDRESS, abi: treasuryAbi, functionName: fn, args: [selected.token, value, minOut, note] });
   }, t("Выкуп исполнен"));
-  const doBurn = () => run(() => wallet.walletClient.writeContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "burn", args: [selected.token, parseEther(burnAmt)] }), t("Сжигание исполнено"));
+
+  // собрать долю платформы из пулов в сплиттер → казны. ETH-пул шлёт сам
+  // (claimProtocolFees → receive сплиттера делит). Пул за валюту — через
+  // сплиттер (claim), иначе валюта ляжет в сплиттер неразделённой.
   async function claimAll() {
     setError(""); setOk(""); setBusy(true);
     try {
-      const pools = data.list.filter((tk) => tk.accrued > 0n).map((tk) => tk.pool);
+      const pools = data.list.filter((tk) => tk.accrued > 0n);
       let claimed = 0;
-      if (FEE_CLAIMER_ADDRESS && pools.length > 1) {
-        // одна транзакция на все пулы — через FeeClaimer
-        const hash = await wallet.walletClient.writeContract({ address: FEE_CLAIMER_ADDRESS, abi: feeClaimerAbi, functionName: "claimAll", args: [pools] });
+      for (const tk of pools) {
+        const hash = tk.q
+          ? await wallet.walletClient.writeContract({ address: FEE_SPLITTER_ADDRESS, abi: feeSplitterAbi, functionName: "claim", args: [tk.pool] })
+          : await wallet.walletClient.writeContract({ address: tk.pool, abi: poolExtraAbi, functionName: "claimProtocolFees" });
         await publicClient.waitForTransactionReceipt({ hash });
-        claimed = pools.length;
-      } else {
-        for (const pool of pools) {
-          const hash = await wallet.walletClient.writeContract({ address: pool, abi: poolExtraAbi, functionName: "claimProtocolFees" });
-          await publicClient.waitForTransactionReceipt({ hash });
-          claimed++;
-        }
+        claimed++;
       }
       setOk(t("Комиссии собраны") + ` (${claimed})`);
       await load();
@@ -298,10 +387,10 @@ export default function Admin({ wallet, onConnect }) {
     return <div className="lt-empty">{t("Доступ только для владельца платформы.")}</div>;
   }
 
-  const balEth = data ? Number(formatEther(data.bal)) : 0;
-  const E = (wei) => Number(formatEther(wei));
   const hv = hover !== null && aud ? { v: aud.bars[hover], ts: aud.bins[hover] } : null;
+  const fhv = feeHover !== null && fees ? { v: fees.bars[feeHover], ts: fees.bins[feeHover] } : null;
   const rangeLbl = RANGES.find(([k]) => k === range)[1];
+  const feeRangeLbl = RANGES.find(([k]) => k === feeRange)[1];
 
   return (
     <>
@@ -319,9 +408,9 @@ export default function Admin({ wallet, onConnect }) {
             )}
           </div>
         </div>
-        {data && data.unclaimed > 0n && (
+        {data && data.unclaimedUsd > 0 && (
           <button className="btn btn-primary" disabled={busy} onClick={claimAll}>
-            {busy ? "…" : `${t("Собрать в казну")} · ${fmtEth(E(data.unclaimed))} ETH`}
+            {busy ? "…" : `${t("Собрать в казну")} · ${dollars(data.unclaimedUsd)}`}
           </button>
         )}
       </div>
@@ -331,12 +420,39 @@ export default function Admin({ wallet, onConnect }) {
 
       {data && (
         <div className="ana-strip">
-          <div className="ana-stat"><div className="n">{dollars(balEth)}</div><div className="l">{t("Баланс казны")} <span className="dim">· {fmtEth(balEth)} ETH</span></div></div>
-          <div className="ana-stat"><div className="n">{dollars(E(data.received))}</div><div className="l">{t("Получено за всё время")}</div></div>
-          <div className="ana-stat"><div className="n">{dollars(E(data.spent))}</div><div className="l">{t("Потрачено на выкупы")}</div></div>
-          <div className="ana-stat"><div className="n">{dollars(E(data.unclaimed))}</div><div className="l">{t("Несобранные комиссии")}</div></div>
+          <div className="ana-stat"><div className="n">{dollars(data.arena.usd)}</div><div className="l">{t("Казна арены")} <span className="dim">· {holdingsSub(data.arena)}</span></div></div>
+          <div className="ana-stat"><div className="n">{data.buyback ? dollars(data.buyback.usd) : "—"}</div><div className="l">{t("Казна выкупа hood")}{data.buyback && <span className="dim"> · {holdingsSub(data.buyback)}</span>}</div></div>
+          <div className="ana-stat"><div className="n">{fees ? dollars(fees.total) : "…"}</div><div className="l">{t("Комиссии за всё время")}{fees && <span className="dim"> · {t("платформе")} {dollars(fees.total * PLATFORM_SHARE)}</span>}</div></div>
+          <div className="ana-stat"><div className="n">{dollars(data.unclaimedUsd)}</div><div className="l">{t("Несобранные комиссии")} <span className="dim">· {t("в пулах")}</span></div></div>
         </div>
       )}
+
+      {/* комиссии платформы */}
+      <div className="ana-panel">
+        <div className="ana-panel-head">
+          <div>
+            <div className="ana-panel-val">
+              {fhv ? dollars(fhv.v) : fees ? dollars(fees.period) : "…"}
+              <span className="adm-val-sub"> {fhv ? t("комиссий") : `${t("комиссий")} · ${feeRangeLbl.toLowerCase()}`}</span>
+            </div>
+            <div className="ana-panel-sub">
+              {fhv ? feeAxis(fhv.ts) : fees
+                ? <>{t("создателям")} {dollars(fees.period * (1 - PLATFORM_SHARE))} · {t("платформе")} {dollars(fees.period * PLATFORM_SHARE)} · {fees.count} {t("сделок")}</>
+                : t("Загружаю…")}
+            </div>
+          </div>
+          <div className="seg">
+            {RANGES.map(([k, lbl]) => (
+              <button key={k} type="button" className={`seg-btn ${feeRange === k ? "on" : ""}`} onClick={() => setFeeRange(k)}>{t(lbl)}</button>
+            ))}
+          </div>
+        </div>
+        {fees ? <Bars data={fees.bars} bins={fees.bins} hover={feeHover} setHover={setFeeHover} fmtAxis={feeAxis} money /> : <div className="ana-svg" />}
+        <div className="ana-panel-sub" style={{ marginTop: 6 }}>
+          {t("Комиссия 1% с каждой сделки, все монеты, в долларах по курсу на сейчас")} · {t("создателю 70% · арена 10% · выкуп hood 10% · команда 10%")}
+          {fees?.capped && <> · {t("показаны последние 3000 сделок")}</>}
+        </div>
+      </div>
 
       {/* аудитория */}
       <div className="ana-panel">
@@ -363,7 +479,7 @@ export default function Admin({ wallet, onConnect }) {
       <div className="ttabs">
         <button type="button" className={`ttab ${tab === "buyback" ? "on" : ""}`} onClick={() => setTab("buyback")}>{t("Выкуп с казны")}</button>
         <button type="button" className={`ttab ${tab === "mod" ? "on" : ""}`} onClick={() => setTab("mod")}>{t("Модерация чата")}{bans.length > 0 && <span className="dim"> · {bans.length}</span>}</button>
-        {tab === "buyback" && <span className="ttabs-right">{t("Голоса раунда — подсказка, решение за вами")}</span>}
+        {tab === "buyback" && <span className="ttabs-right">{t("Ручной выкуп из казны арены — сверх ежедневного подиума")}</span>}
       </div>
 
       {!data && !error && (
@@ -378,27 +494,27 @@ export default function Admin({ wallet, onConnect }) {
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("Поиск: тикер, имя или адрес…")} spellCheck={false} />
             </div>
             <div className="lt adm-lt">
-              <div className="lt-h"><span /><span>{t("Токен")}</span><span className="r">{t("Голоса")}</span><span className="r">{t("Резерв")}</span><span className="r">{t("В казне")}</span></div>
+              <div className="lt-h"><span /><span>{t("Токен")}</span><span className="r">{t("Валюта")}</span><span className="r">{t("Резерв")}</span><span className="r">{t("Несобрано")}</span></div>
               {filtered.length === 0 && <div className="lt-empty">{t("Ничего не найдено")}</div>}
               {filtered.map((tk) => (
                 <div key={tk.token} className={`lt-row adm-row ${sel === tk.token ? "on" : ""}`}
-                     onClick={() => { setSel(tk.token); setOk(""); setError(""); setAmt(""); setBuyPct(0); setBurnAmt(""); setBurnPct(0); }}>
+                     onClick={() => { setSel(tk.token); setOk(""); setError(""); setAmt(""); setBuyPct(0); }}>
                   <span className="lt-logo">{tk.meta.image ? <img src={tk.meta.image} alt="" loading="lazy" /> : <Icon name="image" size={16} style={{ margin: 0, opacity: .5 }} />}</span>
                   <span className="lt-tok">
                     <span className="lt-name">{tk.name} <em>${tk.symbol}</em>{tk.graduated && <em> · {t("градуировал")}</em>}</span>
                     <span className="lt-sub mono addr-copy" onClick={(e) => copyAddr(tk.token, e)} title={t("Скопировать адрес")}>{short(tk.token)} {copiedCA === tk.token ? "✓" : "⧉"}</span>
                   </span>
-                  <span className="lt-num">{tk.voteCount || <span className="dim">—</span>}</span>
-                  <span className="lt-num">{fmtEth(E(tk.reserve))} ETH</span>
-                  <span className="lt-num">{tk.held > 0n ? fmt(E(tk.held), 0) : <span className="dim">—</span>}</span>
+                  <span className="lt-num">{tk.q ? tk.q.sym : "ETH"}</span>
+                  <span className="lt-num">{inAsset(tk, tk.reserve)}</span>
+                  <span className="lt-num">{tk.accrued > 0n ? <>{dollars(tk.accruedUsd)} <span className="dim">· {inAsset(tk, tk.accrued)}</span></> : <span className="dim">—</span>}</span>
                 </div>
               ))}
             </div>
           </div>
 
           <aside className="ana-panel adm-aside">
-            {!selected && <div className="dim">{t("Выберите токен слева, чтобы выкупить или сжечь.")}</div>}
-            {selected && (
+            {!selected && <div className="dim">{t("Выберите монету слева, чтобы выкупить и сжечь из казны арены.")}</div>}
+            {selected && selAsset && (
               <>
                 <div className="adm-aside-head">
                   {selected.meta.image && <img src={selected.meta.image} alt="" />}
@@ -413,46 +529,22 @@ export default function Admin({ wallet, onConnect }) {
                 ) : (
                   <>
                     <div className="slider-row" style={{ marginTop: 18 }}>
-                      <span className="dim">{t("Выкуп")}</span>
+                      <span className="dim">{t("Выкуп")} · {t("в казне")} {+selAsset.bal.toPrecision(4)} {selAsset.sym}</span>
                       <b style={{ color: "var(--gold)" }}>{buyPct}% {t("казны")}</b>
                     </div>
                     <input type="range" className="adm-slider" min="0" max="100" step="1" value={buyPct}
-                           onChange={(e) => { const v = Number(e.target.value); setBuyPct(v); setAmt(v > 0 ? (balEth * v / 100).toFixed(8) : ""); }} />
-                    <input value={amt} onChange={(e) => { setAmt(e.target.value); const n = Number(e.target.value); setBuyPct(balEth > 0 && n > 0 ? Math.min(100, Math.round((n / balEth) * 100)) : 0); }}
-                           placeholder="0.001 ETH" inputMode="decimal" style={{ width: "100%", margin: "8px 0" }} />
-                    <button className="btn btn-primary btn-block" disabled={busy || !amt} onClick={doBuyback}>
-                      {busy ? "…" : `${t("Выкупить")} $${selected.symbol}${amt ? ` · ${dollars(Number(amt) || 0)}` : ""}`}
+                           onChange={(e) => { const v = Number(e.target.value); setBuyPct(v); setAmt(v > 0 ? formatUnits((selAsset.raw * BigInt(v)) / 100n, selAsset.dec) : ""); }} />
+                    <input value={amt} onChange={(e) => { setAmt(e.target.value); const n = Number(e.target.value); setBuyPct(selAsset.bal > 0 && n > 0 ? Math.min(100, Math.round((n / selAsset.bal) * 100)) : 0); }}
+                           placeholder={`0.001 ${selAsset.sym}`} inputMode="decimal" style={{ width: "100%", margin: "8px 0" }} />
+                    <button className="btn btn-primary btn-block" disabled={busy || !amt || selAsset.bal <= 0} onClick={doBuyback}>
+                      {busy ? "…" : `${t("Выкупить")} $${selected.symbol}${amt ? ` · ${dollars((Number(amt) || 0) * selAsset.px)}` : ""}`}
                     </button>
+                    {selAsset.bal <= 0 && <div className="dim" style={{ marginTop: 8, fontSize: 13 }}>{t("В казне арены нет")} {selAsset.sym} — {t("комиссии этой монеты ещё не приходили.")}</div>}
+                    <div className="dim" style={{ marginTop: 10, fontSize: 13 }}>{t("Купленное сжигается в той же транзакции.")}</div>
                   </>
                 )}
-
-                {selected.held > 0n && (
-                  <>
-                    <div className="slider-row" style={{ marginTop: 22 }}>
-                      <span className="dim">{t("Сжечь")} · {t("в казне")} {fmt(E(selected.held), 0)}</span>
-                      <b style={{ color: "var(--red)" }}>{burnPct}%</b>
-                    </div>
-                    <input type="range" className="adm-slider burn" min="0" max="100" step="1" value={burnPct}
-                           onChange={(e) => { const v = Number(e.target.value); setBurnPct(v); setBurnAmt(v > 0 ? formatEther((selected.held * BigInt(v)) / 100n) : ""); }} />
-                    <input value={burnAmt} onChange={(e) => { setBurnAmt(e.target.value); const heldN = E(selected.held); const n = Number(e.target.value); setBurnPct(heldN > 0 && n > 0 ? Math.min(100, Math.round((n / heldN) * 100)) : 0); }}
-                           placeholder="0" inputMode="decimal" style={{ width: "100%", margin: "8px 0" }} />
-                    <button className="btn btn-danger btn-block" disabled={busy || !burnAmt} onClick={doBurn}>{busy ? "…" : t("Сжечь")}</button>
-                  </>
-                )}
+                <a className="dim" style={{ display: "block", marginTop: 16, fontSize: 13 }} href={`${EXPLORER}/address/${ARENA_TREASURY_ADDRESS}`} target="_blank" rel="noreferrer">{t("Казна арены в эксплорере")} →</a>
               </>
-            )}
-
-            {data.ops.length > 0 && (
-              <div style={{ marginTop: 24 }}>
-                <div className="dim" style={{ fontSize: 13, marginBottom: 6 }}>{t("Последние операции")}</div>
-                {data.ops.map((o, i) => (
-                  <a key={i} className="adm-op" href={`${EXPLORER}/tx/${o.tx}`} target="_blank" rel="noreferrer">
-                    <span>{o.kind === "received" ? t("получено") : o.kind === "buyback" ? t("выкуп") : t("сожжено")}</span>
-                    <span className="mono">{o.kind === "burned" ? fmt(Number(o.tokenAmount) / 1e18, 0) : `${fmtEth(Number(o.ethAmount) / 1e18)} ETH`}</span>
-                    <span className="dim">{timeAgo(Number(o.timestamp) * 1000)}</span>
-                  </a>
-                ))}
-              </div>
             )}
           </aside>
         </div>
