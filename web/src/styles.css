@@ -3819,7 +3819,7 @@ html[data-theme="light"] .prow .pbar { background: rgba(0,0,0,.08); }
 .lt-name { font-size: 15.5px; font-weight: 500; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lt-name em { font-style: normal; font-weight: 400; color: var(--text-dim); margin-left: 8px; font-size: 14px; }
 .lt-sub { font-size: 13px; color: var(--text-dim); display: flex; align-items: center; gap: 4px; white-space: nowrap; overflow: hidden; }
-.lt-sub .who { color: var(--text-dim); }
+.lt-sub .who { color: var(--text-dim); flex: none; } /* адрес не сжимается — иначе текст наезжал на «N д назад» на телефоне */
 .lt-sub .who:hover { color: var(--text); }
 .lt-num { font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: -.01em; white-space: nowrap; }
 .lt-st { font-size: 13.5px; white-space: nowrap; }
