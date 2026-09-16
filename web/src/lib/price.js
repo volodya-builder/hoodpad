@@ -124,6 +124,44 @@ let quoteCache = {};
 try { quoteCache = JSON.parse(localStorage.getItem(QUOTE_LS) || "{}") || {}; } catch (e) { /* ignore */ }
 const _qPending = new Map();
 
+// Курс валюты курвы прямо из пулов Uniswap V3 сети (самый глубокий пул
+// против WETH или USDG). Обозреватель для части валют отдаёт мусор
+// (cbBTC показывал $217 вместо $75k — аудит 16.09.2026), а пул — то, по чему
+// реально торгуют. Обозреватель остаётся запасным источником.
+const V3_FACTORY = "0x1f7d7550b1b028f7571e69a784071f0205fd2efa";
+const USDG_ADDR = "0x5fc5360d0400a0fd4f2af552add042d716f1d168";
+const WETH_ADDR = "0x0bd7d308f8e1639fab988df18a8011f41eacad73";
+const V3_FEES = [100, 500, 3000, 10000];
+const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
+async function quoteUsdOnChain(a) {
+  const { publicClient } = await import("./web3.js");
+  const { parseAbi, formatUnits } = await import("viem");
+  const v3Abi = parseAbi(["function getPool(address,address,uint24) view returns (address)"]);
+  const poolAbi = parseAbi(["function slot0() view returns (uint160,int24,uint16,uint16,uint16,uint8,bool)", "function token0() view returns (address)"]);
+  const erc20 = parseAbi(["function balanceOf(address) view returns (uint256)", "function decimals() view returns (uint8)"]);
+  const rd = (address, abi, functionName, args = []) => publicClient.readContract({ address, abi, functionName, args });
+  if (a === USDG_ADDR) return 1; // стейбл — сам себе мера
+  const dec = Number(await rd(a, erc20, "decimals").catch(() => 18));
+  const best = async (b, bDec) => {
+    const pools = (await Promise.all(V3_FEES.map((fee) => rd(V3_FACTORY, v3Abi, "getPool", [a, b, fee]).catch(() => ZERO_ADDR)))).filter((p) => p && p !== ZERO_ADDR);
+    if (!pools.length) return null;
+    const bals = await Promise.all(pools.map((p) => rd(b, erc20, "balanceOf", [p]).catch(() => 0n)));
+    let bi = 0; for (let i = 1; i < pools.length; i++) if (bals[i] > bals[bi]) bi = i;
+    return { p: pools[bi], bal: Number(formatUnits(bals[bi], bDec)) };
+  };
+  const priceOf = async (pool, bDec) => {
+    const [s0, t0] = await Promise.all([rd(pool, poolAbi, "slot0"), rd(pool, poolAbi, "token0")]);
+    const sq = Number(s0[0]) / 2 ** 96; const p = sq * sq;
+    return t0.toLowerCase() === a ? p * 10 ** (dec - bDec) : (1 / p) * 10 ** (dec - bDec);
+  };
+  const [u, w] = await Promise.all([best(USDG_ADDR, 6), best(WETH_ADDR, 18)]);
+  const eth = await ethUsd();
+  const uDepth = u ? u.bal : 0, wDepth = w ? w.bal * eth : 0;
+  if (uDepth <= 0 && wDepth <= 0) return 0;
+  if (a === WETH_ADDR) return eth;
+  return wDepth > uDepth ? (await priceOf(w.p, 18)) * eth : await priceOf(u.p, 6);
+}
+
 export async function quoteUsd(addr) {
   const a = String(addr || "").toLowerCase();
   if (!/^0x[0-9a-f]{40}$/.test(a)) return 0;
@@ -131,15 +169,20 @@ export async function quoteUsd(addr) {
   if (c && Date.now() - c.t < 60_000) return c.v;
   if (_qPending.has(a)) return _qPending.get(a);
   const p = (async () => {
+    const keep = (v) => {
+      quoteCache[a] = { v, t: Date.now() };
+      try { localStorage.setItem(QUOTE_LS, JSON.stringify(quoteCache)); } catch (e) { /* ignore */ }
+      return v;
+    };
+    try {
+      const v = await quoteUsdOnChain(a);
+      if (v > 0 && isFinite(v)) return keep(v);
+    } catch (e) { /* нет пула/RPC — спросим обозреватель */ }
     try {
       const { EXPLORER } = await import("./config.js");
       const j = await (await fetch(`${EXPLORER}/api/v2/tokens/${a}`, { signal: AbortSignal.timeout(5000) })).json();
       const v = parseFloat(j?.exchange_rate);
-      if (v > 0) {
-        quoteCache[a] = { v, t: Date.now() };
-        try { localStorage.setItem(QUOTE_LS, JSON.stringify(quoteCache)); } catch (e) { /* ignore */ }
-        return v;
-      }
+      if (v > 0) return keep(v);
     } catch (e) { /* нет курса — покажем в валюте */ }
     return c?.v ?? 0;
   })();
