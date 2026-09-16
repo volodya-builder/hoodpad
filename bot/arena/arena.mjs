@@ -30,6 +30,7 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { buildChain, podium, dayStart, DAY, ARENA_DAYS, setSystemAddresses } from "../../web/src/lib/arena-core.js";
+import { quoteUsd, ethUsdRate } from "../lib/quote-price.mjs";
 
 const DRY = process.argv.includes("--dry");
 const RPC_URL = process.env.RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
@@ -63,10 +64,17 @@ const treasuryAbi = parseAbi([
   "function owner() view returns (address)",
   "function buybackEth(address token, uint256 ethAmount, uint256 minTokensOut, string note) returns (uint256)",
   "function buybackViaZap(address token, uint256 ethAmount, uint256 minTokensOut, uint256 deadline, string note) returns (uint256)",
+  "function buybackQuote(address token, uint256 quoteAmount, uint256 minTokensOut, string note) returns (uint256)",
   "event Buyback(address indexed token, address indexed asset, uint256 amountIn, uint256 tokensOut, string note)",
 ]);
 const factoryAbi = parseAbi(["function poolOf(address) view returns (address)"]);
 const poolAbi = parseAbi(["function graduated() view returns (bool)"]);
+const quotePoolAbi = parseAbi(["function quote() view returns (address)"]);
+const erc20Abi = parseAbi([
+  "function balanceOf(address) view returns (uint256)",
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+]);
 
 const gql = (q) => fetch(SUBGRAPH, { method: "POST", headers: { "Content-Type": "application/json" },
   body: JSON.stringify({ query: q }) }).then((r) => r.json()).then((j) => j.data);
@@ -74,34 +82,21 @@ const gql = (q) => fetch(SUBGRAPH, { method: "POST", headers: { "Content-Type": 
 /** Сделки монет за валюту → ETH-эквивалент, той же формулой, что на сайте
  *  (web/src/lib/data.js → toEthEquivalent): курс валюты с обозревателя,
  *  ETH — с coingecko/binance. Без курса сделка остаётся с нулём. */
-const EXPLORER_API = process.env.EXPLORER_API || "https://robinhoodchain.blockscout.com/api/v2";
-async function ethUsdRate() {
-  const srcs = [
-    async () => (await (await fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd")).json()).ethereum.usd,
-    async () => parseFloat((await (await fetch("https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT")).json()).price),
-    async () => parseFloat((await (await fetch("https://api.coinbase.com/v2/prices/ETH-USD/spot")).json()).data.amount),
-  ];
-  for (const s of srcs) { try { const v = await s(); if (v > 0) return v; } catch (e) { /* дальше */ } }
-  return 0;
-}
 async function quoteTradesToEth(trades) {
   const q = trades.filter((t) => t.quote);
   if (!q.length) return;
-  const rate = await ethUsdRate();
+  const rate = await ethUsdRate(pub);
   const quotes = [...new Set(q.map((t) => t.quote))];
   const info = {};
-  for (const a of quotes) {
-    let usd = 0, dec = 18;
-    try { usd = parseFloat((await (await fetch(`${EXPLORER_API}/tokens/${a}`)).json()).exchange_rate) || 0; } catch (e) { /* нет курса */ }
-    try { dec = Number(await pub.readContract({ address: a, abi: [{ type: "function", name: "decimals", stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] }], functionName: "decimals" })); } catch (e) { /* 18 */ }
-    info[a] = { usd, dec };
-  }
+  for (const a of quotes) info[a] = await quoteUsd(pub, a, rate || null);
   for (const t of q) {
     const { usd, dec } = info[t.quote];
     const k = rate > 0 && usd > 0 ? usd / rate : 0;
     t.eth = (Number(t.ethRaw) / 10 ** dec) * k;
     t.fee = (Number(t.feeRaw) / 10 ** dec) * k;
   }
+  const missing = quotes.filter((a) => !(info[a].usd > 0));
+  if (missing.length) console.warn(`⚠ нет курса у валют: ${missing.join(", ")} — их сделки считаются с нулём`);
 }
 
 /** Токены и сделки в формате сайта — полная история, иначе подиум разойдётся с экраном. */
@@ -148,7 +143,7 @@ async function paidPlaces(dayKey) {
   const secPerBlock = Math.max(0.05, (Number(hb.timestamp) - Number(old.timestamp)) / Number(head - old.number || 1n));
   const span = BigInt(Math.ceil((LOOKBACK_DAYS * 86400) / secPerBlock));
   const fromBlock = head > span ? head - span : 0n;
-  const paid = new Map(); // место → сколько ETH уже потрачено
+  const paid = new Map(); // место → { asset, amount } уже потрачено
   // порциями: публичный RPC не любит большие диапазоны
   const STEP = 50_000n;
   for (let from = fromBlock; from <= head; from += STEP + 1n) {
@@ -156,7 +151,11 @@ async function paidPlaces(dayKey) {
     const logs = await pub.getLogs({ address: TREASURY, event: treasuryAbi.find((x) => x.type === "event"), fromBlock: from, toBlock: to });
     for (const l of logs) {
       const m = /^arena (\d{4}-\d{2}-\d{2}) (\d)/.exec(l.args.note || "");
-      if (m && m[1] === dayKey) paid.set(Number(m[2]), (paid.get(Number(m[2])) || 0n) + (l.args.asset === "0x0000000000000000000000000000000000000000" ? l.args.amountIn : 0n));
+      if (m && m[1] === dayKey) {
+        const asset = l.args.asset === "0x0000000000000000000000000000000000000000" ? "eth" : String(l.args.asset).toLowerCase();
+        const prev = paid.get(Number(m[2]));
+        paid.set(Number(m[2]), { asset, amount: (prev?.amount || 0n) + l.args.amountIn });
+      }
     }
   }
   return paid;
@@ -169,7 +168,8 @@ async function main() {
   if (!DRY && owner.toLowerCase() !== account.address.toLowerCase()) {
     console.error(`Кошелёк ${account.address} не владелец казны ${TREASURY} (владелец ${owner}).`); process.exit(1);
   }
-  const yesterday = dayStart(Date.now()) - DAY;
+  // --today (только с --dry): посмотреть подиум текущего дня по состоянию на сейчас
+  const yesterday = DRY && process.argv.includes("--today") ? dayStart(Date.now()) : dayStart(Date.now()) - DAY;
   const dayKey = new Date(yesterday).toISOString().slice(0, 10);
 
   const paid = await paidPlaces(dayKey).catch((e) => { if (DRY) { console.warn("⚠ События казны не прочитались:", e.shortMessage || e.message); return new Map(); } throw e; });
@@ -187,40 +187,71 @@ async function main() {
   const pod = podium(st).filter((p) => !gradSet.has(p.token.toLowerCase()));
   if (!pod.length) { console.log(`Арена за ${dayKey}: подиума не было (нет сделок) — выплат нет, фонд копится.`); return; }
 
-  // Фонд дня = что лежит сейчас + что уже выплачено за этот день (если прошлый
-  // запуск оборвался посередине, остальные места получают доли от того же фонда).
-  const bal = await pub.getBalance({ address: TREASURY });
-  let paidSum = 0n; for (const v of paid.values()) paidSum += v;
-  const pot = Number(formatEther(bal + paidSum));
-  const potLeft = Number(formatEther(bal));
-  console.log(`Фонд: ${pot.toFixed(6)} ETH · подиум за ${dayKey}: ${pod.map((p, i) => `${i + 1}. $${p.symbol}`).join("  ")}`);
-  if (potLeft < DUST_ETH) { console.log("Фонд — пыль, копим дальше."); return; }
+  // Фонд дня — по активам. ETH-монеты платятся из ETH казны, монеты за
+  // валюту (USDG, акции, крипта) — из той же валюты, что лежит в казне:
+  // доля арены от их комиссий приходит сюда в этой валюте (сплиттер не
+  // меняет активы). Место i получает SPLIT[i] фонда В СВОЁМ активе.
+  // Фонд актива = что лежит сейчас + что уже выплачено за этот день в нём
+  // (если прошлый запуск оборвался посередине, остальные места получают
+  // доли от того же фонда). Валюта, которой нет у монет подиума, копится.
+  const paidByAsset = {}; // asset(lower|"eth") → уже выплачено за день
+  for (const v of paid.values()) paidByAsset[v.asset] = (paidByAsset[v.asset] || 0n) + v.amount;
+  const potOf = async (asset) => {
+    const bal = asset === "eth"
+      ? await pub.getBalance({ address: TREASURY })
+      : await pub.readContract({ address: asset, abi: erc20Abi, functionName: "balanceOf", args: [TREASURY] });
+    return { bal, pot: bal + (paidByAsset[asset] || 0n) };
+  };
+  const assetInfo = async (asset) => {
+    if (asset === "eth") return { sym: "ETH", dec: 18 };
+    const [sym, dec] = await Promise.all([
+      pub.readContract({ address: asset, abi: erc20Abi, functionName: "symbol" }).catch(() => "?"),
+      pub.readContract({ address: asset, abi: erc20Abi, functionName: "decimals" }).catch(() => 18),
+    ]);
+    return { sym: String(sym), dec: Number(dec) };
+  };
+  const fmtA = (v, dec, sym) => `${(Number(v) / 10 ** dec).toFixed(dec >= 8 ? 6 : 4)} ${sym}`;
+
+  console.log(`Подиум за ${dayKey}: ${pod.map((p, i) => `${i + 1}. $${p.symbol}`).join("  ")}`);
+  const ethBal = await pub.getBalance({ address: TREASURY });
+  console.log(`Казна: ${formatEther(ethBal)} ETH${Object.keys(paidByAsset).length ? ` · уже выплачено сегодня: ${Object.keys(paidByAsset).length} актив(а)` : ""}`);
 
   for (let i = 0; i < pod.length; i++) {
     const place = i + 1;
-    if (paid.has(place)) { console.log(`  ${place} место $${pod[i].symbol}: уже выплачено.`); continue; }
-    const amtEth = Math.min(pot * SPLIT[i], Number(formatEther(await pub.getBalance({ address: TREASURY }))));
-    if (amtEth < DUST_ETH) { console.log(`  ${place} место $${pod[i].symbol}: ${amtEth.toFixed(6)} ETH — пыль, пропуск.`); continue; }
-    const amt = BigInt(Math.floor(amtEth * 1e18));
     const token = pod[i].token;
-    const note = `arena ${dayKey} ${place} $${pod[i].symbol}`;
-    // ETH-монета — напрямую у кривой; монета за валюту — через зап
+    if (paid.has(place)) { console.log(`  ${place} место $${pod[i].symbol}: уже выплачено.`); continue; }
+    // ETH-монета — у своей кривой за ETH; монета за валюту — из той же валюты казны
     const ethPool = await pub.readContract({ address: FACTORY, abi: factoryAbi, functionName: "poolOf", args: [token] }).catch(() => null);
     const isEth = ethPool && ethPool !== "0x0000000000000000000000000000000000000000";
-    const fn = isEth ? "buybackEth" : "buybackViaZap";
-    const deadline = BigInt(Math.floor(Date.now() / 1000) + 600);
-    const argsFor = (minOut) => (isEth ? [token, amt, minOut, note] : [token, amt, minOut, deadline, note]);
+    let asset = "eth";
+    if (!isEth) {
+      const qPool = await pub.readContract({ address: QUOTE_FACTORY, abi: factoryAbi, functionName: "poolOf", args: [token] }).catch(() => null);
+      if (!qPool || qPool === "0x0000000000000000000000000000000000000000") { console.log(`  ${place} место $${pod[i].symbol}: пул не найден, пропуск.`); continue; }
+      asset = (await pub.readContract({ address: qPool, abi: quotePoolAbi, functionName: "quote" })).toLowerCase();
+    }
+    const { sym, dec } = await assetInfo(asset);
+    const { bal, pot } = await potOf(asset);
+    const share = (pot * BigInt(Math.round(SPLIT[i] * 10000))) / 10000n;
+    const amt = share < bal ? share : bal;
+    const dust = asset === "eth" ? BigInt(Math.floor(DUST_ETH * 1e18)) : 0n;
+    if (amt === 0n || amt < dust) {
+      console.log(`  ${place} место $${pod[i].symbol}: фонд в ${sym} — ${fmtA(amt, dec, sym)}, пыль/пусто, копим.`);
+      continue;
+    }
+    const note = `arena ${dayKey} ${place} $${pod[i].symbol}`;
+    const fn = isEth ? "buybackEth" : "buybackQuote";
+    const argsFor = (minOut) => [token, amt, minOut, note];
     let expected;
     try {
       const sim = await pub.simulateContract({ account, address: TREASURY, abi: treasuryAbi, functionName: fn, args: argsFor(0n) });
       expected = sim.result;
     } catch (e) {
       console.error(`  ${place} место $${pod[i].symbol}: симуляция выкупа не прошла — ${e.shortMessage || e.message}`);
-      if (DRY) { console.log(`    (сухо) заплатил бы ${amtEth.toFixed(6)} ETH через ${fn}`); }
+      if (DRY) { console.log(`    (сухо) заплатил бы ${fmtA(amt, dec, sym)} через ${fn}`); }
       continue;
     }
     const minOut = (expected * (10000n - SLIPPAGE_BPS)) / 10000n;
-    console.log(`  ${place} место $${pod[i].symbol}: ${amtEth.toFixed(6)} ETH → ≈${(Number(expected) / 1e18).toFixed(0)} монет, сжигаем${DRY ? " (сухо)" : ""}`);
+    console.log(`  ${place} место $${pod[i].symbol}: ${fmtA(amt, dec, sym)} → ≈${(Number(expected) / 1e18).toFixed(0)} монет, сжигаем${DRY ? " (сухо)" : ""}`);
     if (DRY) continue;
     const hash = await wallet.writeContract({ address: TREASURY, abi: treasuryAbi, functionName: fn, args: argsFor(minOut) });
     const rc = await pub.waitForTransactionReceipt({ hash });

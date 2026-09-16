@@ -5,19 +5,47 @@ import { allTrades, loadTokens } from "./data.js";
 import { arenaState, buildChain, setSystemAddresses } from "./arena-core.js";
 import { TREASURY_ADDRESS, FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, ARENA_TREASURY_ADDRESS, ARENA_LIVE } from "./config.js";
 import { publicClient } from "./web3.js";
-import { arenaTreasuryAbi } from "./abi.js";
+import { arenaTreasuryAbi, erc20Abi } from "./abi.js";
 import { recentFromBlock } from "./data.js";
 
 setSystemAddresses([TREASURY_ADDRESS, FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, ARENA_TREASURY_ADDRESS].filter(Boolean));
 
-/** Призовой фонд арены — баланс казны арены в ETH (число). null — казны нет / ошибка. */
+/** Призовой фонд арены. Казна держит ETH (доля от ETH-монет) и валюты
+ *  монет за валюту (USDG, акции, крипта — сплиттер отдаёт долю в той же
+ *  валюте, что торговалась). Возвращает { eth, usd, assets:[{addr,sym,amt,usd}] }
+ *  — usd это всё вместе в долларах; null — казны нет / ошибка. */
 export function useArenaPot() {
   const [pot, setPot] = useState(null);
   useEffect(() => {
     if (!ARENA_LIVE) return undefined;
     let alive = true;
-    const pull = () => publicClient.getBalance({ address: ARENA_TREASURY_ADDRESS })
-      .then((b) => alive && setPot(Number(b) / 1e18)).catch(() => {});
+    const pull = async () => {
+      try {
+        const [bal, tokens, { ethUsd, quoteUsd }] = await Promise.all([
+          publicClient.getBalance({ address: ARENA_TREASURY_ADDRESS }),
+          loadTokens().catch(() => []),
+          import("./price.js"),
+        ]);
+        const rate = await ethUsd().catch(() => 0);
+        const eth = Number(bal) / 1e18;
+        // валюты, которыми вообще торгуют на площадке — одна проверка на валюту
+        const seen = new Map();
+        for (const tk of tokens) if (tk.q?.addr && !seen.has(tk.q.addr)) seen.set(tk.q.addr, tk.q);
+        const assets = [];
+        await Promise.all([...seen.values()].map(async (q) => {
+          try {
+            const raw = await publicClient.readContract({ address: q.addr, abi: erc20Abi, functionName: "balanceOf", args: [ARENA_TREASURY_ADDRESS] });
+            if (raw === 0n) return;
+            const amt = Number(raw) / 10 ** (q.dec ?? 18);
+            const px = await quoteUsd(q.addr).catch(() => 0);
+            assets.push({ addr: q.addr, sym: q.sym, amt, usd: amt * (px || 0) });
+          } catch (e) { /* валюта не ответила — не показываем */ }
+        }));
+        assets.sort((a, b) => b.usd - a.usd);
+        const usd = eth * rate + assets.reduce((s, a) => s + a.usd, 0);
+        if (alive) setPot({ eth, usd, assets });
+      } catch (e) { /* казна не ответила — оставляем прошлое значение */ }
+    };
     pull();
     const id = setInterval(pull, 60_000);
     return () => { alive = false; clearInterval(id); };

@@ -120,12 +120,19 @@ export function arenaState(tokens, trades, d0, now = Date.now(), excluded = null
     if (cp > cutoff) break;
     if (alive.size <= 1) break;
     let worst = null, worstScore = Infinity;
+    // монета, созданной ПОСЛЕ чекпоинта, на нём ещё не было — выбывать
+    // задним числом с нулём она не может (иначе новичок дня «выбывал» до
+    // своего рождения). Если все живые моложе чекпоинта — никто не выбывает.
+    let candidates = 0;
     for (const [addr, p] of alive) {
+      if ((p.createdAt || 0) > cp) continue;
+      candidates++;
       const v = scoreUntil(p, cp);
       const older = worst && ((p.createdAt || 0) < (worst.createdAt || 0)
         || ((p.createdAt || 0) === (worst.createdAt || 0) && addr > worst.token.toLowerCase()));
       if (v < worstScore || (v === worstScore && !older)) { worst = p; worstScore = v; }
     }
+    if (!worst || candidates < 2) continue;
     alive.delete(worst.token.toLowerCase());
     eliminated.push({ token: worst, at: cp, vol: worstScore });
   }
