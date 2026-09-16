@@ -7,6 +7,21 @@ import "./styles.css";
 
 installTooltips();
 
+// Скорость: в простое после загрузки заранее тянем код остальных страниц
+// (арена, документация…) — переход по вкладкам без ожидания чанка.
+const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1500));
+idle(() => {
+  import("./pages/Arena.jsx"); import("./pages/Docs.jsx"); import("./components/CandleChart.jsx");
+});
+
+// Service worker: хэшированные ассеты кэшируются навсегда (повторный заход —
+// мгновенно, без сети), index.html — всегда свежий с сети.
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL }).catch(() => {});
+  });
+}
+
 // Вместо «чёрного экрана смерти» показываем текст ошибки — и пользователю понятнее,
 // и чинить по скриншоту можно сразу.
 function showFatal(msg) {

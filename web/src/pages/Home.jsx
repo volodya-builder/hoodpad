@@ -3,7 +3,7 @@ import Icon from "../components/Icon.jsx";
 import { formatEther, formatUnits } from "viem";
 import { fmt, fmtEth } from "../lib/web3.js";
 import { useEthUsd, useQuoteUsd, usd, moneyEth } from "../lib/price.js";
-import { timeAgo, loadTokens, useClock, useSupport } from "../lib/data.js";
+import { timeAgo, loadTokens, useClock, useSupport, prefetchToken } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 import { useFavs, toggleFav } from "../lib/favs.js";
 import { useArena } from "../lib/arena.js";
@@ -31,7 +31,7 @@ function TokenCard({ t, fav, onFav, cushion = 0 }) {
     setCp(true); setTimeout(() => setCp(false), 1200);
   };
   return (
-    <a className="tcard" href={`#/token/${t.token}`}>
+    <a className="tcard" href={`#/token/${t.token}`} onMouseEnter={() => prefetchToken(t.token)}>
       <div className="timg">
         {t.meta.image ? <img src={t.meta.image} alt="" /> : <Icon name="image" size={22} style={{ margin: 0, opacity: .6 }} />}
         {t.graduated && <span className="grad-chip">{tr("Градуировал")}</span>}
@@ -93,7 +93,7 @@ function TokenRow({ t, fav, onFav, cushion = 0 }) {
   const priceUnits = q ? Number(formatUnits(t.price, q.dec)) : Number(formatEther(t.price));
   const mcap = q ? (qPrice > 0 ? priceUnits * 1e9 * qPrice : null) : priceUnits * 1e9 * rate;
   return (
-    <a className="lt-row home-row" href={`#/token/${t.token}`}>
+    <a className="lt-row home-row" href={`#/token/${t.token}`} onMouseEnter={() => prefetchToken(t.token)}>
       <button className={`fav-btn inline ${fav ? "on" : ""}`} title={tr(fav ? "Убрать из избранного" : "В избранное")}
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); onFav(t.token); }}>{fav ? "★" : "☆"}</button>
       <span className="lt-logo">{t.meta.image ? <img src={t.meta.image} alt="" loading="lazy" /> : <Icon name="image" size={16} style={{ margin: 0, opacity: .5 }} />}</span>
