@@ -25,9 +25,11 @@
 // ============================================================================
 import { createPublicClient, createWalletClient, http, defineChain, parseAbi, formatUnits, formatEther } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { quoteUsd, ethUsdRate } from "../lib/quote-price.mjs";
 
 const RPC_URL = process.env.RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
 const QUOTE_FACTORY = (process.env.QUOTE_FACTORY || "0x4b55954a2910cfbb04f49e90e727fb1540b3a940").toLowerCase();
+const ETH_FACTORY = (process.env.FACTORY || "0xbe3e7ca55b6c4fc9e759bc8b43734b57a582da01").toLowerCase();
 const FEE_SPLITTER = (process.env.FEE_SPLITTER || "0x82a083e8a99b0f434c03b5c513c8b8c071bcf6e7").toLowerCase();
 const BLOCKSCOUT = process.env.BLOCKSCOUT || "https://robinhoodchain.blockscout.com";
 // Блок деплоя quote-фабрики: раньше него её событий не бывает.
@@ -73,23 +75,17 @@ const tokenAbi = parseAbi([
 ]);
 const erc20Abi = parseAbi(["function decimals() view returns (uint8)", "function symbol() view returns (string)"]);
 const splitterAbi = parseAbi(["function claim(address pool)"]);
+const ethPoolAbi = parseAbi(["function protocolFeesAccrued() view returns (uint256)", "function claimProtocolFees()"]);
 
 const read = (address, abi, functionName, args = []) => pub.readContract({ address, abi, functionName, args });
 const ZERO = "0x0000000000000000000000000000000000000000";
 
-/** Курс валюты к доллару — с обозревателя. Нет курса — null, тогда порог
- *  считаем по газу: платим всё, что больше нуля (газ на этой сети ≈ 1 цент). */
-const rateCache = new Map();
+/** Курс валюты к доллару: пулы Uniswap V3 сети, запасной — обозреватель
+ *  (bot/lib/quote-price.mjs). Нет курса — null, тогда платим всё, что
+ *  больше нуля (газ на этой сети ≈ 1 цент). */
 async function usdRate(asset) {
-  const k = asset.toLowerCase();
-  if (rateCache.has(k)) return rateCache.get(k);
-  let rate = null;
-  try {
-    const r = await fetch(`${BLOCKSCOUT}/api/v2/tokens/${asset}`, { headers: { accept: "application/json" } });
-    if (r.ok) { const j = await r.json(); const v = Number(j.exchange_rate); if (v > 0) rate = v; }
-  } catch (e) { /* обозреватель недоступен — ниже запасной порог */ }
-  rateCache.set(k, rate);
-  return rate;
+  const { usd } = await quoteUsd(pub, asset);
+  return usd > 0 ? usd : null;
 }
 
 let txCount = 0;
@@ -103,12 +99,38 @@ async function send(address, abi, functionName, args, label) {
   return rc.status === "success";
 }
 
+/** ETH-монеты: доля платформы копится в пуле, пока кто-нибудь не дёрнет
+ *  claimProtocolFees() — пул сам шлёт её в казну фабрики (сплиттер), а тот
+ *  сразу делит между аренами/командой. Раньше это делал бот-казначей v2,
+ *  теперь он выключен — забираем здесь, раз в час. Порог — в ETH по курсу. */
+async function sweepEthPools() {
+  const count = await read(ETH_FACTORY, factoryAbi, "tokenCount");
+  if (count === 0n) { console.log("\nETH-монет пока нет"); return; }
+  const toks = await read(ETH_FACTORY, factoryAbi, "tokens", [0n, count]);
+  const treasury = (await read(ETH_FACTORY, factoryAbi, "treasury")).toLowerCase();
+  if (treasury !== FEE_SPLITTER) { console.log(`\nETH-фабрика: казна ${treasury} — не сплиттер, долю платформы не трогаем`); return; }
+  const rate = await ethUsdRate(pub);
+  console.log(`\nETH-монет: ${toks.length} · доля платформы → сплиттер${rate ? ` · ETH $${rate}` : ""}`);
+  for (const token of toks) {
+    const pool = await read(ETH_FACTORY, factoryAbi, "poolOf", [token]);
+    const acc = await read(pool, ethPoolAbi, "protocolFeesAccrued").catch(() => 0n);
+    if (acc === 0n) continue;
+    const sym = await read(token, tokenAbi, "symbol").catch(() => "?");
+    const usdv = rate ? (Number(acc) / 1e18) * rate : null;
+    const label = `$${sym}: ${formatEther(acc)} ETH${usdv != null ? ` ($${usdv.toFixed(2)})` : ""}`;
+    if (usdv != null && usdv < MIN_SWEEP_USD) { console.log(`  ${label} — ниже порога $${MIN_SWEEP_USD}, ждём`); continue; }
+    await send(pool, ethPoolAbi, "claimProtocolFees", [], `сплиттер: забрать ${label}`);
+  }
+}
+
 async function main() {
   console.log(`hood дивиденды · ${new Date().toISOString()} · ${RUN ? "боевой запуск, кошелёк " + account.address : "сухой прогон"}`);
   if (RUN) console.log(`баланс на газ: ${formatEther(await pub.getBalance({ address: account.address }))} ETH`);
 
+  await sweepEthPools().catch((e) => console.log("  ETH-монеты: сбор не удался:", (e.shortMessage || e.message || "").slice(0, 100)));
+
   const count = await read(QUOTE_FACTORY, factoryAbi, "tokenCount");
-  if (count === 0n) { console.log("монет за валюту пока нет"); return; }
+  if (count === 0n) { console.log("\nмонет за валюту пока нет"); return; }
   const toks = await read(QUOTE_FACTORY, factoryAbi, "tokens", [0n, count]);
   const treasury = (await read(QUOTE_FACTORY, factoryAbi, "treasury")).toLowerCase();
   const splitterLive = treasury === FEE_SPLITTER;

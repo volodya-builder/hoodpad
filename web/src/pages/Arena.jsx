@@ -68,12 +68,15 @@ export default function Arena() {
   useClock(1000);
   useTick();
   const st = useArena();
-  const pot = useArenaPot();           // фонд казны арены, ETH
+  const pot = useArenaPot();           // фонд казны арены: { eth, usd, assets }
   const payouts = useArenaPayouts();   // последние выкупы, по дням
   const [view, setView] = useState("day");
 
   const D = (eth) => (rate > 0 ? (eth * rate >= 1000 ? usd(eth * rate) : usdFine(eth * rate)) : "…");
   const E = (eth) => `${fmtEth(eth)} ETH`;
+  // фонд в долларах сразу (там уже и ETH, и валюты); ETH-часть — отдельно подписью
+  const potD = (share = 1) => (pot === null ? "…" : (rate > 0 || pot.usd > 0 ? (pot.usd * share >= 1000 ? usd(pot.usd * share) : usdFine(pot.usd * share)) : "…"));
+  const potSub = pot === null ? "" : [E(pot.eth), ...pot.assets.map((a) => `${a.amt >= 1000 ? Math.round(a.amt) : +a.amt.toPrecision(3)} ${a.sym}`)].join(" · ");
   const mcapOf = (p) => Number(formatEther(p.price)) * 1e9 * rate;
   const day0 = dayStart();
   const nextCp = st ? (st.nextCheckpoint ?? day0 + 86_400_000) : null;
@@ -190,12 +193,12 @@ export default function Arena() {
         <>
           <div className="ana-strip arena-strip">
             <div className="ana-stat">
-              <div className="n">{ARENA_LIVE ? (pot === null ? "…" : D(pot)) : "—"}</div>
-              <div className="l">{t("Призовой фонд")}{ARENA_LIVE && pot !== null && <span className="dim">· {E(pot)}</span>}</div>
+              <div className="n">{ARENA_LIVE ? potD() : "—"}</div>
+              <div className="l">{t("Призовой фонд")}{ARENA_LIVE && pot !== null && <span className="dim">· {potSub}</span>}</div>
             </div>
             {SPLIT.map((pct, i) => (
               <div className="ana-stat" key={pct}>
-                <div className="n">{ARENA_LIVE ? (pot === null ? "…" : D(pot * pct / 100)) : "—"}</div>
+                <div className="n">{ARENA_LIVE ? potD(pct / 100) : "—"}</div>
                 <div className="l">{i + 1} {t("место")} <span className="dim">· {pct}%</span></div>
               </div>
             ))}
