@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { parseEther, formatEther, parseUnits, decodeEventLog, encodeFunctionData } from "viem";
+import { parseEther, formatEther, parseUnits, decodeEventLog } from "viem";
 import { publicClient } from "../lib/web3.js";
 import { factoryAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi, zapAbi, feeSplitterAbi } from "../lib/abi.js";
 import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, FEATURES, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE, CREATOR_FEE_PCT } from "../lib/config.js";
@@ -202,31 +202,10 @@ export default function Create({ wallet, onConnect }) {
     };
     return "data:application/json;base64," + btoa(unescape(encodeURIComponent(JSON.stringify(metadata))));
   };
-  // Газ сети за запуск — живая оценка той же транзакции (картинка хранится
-  // в цепи, поэтому цена зависит от её размера). Платформа за запуск не
-  // берёт ничего (решение владельца 16.09.2026) — показываем именно газ.
-  const [gasEth, setGasEth] = useState(null);
-  useEffect(() => {
-    let on = true;
-    const id = setTimeout(async () => {
-      try {
-        const byQ = quote !== "ETH";
-        if (byQ && (!QUOTE_LIVE || !quoteAddr)) { if (on) setGasEth(null); return; }
-        const uri = buildUri();
-        const name = form.name.trim() || "token", sym = form.symbol.trim() || "TKN";
-        const data = byQ
-          ? encodeFunctionData({ abi: quoteFactoryAbi, functionName: "createToken", args: [name, sym, uri, quoteAddr, ZERO, divBps] })
-          : encodeFunctionData({ abi: factoryAbi, functionName: "createToken", args: [name, sym, uri, ZERO] });
-        const from = wallet?.account || "0x0000000000000000000000000000000000000001";
-        const [gas, price] = await Promise.all([
-          publicClient.estimateGas({ account: from, to: byQ ? QUOTE_FACTORY_ADDRESS : FACTORY_ADDRESS, data }),
-          publicClient.getGasPrice(),
-        ]);
-        if (on) setGasEth(Number(formatEther(gas * price)));
-      } catch { if (on) setGasEth(null); }
-    }, 700);
-    return () => { on = false; clearTimeout(id); };
-  }, [image, form.description, form.name, form.symbol, quote, quoteAddr, divBps, ai, wallet?.account]);
+  // «Комиссия запуска» — фиксированная цифра по решению владельца (16.09.2026):
+  // это ориентир на газ сети, платформа за запуск ничего не берёт.
+  const LAUNCH_FEE_ETH = 0.0005;
+  const launchFeeStr = `${LAUNCH_FEE_ETH} ETH${ethUsd > 0 ? ` (${usdFine(LAUNCH_FEE_ETH * ethUsd)})` : ""}`;
   const symbolOk = /^[A-Z0-9]*$/.test(form.symbol);
   const buyOk = buyValue <= MAX_DEV_BUY_ETH;
   const walletOk =
@@ -801,7 +780,7 @@ export default function Create({ wallet, onConnect }) {
 
         <div className="due-row">
           <span>{t("Uniswap V3 после градации · ликвидность запирается навсегда")}</span>
-          <span><b style={{ color: "var(--accent)" }}>{t("Комиссия запуска")}: 0 ETH</b>{gasEth != null && <span className="dim"> · {t("газ сети")} ≈ {gasEth.toFixed(4)} ETH{ethUsd > 0 ? ` (${usdFine(gasEth * ethUsd)})` : ""}</span>}</span>
+          <span><b style={{ color: "var(--accent)" }}>{t("Комиссия запуска")}: {launchFeeStr}</b></span>
         </div>
 
         <button className="btn btn-primary btn-block" disabled={busy}>{ctaLabel}</button>
@@ -813,8 +792,7 @@ export default function Create({ wallet, onConnect }) {
         <div className="preview-name">{form.name.trim() || t("Ваш токен")}</div>
         <div className="preview-ticker">{form.symbol ? `$${form.symbol}` : t("тикер")}</div>
         <div className="preview-stats">
-          <div className="row"><span className="k">{t("Комиссия запуска")}</span><span className="v green">0 ETH</span></div>
-          <div className="row"><span className="k">{t("Газ сети")}</span><span className="v">{gasEth != null ? `≈ ${gasEth.toFixed(4)} ETH${ethUsd > 0 ? ` (${usdFine(gasEth * ethUsd)})` : ""}` : "…"}</span></div>
+          <div className="row"><span className="k">{t("Комиссия запуска")}</span><span className="v green">{launchFeeStr}</span></div>
           {/* Комиссия — простыми словами: одна строка «сколько берётся» и
               кому уходит, без bps и долей от долей. Цифры — с цепи. */}
           <div className="row"><span className="k">{t("Комиссия с каждой сделки")}</span><span className="v">1%</span></div>
