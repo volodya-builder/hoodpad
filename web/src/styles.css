@@ -3812,6 +3812,9 @@ html[data-theme="light"] .prow .pbar { background: rgba(0,0,0,.08); }
 .lt-row:hover { background: rgba(255,255,255,.035); }
 .lt-row.dim { opacity: .5; }
 .lt-rank { font-size: 12.5px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+/* призовая зона арены (места 1–3): тонкая золотая линия слева и золотой номер */
+.lt-row.podium { box-shadow: inset 2px 0 0 var(--gold); }
+.lt-row.podium .lt-rank { color: var(--gold); font-weight: 700; }
 .lt-logo { width: 44px; height: 44px; border-radius: 12px; overflow: hidden; background: rgba(255,255,255,.05); display: flex; align-items: center; justify-content: center; }
 .lt-logo img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .4s var(--ease); }
 .lt-row:hover .lt-logo img { transform: scale(1.05); }
