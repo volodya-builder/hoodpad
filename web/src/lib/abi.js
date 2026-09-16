@@ -218,6 +218,7 @@ export const feeSplitterAbi = parseAbi([
   "function poolOf(address token) view returns (address)",
   "function teamShareBps() view returns (uint256)",
   "function arenaShareBps() view returns (uint256)",
+  "function buybackShareBps() view returns (uint256)",
   "function claim(address pool)",
   "function pendingEth(address) view returns (uint256)",
   "function pendingErc20(address, address) view returns (uint256)",

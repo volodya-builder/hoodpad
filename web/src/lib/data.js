@@ -43,7 +43,10 @@ const PAGE = 96n;
 // 3.1.0 = + квот-фабрика (монеты за валюту). Пока владелец её не задеплоил,
 // сайт сам откатывается на 3.0.0: первая проба _meta решает, дальше кэш.
 const SUBGRAPH_BASE = "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/";
-const SUBGRAPH_VERSIONS = ["3.1.0", "3.0.0"];
+// 4.0.0 = перезапуск 16.09.2026 (новые фабрики 0xbe3e…/0x4b55…). Старые версии
+// НЕ подставляем: они индексируют старые фабрики и показали бы старые монеты.
+// Пока 4.0.0 не задеплоен на Goldsky, сайт читает фабрики напрямую (RPC).
+const SUBGRAPH_VERSIONS = ["4.0.0"];
 export let SUBGRAPH_URL = SUBGRAPH_BASE + SUBGRAPH_VERSIONS[0] + "/gn";
 let _sgPick = null;
 const SG_LS = "hood_subgraph_pick_v1";
@@ -622,10 +625,13 @@ async function splitFor(shareBps, treasury) {
     const teamBps = await publicClient.readContract({ address: FEE_SPLITTER_ADDRESS, abi: feeSplitterAbi, functionName: "teamShareBps" });
     // V5 — часть входящего уходит казне арены; у V4 такой функции нет — 0
     const arenaBps = await publicClient.readContract({ address: FEE_SPLITTER_ADDRESS, abi: feeSplitterAbi, functionName: "arenaShareBps" }).catch(() => 0n);
+    // V6 — треть остатка уходит казне выкупа монеты hood; у V5 такой функции нет — 0
+    const buybackBps = await publicClient.readContract({ address: FEE_SPLITTER_ADDRESS, abi: feeSplitterAbi, functionName: "buybackShareBps" }).catch(() => 0n);
     const team = (rest * Number(teamBps)) / 10000;
     const arena = (rest * Number(arenaBps)) / 10000;
-    const agent = rest - team - arena;
-    return { creator, team: +team.toFixed(1), arena: +arena.toFixed(1), agent: +agent.toFixed(1), buyback: 0, creatorNoAi: +(creator + agent).toFixed(1), live: true };
+    const buyback = (rest * Number(buybackBps)) / 10000;
+    const agent = Math.max(0, rest - team - arena - buyback);
+    return { creator, team: +team.toFixed(1), arena: +arena.toFixed(1), agent: +agent.toFixed(1), buyback: +buyback.toFixed(1), creatorNoAi: +(creator + agent).toFixed(1), live: true };
   }
   let team = 0;
   try {

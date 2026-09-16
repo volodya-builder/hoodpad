@@ -33,8 +33,8 @@ import { buildChain, podium, dayStart, DAY, ARENA_DAYS, setSystemAddresses } fro
 
 const DRY = process.argv.includes("--dry");
 const RPC_URL = process.env.RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
-const FACTORY = (process.env.FACTORY || "0x08a887196fc31b89305ae03aa991917f6b1d23ec").toLowerCase();
-const QUOTE_FACTORY = (process.env.QUOTE_FACTORY || "0xd7299e03c5e7d4f9f4c62f305a0b619359cf9a4f").toLowerCase();
+const FACTORY = (process.env.FACTORY || "0xbe3e7ca55b6c4fc9e759bc8b43734b57a582da01").toLowerCase();
+const QUOTE_FACTORY = (process.env.QUOTE_FACTORY || "0x4b55954a2910cfbb04f49e90e727fb1540b3a940").toLowerCase();
 const TREASURY = (process.env.ARENA_TREASURY || "").toLowerCase();
 const SUBGRAPH = process.env.SUBGRAPH ||
   "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/3.0.0/gn";
