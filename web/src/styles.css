@@ -4055,7 +4055,7 @@ html[data-theme="light"] .sr-menu-it:hover, html[data-theme="light"] .sr-menu-it
 .adm-search { margin-bottom: 12px; padding: 10px 16px; }
 .adm-search input { flex: 1; border: 0; background: transparent; padding: 0; font-size: 14px; box-shadow: none; }
 .adm-search input:focus { box-shadow: none; }
-.adm-lt .lt-h, .adm-lt .lt-row { grid-template-columns: 44px minmax(0, 1fr) 80px 130px 120px; }
+.adm-lt .lt-h, .adm-lt .lt-row { grid-template-columns: 44px minmax(0, 1fr) 70px 120px 180px; }
 .adm-lt .lt-row { min-height: 64px; cursor: pointer; }
 .adm-lt .lt-row.on { background: rgba(255,255,255,.06); }
 .adm-lt .lt-sub.addr-copy { cursor: copy; }

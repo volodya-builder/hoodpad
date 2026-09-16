@@ -90,6 +90,9 @@ export const AGENT_TREASURY_ADDRESS = import.meta.env.VITE_AGENT_TREASURY ?? "0x
 // Задеплоить: node scripts/deploy-arena-economy.js --deploy (владелец).
 export const ARENA_TREASURY_ADDRESS = import.meta.env.VITE_ARENA_TREASURY ?? "0x3cecc31c6db73ea1b31a5e1726c3e5e595b59a0a";
 export const ARENA_LIVE = /^0x[0-9a-fA-F]{40}$/.test(ARENA_TREASURY_ADDRESS);
+// Казна выкупа монеты hood (тот же контракт ArenaTreasury): 10% каждой
+// комиссии; бот bot/buyback раз в сутки выкупает hood и сжигает.
+export const BUYBACK_TREASURY_ADDRESS = import.meta.env.VITE_BUYBACK_TREASURY ?? "0x64bb9fd0b86489eb037f496a37528a37a6c5187b";
 
 // ProfileRegistry — имя, аватар, соцсети кошелька в блокчейне. Задеплоен
 // владельцем 15.09.2026 (scripts/deploy-profiles.js); без владельца, переживёт

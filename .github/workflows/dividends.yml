@@ -40,8 +40,8 @@ jobs:
       - name: Pay dividends
         env:
           TREASURER_PRIVATE_KEY: ${{ secrets.TREASURER_PRIVATE_KEY }}
-          MIN_PAYOUT_USD: "1"
-          MIN_SWEEP_USD: "0.5"
+          MIN_PAYOUT_USD: "0.1"   # тест: платим от 10 центов (потом вернуть 1)
+          MIN_SWEEP_USD: "0.1"
         run: |
           set -o pipefail   # иначе tee прячет ошибку бота, и заход выглядит успешным
           if [ "${{ github.event.inputs.mode }}" = "dry" ]; then
