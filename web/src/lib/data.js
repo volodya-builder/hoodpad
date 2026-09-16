@@ -797,11 +797,21 @@ function cacheSet(addr, ts) {
 }
 
 async function creationTimeViaExplorer(addr) {
-  const a = await fetch(`${EXPLORER}/api/v2/addresses/${addr}`).then((r) => r.json());
+  // обозреватель за Cloudflare отвечает по 5–9 с — не ждём дольше 4 с на запрос
+  const a = await fetch(`${EXPLORER}/api/v2/addresses/${addr}`, { signal: AbortSignal.timeout(4000) }).then((r) => r.json());
   const tx = a.creation_tx_hash || a.creation_transaction_hash;
   if (!tx) return null;
-  const t = await fetch(`${EXPLORER}/api/v2/transactions/${tx}`).then((r) => r.json());
+  const t = await fetch(`${EXPLORER}/api/v2/transactions/${tx}`, { signal: AbortSignal.timeout(4000) }).then((r) => r.json());
   return t.timestamp ? new Date(t.timestamp).getTime() : null;
+}
+
+/** Даты создания из индексатора — одним запросом, быстро. Нет — {}. */
+async function creationTimesViaSubgraph(keys) {
+  const ids = keys.map((k) => `"${k}"`).join(",");
+  const d = await gql(`{ tokens(first: ${keys.length}, where: { id_in: [${ids}] }) { id createdAt } }`);
+  const out = {};
+  for (const t of d?.tokens || []) if (Number(t.createdAt) > 0) out[t.id.toLowerCase()] = Number(t.createdAt) * 1000;
+  return out;
 }
 
 export async function loadCreationTimes(addrs) {
@@ -812,7 +822,15 @@ export async function loadCreationTimes(addrs) {
     const c = cacheGet(k);
     if (c) out[k] = c; else missing.push(k);
   }
-  await Promise.all(missing.map(async (k) => {
+  // сначала индексатор: один быстрый запрос на все адреса
+  if (missing.length) {
+    try {
+      const sg = await creationTimesViaSubgraph(missing);
+      for (const k of Object.keys(sg)) { out[k] = sg[k]; cacheSet(k, sg[k]); }
+    } catch (e) { /* индексатор недоступен — ниже обозреватель и события */ }
+  }
+  const viaExplorer = missing.filter((k) => !out[k]);
+  await Promise.all(viaExplorer.map(async (k) => {
     try {
       const ts = await creationTimeViaExplorer(k);
       if (ts) { out[k] = ts; cacheSet(k, ts); }

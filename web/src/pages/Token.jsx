@@ -631,13 +631,18 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     // Монета за валюту: ждём виртуал из сети — без него сделки считались бы
     // как у ETH-монеты (1.625) и график врал в разы.
     if (data.q && !(data.q.virt > 0)) return;
-    const [h, creatorFees, treasuryOwner, treasuryHeld, burned, createdMap] = await Promise.all([
+    // Дата создания — отдельно и не блокируя график: обозреватель (запасной
+    // источник) отвечает по 5–9 с, и раньше сделки/держатели/график ждали его
+    // (16.09.2026: у нового посетителя страница «читала события» ~20 с).
+    const createdP = data.createdAt > 0
+      ? Promise.resolve({ [tokenAddress.toLowerCase()]: data.createdAt })
+      : loadCreationTimes([tokenAddress]).catch(() => ({}));
+    const [h, creatorFees, treasuryOwner, treasuryHeld, burned] = await Promise.all([
       poolTrades(data.pool, data.q ? { dec: data.q.dec, virt: data.q.virt, token: tokenAddress } : null),
       publicClient.readContract({ address: data.pool, abi: poolExtraAbi, functionName: "creatorFeesAccrued" }),
       publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "owner" }).catch(() => null),
       publicClient.readContract({ address: tokenAddress, abi: tokenAbi, functionName: "balanceOf", args: [TREASURY_ADDRESS] }).catch(() => 0n),
       publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "burnedOf", args: [tokenAddress] }).catch(() => 0n),
-      loadCreationTimes([tokenAddress]).catch(() => ({})),
     ]);
     // Время сделок: интерполяция по блокам (2 RPC-вызова) — для таймфреймов графика
     if (h.trades.length > 0 && !h.trades[0].ts) {
@@ -658,8 +663,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     }
     setHistory(h);
     writeHistCache(tokenAddress, h);
-    setExtra({ creatorFees, treasuryOwner, treasuryHeld, burned,
-               createdAt: createdMap[tokenAddress.toLowerCase()] });
+    setExtra((x) => ({ ...x, creatorFees, treasuryOwner, treasuryHeld, burned }));
+    createdP.then((createdMap) => setExtra((x) => ({ ...x, createdAt: createdMap[tokenAddress.toLowerCase()] })));
   }, [data?.pool, data?.q?.virt, tokenAddress]); // virt приходит с сетью после кэша — сделки пересчитать
 
   useEffect(() => {
