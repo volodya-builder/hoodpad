@@ -1814,12 +1814,13 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               {history && history.trades.length === 0 && (
                 <div className="dim" style={{ padding: 12 }}>{t("Пока нет сделок.")}</div>
               )}
-              {history && history.trades.slice(0, 60).map((tr, i) => {
+              {history && history.trades.length > 0 && (() => { const saMax = Math.max(...history.trades.slice(0, 60).map((x) => x.eth), 1e-9); return history.trades.slice(0, 60).map((tr, i) => {
                 const buy = tr.side === "buy";
                 const isMine = wallet && tr.addr.toLowerCase() === wallet.account.toLowerCase();
+                const heat = Math.max(6, Math.round((tr.eth / saMax) * 100));
                 return (
-                  <div className="sa-row" key={i} {...rowHover(tr.addr)}>
-                    <span className={buy ? "side-buy" : "side-sell"}>{dollars(tr.eth)}</span>
+                  <div className={`sa-row ${buy ? "is-buy" : "is-sell"}`} key={i} {...rowHover(tr.addr)}>
+                    <span className={`sa-amt ${buy ? "side-buy" : "side-sell"}`} style={{ "--heat": `${heat}%` }}><i />{dollars(tr.eth)}</span>
                     <span className="dim">{compactN(tr.tokens)}</span>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 4, minWidth: 0 }}>
                       <Who addr={tr.addr} title={t("Открыть профиль трейдера")} style={{ color: "inherit" }} /><Badges addr={tr.addr} />
@@ -1830,7 +1831,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                     </a>
                   </div>
                 );
-              })}
+              }); })()}
             </div>
           )}
         </div>
