@@ -350,7 +350,7 @@ export async function subgraphTreasuryOps() {
 // получает данные мгновенно (пусть и чуть устаревшие), а свежие
 // подтягиваются в фоне. Кэш переживает перезагрузку через localStorage.
 let _tok = { v: null, t: 0, p: null };
-const TOK_LS = "hood_cache_tokens_v2_" + FACTORY_ADDRESS.slice(2, 10); // ключ по фабрике: старые монеты после перезапуска не всплывают
+const TOK_LS = "hood_cache_tokens_v3_" + FACTORY_ADDRESS.slice(2, 10); // v3: кэш v2 успел набрать старые монеты через graft-сабграф 4.0.0 — сбрасываем
 
 const bigReplacer = (k, v) => (typeof v === "bigint" ? { __b: v.toString() } : v);
 const bigReviver = (k, v) => (v && typeof v === "object" && "__b" in v ? BigInt(v.__b) : v);
@@ -728,7 +728,7 @@ export function useSplit() {
 // Сколько ETH казна потратила на выкуп каждого токена (+ общий счётчик)
 // и сколько токенов сожгла. Источник — treasuryOps из Goldsky, SWR-кэш.
 let _sup = { v: null, t: 0, p: null };
-const SUP_LS = "hood_cache_support_v2_" + FACTORY_ADDRESS.slice(2, 10);
+const SUP_LS = "hood_cache_support_v3_" + FACTORY_ADDRESS.slice(2, 10);
 try {
   const rawSup = localStorage.getItem(SUP_LS);
   if (rawSup) _sup.v = JSON.parse(rawSup);
