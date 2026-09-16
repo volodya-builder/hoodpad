@@ -717,6 +717,19 @@ async function _poolTradesRpc(pool, cur = null) {
     });
     points.push({ i: trades.length, mcap: price * TOTAL });
   }
+  // Страховка: если стороной сделки всё ещё стоит зап (событие запа не
+  // прочиталось), настоящий трейдер — отправитель транзакции. Иначе
+  // держатели считались неверно: покупки на человеке, продажи на запе —
+  // и у человека «висело» 4% эмиссии, которых у него нет.
+  const zapL = String(ZAP_ADDRESS || "").toLowerCase();
+  const fix = zapL ? trades.filter((tr) => String(tr.addr).toLowerCase() === zapL) : [];
+  if (fix.length) {
+    const byTx = new Map();
+    await Promise.all([...new Set(fix.map((tr) => tr.tx))].map(async (h) => {
+      try { const tx = await publicClient.getTransaction({ hash: h }); byTx.set(h, tx.from); } catch (e) { /* оставим как есть */ }
+    }));
+    for (const tr of fix) if (byTx.has(tr.tx)) tr.addr = byTx.get(tr.tx);
+  }
   return { trades: trades.reverse(), points };
 }
 

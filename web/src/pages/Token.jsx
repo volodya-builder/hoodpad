@@ -434,6 +434,11 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const tradeUsd = (tr) => (tr.usd != null && tr.usd > 0 ? fmtUsd(tr.usd) : dollars(tr.eth));
 
   // Топ держателей: восстанавливаем балансы из событий сделок
+  // Держатели: оценка по сделкам — мгновенно, затем сверка с балансами в
+  // блокчейне (balanceOf) — точные цифры. Раньше при продаже через зап
+  // покупка числилась на человеке, а продажа на запе, и у человека
+  // «висело» 4% эмиссии, которых у него нет.
+  const [chainBal, setChainBal] = useState({}); // addr → баланс (токены)
   const holders = useMemo(() => {
     if (!history || !data) return null;
     const m = {};
@@ -441,6 +446,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       const a = tr.addr.toLowerCase();
       m[a] = (m[a] ?? 0) + (tr.side === "buy" ? tr.tokens : -tr.tokens);
     }
+    for (const [a, v] of Object.entries(chainBal)) if (a in m || v > 0) m[a] = v;
     const TOTAL = 1e9;
     const unsold = Math.max(0, TOTAL - Number(formatEther(data.sold)));
     const list = Object.entries(m)
@@ -449,7 +455,20 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       .slice(0, 10)
       .map(([a, v]) => ({ addr: a, bal: v, pct: (v / TOTAL) * 100 }));
     return { list, unsold, unsoldPct: (unsold / TOTAL) * 100 };
-  }, [history, data]);
+  }, [history, data, chainBal]);
+  useEffect(() => {
+    if (!history || !tokenAddress) return;
+    const m = {};
+    for (const tr of history.trades) { const a = tr.addr.toLowerCase(); m[a] = (m[a] ?? 0) + (tr.side === "buy" ? tr.tokens : -tr.tokens); }
+    const addrs = Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, 14).map(([a]) => a);
+    if (!addrs.length) return;
+    let alive = true;
+    Promise.all(addrs.map((a) => publicClient.readContract({ address: tokenAddress, abi: tokenAbi, functionName: "balanceOf", args: [a] })
+      .then((v) => [a, Number(formatEther(v))]).catch(() => null)))
+      .then((rows) => { if (alive) setChainBal(Object.fromEntries(rows.filter(Boolean))); });
+    return () => { alive = false; };
+  }, [history, tokenAddress]);
+  useEffect(() => { setChainBal({}); }, [tokenAddress]);
 
   // Паспорт токена: три цифры, по которым видно накрутку и риск дампа.
   const passport = useMemo(() => {
