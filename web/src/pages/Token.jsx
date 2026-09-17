@@ -25,7 +25,7 @@ import TokenSidebar from "../components/TokenSidebar.jsx";
 import { useDividends } from "../components/Dividends.jsx";
 import QuoteLogo from "../components/QuoteLogo.jsx";
 import { useFavs, toggleFav } from "../lib/favs.js";
-import { currentPosition } from "../lib/position.js";
+import { currentPosition, costBasis } from "../lib/position.js";
 import RGL, { WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -1473,11 +1473,14 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             const valEth = balTok * Number(formatEther(data.price));
             const avgBuy = buysTok > 0 ? buysEth / buysTok : 0;   // ETH за токен
             const avgSell = sellsTok > 0 ? sellsEth / sellsTok : 0;
-            const costRem = balTok * avgBuy;                       // себестоимость остатка
+            // себестоимость с поправкой на переводы: ушедшие с кошелька монеты
+            // уносят свою цену покупки, пришедшие переводом стоят 0
+            const cbNet = costBasis(mine.map((x) => ({ ...x, fee: 0 })), balTok);
+            const costRem = cbNet.heldCost;                        // себестоимость остатка
             const uPnl = valEth - costRem;                         // нереализованный
             const uPct = costRem > 0 ? (uPnl / costRem) * 100 : 0;
-            const totPnl = valEth + sellsEth - buysEth;            // общая прибыль
-            const totPct = buysEth > 0 ? (totPnl / buysEth) * 100 : 0;
+            const totPnl = valEth + sellsEth - cbNet.effInvested;  // общая прибыль
+            const totPct = cbNet.effInvested > 0 ? (totPnl / cbNet.effInvested) * 100 : 0;
             const lastTs = mine.reduce((s, x) => Math.max(s, x.ts || 0), 0);
             const firstTs = mine.reduce((s, x) => (x.ts ? Math.min(s, x.ts) : s), Infinity);
             const holdMs = firstTs !== Infinity ? Date.now() - firstTs : 0;

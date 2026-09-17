@@ -5,7 +5,7 @@ import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { tokenAbi } from "../lib/abi.js";
 import { EXPLORER } from "../lib/config.js";
 import { loadTokens, subgraphUserTrades, priceEthMap, poolTrades, allTrades, timeAgo, useClock } from "../lib/data.js";
-import { currentPosition } from "../lib/position.js";
+import { currentPosition, costBasis } from "../lib/position.js";
 import { computeCreatorRep } from "../lib/creatorRep.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { useLang } from "../lib/i18n.jsx";
@@ -79,11 +79,12 @@ export default function Trader({ address }) {
           }).catch(() => 0n);
           const all = byPool[(tk.pool || "").toLowerCase()] || [];
           const cur = currentPosition(all);
-          const invested = cur.filter((x) => x.side === "buy").reduce((s, x) => s + x.eth + x.fee, 0);
-          const realized = cur.filter((x) => x.side === "sell").reduce((s, x) => s + x.eth, 0);
-          const allInv = all.filter((x) => x.side === "buy").reduce((s, x) => s + x.eth + x.fee, 0);
-          const allReal = all.filter((x) => x.side === "sell").reduce((s, x) => s + x.eth, 0);
-          return { ...tk, bal, all, cur, invested, realized, allInv, allReal,
+          // вложено — с поправкой на переводы (ушедшие монеты уносят свою цену)
+          const balTok = Number(formatEther(bal));
+          const cb = costBasis(cur, balTok), cbAll = costBasis(all, balTok);
+          const invested = cb.effInvested, realized = cb.realized;
+          const allInv = cbAll.effInvested, allReal = cbAll.realized;
+          return { ...tk, bal, all, cur, invested, realized, allInv, allReal, buysCost: cb.invested,
                    isMine: (tk.creator || "").toLowerCase() === addr };
         }));
         enriched.push(...part);
@@ -220,7 +221,7 @@ export default function Trader({ address }) {
                       <b className="ticker" style={{ fontSize: 13 }}>${p.symbol}</b>
                     </span>
                   </span>
-                  <div className="tk-cell"><span>{t("Куплено")}</span><b>{dollars(p.invested)}</b></div>
+                  <div className="tk-cell"><span>{t("Куплено")}</span><b>{dollars(p.buysCost ?? p.invested)}</b></div>
                   <div className="tk-cell"><span>{t("Продано")}</span><b>{dollars(p.realized)}</b></div>
                   <div className="tk-cell"><span>{t("Баланс")}</span><b>{dollars(val)}</b><span>{compactN(balTok)}</span></div>
                   <div className="tk-cell"><span>{t("Прибыль")}</span>

@@ -5,7 +5,7 @@ import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { tokenAbi, poolAbi } from "../lib/abi.js";
 import { EXPLORER } from "../lib/config.js";
 import { loadTokens, poolTrades, subgraphUserTrades, priceEthMap, timeAgo, useClock } from "../lib/data.js";
-import { currentPosition } from "../lib/position.js";
+import { currentPosition, costBasis } from "../lib/position.js";
 import { useEthUsd, usd, quoteUsd, ethUsdCached } from "../lib/price.js";
 import { useLang } from "../lib/i18n.jsx";
 import { useProfile } from "../lib/profiles.js";
@@ -135,10 +135,11 @@ export default function Profile({ wallet, onConnect }) {
           }
           // счётчики позиции — только ТЕКУЩИЙ цикл (после последнего обнуления баланса)
           const cur = currentPosition(mine);
-          const invested = cur.filter((x) => x.side === "buy").reduce((s, x) => s + x.eth + x.fee, 0);
-          const realized = cur.filter((x) => x.side === "sell").reduce((s, x) => s + x.eth, 0);
+          // вложено — с поправкой на переводы (ушедшие монеты уносят свою цену)
+          const cb = costBasis(cur, Number(formatEther(bal)));
+          const invested = cb.effInvested, realized = cb.realized;
           return {
-            ...tk, bal, mine: cur, mineAll: mine, invested, realized,
+            ...tk, bal, mine: cur, mineAll: mine, invested, realized, heldCost: cb.heldCost, buysCost: cb.invested,
             isMine: creatorRpc && creatorRpc.toLowerCase() === me,
             feesAccrued, feesEth,
           };
@@ -161,8 +162,9 @@ export default function Profile({ wallet, onConnect }) {
         const all = tk.mineAll || tk.mine;
         if (all.length === 0 && tk.bal === 0n) return;
         totVal += Number(formatEther(tk.bal)) * tk.priceEth;
-        totInv += all.filter((x) => x.side === "buy").reduce((s, x) => s + x.eth + x.fee, 0);
-        totReal += all.filter((x) => x.side === "sell").reduce((s, x) => s + x.eth, 0);
+        const cbAll = costBasis(all, Number(formatEther(tk.bal)));
+        totInv += cbAll.effInvested;
+        totReal += cbAll.realized;
       });
       const next = {
         ethBal, positions, launched,
@@ -468,9 +470,9 @@ export default function Profile({ wallet, onConnect }) {
               const buysTok = buys.reduce((s, x) => s + x.tokens, 0);
               const sellsTok = sells.reduce((s, x) => s + x.tokens, 0);
               const feesEth = p.mine ? p.mine.reduce((s, x) => s + (x.fee || 0), 0) : 0;
-              const avgB = buysTok > 0 ? p.invested / buysTok : 0;
-              const uPnl = val - balTok * avgB;
-              const uPct = balTok * avgB > 0 ? (uPnl / (balTok * avgB)) * 100 : 0;
+              const heldCost = p.heldCost ?? (buysTok > 0 ? (p.invested / buysTok) * balTok : 0);
+              const uPnl = val - heldCost;
+              const uPct = heldCost > 0 ? (uPnl / heldCost) * 100 : 0;
               const totPnl = val + p.realized - p.invested;
               const totPct = p.invested > 0 ? (totPnl / p.invested) * 100 : 0;
               const lastTs = p.mine ? p.mine.reduce((s, x) => Math.max(s, x.ts || 0), 0) : 0;
@@ -497,7 +499,7 @@ export default function Profile({ wallet, onConnect }) {
                     </span>
                   </span>
                   <div className="tk-cell"><span>{t("Куплено")}</span>
-                    <b>{dollars(p.invested)}</b><span>{compactN(buysTok)}</span></div>
+                    <b>{dollars(p.buysCost ?? p.invested)}</b><span>{compactN(buysTok)}</span></div>
                   <div className="tk-cell"><span>{t("Продано")}</span>
                     <b>{dollars(p.realized)}</b><span>{sellsTok > 0 ? compactN(sellsTok) : "—"}</span></div>
                   <div className="tk-cell"><span>{t("Баланс")}</span>
