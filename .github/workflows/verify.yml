@@ -1,0 +1,42 @@
+name: verify
+
+# Верификация исходников контрактов hood в обозревателе (Blockscout):
+# Actions → verify → Run workflow. Адреса берутся из
+# scripts/relaunch-v3-output.json (комплект перезапуска 17.09.2026) плюс по
+# одному экземпляру токена и пула каждого вида, если монеты уже есть.
+# Дополнительные адреса — поле extra: "Имя=0x…,Имя2=0x…".
+# Ключи не нужны: верификация — публичное действие.
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Только один контракт (ключ или имя, напр. zap / ArenaTreasuryV2); пусто — все"
+        required: false
+        default: ""
+      extra:
+        description: "Дополнительно: Имя=0x…,Имя2=0x…"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Исходники OpenZeppelin (та же версия, что при сборке) и viem
+        run: npm install --no-save --no-audit --no-fund @openzeppelin/contracts@5.6.1 viem@2
+      - name: Верифицировать
+        env:
+          EXTRA: ${{ inputs.extra }}
+        run: node scripts/verify-v3.js ${{ inputs.only != '' && format('--only {0}', inputs.only) || '' }}

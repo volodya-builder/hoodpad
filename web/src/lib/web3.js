@@ -36,17 +36,40 @@ export const publicClient = createPublicClient({
 // EIP-6963 multi-wallet discovery: in browsers with several wallet
 // extensions, window.ethereum may be hijacked by a non-MetaMask wallet.
 // We collect announced providers and prefer MetaMask explicitly.
+const walletId = (d) => d.info?.rdns || d.info?.name || ""; // до слушателя: кошельки отвечают синхронно
 const discovered = [];
+const LS_WALLET = "hood.wallet"; // rdns кошелька, который выбрал пользователь
 if (typeof window !== "undefined") {
   window.addEventListener("eip6963:announceProvider", (e) => {
-    if (e.detail?.provider) discovered.push(e.detail);
+    const d = e.detail;
+    if (!d?.provider) return;
+    // расширения объявляются повторно на каждый requestProvider — без дублей
+    if (discovered.some((x) => walletId(x) === walletId(d))) return;
+    discovered.push(d);
   });
   try {
     window.dispatchEvent(new Event("eip6963:requestProvider"));
   } catch (e) { /* ignore */ }
 }
 
+/** Кошельки, которые объявились в браузере (EIP-6963): [{rdns, name, icon}] */
+export function listWallets() {
+  return discovered.map((d) => ({ rdns: walletId(d), name: d.info?.name || "Wallet", icon: d.info?.icon || "" }));
+}
+/** Какой кошелёк выбрал пользователь (rdns) — "" если не выбирал. */
+export function preferredWallet() {
+  try { return localStorage.getItem(LS_WALLET) || ""; } catch (e) { return ""; }
+}
+export function setPreferredWallet(rdns) {
+  try { rdns ? localStorage.setItem(LS_WALLET, rdns) : localStorage.removeItem(LS_WALLET); } catch (e) { /* ignore */ }
+}
+const byId = (rdns) => discovered.find((d) => walletId(d) === rdns) || null;
+
 export function pickProvider() {
+  // 1) кошелёк, который человек выбрал сам (OKX с Ledger, Rabby…)
+  const want = preferredWallet();
+  if (want) { const d = byId(want); if (d) return d.provider; }
+  // 2) иначе MetaMask, как раньше
   const mm = discovered.find((d) => /metamask/i.test(d.info?.name || ""));
   if (mm) return mm.provider;
   if (discovered.length) return discovered[0].provider;
@@ -64,8 +87,16 @@ export function hasWallet() {
 const isMobile = () =>
   typeof navigator !== "undefined" && /android|iphone|ipad|ipod/i.test(navigator.userAgent);
 
-export async function connectWallet() {
-  const provider = pickProvider();
+export async function connectWallet(opts = {}) {
+  let provider = null;
+  if (opts.rdns) {
+    const d = byId(opts.rdns);
+    if (!d) throw new Error("Кошелёк не найден. Обновите страницу.");
+    provider = d.provider;
+    setPreferredWallet(opts.rdns);
+  } else {
+    provider = pickProvider();
+  }
   if (!provider) {
     if (isMobile()) {
       // На телефоне MetaMask — приложение, а не расширение браузера.
