@@ -1,29 +1,26 @@
 // ============================================================================
 //  Бот выкупа монеты hood — тратит казну выкупа на монету платформы.
 //
-//  Экономика (перезапуск 16.09.2026): 10% каждой торговой комиссии приходит
-//  в казну выкупа hood (ArenaTreasury, отдельный контракт от казны арены).
-//  Раз в сутки бот берёт ВСЁ, что накопилось в ETH, покупает на это монету
-//  hood с кривой и сжигает купленное в той же транзакции. Вывода из казны
-//  нет по замыслу — она умеет только выкупать и сжигать.
+//  Экономика (перезапуск 09.2026): 10% каждой торговой комиссии приходит
+//  в казну выкупа hood (ArenaTreasuryV3, отдельный контракт от казны арены).
+//  РАЗ В ЧАС (решение владельца 17.09.2026) бот берёт ВСЁ, что накопилось в
+//  ETH, покупает на это монету hood и сжигает купленное в той же транзакции:
+//  пока монета на кривой — у кривой (buybackEth), после градации — на
+//  Uniswap V3 (buybackDex). Вывода из казны нет по замыслу — она умеет
+//  только выкупать и сжигать.
 //
 //  Состояние — в блокчейне: перед выкупом бот читает события Buyback казны
-//  за последние дни и не повторяет день, у которого уже есть событие с
-//  пометкой «hood <день>». Повторный запуск безопасен.
+//  за последние дни и не повторяет час, у которого уже есть событие с
+//  пометкой «hood <день> <час>». Повторный запуск безопасен.
 //
-//  Запуск (GitHub Actions, .github/workflows/buyback.yml):
-//     node bot/buyback/buyback.mjs           # выкуп за сегодня, если ещё не было
+//  Запуск (GitHub Actions, .github/workflows/buyback.yml — цикл раз в час):
+//     node bot/buyback/buyback.mjs           # выкуп за этот час, если ещё не было
 //     node bot/buyback/buyback.mjs --dry     # только показать, что бы сделал
 //
-//  Переменные: ARENA_PRIVATE_KEY (ключ владельца казны — тот же, что у
+//  Переменные: ARENA_PRIVATE_KEY (ключ оператора казны — тот же, что у
 //  арены), BUYBACK_TREASURY (адрес казны выкупа), HOOD_TOKEN (адрес монеты
 //  hood — переменная GitHub, задаётся после создания монеты). Необязательно:
 //  FACTORY, RPC_URL, DUST_ETH, SLIPPAGE_BPS.
-//
-//  Пока монета на кривой, выкуп идёт напрямую у пула (buybackEth). После
-//  градации кривая закрыта: казна ещё не умеет покупать на Uniswap — бот
-//  пишет предупреждение и копит дальше (следующий шаг: маршрут через
-//  Uniswap в ArenaTreasury).
 // ============================================================================
 import {
   createPublicClient, createWalletClient, http, parseAbi, formatEther, defineChain,
@@ -57,14 +54,15 @@ const wallet = createWalletClient({ account, chain, transport: http(RPC_URL) });
 const treasuryAbi = parseAbi([
   "function owner() view returns (address)",
   "function buybackEth(address token, uint256 ethAmount, uint256 minTokensOut, string note) returns (uint256)",
+  "function buybackDex(address token, uint256 ethAmount, uint256 minTokensOut, string note) returns (uint256)",
   "event Buyback(address indexed token, address indexed asset, uint256 amountIn, uint256 tokensOut, string note)",
 ]);
 const factoryAbi = parseAbi(["function poolOf(address) view returns (address)"]);
 const poolAbi = parseAbi(["function graduated() view returns (bool)"]);
 const tokenAbi = parseAbi(["function symbol() view returns (string)"]);
 
-/** Уже был выкуп с пометкой этого дня? */
-async function alreadyPaid(dayKey) {
+/** Уже был выкуп с пометкой этого часа? */
+async function alreadyPaid(hourKey) {
   const head = await pub.getBlockNumber();
   const hb = await pub.getBlock({ blockNumber: head });
   const old = await pub.getBlock({ blockNumber: head > 5000n ? head - 5000n : 0n });
@@ -75,13 +73,14 @@ async function alreadyPaid(dayKey) {
   for (let from = fromBlock; from <= head; from += STEP + 1n) {
     const to = from + STEP > head ? head : from + STEP;
     const logs = await pub.getLogs({ address: TREASURY, event: treasuryAbi.find((x) => x.type === "event"), fromBlock: from, toBlock: to });
-    for (const l of logs) if ((l.args.note || "") === `hood ${dayKey}`) return true;
+    for (const l of logs) if ((l.args.note || "") === `hood ${hourKey}`) return true;
   }
   return false;
 }
 
 async function main() {
-  const dayKey = new Date().toISOString().slice(0, 10);
+  // ключ часа: «2026-09-18 01» — один выкуп в час, повтор в тот же час — холостой
+  const hourKey = new Date().toISOString().slice(0, 13).replace("T", " ");
   console.log(`hood · бот выкупа hood · ${new Date().toISOString()} · кошелёк ${account.address}${DRY ? " · СУХОЙ ПРОГОН" : ""}`);
 
   // казна V2: выкупать может владелец или оператор (ключ бота); старая — только владелец
@@ -107,30 +106,28 @@ async function main() {
   }
   const bal = await pub.getBalance({ address: TREASURY });
   const balEth = Number(formatEther(bal));
-  console.log(`Казна выкупа: ${balEth.toFixed(6)} ETH · монета $${symbol} ${HOOD}${graduated ? " · ГРАДУИРОВАЛА" : " · на кривой"}`);
+  console.log(`Казна выкупа: ${balEth.toFixed(6)} ETH · монета $${symbol} ${HOOD}${graduated ? " · градуировала — покупаем на Uniswap" : " · на кривой"}`);
 
-  if (graduated) {
-    console.warn("⚠ Монета градуировала — кривая закрыта, казна пока не умеет покупать на Uniswap. Копим.");
-    return;
-  }
   if (balEth < DUST_ETH) { console.log("Фонд — пыль, копим дальше."); return; }
-  if (await alreadyPaid(dayKey)) { console.log(`Выкуп за ${dayKey} уже был.`); return; }
+  if (await alreadyPaid(hourKey)) { console.log(`Выкуп за час ${hourKey} уже был.`); return; }
 
-  const note = `hood ${dayKey}`;
+  // до градации — у кривой, после — на Uniswap V3 через казну (buybackDex)
+  const fn = graduated ? "buybackDex" : "buybackEth";
+  const note = `hood ${hourKey}`;
   let expected;
   try {
-    const sim = await pub.simulateContract({ account, address: TREASURY, abi: treasuryAbi, functionName: "buybackEth", args: [HOOD, bal, 0n, note] });
+    const sim = await pub.simulateContract({ account, address: TREASURY, abi: treasuryAbi, functionName: fn, args: [HOOD, bal, 0n, note] });
     expected = sim.result;
   } catch (e) {
-    console.error(`Симуляция выкупа не прошла — ${e.shortMessage || e.message}`); process.exit(DRY ? 0 : 3);
+    console.error(`Симуляция выкупа (${fn}) не прошла — ${e.shortMessage || e.message}`); process.exit(DRY ? 0 : 3);
   }
   const minOut = (expected * (10000n - SLIPPAGE_BPS)) / 10000n;
-  console.log(`Выкуп: ${balEth.toFixed(6)} ETH → ≈${(Number(expected) / 1e18).toFixed(0)} $${symbol}, сжигаем${DRY ? " (сухо)" : ""}`);
+  console.log(`Выкуп ${fn === "buybackDex" ? "на DEX" : "с кривой"}: ${balEth.toFixed(6)} ETH → ≈${(Number(expected) / 1e18).toFixed(0)} $${symbol}, сжигаем${DRY ? " (сухо)" : ""}`);
   if (DRY) return;
-  const hash = await wallet.writeContract({ address: TREASURY, abi: treasuryAbi, functionName: "buybackEth", args: [HOOD, bal, minOut, note] });
+  const hash = await wallet.writeContract({ address: TREASURY, abi: treasuryAbi, functionName: fn, args: [HOOD, bal, minOut, note] });
   const rc = await pub.waitForTransactionReceipt({ hash });
   console.log(`  ${rc.status} ${hash}`);
-  if (rc.status !== "success") { console.error("Выкуп не прошёл — остаток ждёт следующего запуска."); process.exit(3); }
+  if (rc.status !== "success") { console.error("Выкуп не прошёл — остаток ждёт следующего часа."); process.exit(3); }
   console.log("Готово.");
 }
 

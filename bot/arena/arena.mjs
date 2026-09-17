@@ -1,11 +1,13 @@
 // ============================================================================
 //  Бот арены hood — платит вчерашнему подиуму из казны арены.
 //
-//  Экономика (перезапуск 16.09.2026): 10% каждой торговой комиссии
-//  приходит в ArenaTreasury. Раз в сутки бот берёт ВСЁ, что накопилось в ETH,
-//  и делит между вчерашним подиумом 70 / 20 / 10: выкупает монеты-призёры с
-//  рынка и сжигает их в той же транзакции (казна умеет только это — вывода
-//  из неё нет по замыслу). Подиум считает ЕДИНОЕ ядро арены
+//  Экономика (перезапуск 09.2026): 10% каждой торговой комиссии приходит в
+//  ArenaTreasuryV3. Раз в сутки бот берёт ВСЁ, что накопилось в ETH, и делит
+//  между вчерашним подиумом 70 / 20 / 10: выкупает монеты-призёры с рынка и
+//  сжигает их в той же транзакции (казна умеет только это — вывода из неё
+//  нет по замыслу). Монета на кривой выкупается у кривой (ETH-монета —
+//  напрямую, монета за валюту — через зап); градуировавшая — на Uniswap V3
+//  (buybackDex) — из выкупов монета не выпадает никогда. Подиум считает ЕДИНОЕ ядро арены
 //  (web/src/lib/arena-core.js) — тот же код, что показывает бой на сайте.
 //
 //  Состояние — в блокчейне: перед выплатой бот читает события Buyback казны
@@ -70,6 +72,8 @@ const treasuryAbi = parseAbi([
   "function buybackEth(address token, uint256 ethAmount, uint256 minTokensOut, string note) returns (uint256)",
   "function buybackViaZap(address token, uint256 ethAmount, uint256 minTokensOut, uint256 deadline, string note) returns (uint256)",
   "function buybackQuote(address token, uint256 quoteAmount, uint256 minTokensOut, string note) returns (uint256)",
+  "function buybackDex(address token, uint256 ethAmount, uint256 minTokensOut, string note) returns (uint256)",
+  "function DEX_FEE() view returns (uint24)",
   "event Buyback(address indexed token, address indexed asset, uint256 amountIn, uint256 tokensOut, string note)",
 ]);
 const factoryAbi = parseAbi(["function poolOf(address) view returns (address)"]);
@@ -195,6 +199,8 @@ async function payFrom(treasury, prefix, paid, pod, trades, dayKey) {
   // Казна V2 копит в ETH: сначала переводим всю валюту казны (GME, USDG…) в
   // ETH, потом весь подиум оплачивается из ETH — любую монету, любой парой.
   const canConvert = await treasuryCanConvert(pub, treasury);
+  // казна V3 умеет покупать на Uniswap (buybackDex) — проверяем по коду контракта
+  const canDex = await pub.readContract({ address: treasury, abi: treasuryAbi, functionName: "DEX_FEE" }).then(() => true).catch(() => false);
   if (canConvert) {
     const assets = [...new Set(trades.map((t) => t.quote).filter(Boolean))];
     console.log(`Казна V2 · валюта → ETH (${assets.length} актив.)…`);
@@ -211,17 +217,24 @@ async function payFrom(treasury, prefix, paid, pod, trades, dayKey) {
     const ethPool = await pub.readContract({ address: FACTORY, abi: factoryAbi, functionName: "poolOf", args: [token] }).catch(() => null);
     const isEth = ethPool && ethPool !== "0x0000000000000000000000000000000000000000";
     let asset = "eth";
+    let curvePool = isEth ? ethPool : null;
     if (!isEth) {
       const qPool = await pub.readContract({ address: QUOTE_FACTORY, abi: factoryAbi, functionName: "poolOf", args: [token] }).catch(() => null);
       if (!qPool || qPool === "0x0000000000000000000000000000000000000000") { console.log(`  ${place} место $${pod[i].symbol}: пул не найден, пропуск.`); continue; }
-      // V2: платим ETH через зап; V1: из валюты казны, а если её нет — тоже ETH через зап
+      curvePool = qPool;
+      // V2+: платим ETH через зап; V1: из валюты казны, а если её нет — тоже ETH через зап
       if (!canConvert) {
         const q = (await pub.readContract({ address: qPool, abi: quotePoolAbi, functionName: "quote" })).toLowerCase();
         const qBal = await pub.readContract({ address: q, abi: erc20Abi, functionName: "balanceOf", args: [treasury] }).catch(() => 0n);
         if (qBal > 0n) asset = q;
       }
     }
-    const viaZap = !isEth && asset === "eth";
+    // градуировала — кривая закрыта, покупаем на Uniswap V3 (казна V3); у старой казны такого нет — пропуск
+    const graduated = await pub.readContract({ address: curvePool, abi: poolAbi, functionName: "graduated" }).catch(() => false);
+    const viaDex = graduated;
+    if (viaDex && !canDex) { console.log(`  ${place} место $${pod[i].symbol}: градуировала, а эта казна не умеет покупать на DEX — пропуск.`); continue; }
+    if (viaDex) asset = "eth";
+    const viaZap = !viaDex && !isEth && asset === "eth";
     const { sym, dec } = await assetInfo(asset);
     const { bal, pot } = await potOf(asset);
     const share = (pot * BigInt(Math.round(SPLIT[i] * 10000))) / 10000n;
@@ -232,7 +245,7 @@ async function payFrom(treasury, prefix, paid, pod, trades, dayKey) {
       continue;
     }
     const note = `${prefix} ${dayKey} ${place} $${pod[i].symbol}`;
-    const fn = isEth ? "buybackEth" : viaZap ? "buybackViaZap" : "buybackQuote";
+    const fn = viaDex ? "buybackDex" : isEth ? "buybackEth" : viaZap ? "buybackViaZap" : "buybackQuote";
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 600);
     const argsFor = (minOut) => (viaZap ? [token, amt, minOut, deadline, note] : [token, amt, minOut, note]);
     let expected;
@@ -277,9 +290,8 @@ async function main() {
   // и бот писал «подиума не было» при живых сделках (17.09.2026).
   const { chain: days } = buildChain(tokens, trades, ARENA_DAYS, yesterday + DAY);
   const st = days.get(yesterday);
-  // градуировавшие монеты выкупить нельзя — кривая закрыта
-  const gradSet = new Set(tokens.filter((x) => x.graduated).map((x) => x.token.toLowerCase()));
-  const pod = podium(st).filter((p) => !gradSet.has(p.token.toLowerCase()));
+  // градуировавшие монеты тоже в подиуме: казна V3 покупает их на Uniswap
+  const pod = podium(st);
   if (!pod.length) { console.log(`Арена за ${dayKey}: подиума не было (нет сделок) — выплат нет, фонд копится.`); return; }
 
   console.log(`Подиум за ${dayKey}: ${pod.map((p, i) => `${i + 1}. $${p.symbol}`).join("  ")}`);
