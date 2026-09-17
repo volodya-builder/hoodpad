@@ -60,9 +60,27 @@ export const modal = createAppKit({
   // остальное — как у Pons: стандартный вид AppKit (шрифт, скругления), только акцент наш
   themeVariables: {
     "--w3m-accent": isLight() ? "#5f8a00" : "#c8f542",
+    // темнее стандартного, как у Pons: подмешиваем чёрный в фон и плашки
+    "--w3m-color-mix": isLight() ? "#ffffff" : "#000000",
+    "--w3m-color-mix-strength": isLight() ? 0 : 35,
     "--w3m-z-index": 1000,
   },
 });
+
+// Кнопка «?» (What is a wallet) в шапке окна — лишняя, у AppKit нет настройки
+// её убрать; прячем стилем внутри shadow DOM шапки при каждом открытии.
+function hideHelpButton() {
+  try {
+    const header = document.querySelector("w3m-modal")?.shadowRoot?.querySelector("w3m-header");
+    const root = header?.shadowRoot;
+    if (!root || root.querySelector("#hood-no-help")) return;
+    const st = document.createElement("style");
+    st.id = "hood-no-help";
+    st.textContent = 'wui-icon-button[icon="helpCircle"] { visibility: hidden; pointer-events: none; }';
+    root.appendChild(st);
+  } catch (e) { /* ignore */ }
+}
+modal.subscribeState((s) => { if (s.open) [0, 60, 300, 1000].forEach((ms) => setTimeout(hideHelpButton, ms)); });
 
 // Логотип WalletConnect: AppKit тянет картинки коннекторов один раз, при первом
 // открытии окна, а WalletConnect-коннектор к этому моменту ещё не создан —
