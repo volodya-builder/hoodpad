@@ -224,21 +224,8 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
   transition: border-color .18s, background .18s, color .18s;
 }
 .check-row:hover { border-color: #3a3b33; color: var(--text); }
-.check-row input { position: absolute; opacity: 0; width: 0; height: 0; }
-.check-row input + span::before {
-  content: ""; float: left; margin: 1px 12px 0 0;
-  width: 20px; height: 20px; border-radius: 7px;
-  border: 1.5px solid var(--border); background: var(--card);
-  transition: all .18s; box-sizing: border-box;
-}
-.check-row input:checked + span::before {
-  background: var(--gold); border-color: var(--gold);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 18%, transparent);
-}
-.check-row input:checked + span::after {
-  content: "✓"; position: absolute; margin: -1px 0 0 -30px;
-  color: #101100; font-size: 14px; font-weight: 900; line-height: 22px;
-}
+.check-row { align-items: flex-start; }
+.check-row input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--gold); flex: none; cursor: pointer; }
 .check-row:has(input:checked) { border-color: color-mix(in srgb, var(--gold) 45%, transparent); color: var(--text); }
 .upload-box {
   border: 1.5px dashed var(--border); border-radius: 13px; padding: 18px;
@@ -4072,10 +4059,8 @@ html[data-theme="light"] .sr-menu-it:hover, html[data-theme="light"] .sr-menu-it
 .tos-sub { color: var(--text-dim); font-size: 14px; line-height: 1.6; margin: 0 0 20px; }
 .tos-check { background: transparent; border: 0; border-top: 1px solid rgba(255,255,255,.08); border-radius: 0; padding: 14px 0; margin: 0; font-weight: 400; font-size: 14.5px; gap: 12px; }
 .tos-check:last-of-type { border-bottom: 1px solid rgba(255,255,255,.08); }
-.tos-check input { position: absolute; opacity: 0; width: 0; height: 0; }
-.tos-box { width: 20px; height: 20px; border-radius: 6px; border: 1px solid rgba(255,255,255,.25); display: inline-flex; align-items: center; justify-content: center; color: transparent; flex: none; transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease); }
-.tos-check:hover .tos-box { border-color: rgba(255,255,255,.5); }
-.tos-check.on .tos-box { background: var(--gold); border-color: var(--gold); color: #101400; }
+.tos-check { align-items: flex-start; line-height: 1.45; }
+.tos-check input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--gold); flex: none; cursor: pointer; }
 .tos-check a { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
 .tos-check a:hover { color: var(--gold); }
 .tos-actions { margin-top: 22px; gap: 16px; }
@@ -4083,7 +4068,6 @@ html[data-theme="light"] .sr-menu-it:hover, html[data-theme="light"] .sr-menu-it
 .tos-ghost:hover { color: var(--text); }
 html[data-theme="light"] .tos-modal { background: #fff; border-color: rgba(0,0,0,.1); }
 html[data-theme="light"] .tos-check, html[data-theme="light"] .tos-check:last-of-type { border-color: rgba(0,0,0,.1); }
-html[data-theme="light"] .tos-box { border-color: rgba(0,0,0,.3); }
 .th-pair { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 400; color: var(--text-dim); padding: 4px 10px 4px 5px; border-radius: 999px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); }
 .th-pair b { font-weight: 500; color: var(--text); }
 .th-pair .qlogo-sym { color: var(--text); font-size: 13px; }

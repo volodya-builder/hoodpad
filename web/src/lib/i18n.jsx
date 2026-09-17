@@ -1695,6 +1695,8 @@ const EN = {
   "Название слишком длинное для контракта — укоротите (эмодзи и кириллица считаются за несколько знаков).": "Name is too long for the contract — shorten it (emoji and non-Latin letters count as several characters).",
   "Тикер слишком длинный для контракта — укоротите.": "Ticker is too long for the contract — shorten it.",
   "Запас на чужие сделки между оценкой и исполнением: 2% на кривой, 5% через обмен": "Buffer for other trades between quote and execution: 2% on the curve, 5% via swap",
+  "Чтобы пользоваться hood с этим кошельком, примите Условия использования и Политику конфиденциальности и подтвердите, что имеете право пользоваться сервисом.": "To use hood with this wallet, accept the Terms of Use and the Privacy Policy and confirm that you are eligible to use the service.",
+  "Мне есть 18 лет, я не гражданин и не резидент США, не нахожусь в запрещённой юрисдикции и не под санкциями": "I am 18 or older, not a U.S. citizen or resident, not located in a prohibited jurisdiction and not subject to sanctions",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

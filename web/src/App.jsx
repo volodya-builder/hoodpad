@@ -281,6 +281,7 @@ export default function App() {
   const [tosOpen, setTosOpen] = useState(false);
   const [tosA, setTosA] = useState(false);
   const [tosB, setTosB] = useState(false);
+  const [tosC, setTosC] = useState(false);
   const [walletMenu, setWalletMenu] = useState(false);
   useEffect(() => {
     const close = (e) => { if (!e.target.closest(".wallet-wrap")) setWalletMenu(false); };
@@ -317,15 +318,18 @@ export default function App() {
     return () => document.removeEventListener("keydown", onKey);
   }, []);
 
+  // версия Условий: при смене даты все кошельки принимают заново
+  const TOS_VERSION = "2026-09-17";
   const tosAccepted = (acc) => {
     try {
-      const m = JSON.parse(localStorage.getItem("hood_tos_v1") || "{}");
-      return !!m[acc.toLowerCase()];
+      const m = JSON.parse(localStorage.getItem("hood_tos_v2") || "{}");
+      const v = m[acc.toLowerCase()];
+      return !!v && (v === true ? false : v.terms === TOS_VERSION);
     } catch (e) { return false; }
   };
 
   const requireTos = useCallback((acc) => {
-    if (!tosAccepted(acc)) { setTosA(false); setTosB(false); setTosOpen(true); }
+    if (!tosAccepted(acc)) { setTosA(false); setTosB(false); setTosC(false); setTosOpen(true); }
   }, []);
 
   // Окно выбора кошелька (components/WalletModal.jsx): расширения, WalletConnect,
@@ -376,9 +380,10 @@ export default function App() {
   const acceptTos = () => {
     if (!wallet) return;
     try {
-      const m = JSON.parse(localStorage.getItem("hood_tos_v1") || "{}");
-      m[wallet.account.toLowerCase()] = true;
-      localStorage.setItem("hood_tos_v1", JSON.stringify(m));
+      const m = JSON.parse(localStorage.getItem("hood_tos_v2") || "{}");
+      // что именно принято и когда — на случай спора
+      m[wallet.account.toLowerCase()] = { terms: TOS_VERSION, at: new Date().toISOString(), age18: true, eligible: true };
+      localStorage.setItem("hood_tos_v2", JSON.stringify(m));
     } catch (e) { /* ignore */ }
     setTosOpen(false);
   };
@@ -726,20 +731,22 @@ export default function App() {
             <div className="tos-body">
               <h2 className="tos-title">{t("Условия и конфиденциальность")}</h2>
               <p className="tos-sub">
-                {t("Чтобы пользоваться hood с этим кошельком, примите Условия использования и Политику конфиденциальности и подтвердите, что вы не в юрисдикции, где это запрещено.")}
+                {t("Чтобы пользоваться hood с этим кошельком, примите Условия использования и Политику конфиденциальности и подтвердите, что имеете право пользоваться сервисом.")}
               </p>
-              <label className={`tos-check ${tosA ? "on" : ""}`}>
+              <label className="tos-check">
                 <input type="checkbox" checked={tosA} onChange={(e) => setTosA(e.target.checked)} />
-                <span className="tos-box"><Icon name="check" size={13} style={{ margin: 0 }} /></span>
                 <span>{t("Принимаю")} <a href="#/terms" target="_blank" rel="noreferrer">{t("Условия использования")}</a></span>
               </label>
-              <label className={`tos-check ${tosB ? "on" : ""}`}>
+              <label className="tos-check">
                 <input type="checkbox" checked={tosB} onChange={(e) => setTosB(e.target.checked)} />
-                <span className="tos-box"><Icon name="check" size={13} style={{ margin: 0 }} /></span>
                 <span>{t("Принимаю")} <a href="#/privacy" target="_blank" rel="noreferrer">{t("Политику конфиденциальности")}</a></span>
               </label>
+              <label className="tos-check">
+                <input type="checkbox" checked={tosC} onChange={(e) => setTosC(e.target.checked)} />
+                <span>{t("Мне есть 18 лет, я не гражданин и не резидент США, не нахожусь в запрещённой юрисдикции и не под санкциями")}</span>
+              </label>
               <div className="tos-actions">
-                <button className="btn btn-primary" disabled={!tosA || !tosB} onClick={acceptTos}>{t("Продолжить")}</button>
+                <button className="btn btn-primary" disabled={!tosA || !tosB || !tosC} onClick={acceptTos}>{t("Продолжить")}</button>
                 <button className="tos-ghost" onClick={declineTos}>{t("Отключить кошелёк")}</button>
               </div>
             </div>
