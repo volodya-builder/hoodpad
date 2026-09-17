@@ -14,7 +14,8 @@
 // ============================================================================
 import { createAppKit } from "@reown/appkit";
 import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
-import { defineChain } from "@reown/appkit/networks";
+import { defineChain, mainnet } from "@reown/appkit/networks";
+import { AssetController } from "@reown/appkit-controllers";
 import { reconnect, getAccount, watchAccount, disconnect as wagmiDisconnect } from "@wagmi/core";
 import { createWalletClient, custom } from "viem";
 import { CHAIN, WC_PROJECT_ID as PROJECT_ID } from "./config.js";
@@ -31,12 +32,16 @@ const robinhood = defineChain({
 
 const isLight = () => document.documentElement.dataset.theme === "light";
 
-const wagmiAdapter = new WagmiAdapter({ networks: [robinhood], projectId: PROJECT_ID, ssr: false });
+// Ethereum в списке сетей — только чтобы реестр показывал все EVM-кошельки
+// (540+, как у Pons), а не 80 с явной поддержкой Robinhood Chain. Работает
+// сайт всё равно в Robinhood Chain: после подключения ensureChain переключит.
+const NETWORKS = [robinhood, mainnet];
+const wagmiAdapter = new WagmiAdapter({ networks: NETWORKS, projectId: PROJECT_ID, ssr: false });
 export const wagmiConfig = wagmiAdapter.wagmiConfig;
 
 export const modal = createAppKit({
   adapters: [wagmiAdapter],
-  networks: [robinhood],
+  networks: NETWORKS,
   defaultNetwork: robinhood,
   projectId: PROJECT_ID,
   metadata: {
@@ -52,13 +57,18 @@ export const modal = createAppKit({
   enableNetworkSwitch: false,
   allowUnsupportedChain: true, // сеть переключит ensureChain — не пугаем «unsupported»
   themeMode: isLight() ? "light" : "dark",
+  // остальное — как у Pons: стандартный вид AppKit (шрифт, скругления), только акцент наш
   themeVariables: {
     "--w3m-accent": isLight() ? "#5f8a00" : "#c8f542",
-    "--w3m-font-family": "Inter, system-ui, sans-serif",
-    "--w3m-border-radius-master": "2px",
     "--w3m-z-index": 1000,
   },
 });
+
+// Логотип WalletConnect: AppKit тянет картинки коннекторов один раз, при первом
+// открытии окна, а WalletConnect-коннектор к этому моменту ещё не создан —
+// остаётся пустой квадрат. Ставим картинку сами: тот же файл из реестра Reown.
+const WC_IMAGE_ID = "ef1a1fcf-7fe8-4d69-bd6d-fda1345b4400";
+AssetController.setConnectorImage(WC_IMAGE_ID, `https://api.web3modal.org/public/getAssetImage/${WC_IMAGE_ID}?projectId=${PROJECT_ID}&st=appkit&sv=html-wagmi-1.8.24`);
 
 // тема сайта переключилась — окно за ней
 new MutationObserver(() => modal.setThemeMode(isLight() ? "light" : "dark"))
@@ -81,6 +91,8 @@ export async function restore() {
 
 /** Открыть окно и дождаться подключения; закрыл окно — ошибка «rejected». */
 export function connect() {
+  // AppKit сам восстанавливает прошлую сессию при инициализации — тогда окно не нужно
+  if (getAccount(wagmiConfig).status === "connected") return current();
   return new Promise((resolve, reject) => {
     let done = false;
     const finish = (fn) => { if (done) return; done = true; unAcc(); unState(); fn(); };
