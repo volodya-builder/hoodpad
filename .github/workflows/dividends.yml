@@ -41,13 +41,13 @@ jobs:
         env:
           TREASURER_PRIVATE_KEY: ${{ secrets.TREASURER_PRIVATE_KEY }}
           # Боевой режим (решение владельца 17.09.2026): выплата держателю и сбор
-          # доли площадки — от $1, чтобы газ не съедал сумму; раз в час.
+          # доли площадки — от $1, чтобы газ не съедал сумму; проверка каждые 5 минут.
           MIN_PAYOUT_USD: "1"
           MIN_SWEEP_USD: "1"
-          # Как часто платить, секунд. 3600 — раз в час (один прогон на заход,
-          # эстафета запускает следующий в начале следующего часа). Для теста
-          # можно временно поставить Settings → Variables → DIVIDENDS_EVERY = 60.
-          EVERY: ${{ vars.DIVIDENDS_EVERY || '3600' }}
+          # Как часто, секунд. 300 — каждые 5 минут: бот крутится внутри одного
+          # захода до 5,5 ч, потом эстафета сразу запускает следующий.
+          # Переопределить: Settings → Variables → DIVIDENDS_EVERY.
+          EVERY: ${{ vars.DIVIDENDS_EVERY || '300' }}
         run: |
           set -o pipefail   # иначе tee прячет ошибку бота, и заход выглядит успешным
           if [ "${{ github.event.inputs.mode }}" = "dry" ]; then
@@ -72,14 +72,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELAY: ${{ vars.DIVIDENDS_RELAY }}
-          EVERY: ${{ vars.DIVIDENDS_EVERY || '3600' }}
+          EVERY: ${{ vars.DIVIDENDS_EVERY || '300' }}
         run: |
           if [ "$RELAY" = "off" ]; then echo "Эстафета выключена (DIVIDENDS_RELAY=off)."; exit 0; fi
           NOW=$(date -u +%s)
           NEXT=$(( (NOW / 3600 + 1) * 3600 + 120 ))
           WAIT=$(( NEXT - NOW ))
           # тестовый режим (чаще раза в час): следующий заход сразу, без ожидания
-          [ "${EVERY:-3600}" -lt 3600 ] && WAIT=0
+          [ "${EVERY:-300}" -lt 3600 ] && WAIT=0
           OTHERS=$(gh run list --workflow dividends.yml --limit 20 --json status --jq '[.[] | select(.status=="queued" or .status=="pending" or .status=="waiting" or .status=="requested")] | length' || echo 0)
           if [ "$OTHERS" != "0" ]; then echo "В очереди уже есть запуск — эстафету не передаю."; exit 0; fi
           echo "Следующий заход через $((WAIT / 60)) мин…"; sleep "$WAIT"
