@@ -20,7 +20,7 @@ const Admin = lazy(() => import("./pages/Admin.jsx"));
 const Revenue = lazy(() => import("./pages/Revenue.jsx"));
 const Cats = lazy(() => import("./pages/Cats.jsx"));
 const Docs = lazy(() => import("./pages/Docs.jsx"));
-import { connectWallet, reconnectWallet, hasWallet, short, fmt, fmtEth, publicClient } from "./lib/web3.js";
+import { connectWallet, reconnectWallet, hasWallet, short, fmt, fmtEth, publicClient, listWallets, preferredWallet, setPreferredWallet } from "./lib/web3.js";
 import { CHAIN, FACTORY_ADDRESS, TREASURY_ADDRESS, CHAT_DB_URL, FEATURES } from "./lib/config.js";
 import { treasuryAbi } from "./lib/abi.js";
 import { loadTokens, timeAgo } from "./lib/data.js";
@@ -327,9 +327,13 @@ export default function App() {
     if (!tosAccepted(acc)) { setTosA(false); setTosB(false); setTosOpen(true); }
   }, []);
 
-  const connect = useCallback(async () => {
+  // Несколько кошельков в браузере (MetaMask + OKX с Ledger…): при первом
+  // подключении спрашиваем, каким; выбор помним, сменить можно в меню кошелька.
+  const [pickOpen, setPickOpen] = useState(false);
+  const connectAs = useCallback(async (rdns) => {
     try {
-      const w = await connectWallet();
+      if (!rdns && listWallets().length > 1 && !preferredWallet()) { setPickOpen(true); return; }
+      const w = await connectWallet(rdns ? { rdns } : {});
       setWallet(w);
       try { localStorage.setItem("hood_wallet", "1"); } catch (e) { /* ignore */ }
       requireTos(w.account);
@@ -344,11 +348,13 @@ export default function App() {
       }
     }
   }, [requireTos, t]);
+  const connect = useCallback(() => connectAs(""), [connectAs]);
 
   const hardDisconnect = useCallback(() => {
     const prov = wallet?.provider;
     setWallet(null);
     try { localStorage.removeItem("hood_wallet"); } catch (e) { /* ignore */ }
+    setPreferredWallet(""); // после отключения снова спросим, каким кошельком входить
     // отзыв разрешения в MetaMask — следующее подключение снова спросит
     try {
       prov?.request({
@@ -628,6 +634,11 @@ export default function App() {
                     <a className="wallet-item" href="#/admin" onClick={() => setWalletMenu(false)}
                        style={{ display: "block" }}>⚙ {t("Админ-панель")}</a>
                   )}
+                  {listWallets().length > 1 && (
+                    <div className="wallet-item" onClick={() => { setWalletMenu(false); setPreferredWallet(""); setPickOpen(true); }}>
+                      {t("Сменить кошелёк")}
+                    </div>
+                  )}
                   <div className="wallet-item" onClick={() => {
                     setWalletMenu(false);
                     hardDisconnect();
@@ -701,6 +712,25 @@ export default function App() {
         </div>
       </footer>
       <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
+      {pickOpen && (
+        <div className="modal-back open" onClick={() => setPickOpen(false)}>
+          <div className="tos-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="tos-body">
+              <h2 className="tos-title">{t("Выберите кошелёк")}</h2>
+              <p className="tos-sub">{t("В браузере несколько кошельков. Выбор запомним — сменить можно в меню кошелька.")}</p>
+              <div className="wpick-list">
+                {listWallets().map((w) => (
+                  <button type="button" className="wpick-item" key={w.rdns}
+                          onClick={() => { setPickOpen(false); connectAs(w.rdns); }}>
+                    {w.icon ? <img src={w.icon} alt="" /> : <span className="wpick-ph" />}
+                    <span>{w.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {tosOpen && wallet && (
         <div className="modal-back open">
           <div className="tos-modal">

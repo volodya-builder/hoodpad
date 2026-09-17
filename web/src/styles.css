@@ -4475,3 +4475,12 @@ html[data-theme="light"] .pos-row:hover { background: rgba(30,32,28,.07); box-sh
 html[data-theme="light"] .arena-pot, html[data-theme="light"] .docs-stat, html[data-theme="light"] .docs-table, html[data-theme="light"] .docs-split {
   background: rgba(30,32,28,.03) !important; border-color: rgba(30,32,28,.1) !important; box-shadow: inset 0 1px 0 #fff !important;
 }
+
+/* выбор кошелька (EIP-6963), когда в браузере их несколько */
+.wpick-list { display: grid; gap: 8px; }
+.wpick-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.03); color: var(--text); font: inherit; font-weight: 600; font-size: 15px; cursor: pointer; text-align: left; transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease); }
+.wpick-item:hover { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.25); }
+.wpick-item img, .wpick-ph { width: 28px; height: 28px; border-radius: 8px; flex: none; }
+.wpick-ph { background: rgba(255,255,255,.08); }
+html[data-theme="light"] .wpick-item { border-color: rgba(0,0,0,.1); background: rgba(0,0,0,.02); }
+html[data-theme="light"] .wpick-item:hover { background: rgba(0,0,0,.05); border-color: rgba(0,0,0,.25); }

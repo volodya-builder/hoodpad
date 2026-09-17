@@ -38,6 +38,7 @@ export const BASE_ASSETS = [
 
 const v2Abi = parseAbi([
   "function owner() view returns (address)",
+  "function operator() view returns (address)",
   "function totalEthConverted() view returns (uint256)",
   "function toEth(address asset, uint256 amount, uint256 minEthOut) returns (uint256)",
 ]);
@@ -47,6 +48,21 @@ const erc20 = parseAbi(["function balanceOf(address) view returns (uint256)", "f
 export async function treasuryCanConvert(pub, treasury) {
   try { await pub.readContract({ address: treasury, abi: v2Abi, functionName: "totalEthConverted" }); return true; }
   catch (e) { return false; }
+}
+
+/**
+ * Может ли кошелёк распоряжаться казной: владелец — всегда; у казны с ролью
+ * оператора (перезапуск 17.09.2026) — ещё и оператор (ключ бота). Возвращает
+ * { ok, owner, operator, why }. Никогда не бросает.
+ */
+export async function treasuryAccess(pub, treasury, wallet) {
+  const w = String(wallet || "").toLowerCase();
+  let owner = null, operator = null;
+  try { owner = await pub.readContract({ address: treasury, abi: v2Abi, functionName: "owner" }); }
+  catch (e) { return { ok: false, owner, operator, why: `казна не отвечает: ${e.shortMessage || e.message}` }; }
+  try { operator = await pub.readContract({ address: treasury, abi: v2Abi, functionName: "operator" }); } catch (e) { operator = null; }
+  const ok = owner.toLowerCase() === w || (operator && operator.toLowerCase() === w);
+  return { ok, owner, operator, why: ok ? "" : `кошелёк ${wallet} не владелец (${owner})${operator ? ` и не оператор (${operator})` : ""} казны ${treasury}` };
 }
 
 /** Справедливый курс валюты в $ — или причина, почему ему нельзя верить. */
@@ -66,9 +82,11 @@ function trustedUsd(info) {
 export async function convertTreasuryToEth(pub, wallet, treasury, assets, { dry = false, log = console.log } = {}) {
   const uniq = [...new Set([...(assets || []), ...BASE_ASSETS].map((a) => String(a).toLowerCase()).filter((a) => /^0x[0-9a-f]{40}$/.test(a)))];
   let got = 0n;
-  let owner;
-  try { owner = await pub.readContract({ address: treasury, abi: v2Abi, functionName: "owner" }); } catch (e) { log(`  казна не отвечает: ${e.shortMessage || e.message}`); return 0n; }
-  if (!dry && owner.toLowerCase() !== wallet.account.address.toLowerCase()) { log(`  кошелёк бота не владелец казны (${owner}) — обмен невозможен`); return 0n; }
+  const acc = await treasuryAccess(pub, treasury, wallet.account.address);
+  if (!acc.owner) { log(`  ${acc.why}`); return 0n; }
+  if (!dry && !acc.ok) { log(`  ${acc.why} — обмен невозможен`); return 0n; }
+  // симулируем от того, кто реально подпишет; в сухом прогоне с чужим ключом — от владельца
+  const owner = acc.ok ? wallet.account.address : acc.owner;
   const eth = await ethUsdRate(pub);
   if (!(eth > 0)) { log("  курс ETH недоступен — обмен отложен до следующего запуска"); return 0n; }
   for (const asset of uniq) {

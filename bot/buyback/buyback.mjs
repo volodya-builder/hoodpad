@@ -29,7 +29,7 @@ import {
   createPublicClient, createWalletClient, http, parseAbi, formatEther, defineChain,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { treasuryCanConvert, convertTreasuryToEth } from "../lib/to-eth.mjs";
+import { treasuryCanConvert, convertTreasuryToEth, treasuryAccess } from "../lib/to-eth.mjs";
 
 const DRY = process.argv.includes("--dry");
 const RPC_URL = process.env.RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
@@ -84,10 +84,10 @@ async function main() {
   const dayKey = new Date().toISOString().slice(0, 10);
   console.log(`hood · бот выкупа hood · ${new Date().toISOString()} · кошелёк ${account.address}${DRY ? " · СУХОЙ ПРОГОН" : ""}`);
 
-  const owner = await pub.readContract({ address: TREASURY, abi: treasuryAbi, functionName: "owner" });
-  if (!DRY && owner.toLowerCase() !== account.address.toLowerCase()) {
-    console.error(`Кошелёк ${account.address} не владелец казны ${TREASURY} (владелец ${owner}).`); process.exit(1);
-  }
+  // казна V2: выкупать может владелец или оператор (ключ бота); старая — только владелец
+  const acc = await treasuryAccess(pub, TREASURY, account.address);
+  if (!acc.owner) throw new Error(acc.why);
+  if (!DRY && !acc.ok) { console.error(acc.why); process.exit(1); }
 
   const pool = await pub.readContract({ address: FACTORY, abi: factoryAbi, functionName: "poolOf", args: [HOOD] });
   if (!pool || /^0x0{40}$/.test(pool)) { console.error(`Монета ${HOOD} не найдена в фабрике ${FACTORY}.`); process.exit(1); }

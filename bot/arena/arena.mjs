@@ -31,7 +31,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { buildChain, podium, dayStart, DAY, ARENA_DAYS, setSystemAddresses } from "../../web/src/lib/arena-core.js";
 import { quoteUsd, ethUsdRate } from "../lib/quote-price.mjs";
-import { treasuryCanConvert, convertTreasuryToEth } from "../lib/to-eth.mjs";
+import { treasuryCanConvert, convertTreasuryToEth, treasuryAccess } from "../lib/to-eth.mjs";
 
 const DRY = process.argv.includes("--dry");
 const RPC_URL = process.env.RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
@@ -256,11 +256,10 @@ async function payFrom(treasury, prefix, paid, pod, trades, dayKey) {
 
 async function main() {
   console.log(`hood · бот арены · ${new Date().toISOString()} · кошелёк ${account.address}${DRY ? " · СУХОЙ ПРОГОН" : ""}`);
-  const owner = await pub.readContract({ address: TREASURY, abi: treasuryAbi, functionName: "owner" })
-    .catch((e) => { if (DRY) { console.warn("⚠ Казна не отвечает (ещё не задеплоена?) — сухой прогон продолжаю:", e.shortMessage || e.message); return null; } throw e; });
-  if (!DRY && owner.toLowerCase() !== account.address.toLowerCase()) {
-    console.error(`Кошелёк ${account.address} не владелец казны ${TREASURY} (владелец ${owner}).`); process.exit(1);
-  }
+  // казна V2: платить может владелец или оператор (ключ бота); старая — только владелец
+  const acc = await treasuryAccess(pub, TREASURY, account.address);
+  if (!acc.owner) { if (DRY) console.warn("⚠ Казна не отвечает (ещё не задеплоена?) — сухой прогон продолжаю:", acc.why); else throw new Error(acc.why); }
+  if (!DRY && !acc.ok) { console.error(acc.why); process.exit(1); }
   // --today (только с --dry): посмотреть подиум текущего дня по состоянию на сейчас
   const yesterday = DRY && process.argv.includes("--today") ? dayStart(Date.now()) : dayStart(Date.now()) - DAY;
   const dayKey = new Date(yesterday).toISOString().slice(0, 10);

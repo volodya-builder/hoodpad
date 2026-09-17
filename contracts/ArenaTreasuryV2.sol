@@ -53,8 +53,15 @@ interface IUniswapV3PoolA2 {
 ///         Поэтому бот арены сначала зовёт toEth() для каждой валюты, а потом
 ///         платит подиуму из ETH.
 ///
-///         Обмен только владелец (бот) и только в сторону ETH: увести деньги
-///         куда-то ещё невозможно — ETH остаётся на этом же контракте.
+///         Обмен и выкупы делает оператор (горячий кошелёк бота) или владелец,
+///         и только в сторону ETH / в печь: увести деньги куда-то ещё
+///         невозможно — ETH остаётся на этом же контракте.
+///
+///         Роли (перезапуск 17.09.2026): владелец — холодный кошелёк (Ledger),
+///         он назначает оператора и может передать владение (в два шага);
+///         оператор — ключ бота в GitHub Actions, у него нет прав ни на что,
+///         кроме toEth и выкупов. Утечка ключа бота = максимум лишний выкуп
+///         монеты платформы, деньги с казны не уходят.
 contract ArenaTreasuryV2 is Ownable2Step, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
@@ -72,6 +79,8 @@ contract ArenaTreasuryV2 is Ownable2Step, ReentrancyGuard {
     uint256 public totalEthSpent;
     /// @notice Сколько ETH получено обменом валюты за всё время.
     uint256 public totalEthConverted;
+    /// @notice Оператор — кошелёк бота: обмен в ETH и выкупы, не больше.
+    address public operator;
 
     // Пул V3, от которого ждём колбэк прямо сейчас (как в CurveZap).
     address private _expectPool;
@@ -85,13 +94,28 @@ contract ArenaTreasuryV2 is Ownable2Step, ReentrancyGuard {
     /// @notice Валюта казны обменяна на ETH (ETH остался здесь же).
     event Converted(address indexed asset, uint256 amountIn, uint256 ethOut);
 
+    event OperatorSet(address indexed operator);
+
     error NoRoute();
     error BadCallback();
     error Slippage();
+    error NotOperator();
 
-    constructor(address owner_, address ethFactory_, address quoteFactory_, address zap_, address weth_, address v3Factory_)
-        Ownable(owner_)
-    {
+    /// @dev Владелец или оператор.
+    modifier onlyOperator() {
+        if (msg.sender != owner() && msg.sender != operator) revert NotOperator();
+        _;
+    }
+
+    constructor(
+        address owner_,
+        address operator_,
+        address ethFactory_,
+        address quoteFactory_,
+        address zap_,
+        address weth_,
+        address v3Factory_
+    ) Ownable(owner_) {
         require(ethFactory_ != address(0) || quoteFactory_ != address(0), "no factory");
         require(zap_ != address(0) && weth_ != address(0) && v3Factory_ != address(0), "zero addr");
         ethFactory = IFactoryA2(ethFactory_);
@@ -99,6 +123,14 @@ contract ArenaTreasuryV2 is Ownable2Step, ReentrancyGuard {
         zap = IZapA2(zap_);
         weth = IWETH9A2(weth_);
         v3Factory = IUniswapV3FactoryA2(v3Factory_);
+        operator = operator_;
+        emit OperatorSet(operator_);
+    }
+
+    /// @notice Сменить кошелёк бота. address(0) — только владелец.
+    function setOperator(address operator_) external onlyOwner {
+        operator = operator_;
+        emit OperatorSet(operator_);
     }
 
     /// @dev Доля арены от сплиттера, сдача ETH от запа, ETH от WETH.withdraw.
@@ -109,11 +141,11 @@ contract ArenaTreasuryV2 is Ownable2Step, ReentrancyGuard {
     // ------------------------------------------------------------- обмен в ETH
 
     /// @notice Поменять валюту казны на ETH по маршруту запа. minEthOut —
-    ///         защита от проскальзывания (бот считает её по курсу).
+    ///         защита от проскальзывания (бот считает её по симуляции).
     ///         Для WETH — просто распаковка.
     function toEth(address asset, uint256 amount, uint256 minEthOut)
         external
-        onlyOwner
+        onlyOperator
         nonReentrant
         returns (uint256 ethOut)
     {
@@ -149,7 +181,7 @@ contract ArenaTreasuryV2 is Ownable2Step, ReentrancyGuard {
     /// @notice Выкупить ETH-монету за ETH у её кривой и сжечь.
     function buybackEth(address token, uint256 ethAmount, uint256 minTokensOut, string calldata note)
         external
-        onlyOwner
+        onlyOperator
         nonReentrant
         returns (uint256 tokensOut)
     {
@@ -166,7 +198,7 @@ contract ArenaTreasuryV2 is Ownable2Step, ReentrancyGuard {
     ///         Сдача от кривой (валюта или ETH) остаётся в казне.
     function buybackViaZap(address token, uint256 ethAmount, uint256 minTokensOut, uint256 deadline, string calldata note)
         external
-        onlyOwner
+        onlyOperator
         nonReentrant
         returns (uint256 tokensOut)
     {
@@ -182,7 +214,7 @@ contract ArenaTreasuryV2 is Ownable2Step, ReentrancyGuard {
     ///         Оставлено на случай, когда обмен в ETH невыгоден (нет маршрута).
     function buybackQuote(address token, uint256 quoteAmount, uint256 minTokensOut, string calldata note)
         external
-        onlyOwner
+        onlyOperator
         nonReentrant
         returns (uint256 tokensOut)
     {
