@@ -20,7 +20,7 @@ const Admin = lazy(() => import("./pages/Admin.jsx"));
 const Revenue = lazy(() => import("./pages/Revenue.jsx"));
 const Cats = lazy(() => import("./pages/Cats.jsx"));
 const Docs = lazy(() => import("./pages/Docs.jsx"));
-import { connectWallet, reconnectWallet, hasWallet, short, fmt, fmtEth, publicClient, preferredWallet, setPreferredWallet, disconnectWalletConnect } from "./lib/web3.js";
+import { connectWallet, reconnectWallet, hasWallet, short, fmt, fmtEth, publicClient, preferredWallet, setPreferredWallet, disconnectWallet, hasAppKit } from "./lib/web3.js";
 import WalletModal from "./components/WalletModal.jsx";
 import { CHAIN, FACTORY_ADDRESS, TREASURY_ADDRESS, CHAT_DB_URL, FEATURES } from "./lib/config.js";
 import { treasuryAbi } from "./lib/abi.js";
@@ -335,7 +335,8 @@ export default function App() {
   const [pickBusy, setPickBusy] = useState("");
   const connectAs = useCallback(async (rdns) => {
     try {
-      if (!rdns && !preferredWallet()) { setPickOpen(true); return; }
+      // с Project ID окно рисует Reown AppKit (внутри connectWallet); без него — наше запасное
+      if (!rdns && !hasAppKit() && !preferredWallet()) { setPickOpen(true); return; }
       setPickBusy(rdns || "");
       const w = await connectWallet(rdns ? { rdns } : {});
       setPickBusy(""); setPickOpen(false);
@@ -361,7 +362,7 @@ export default function App() {
     const prov = wallet?.provider;
     setWallet(null);
     try { localStorage.removeItem("hood_wallet"); } catch (e) { /* ignore */ }
-    if (wallet?.wc) disconnectWalletConnect(); // сессия WalletConnect живёт отдельно — рвём и её
+    disconnectWallet(wallet); // AppKit/WalletConnect помнят сессию сами — рвём и её
     setPreferredWallet(""); // после отключения снова спросим, каким кошельком входить
     // отзыв разрешения в MetaMask — следующее подключение снова спросит
     try {
@@ -642,7 +643,7 @@ export default function App() {
                     <a className="wallet-item" href="#/admin" onClick={() => setWalletMenu(false)}
                        style={{ display: "block" }}>⚙ {t("Админ-панель")}</a>
                   )}
-                  <div className="wallet-item" onClick={() => { setWalletMenu(false); setPreferredWallet(""); setPickOpen(true); }}>
+                  <div className="wallet-item" onClick={() => { setWalletMenu(false); setPreferredWallet(""); if (hasAppKit()) { hardDisconnect(); setTimeout(connect, 300); } else setPickOpen(true); }}>
                     {t("Сменить кошелёк")}
                   </div>
                   <div className="wallet-item" onClick={() => {

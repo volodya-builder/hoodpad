@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useLang } from "../lib/i18n.jsx";
-import { listWallets, missingWallets, hasWalletConnect, isMobile, WC_ID } from "../lib/web3.js";
+import { listWallets, missingWallets, isMobile } from "../lib/web3.js";
 
 // ============================================================================
 //  Окно «Подключить кошелёк» (17.09.2026, просьба владельца: «чтоб все
@@ -9,13 +9,13 @@ import { listWallets, missingWallets, hasWalletConnect, isMobile, WC_ID } from "
 //  Три группы:
 //   1. Установлены — расширения, которые объявились по EIP-6963 (MetaMask,
 //      OKX, Rabby, Phantom…), с их собственными иконками. Клик — подключение.
-//   2. WalletConnect — телефонные кошельки, Ledger Live и всё остальное
-//      через QR-код (только если задан WC_PROJECT_ID).
-//   3. Другие — известные кошельки, которых в браузере нет: на компьютере
+//   2. Другие — известные кошельки, которых в браузере нет: на компьютере
 //      «Установить», на телефоне «Открыть в приложении» (deep link).
 //  Ledger — отдельная подсказка: аппаратный кошелёк подключают через
 //  MetaMask / OKX / Rabby (там он как аккаунт) или через WalletConnect
 //  из Ledger Live. Выбор запоминается; сменить — в меню кошелька.
+//  Это ЗАПАСНОЕ окно: с Project ID (WC_PROJECT_ID) сайт показывает полное
+//  окно Reown AppKit (lib/appkit.js) — реестр 540+ кошельков, QR, поиск.
 // ============================================================================
 
 const Tile = ({ icon, name }) => icon
@@ -41,7 +41,6 @@ export default function WalletModal({ open, onClose, onPick, busy }) {
   const installed = listWallets();
   const missing = missingWallets();
   const mobile = isMobile();
-  const wc = hasWalletConnect();
 
   return (
     <div className="modal-back open" onClick={onClose}>
@@ -68,19 +67,6 @@ export default function WalletModal({ open, onClose, onPick, busy }) {
             <div className="wm-empty">{t("Кошельки в браузере не найдены.")}</div>
           )}
 
-          {wc && (
-            <div className="wm-group">
-              <button type="button" className="wm-item" disabled={!!busy} onClick={() => onPick(WC_ID)}>
-                <span className="wm-ico wm-ico-wc">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><path d="M14 14h3v3M21 14v7h-7" />
-                  </svg>
-                </span>
-                <span className="wm-name">WalletConnect<small>{t("телефон, Ledger Live и другие")}</small></span>
-                <span className="wm-chip">{busy === WC_ID ? t("Подключение…") : t("QR-код")}</span>
-              </button>
-            </div>
-          )}
 
           <div className="wm-group">
             <div className="wm-k">{t("Другие кошельки")}</div>
