@@ -40,7 +40,10 @@ function showFatal(msg) {
   } catch (e) { /* ignore */ }
 }
 window.addEventListener("error", (e) => showFatal((e.error && e.error.stack) || e.message));
-window.addEventListener("unhandledrejection", (e) => showFatal((e.reason && (e.reason.stack || e.reason.message)) || String(e.reason)));
+// Сетевые сбои окна кошельков (реестр Reown отвечает 403/5xx, когда домен не
+// в allowlist проекта) — не падение страницы: окно работает, просто без списка.
+const isWalletNoise = (r) => { const s = String((r && (r.stack || r.message)) || r); return /ApiController|api\.web3modal|HTTP status code: \d+/.test(s); };
+window.addEventListener("unhandledrejection", (e) => { if (isWalletNoise(e.reason)) { console.warn("wallet registry:", e.reason?.message || e.reason); return; } showFatal((e.reason && (e.reason.stack || e.reason.message)) || String(e.reason)); });
 
 class Boundary extends React.Component {
   constructor(p) { super(p); this.state = { err: null }; }
