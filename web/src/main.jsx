@@ -4,6 +4,7 @@ import App from "./App.jsx";
 import { LangProvider } from "./lib/i18n.jsx";
 import { installTooltips } from "./lib/tooltip.js";
 import StagingGate from "./components/StagingGate.jsx";
+import { WC_PROJECT_ID } from "./lib/config.js";
 import "./styles.css";
 
 installTooltips();
@@ -15,6 +16,9 @@ idle(() => {
   import("./pages/Arena.jsx"); import("./pages/Docs.jsx"); import("./components/CandleChart.jsx");
   // данные арены (сделки, фонд, выплаты) — тоже заранее: вкладка открывается готовой
   import("./lib/arena.js").then((m) => m.warmArena?.()).catch(() => {});
+  // окно кошельков (Reown AppKit) тяжёлое — поднимаем его заранее в простое,
+  // чтобы «Подключить кошелёк» открывалось мгновенно, как у Pons (17.09.2026)
+  if (/^[0-9a-f]{32}$/i.test(WC_PROJECT_ID)) import("./lib/appkit.js").catch(() => {});
 });
 
 // Service worker: хэшированные ассеты кэшируются навсегда (повторный заход —
