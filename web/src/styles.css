@@ -18,11 +18,14 @@
   --radius: 16px;
   /* моноширинный: явные латинские шрифты до generic monospace — иначе при lang=zh Windows подставляет SimSun и цифры «плывут» */
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "Roboto Mono", "Courier New", monospace;
+  /* Шрифт сайта (16.09.2026): текст — Inter, заголовки и крупные цифры —
+     Nunito (мягкая геометрия, как у Pons). */
   --font-ui: "Inter", "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
   /* движение: одна кривая и одна длительность на весь сайт (как у Pons) */
   --ease: cubic-bezier(.22, 1, .36, 1);
   --dur: .18s;
-  --font-display: "Instrument Serif", Georgia, "Times New Roman", "Songti SC", "Noto Serif SC", "SimSun", serif;
+  --font-serif: "Instrument Serif", Georgia, "Times New Roman", "Songti SC", "Noto Serif SC", "SimSun", serif; /* заголовки документации */
+  --font-display: "Nunito", "Nunito Sans", "Inter", -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   font-family: var(--font-ui);
 }
 /* Серив (Instrument Serif) — только у бренда, как у pons: футер-логотип. */
@@ -3678,8 +3681,8 @@ a.who:hover .who-name, a.who:hover .mono { color: var(--gold); }
    Шрифт Inter, крупные цифры обычным начертанием с плотным трекингом,
    заголовки 500, подписи 500 без «жирного капса», переходы 180 мс. */
 body { font-feature-settings: "cv11", "ss01", "tnum"; }
-.page-title { font-weight: 400; letter-spacing: -.025em; }
-h1, h2, h3, .card-title h3, .sec-h2, .sec-h3 { font-weight: 400; letter-spacing: -.015em; }
+.page-title { font-weight: 700; letter-spacing: -.025em; }
+h1, h2, h3, .card-title h3, .sec-h2, .sec-h3 { font-family: var(--font-display-round); font-weight: 700; letter-spacing: -.015em; }
 .btn, .bt-tab, .nav-pill, .fpill, .chip, .badge, .card, .arena-row, .tcard, .quote-chip, .cp-btn, .soc-btn, .mini-btn, input, textarea, select {
   transition: color var(--dur) var(--ease), background var(--dur) var(--ease), border-color var(--dur) var(--ease), opacity var(--dur) var(--ease), transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
@@ -3726,8 +3729,9 @@ h1, h2, h3, .card-title h3, .sec-h2, .sec-h3 { font-weight: 400; letter-spacing:
 /* по скриншоту новой версии Pons: округлый дисплейный шрифт у заголовков и
    крупных цифр, столбики серые с подсветкой сверху, «сейчас» — зелёный,
    под мышью — почти белый */
-:root { --font-display-round: "Nunito", "Inter", -apple-system, sans-serif; }
-.page-title, .ana-stat .n, .ana-panel-val { font-family: var(--font-display-round); font-weight: 500; letter-spacing: -.01em; }
+:root { --font-display-round: "Nunito", "Nunito Sans", "Inter", -apple-system, sans-serif; }
+.page-title, .ana-stat .n, .ana-panel-val { font-family: var(--font-display-round); font-weight: 700; letter-spacing: -.02em; }
+.ana-stat .n, .ana-panel-val, .pf-usd, .ana-card .v, .stat-card .v, .arena-pot-main .n, .arena-pot-place .v, .docs-stat .n { font-family: var(--font-display-round); font-weight: 600; letter-spacing: -.02em; }
 .page-title { font-size: 30px; }
 .ana-stat .n { font-weight: 500; }
 .ana-svg-bar { fill: url(#anaBarGrad); }
@@ -3939,7 +3943,7 @@ html[data-theme="light"] .fpill.on, html[data-theme="light"] .mode-tab.on { back
 html[data-theme="light"] input, html[data-theme="light"] textarea, html[data-theme="light"] select { background: #fff; border-color: rgba(0,0,0,.12); }
 label { text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 13px; margin: 18px 0 8px; }
 .panel { background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); border-radius: 22px; box-shadow: inset 0 1px 0 rgba(255,255,255,.04); }
-.panel h2, .create-layout h2 { font-family: var(--font-display-round); font-weight: 500; font-size: 26px; letter-spacing: -.01em; }
+.panel h2, .create-layout h2 { font-family: var(--font-display-round); font-weight: 700; font-size: 26px; letter-spacing: -.01em; }
 html[data-theme="light"] .panel { background: #fff; border-color: rgba(0,0,0,.08); box-shadow: none; }
 /* купить/продать: капсула-переключатель, активная — лайм или красный текст */
 .tabs { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06); border-radius: 999px; padding: 3px; gap: 2px; }
@@ -4060,7 +4064,7 @@ html[data-theme="light"] .sr-menu-it:hover, html[data-theme="light"] .sr-menu-it
 /* согласие с условиями — в общем стиле: без «героя» и чипов */
 .tos-modal { width: min(520px, 92vw); background: #131313; border: 1px solid rgba(255,255,255,.1); border-radius: 22px; box-shadow: 0 30px 80px -20px #000; }
 .tos-body { padding: 28px 28px 26px; }
-.tos-title { font-family: var(--font-display-round); font-weight: 500; font-size: 24px; letter-spacing: -.01em; margin: 0 0 8px; }
+.tos-title { font-family: var(--font-display-round); font-weight: 700; font-size: 24px; letter-spacing: -.01em; margin: 0 0 8px; }
 .tos-sub { color: var(--text-dim); font-size: 14px; line-height: 1.6; margin: 0 0 20px; }
 .tos-check { background: transparent; border: 0; border-top: 1px solid rgba(255,255,255,.08); border-radius: 0; padding: 14px 0; margin: 0; font-weight: 400; font-size: 14.5px; gap: 12px; }
 .tos-check:last-of-type { border-bottom: 1px solid rgba(255,255,255,.08); }
@@ -4121,14 +4125,14 @@ html[data-theme="light"] .tos-box { border-color: rgba(0,0,0,.3); }
 .docs-hero::before { content: ""; position: absolute; inset: -40px -60px auto -60px; height: 260px; pointer-events: none;
   background: radial-gradient(520px 200px at 18% 40%, #c8f54216, transparent 70%); }
 .docs-eyebrow { font-size: 11px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; color: var(--gold); margin-bottom: 14px; }
-.docs-hero h1 { font-family: var(--font-display); font-weight: 400; font-size: 54px; line-height: 1.02; letter-spacing: -.02em; margin: 0 0 14px; }
+.docs-hero h1 { font-family: var(--font-serif); font-weight: 400; font-size: 54px; line-height: 1.02; letter-spacing: -.02em; margin: 0 0 14px; }
 .docs-lead { font-size: 16px; color: var(--text-dim); max-width: 560px; line-height: 1.6; }
 .docs-hero-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
 .docs-hero-chips a { font-size: 13px; font-weight: 500; color: var(--text); text-decoration: none; padding: 8px 14px; border: 1px solid var(--border); border-radius: 999px; background: var(--card); transition: border-color .15s, color .15s; }
 .docs-hero-chips a:hover { border-color: var(--gold); color: var(--gold); }
 .docs-sec { position: relative; margin-top: 56px; padding-top: 8px; }
 .docs-num { font-family: var(--font-mono); font-size: 12px; color: var(--gold); letter-spacing: .12em; margin-bottom: 8px; opacity: .9; }
-.docs-sec h2 { font-family: var(--font-display); font-weight: 400; font-size: 32px; letter-spacing: -.015em; margin: 0 0 16px; }
+.docs-sec h2 { font-family: var(--font-serif); font-weight: 400; font-size: 32px; letter-spacing: -.015em; margin: 0 0 16px; }
 .docs-sec p { color: var(--text-dim); font-size: 15px; line-height: 1.75; }
 .docs-sec p strong { color: var(--text); }
 .docs-nav-item { display: flex; align-items: baseline; gap: 10px; }
@@ -4228,7 +4232,9 @@ b, strong { font-weight: 500; }
 .arena-pot-bar .p2, .arena-pot-place.p2 i { background: #c3cbd4; }
 .arena-pot-bar .p3, .arena-pot-place.p3 i { background: #c98a55; }
 .arena-pot-places { display: flex; gap: 12px; margin-top: 12px; }
-.arena-pot-place { min-width: 0; }
+.arena-pot-place { min-width: max-content; flex-shrink: 0; }
+.arena-pot-place:first-child { flex-shrink: 1; min-width: 0; }
+.arena-pot-place:last-child { text-align: right; }
 .arena-pot-place .v { font-size: 22px; font-weight: 400; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.1; }
 .arena-pot-place .l { font-size: 12px; color: var(--text-dim); margin-top: 4px; white-space: nowrap; }
 .arena-pot-place .l i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; vertical-align: -1px; margin-right: 2px; }
@@ -4240,3 +4246,216 @@ b, strong { font-weight: 500; }
   .arena-pot-places { flex-wrap: wrap; }
   .arena-pot-place { flex-basis: auto !important; flex: 1 1 30%; }
 }
+
+/* ---- Документация: «белое стекло» для плиток, таблиц и разбивок (16.09.2026) ---- */
+.docs-stat, .docs-table, .docs-split {
+  background: linear-gradient(160deg, rgba(255,255,255,.075), rgba(255,255,255,.028) 55%, rgba(255,255,255,.015));
+  border: 1px solid rgba(255,255,255,.09);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3);
+  box-shadow: 0 1px 0 rgba(255,255,255,.10) inset, 0 -1px 0 rgba(0,0,0,.35) inset, 0 16px 40px -28px rgba(0,0,0,.9);
+  position: relative;
+}
+.docs-stat::before, .docs-table::before, .docs-split::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(120% 70% at 12% -10%, rgba(255,255,255,.10), transparent 60%);
+}
+.docs-row { border-top-color: rgba(255,255,255,.07); position: relative; }
+.docs-split:hover { border-color: rgba(255,255,255,.16); box-shadow: 0 1px 0 rgba(255,255,255,.14) inset, 0 22px 48px -28px rgba(0,0,0,.95); }
+.docs-stat { transition: border-color .25s, transform .25s, box-shadow .25s; }
+.docs-stat:hover { border-color: rgba(255,255,255,.16); transform: translateY(-1px); }
+html[data-theme="light"] .docs-stat, html[data-theme="light"] .docs-table, html[data-theme="light"] .docs-split {
+  background: linear-gradient(160deg, rgba(255,255,255,.85), rgba(255,255,255,.55));
+  border-color: rgba(255,255,255,.9);
+  box-shadow: 0 1px 0 #fff inset, 0 14px 34px -26px rgba(30,32,28,.35), 0 0 0 1px rgba(30,32,28,.06);
+}
+html[data-theme="light"] .docs-stat::before, html[data-theme="light"] .docs-table::before, html[data-theme="light"] .docs-split::before { background: none; }
+html[data-theme="light"] .docs-row { border-top-color: rgba(30,32,28,.08); }
+
+/* ---- Лента активности на странице монеты: подсветка строки и «тепло» сделки (как у GMGN) ---- */
+.sa-row { position: relative; cursor: pointer; padding-left: 8px; padding-right: 8px; margin: 0 -8px; border-radius: 8px; transition: background .16s ease; }
+.sa-row:hover { background: rgba(255,255,255,.045); }
+.sa-row.is-buy:hover { background: color-mix(in srgb, var(--leaf) 9%, transparent); }
+.sa-row.is-sell:hover { background: color-mix(in srgb, var(--red) 9%, transparent); }
+.sa-row:hover + .sa-row { border-top-color: transparent; }
+.sa-amt { position: relative; display: inline-block; padding: 2px 6px; margin-left: -6px; border-radius: 5px; overflow: hidden; }
+.sa-amt i { position: absolute; left: 0; top: 0; bottom: 0; width: var(--heat, 0%); border-radius: 5px; opacity: .16; background: currentColor; transform-origin: left; transition: width .35s cubic-bezier(.2,.8,.2,1), opacity .2s; }
+.sa-row:hover .sa-amt i { opacity: .28; }
+
+/* ---- Вкладка «Dev-токены» на странице монеты (как у GMGN) ---- */
+.bt-count { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: #2a2a28; color: var(--text-dim); font-size: 11px; line-height: 17px; vertical-align: 1px; }
+.bt-tab.on .bt-count { background: var(--gold); color: #0b0b0b; }
+.dev-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; margin-top: 8px; align-items: start; }
+.dev-table { min-width: 0; }
+.dev-row { display: grid; grid-template-columns: minmax(150px, 1.6fr) .8fr .9fr .9fr 1fr 1fr 1fr; gap: 12px; padding: 10px 8px; margin: 0 -8px; border-top: 1px solid var(--border); font-size: 13px; align-items: center; font-variant-numeric: tabular-nums; color: var(--text); text-decoration: none; border-radius: 8px; transition: background .15s; }
+.dev-row:not(.hdr):hover { background: rgba(255,255,255,.045); border-top-color: transparent; }
+.dev-row:not(.hdr):hover + .dev-row { border-top-color: transparent; }
+.dev-row.hdr { color: var(--text-dim); font-size: 12.5px; font-weight: 400; border-top: none; padding-bottom: 6px; }
+.dev-row.cur { background: rgba(200,245,66,.05); }
+.dev-coin { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.dev-coin img { width: 22px; height: 22px; border-radius: 7px; object-fit: cover; flex: none; }
+.dev-coin b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dev-this { font-style: normal; font-size: 10.5px; color: var(--gold); border: 1px solid var(--gold-dim); background: var(--gold-dim); border-radius: 5px; padding: 1px 5px; }
+.dev-ok { font-style: normal; color: var(--leaf); display: inline-flex; align-items: center; gap: 5px; }
+.dev-row i.dim { font-style: normal; }
+.dev-ath { color: var(--gold); }
+.dev-side { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; padding: 16px 18px; border: 1px solid var(--border); border-radius: 14px; background: linear-gradient(160deg, rgba(255,255,255,.05), rgba(255,255,255,.015)); }
+.dev-k { font-size: 12.5px; color: var(--text-dim); }
+.dev-v { font-size: 13px; margin: 3px 0 10px; }
+.dev-stats > div { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 3px 0; }
+.dev-stats span { color: var(--text-dim); display: inline-flex; align-items: center; gap: 7px; }
+.dev-stats b { font-weight: 500; font-variant-numeric: tabular-nums; }
+.dev-dot { display: inline-block; width: 8px; height: 8px; border-radius: 3px; background: var(--border); }
+.dev-dot.on { background: var(--gold); }
+.dev-line { font-size: 12.5px; margin-top: 8px; line-height: 1.5; }
+.dev-line a { color: var(--text); text-decoration: none; }
+.dev-line a:hover { color: var(--gold); }
+.dev-ring { position: relative; width: 118px; height: 118px; }
+.dev-ring-txt { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
+.dev-ring-txt b { font-family: var(--font-display-round); font-size: 24px; font-weight: 600; letter-spacing: -.02em; }
+.dev-ring-txt span { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+@media (max-width: 1100px) { .dev-wrap { grid-template-columns: 1fr; } .dev-side { order: -1; } }
+@media (max-width: 720px) { .dev-table { overflow-x: auto; } .dev-row { min-width: 720px; } }
+
+/* ---- Панель трейдера: под общий стиль сайта (16.09.2026) ---- */
+.trader-panel {
+  top: 12px; right: 12px; height: auto; max-height: calc(100vh - 24px);
+  width: min(440px, calc(100vw - 24px));
+  border: 1px solid rgba(255,255,255,.09); border-radius: 18px;
+  background: linear-gradient(170deg, #1b1b1a 0%, #141413 100%);
+  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 30px 80px -30px #000;
+  padding: 18px 20px 22px;
+  scrollbar-width: thin;
+}
+.tp-head { gap: 10px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,.07); }
+.tp-head img { width: 30px !important; height: 30px !important; border-radius: 9px !important; border: 1px solid var(--border); }
+.tp-head .mono { font-size: 13.5px; color: var(--text); text-decoration: none; }
+.tp-head .mono:hover { color: var(--gold); }
+.tp-head .cnt-chip { font-size: 11px; padding: 2px 8px; border-radius: 999px; }
+.tp-close { font-size: 13px; padding: 5px 9px; border-radius: 9px; }
+
+/* главная цифра — прибыль, крупно, как капа на странице монеты */
+.tp-grid { grid-template-columns: 1fr 1fr; gap: 14px 20px; margin-top: 18px; }
+.tp-grid .tp-cell:first-child { grid-column: 1 / -1; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,.07); }
+.tp-grid .tp-cell:first-child b { font-family: var(--font-display-round); font-size: 30px; font-weight: 600; letter-spacing: -.02em; line-height: 1.05; }
+.tp-cell > span:first-child { text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 12.5px; color: var(--text-dim); }
+.tp-cell b { font-size: 14.5px; font-weight: 500; }
+.tp-cell > span:last-child:not(:first-child) { font-size: 11.5px; }
+
+.trader-panel .orders-head { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 500; color: var(--text); margin: 22px 0 6px !important; }
+.tp-row { grid-template-columns: 74px 84px 1fr 86px 58px; padding: 8px 8px; margin: 0 -8px; border-top: 1px solid rgba(255,255,255,.06); border-radius: 8px; font-size: 13px; }
+.tp-row.hdr { text-transform: none; letter-spacing: 0; font-size: 12.5px; font-weight: 400; padding-bottom: 6px; }
+.tp-row:hover { background: rgba(255,255,255,.045); border-top-color: transparent; }
+.tp-row:hover + .tp-row { border-top-color: transparent; }
+.tp-row > *:nth-child(4), .tp-row > *:nth-child(5) { text-align: right; }
+.tp-type { text-align: left; padding: 0; border: 0 !important; background: none !important; font-size: 13px; display: inline-flex; align-items: center; gap: 7px; }
+.tp-type::before { content: ""; width: 7px; height: 7px; border-radius: 2px; background: currentColor; flex: none; }
+html[data-theme="light"] .trader-panel { background: linear-gradient(170deg, #ffffff, #f7f7f4); border-color: rgba(30,32,28,.1); box-shadow: 0 30px 80px -30px rgba(30,32,28,.45); }
+html[data-theme="light"] .tp-head, html[data-theme="light"] .tp-grid .tp-cell:first-child, html[data-theme="light"] .tp-row { border-color: rgba(30,32,28,.08); }
+html[data-theme="light"] .tp-row:hover { background: rgba(30,32,28,.04); }
+@media (max-width: 720px) { .trader-panel { top: 0; right: 0; width: 100vw; max-height: 100vh; border-radius: 0; } }
+
+.tp-head { cursor: grab; user-select: none; }
+.trader-panel.dragging { animation: none; transition: none; }
+.trader-panel.dragging .tp-head { cursor: grabbing; }
+.trader-panel.dragging { box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 40px 100px -30px #000, 0 0 0 1px rgba(200,245,66,.25); }
+
+/* панель трейдера растягивается за правый нижний угол */
+.trader-panel { resize: both; min-width: 340px; min-height: 260px; max-width: calc(100vw - 24px); }
+.trader-panel::after { content: ""; position: absolute; right: 7px; bottom: 7px; width: 10px; height: 10px; pointer-events: none; opacity: .5;
+  border-right: 2px solid var(--text-dim); border-bottom: 2px solid var(--text-dim); border-radius: 0 0 3px 0; }
+.trader-panel::-webkit-resizer { background: transparent; }
+@media (max-width: 720px) { .trader-panel { resize: none; } .trader-panel::after { display: none; } }
+
+/* Арена: три равные колонки под полосой — читается как одна картинка */
+.arena-pot-places { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 14px; }
+.arena-pot-place { min-width: 0 !important; flex: none !important; text-align: left !important; padding-left: 12px; border-left: 2px solid var(--c, var(--border)); }
+.arena-pot-place.p1 { --c: #e8c65a; } .arena-pot-place.p2 { --c: #c3cbd4; } .arena-pot-place.p3 { --c: #c98a55; }
+.arena-pot-place .l i { display: none; }
+.arena-pot-place .l { white-space: normal; }
+@media (max-width: 900px) { .arena-pot-place { flex: none !important; } }
+
+/* Панель трейдера при растягивании: сетка показателей растёт колонками, таблица — пропорционально */
+.tp-grid { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.tp-grid .tp-cell:first-child { grid-column: 1 / -1; }
+.tp-row { grid-template-columns: 80px minmax(90px, 1fr) minmax(80px, 1fr) minmax(90px, 1fr) 64px; }
+.trader-panel { max-width: min(760px, calc(100vw - 24px)); }
+.dev-old { font-style: normal; font-size: 10.5px; color: var(--text-dim); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; white-space: nowrap; }
+.dev-row.old { opacity: .85; }
+
+/* Панель трейдера: без системных полос прокрутки (прокрутка есть, ползунок скрыт), содержимое ужимается, а не уезжает вбок */
+.trader-panel { overflow-x: hidden !important; overflow-y: auto !important; scrollbar-width: none !important; -ms-overflow-style: none; }
+.trader-panel::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.tp-row { grid-template-columns: 72px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 56px; }
+.tp-row > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tp-cell b, .tp-cell span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tp-head { flex-wrap: nowrap; min-width: 0; }
+.tp-head .mono { overflow: hidden; text-overflow: ellipsis; }
+
+/* Арена, разбивка подиума: три ровных блока в ряд, подпись сверху, сумма снизу */
+.arena-pot-places { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.arena-pot-place { padding: 10px 12px; border-left: 0; border-radius: 10px; background: rgba(255,255,255,.035); text-align: left !important; }
+.arena-pot-place .l { font-size: 12px; color: var(--text-dim); margin: 0 0 4px; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+.arena-pot-place .l i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin: 0; }
+.arena-pot-place .l .pct { margin-left: auto; color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; }
+.arena-pot-place .v { font-size: 20px; }
+.arena-pot-place.p1 { background: rgba(232,198,90,.08); }
+html[data-theme="light"] .arena-pot-place { background: rgba(30,32,28,.05); }
+html[data-theme="light"] .arena-pot-place.p1 { background: rgba(232,198,90,.18); }
+@media (max-width: 900px) { .arena-pot-places { grid-template-columns: 1fr; gap: 8px; } }
+.trader-panel.placed { animation: none; }
+.dev-row { grid-template-columns: minmax(200px, 1.9fr) .8fr .9fr .8fr .9fr .9fr .9fr; }
+.dev-coin b { flex: none; max-width: 150px; }
+
+/* Арена, подиум под полосой — минимализм: точка цвета, сумма, подпись. Без плиток и рамок. */
+.arena-pot-places { display: flex; justify-content: space-between; gap: 18px; margin-top: 14px; }
+.arena-pot-place { padding: 0 !important; background: none !important; border: 0 !important; border-radius: 0; min-width: 0; }
+.arena-pot-place.p1 { background: none !important; }
+.arena-pot-place .v { display: flex; align-items: center; gap: 8px; font-size: 20px; }
+.arena-pot-place .v i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; flex: none; background: var(--c); }
+.arena-pot-place.p1 .v i { --c: #e8c65a; } .arena-pot-place.p2 .v i { --c: #c3cbd4; } .arena-pot-place.p3 .v i { --c: #c98a55; }
+.arena-pot-place.p1 .v { color: #f3e3a3; }
+.arena-pot-place .l { display: block; margin: 3px 0 0 16px; font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+.arena-pot-place:last-child { text-align: right; }
+.arena-pot-place:last-child .v { justify-content: flex-end; }
+.arena-pot-place:last-child .l { margin-left: 0; }
+.arena-pot-place:nth-child(2) { text-align: center; }
+.arena-pot-place:nth-child(2) .v { justify-content: center; }
+.arena-pot-place:nth-child(2) .l { margin-left: 0; }
+@media (max-width: 900px) { .arena-pot-places { flex-direction: column; gap: 10px; } .arena-pot-place, .arena-pot-place:last-child, .arena-pot-place:nth-child(2) { text-align: left; } .arena-pot-place .v { justify-content: flex-start !important; } .arena-pot-place .l { margin-left: 16px !important; } }
+
+/* Арена, подиум: наведение — сегмент вырастает, остальные гаснут, в подписи сумма и доля */
+.arena-pot-bar { overflow: visible; height: 12px; }
+.arena-pot-bar span { position: relative; display: flex; align-items: center; justify-content: center; cursor: default; border-radius: 3px;
+  transition: transform .22s cubic-bezier(.2,.8,.2,1), opacity .22s, filter .22s; transform-origin: center; }
+.arena-pot-bar span:first-child { border-radius: 999px 3px 3px 999px; }
+.arena-pot-bar span:last-child { border-radius: 3px 999px 999px 3px; }
+.arena-pot-bar span em { font-style: normal; font-size: 10px; font-weight: 500; color: #0b0b0b; opacity: 0; transform: translateY(2px); transition: opacity .18s, transform .18s; font-variant-numeric: tabular-nums; pointer-events: none; }
+.arena-pot-split.has-hi .arena-pot-bar span { opacity: .4; filter: saturate(.5); }
+.arena-pot-split.has-hi .arena-pot-bar span.hi { opacity: 1; filter: none; transform: scaleY(1.5); z-index: 1; }
+.arena-pot-bar span.hi em { opacity: 1; transform: none; }
+.arena-pot-split.has-hi .arena-pot-place { opacity: .45; transition: opacity .2s; }
+.arena-pot-split.has-hi .arena-pot-place.hi { opacity: 1; }
+.arena-pot-place { transition: opacity .2s; cursor: default; }
+.arena-pot-cur { display: inline-block; animation: docsFade .18s ease; color: var(--text-dim); }
+.arena-pot-cur b { color: var(--text); font-weight: 500; }
+
+/* строка позиции: явная серая подсветка при наведении */
+.pos-row:hover { background: rgba(255,255,255,.07); box-shadow: 0 0 0 1px rgba(255,255,255,.08) inset; }
+html[data-theme="light"] .pos-row:hover { background: rgba(30,32,28,.07); box-shadow: 0 0 0 1px rgba(30,32,28,.08) inset; }
+
+/* подписи подиума стоят ровно под своими сегментами полосы: 70% / 20% / 10% */
+.arena-pot-places { display: grid; grid-template-columns: 70% 20% 10%; gap: 0; position: relative; }
+.arena-pot-place:nth-child(2) { text-align: left; padding-left: 2px; }
+.arena-pot-place:nth-child(2) .v { justify-content: flex-start; }
+.arena-pot-place:nth-child(2) .l { margin-left: 16px; }
+.arena-pot-place:last-child { position: absolute; right: 0; top: 0; text-align: right; }
+@media (max-width: 900px) { .arena-pot-places { display: flex; } .arena-pot-place:last-child { position: static; } }
+
+/* подиум как на main: сумма сверху, под ней цветная точка и «1 место · 70%», ровно под сегментами */
+.arena-pot-place .v { display: block; font-size: 22px; }
+.arena-pot-place .l { display: flex; align-items: center; gap: 6px; margin: 4px 0 0 0 !important; font-size: 12px; color: var(--text-dim); }
+.arena-pot-place .l i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin: 0; background: var(--c); }
+.arena-pot-place.p1 .l i { --c: #e8c65a; } .arena-pot-place.p2 .l i { --c: #c3cbd4; } .arena-pot-place.p3 .l i { --c: #c98a55; }
+.arena-pot-place:last-child .l { justify-content: flex-end; }
+.arena-pot-place:nth-child(2) .l { justify-content: flex-start; }
+@media (max-width: 900px) { .arena-pot-place:last-child .l { justify-content: flex-start; } }

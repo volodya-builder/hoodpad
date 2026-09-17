@@ -108,7 +108,7 @@ function SearchModal({ open, onClose }) {
       await Promise.all(qs.map(async (a) => { px[a] = await quoteUsd(a).catch(() => 0); }));
       setQPx(px);
     }).catch(() => setTokens([]));
-    import("./lib/data.js").then((m) => m.subgraphStats24 && m.subgraphStats24().then((st) => setVol24(st?.vol || {})).catch(() => {}));
+    import("./lib/data.js").then((m) => m.subgraphStats24 && m.subgraphStats24().then((st) => setVol24({ ...(st?.vol || {}), __usd: st?.volUsd || {} })).catch(() => {}));
   }, [open]);
 
   const mcapOf = React.useCallback((r) => {
@@ -118,7 +118,8 @@ function SearchModal({ open, onClose }) {
     }
     return Number(formatEther(r.price)) * 1e9 * (rate || 0);
   }, [rate, qPx]);
-  const volOf = (r) => (vol24[(r.pool || "").toLowerCase()] || 0) * (rate || 0);
+  // объём в долларах: по курсу на момент сделок (из индексатора), иначе ETH × текущий курс
+  const volOf = (r) => { const k = (r.pool || "").toLowerCase(); const f = vol24.__usd?.[k]; return f != null ? f : (vol24[k] || 0) * (rate || 0); };
 
   // акции, за которые есть монеты — для выпадающего списка
   const stocks = React.useMemo(() => {

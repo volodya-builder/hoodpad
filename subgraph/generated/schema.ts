@@ -250,6 +250,32 @@ export class Token extends Entity {
     this.set("feesEth", Value.fromBigInt(value));
   }
 
+  get volumeUsd(): BigDecimal {
+    let value = this.get("volumeUsd");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set volumeUsd(value: BigDecimal) {
+    this.set("volumeUsd", Value.fromBigDecimal(value));
+  }
+
+  get feesUsd(): BigDecimal {
+    let value = this.get("feesUsd");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set feesUsd(value: BigDecimal) {
+    this.set("feesUsd", Value.fromBigDecimal(value));
+  }
+
   get lastTradeAt(): BigInt {
     let value = this.get("lastTradeAt");
     if (!value || value.kind == ValueKind.NULL) {
@@ -415,6 +441,45 @@ export class Trade extends Entity {
     this.set("fee", Value.fromBigInt(value));
   }
 
+  get usd(): BigDecimal {
+    let value = this.get("usd");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set usd(value: BigDecimal) {
+    this.set("usd", Value.fromBigDecimal(value));
+  }
+
+  get feeUsd(): BigDecimal {
+    let value = this.get("feeUsd");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set feeUsd(value: BigDecimal) {
+    this.set("feeUsd", Value.fromBigDecimal(value));
+  }
+
+  get rateUsd(): BigDecimal {
+    let value = this.get("rateUsd");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set rateUsd(value: BigDecimal) {
+    this.set("rateUsd", Value.fromBigDecimal(value));
+  }
+
   get timestamp(): BigInt {
     let value = this.get("timestamp");
     if (!value || value.kind == ValueKind.NULL) {
@@ -452,6 +517,126 @@ export class Trade extends Entity {
 
   set tx(value: Bytes) {
     this.set("tx", Value.fromBytes(value));
+  }
+}
+
+export class PriceSource extends Entity {
+  constructor(id: string) {
+    super();
+    this.set("id", Value.fromString(id));
+  }
+
+  save(): void {
+    let id = this.get("id");
+    assert(id != null, "Cannot save PriceSource entity without an ID");
+    if (id) {
+      assert(
+        id.kind == ValueKind.STRING,
+        `Entities of type PriceSource must have an ID of type String but the id '${id.displayData()}' is of type ${id.displayKind()}`,
+      );
+      store.set("PriceSource", id.toString(), this);
+    }
+  }
+
+  static loadInBlock(id: string): PriceSource | null {
+    return changetype<PriceSource | null>(
+      store.get_in_block("PriceSource", id),
+    );
+  }
+
+  static load(id: string): PriceSource | null {
+    return changetype<PriceSource | null>(store.get("PriceSource", id));
+  }
+
+  get id(): string {
+    let value = this.get("id");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toString();
+    }
+  }
+
+  set id(value: string) {
+    this.set("id", Value.fromString(value));
+  }
+
+  get pool(): Bytes {
+    let value = this.get("pool");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBytes();
+    }
+  }
+
+  set pool(value: Bytes) {
+    this.set("pool", Value.fromBytes(value));
+  }
+
+  get base(): string {
+    let value = this.get("base");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toString();
+    }
+  }
+
+  set base(value: string) {
+    this.set("base", Value.fromString(value));
+  }
+
+  get quoteIsToken0(): boolean {
+    let value = this.get("quoteIsToken0");
+    if (!value || value.kind == ValueKind.NULL) {
+      return false;
+    } else {
+      return value.toBoolean();
+    }
+  }
+
+  set quoteIsToken0(value: boolean) {
+    this.set("quoteIsToken0", Value.fromBoolean(value));
+  }
+
+  get quoteDec(): i32 {
+    let value = this.get("quoteDec");
+    if (!value || value.kind == ValueKind.NULL) {
+      return 0;
+    } else {
+      return value.toI32();
+    }
+  }
+
+  set quoteDec(value: i32) {
+    this.set("quoteDec", Value.fromI32(value));
+  }
+
+  get baseDec(): i32 {
+    let value = this.get("baseDec");
+    if (!value || value.kind == ValueKind.NULL) {
+      return 0;
+    } else {
+      return value.toI32();
+    }
+  }
+
+  set baseDec(value: i32) {
+    this.set("baseDec", Value.fromI32(value));
+  }
+
+  get checkedAt(): BigInt {
+    let value = this.get("checkedAt");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigInt();
+    }
+  }
+
+  set checkedAt(value: BigInt) {
+    this.set("checkedAt", Value.fromBigInt(value));
   }
 }
 
@@ -796,6 +981,32 @@ export class Protocol extends Entity {
 
   set feesEth(value: BigInt) {
     this.set("feesEth", Value.fromBigInt(value));
+  }
+
+  get volumeUsd(): BigDecimal {
+    let value = this.get("volumeUsd");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set volumeUsd(value: BigDecimal) {
+    this.set("volumeUsd", Value.fromBigDecimal(value));
+  }
+
+  get feesUsd(): BigDecimal {
+    let value = this.get("feesUsd");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set feesUsd(value: BigDecimal) {
+    this.set("feesUsd", Value.fromBigDecimal(value));
   }
 
   get treasuryReceived(): BigInt {

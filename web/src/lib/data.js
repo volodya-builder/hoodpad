@@ -121,7 +121,23 @@ async function _loadTokensSubgraph() {
   const d = await gql(`{ tokens(first: 96, orderBy: createdBlock, orderDirection: desc) {
     id name symbol metadataURI creator pool createdAt graduated ethReserve tokensSold } }`);
   if (!d?.tokens) throw new Error("no tokens field");
-  return d.tokens.map((x) => {
+  return d.tokens.map(_mapSubgraphToken);
+}
+
+/** Все монеты одного создателя — прямо из индексатора (обе фабрики, без
+ *  лимита списка в 96 монет). Для вкладки «Dev-токены». У монет за валюту
+ *  цена в единицах валюты — фронт подставит запись из общего списка. */
+export async function loadCreatorTokens(creator) {
+  const qf = (await subgraphHasQuote()) ? " quote" : "";
+  const d = await gql(`{ tokens(first: 300, orderBy: createdBlock, orderDirection: desc,
+    where: { creator: "${String(creator).toLowerCase()}" }) {
+    id name symbol metadataURI creator pool createdAt graduated ethReserve tokensSold${qf} } }`);
+  if (!d?.tokens) throw new Error("no tokens field");
+  return d.tokens.map((x) => ({ ..._mapSubgraphToken(x), quoteAddr: x.quote ? String(x.quote).toLowerCase() : null }));
+}
+
+function _mapSubgraphToken(x) {
+  {
     const reserve = BigInt(x.ethReserve);
     const sold = BigInt(x.tokensSold);
     const denom = TOTAL_WEI - sold;
@@ -133,7 +149,7 @@ async function _loadTokensSubgraph() {
       createdAt: Number(x.createdAt) * 1000,
       creator: x.creator,
     };
-  });
+  }
 }
 
 export async function subgraphVotes(epoch) {
@@ -152,7 +168,7 @@ let _st24 = { v: null, t: 0 };
 export async function subgraphStats24() {
   if (_st24.v && Date.now() - _st24.t < 60_000) return _st24.v;
   const since = Math.floor(Date.now() / 1000) - 86400;
-  const qf = (await subgraphHasQuote()) ? " quote fee" : " fee";
+  const qf = await tradeFields(" fee");
   const d = await gql(`{ trades(first: 1000, orderBy: timestamp, orderDirection: asc,
     where: { timestamp_gt: "${since}" }) { pool ethAmount tokenAmount${qf} } }`);
   // Монеты за валюту: объём приходит в валюте (GME, USDG…), а не в ETH —
@@ -160,18 +176,21 @@ export async function subgraphStats24() {
   const rows = (d.trades || []).map((tr) => ({
     pool: tr.pool.toLowerCase(), quote: tr.quote ? String(tr.quote).toLowerCase() : null,
     ethRaw: tr.ethAmount, feeRaw: tr.fee || "0", eth: Number(tr.ethAmount) / 1e18, fee: 0,
-    tokens: Number(tr.tokenAmount) / 1e18,
+    tokens: Number(tr.tokenAmount) / 1e18, usd: fixedUsd(tr),
   }));
   await toEthEquivalent(rows);
-  const vol = {}, first = {};
+  // volUsd: объём в долларах по курсу на момент сделок (не «дышит»); null для пула,
+  // если у какой-то сделки курса не было — тогда фронт возьмёт vol × текущий курс
+  const vol = {}, first = {}, volUsd = {};
   for (const tr of rows) {
     const p = tr.pool;
     vol[p] = (vol[p] || 0) + tr.eth;
+    if (volUsd[p] !== null) volUsd[p] = tr.usd == null ? null : (volUsd[p] || 0) + tr.usd;
     // первая цена дня — в единицах валюты пула (для % изменения сравнивается с ценой в тех же единицах)
     const q0 = tr.quote ? Number(tr.ethRaw) / 1e18 : tr.eth;
     if (first[p] == null && tr.tokens > 0) first[p] = q0 / tr.tokens;
   }
-  _st24 = { v: { vol, first }, t: Date.now() };
+  _st24 = { v: { vol, first, volUsd }, t: Date.now() };
   return _st24.v;
 }
 
@@ -194,6 +213,24 @@ export async function subgraphTraderFees(trader, sinceTs = 0) {
  *  SWR-кэш 60с: сто посетителей = те же 1-3 запроса в минуту, а не сотни. */
 // Сабграф 3.1.0 отдаёт у сделки поле quote (валюта курвы). До передеплоя
 // поля нет — запрос с ним падает целиком, поэтому сначала пробуем.
+// Доллары по курсу на момент сделки (сабграф 4.1+): поле usd у сделки.
+// Пока версии без него — фронт пересчитывает по текущему курсу, как раньше.
+let _hasUsd = null;
+export async function subgraphHasUsd() {
+  if (_hasUsd !== null) return _hasUsd;
+  try { await gql("{ trades(first: 1) { usd } }"); _hasUsd = true; }
+  catch (e) { _hasUsd = false; }
+  return _hasUsd;
+}
+/** Поля сделки для запроса: quote/fee + usd, если индексатор их знает. */
+async function tradeFields(base) {
+  const [hq, hu] = await Promise.all([subgraphHasQuote(), subgraphHasUsd()]);
+  return base + (hq ? " quote" : "") + (hu ? " usd feeUsd" : "");
+}
+/** Доллары сделки из индексатора; null — не записаны (0 = курса не было). */
+const fixedUsd = (l) => (l.usd != null && Number(l.usd) > 0 ? Number(l.usd) : null);
+const fixedFeeUsd = (l) => (l.feeUsd != null && Number(l.usd) > 0 ? Number(l.feeUsd) : null);
+
 let _hasQuote = null;
 async function subgraphHasQuote() {
   if (_hasQuote !== null) return _hasQuote;
@@ -239,7 +276,7 @@ export async function allTrades() {
   _allTr.p = (async () => {
     const out = [];
     let beforeTs = null;
-    const qf = (await subgraphHasQuote()) ? " quote" : "";
+    const qf = await tradeFields("");
     for (let page = 0; page < 3; page++) {
       const cond = beforeTs ? `, where: { timestamp_lt: "${beforeTs}" }` : "";
       const d = await gql(`{ trades(first: 1000, orderBy: timestamp, orderDirection: desc${cond}) {
@@ -254,6 +291,7 @@ export async function allTrades() {
           ts: Number(l.timestamp) * 1000, block: BigInt(l.block), tx: l.tx,
           quote: l.quote ? String(l.quote).toLowerCase() : null,
           ethRaw: l.ethAmount, feeRaw: l.fee,
+          usd: fixedUsd(l), feeUsd: fixedFeeUsd(l),
         });
       }
       if (rows.length < 1000) break;
@@ -313,7 +351,7 @@ async function _allTradesRpc() {
 
 /** Все сделки одного пользователя одним запросом (для профиля). */
 export async function subgraphUserTrades(trader) {
-  const qf = (await subgraphHasQuote()) ? " quote" : "";
+  const qf = await tradeFields("");
   const d = await gql(`{ trades(first: 1000, orderBy: timestamp, orderDirection: desc,
     where: { trader: "${trader.toLowerCase()}" }) {
     pool isBuy ethAmount tokenAmount fee timestamp block tx${qf} } }`);
@@ -326,6 +364,7 @@ export async function subgraphUserTrades(trader) {
     ts: Number(l.timestamp) * 1000, block: BigInt(l.block), tx: l.tx,
     quote: l.quote ? String(l.quote).toLowerCase() : null,
     ethRaw: l.ethAmount, feeRaw: l.fee,
+    usd: fixedUsd(l), feeUsd: fixedFeeUsd(l),
   }));
   // сделки за валюту — в ETH-эквиваленте, как везде (PnL, объём, история)
   await toEthEquivalent(rows);
@@ -446,6 +485,11 @@ async function _loadTokensFresh() {
   // сабграф 3.1+ тоже знает монеты за валюту — чтобы не было дублей,
   // из его списка их убираем (с цепи они приходят с курсом и валютой)
   const qs = new Set(q.map((x) => x.token.toLowerCase()));
+  // у монет с цепи нет создателя — берём его из записи индексатора (нужен
+  // для вкладки «Dev-токены», метки «создатель» в держателях и т.п.)
+  const creBy = {};
+  for (const x of eth) if (x.creator) creBy[x.token.toLowerCase()] = x.creator;
+  for (const x of q) if (!x.creator && creBy[x.token.toLowerCase()]) x.creator = creBy[x.token.toLowerCase()];
   const all = [...q, ...eth.filter((x) => !qs.has(x.token.toLowerCase()))];
   // Общий порядок — по времени создания, новые первыми: иначе монеты за
   // валюту всегда стояли впереди ETH-монет, и свежая ETH-монета оказывалась
@@ -595,9 +639,10 @@ export async function poolTrades(pool, cur = null) {
 }
 
 async function _poolTradesSubgraph(pool) {
+  const uf = (await subgraphHasUsd()) ? " usd feeUsd" : "";
   const d = await gql(`{ trades(first: 1000, orderBy: block, orderDirection: asc,
     where: { pool: "${pool.toLowerCase()}" }) {
-    isBuy trader ethAmount tokenAmount fee timestamp block tx } }`);
+    isBuy trader ethAmount tokenAmount fee timestamp block tx${uf} } }`);
   if (!d?.trades) throw new Error("no trades field");
   const VIRT = 1.625, TOTAL = 1e9;
   let eth = 0, sold = 0;
@@ -615,6 +660,7 @@ async function _poolTradesSubgraph(pool) {
       side: l.isBuy ? "buy" : "sell", addr: l.trader,
       eth: ethAmt, tokens: tokAmt, fee,
       block: BigInt(l.block), tx: l.tx, ts,
+      usd: fixedUsd(l), feeUsd: fixedFeeUsd(l),
     });
     points.push({ i: trades.length, mcap: price * TOTAL, ts });
   }
@@ -670,6 +716,19 @@ async function _poolTradesRpc(pool, cur = null) {
       block: l.blockNumber, tx: l.transactionHash,
     });
     points.push({ i: trades.length, mcap: price * TOTAL });
+  }
+  // Страховка: если стороной сделки всё ещё стоит зап (событие запа не
+  // прочиталось), настоящий трейдер — отправитель транзакции. Иначе
+  // держатели считались неверно: покупки на человеке, продажи на запе —
+  // и у человека «висело» 4% эмиссии, которых у него нет.
+  const zapL = String(ZAP_ADDRESS || "").toLowerCase();
+  const fix = zapL ? trades.filter((tr) => String(tr.addr).toLowerCase() === zapL) : [];
+  if (fix.length) {
+    const byTx = new Map();
+    await Promise.all([...new Set(fix.map((tr) => tr.tx))].map(async (h) => {
+      try { const tx = await publicClient.getTransaction({ hash: h }); byTx.set(h, tx.from); } catch (e) { /* оставим как есть */ }
+    }));
+    for (const tr of fix) if (byTx.has(tr.tx)) tr.addr = byTx.get(tr.tx);
   }
   return { trades: trades.reverse(), points };
 }

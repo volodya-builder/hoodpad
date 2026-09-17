@@ -9,7 +9,8 @@ import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER, QUOTE_FACTORY_ADDRESS, QUO
 import { poolTrades, invalidateTrades, loadTokens, allTrades, parseMeta, cachedToken } from "../lib/data.js";
 import { computeTrust } from "../lib/trust.js";
 import { honestVolume } from "../lib/fairvol.js";
-import { useEthUsd, useQuoteUsd, usd, moneyEth, ethOf } from "../lib/price.js";
+import { useEthUsd, useQuoteUsd, usd, moneyEth, ethOf, quoteUsd as quoteUsdOf } from "../lib/price.js";
+import DevTokens, { useDevTokens } from "../components/DevTokens.jsx";
 import Chat from "./Chat.jsx";
 import Workshop from "../components/Workshop.jsx";
 import Journal from "../components/Journal.jsx";
@@ -352,6 +353,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [sideTab, setSideTab] = useState("act"); // боковая панель: «Активность» | «Чат»
   const [tokensList, setTokensList] = useState([]); // все токены платформы (для ИИ-судьи)
   const [platTrades, setPlatTrades] = useState(null); // сделки платформы (метки кошельков)
+  const devInfo = useDevTokens(data?.creator, tokensList, tokenAddress); // монеты дева — для счётчика на ярлыке вкладки
   useEffect(() => {
     let alive = true;
     loadTokens().then((x) => alive && setTokensList(x)).catch(() => {});
@@ -427,8 +429,17 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     if (a > 0 && a < 0.01) return "<$0.01";
     return (v < 0 ? "-" : "") + (a >= 1e3 ? usd(a) : "$" + a.toFixed(2));
   };
+  // Доллары сделки: зафиксированные индексатором по курсу на момент сделки
+  // (не меняются вместе с курсом); если их нет — по текущему курсу.
+  const fmtUsd = (v) => { const a = Math.abs(v); if (a > 0 && a < 0.01) return "<$0.01"; return (v < 0 ? "-" : "") + (a >= 1e3 ? usd(a) : "$" + a.toFixed(2)); };
+  const tradeUsd = (tr) => (tr.usd != null && tr.usd > 0 ? fmtUsd(tr.usd) : dollars(tr.eth));
 
   // Топ держателей: восстанавливаем балансы из событий сделок
+  // Держатели: оценка по сделкам — мгновенно, затем сверка с балансами в
+  // блокчейне (balanceOf) — точные цифры. Раньше при продаже через зап
+  // покупка числилась на человеке, а продажа на запе, и у человека
+  // «висело» 4% эмиссии, которых у него нет.
+  const [chainBal, setChainBal] = useState({}); // addr → баланс (токены)
   const holders = useMemo(() => {
     if (!history || !data) return null;
     const m = {};
@@ -436,6 +447,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       const a = tr.addr.toLowerCase();
       m[a] = (m[a] ?? 0) + (tr.side === "buy" ? tr.tokens : -tr.tokens);
     }
+    for (const [a, v] of Object.entries(chainBal)) if (a in m || v > 0) m[a] = v;
     const TOTAL = 1e9;
     const unsold = Math.max(0, TOTAL - Number(formatEther(data.sold)));
     const list = Object.entries(m)
@@ -444,7 +456,20 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       .slice(0, 10)
       .map(([a, v]) => ({ addr: a, bal: v, pct: (v / TOTAL) * 100 }));
     return { list, unsold, unsoldPct: (unsold / TOTAL) * 100 };
-  }, [history, data]);
+  }, [history, data, chainBal]);
+  useEffect(() => {
+    if (!history || !tokenAddress) return;
+    const m = {};
+    for (const tr of history.trades) { const a = tr.addr.toLowerCase(); m[a] = (m[a] ?? 0) + (tr.side === "buy" ? tr.tokens : -tr.tokens); }
+    const addrs = Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, 14).map(([a]) => a);
+    if (!addrs.length) return;
+    let alive = true;
+    Promise.all(addrs.map((a) => publicClient.readContract({ address: tokenAddress, abi: tokenAbi, functionName: "balanceOf", args: [a] })
+      .then((v) => [a, Number(formatEther(v))]).catch(() => null)))
+      .then((rows) => { if (alive) setChainBal(Object.fromEntries(rows.filter(Boolean))); });
+    return () => { alive = false; };
+  }, [history, tokenAddress]);
+  useEffect(() => { setChainBal({}); }, [tokenAddress]);
 
   // Паспорт токена: три цифры, по которым видно накрутку и риск дампа.
   const passport = useMemo(() => {
@@ -483,11 +508,12 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const tokStats = useMemo(() => {
     if (!history || !history.trades.length) return null;
     const now = history.now ?? Date.now();
-    const vol24 = history.trades
-      .filter((tr) => (tr.ts ?? 0) >= now - 86400e3)
-      .reduce((s2, tr) => s2 + tr.eth + tr.fee, 0);
+    const day = history.trades.filter((tr) => (tr.ts ?? 0) >= now - 86400e3);
+    const vol24 = day.reduce((s2, tr) => s2 + tr.eth + tr.fee, 0);
+    // доллары по курсу на момент сделок — если индексатор знает их для всех сделок дня
+    const vol24Usd = day.length && day.every((tr) => tr.usd != null && tr.usd > 0) ? day.reduce((s2, tr) => s2 + tr.usd, 0) : null;
     const ath = Math.max(...history.points.map((pp) => pp.mcap));
-    return { vol24, ath };
+    return { vol24, vol24Usd, ath };
   }, [history]);
 
   const chartPoints = useMemo(() => {
@@ -882,6 +908,51 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
 
   // ---- выдвижная панель трейдера (наведение/клик на сделку в «Активности») ----
   const [inspect, setInspect] = useState(null); // адрес трейдера
+  // Панель трейдера можно таскать за шапку; место запоминается в браузере
+  const [tpPos, setTpPos] = useState(() => { try { return JSON.parse(localStorage.getItem("hood.tpPos") || "null"); } catch (e) { return null; } });
+  const tpDrag = useRef(null);
+  const [tpDragging, setTpDragging] = useState(false); // класс через состояние: иначе React снимал его на каждом рендере и анимация появления дёргала панель
+  // и растягивать за правый нижний угол (браузерный resize); размер тоже помним
+  const [tpSize, setTpSize] = useState(() => { try { return JSON.parse(localStorage.getItem("hood.tpSize") || "null"); } catch (e) { return null; } });
+  const tpRef = useRef(null);
+  useEffect(() => {
+    const el = tpRef.current;
+    if (!el || !inspect || typeof ResizeObserver === "undefined") return;
+    let t0 = 0;
+    const ro = new ResizeObserver(() => {
+      clearTimeout(t0);
+      t0 = setTimeout(() => {
+        const w = Math.round(el.offsetWidth), h = Math.round(el.offsetHeight);
+        if (w < 200 || h < 200) return;
+        const cur = tpSize || {};
+        if (cur.w === w && cur.h === h) return;
+        setTpSize({ w, h });
+        try { localStorage.setItem("hood.tpSize", JSON.stringify({ w, h })); } catch (e) { /* ignore */ }
+      }, 150);
+    });
+    ro.observe(el);
+    return () => { ro.disconnect(); clearTimeout(t0); };
+  }, [inspect]); // eslint-disable-line
+  const onTpDragStart = (e) => {
+    if (e.button !== 0 || e.target.closest("a, .tp-close, button")) return;
+    const el = e.currentTarget.parentElement;
+    const r = el.getBoundingClientRect();
+    tpDrag.current = { dx: e.clientX - r.left, dy: e.clientY - r.top, w: r.width, h: r.height };
+    setTpDragging(true);
+    const move = (ev) => {
+      const d = tpDrag.current; if (!d) return;
+      const x = Math.min(Math.max(0, ev.clientX - d.dx), window.innerWidth - d.w);
+      const y = Math.min(Math.max(0, ev.clientY - d.dy), window.innerHeight - 48);
+      setTpPos({ x, y });
+    };
+    const up = () => {
+      tpDrag.current = null; setTpDragging(false);
+      window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up);
+      setTpPos((p) => { try { localStorage.setItem("hood.tpPos", JSON.stringify(p)); } catch (err) { /* ignore */ } return p; });
+    };
+    window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);
+    e.preventDefault();
+  };
   const hovT = useRef(null);
   const [inspBal, setInspBal] = useState(null); // { tok, eth }
   useEffect(() => {
@@ -893,8 +964,16 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       publicClient.getBalance({ address: inspect }).catch(() => 0n),
     ]).then(([tok, eth]) => { if (alive) setInspBal({ tok, eth }); });
     const onKey = (e) => { if (e.key === "Escape") setInspect(null); };
+    // клик мимо панели закрывает её (клик по другой сделке — просто переключает трейдера)
+    const onDown = (e) => {
+      const el = e.target;
+      if (!(el instanceof Element)) return;
+      if (el.closest(".trader-panel, .sa-row, .arow-hov, .hood-tip")) return;
+      setInspect(null);
+    };
     window.addEventListener("keydown", onKey);
-    return () => { alive = false; window.removeEventListener("keydown", onKey); };
+    document.addEventListener("pointerdown", onDown, true);
+    return () => { alive = false; window.removeEventListener("keydown", onKey); document.removeEventListener("pointerdown", onDown, true); };
   }, [inspect, tokenAddress]);
   // панель открывается только по клику на сделку
   const rowHover = (addr) => ({
@@ -1270,7 +1349,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <div className="tk-cells">
               <div className="tk-cell"><span>{t("Цена")}</span><b>{ethStr(fc(data.price))} ETH</b></div>
               <div className="tk-cell"><span>{t("Собрано")}</span><b>{money(fc(data.reserve))}</b></div>
-              <div className="tk-cell"><span>{t("Объём 24ч")}</span><b>{tokStats ? money(tokStats.vol24) : "0 ETH"}</b></div>
+              <div className="tk-cell"><span>{t("Объём 24ч")}</span><b>{tokStats ? (tokStats.vol24Usd != null ? money(tokStats.vol24).replace(/\(\$[^)]*\)/, "(" + fmtUsd(tokStats.vol24Usd) + ")") : money(tokStats.vol24)) : "0 ETH"}</b></div>
               <div className="tk-cell"><span>ATH</span><b>{tokStats && curRate > 0 ? usd(tokStats.ath * curRate) : "—"}</b></div>
               {!data.graduated && (
                 <div className="tk-cell"><span>{t("До градации")}</span><b>{fmt(progress, 1)}%</b></div>
@@ -1305,7 +1384,13 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <div className={`bt-tab ${btTab === "myhist" ? "on" : ""}`} onClick={() => setBtTab("myhist")}>
               {t("История сделок")}
             </div>
+            <div className={`bt-tab ${btTab === "dev" ? "on" : ""}`} onClick={() => setBtTab("dev")}>
+              {t("Dev-токены")}{devInfo.mine.length > 0 && <span className="bt-count">{devInfo.mine.length}</span>}
+            </div>
           </div>
+          {btTab === "dev" && (
+            <DevTokens creator={data.creator} tokens={tokensList} trades={platTrades} rate={rate} current={tokenAddress} />
+          )}
           {FEATURES.activityTab && btTab === "trades" && (<>
 
           {!history && <div className="dim" style={{ padding: "14px 0" }}>{t("Читаю события…")}</div>}
@@ -1335,7 +1420,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                     background: `linear-gradient(90deg, ${buy ? "#7ac74f1c" : "#e06a4a1c"} ${heat}%, transparent ${heat}%)`,
                     borderRadius: 6, padding: "4px 8px", marginLeft: -8,
                   }}>
-                    {dollars(tr.eth)}
+                    {tradeUsd(tr)}
                   </span>
                   <span className="dim">${fmtEthFine(priceUsd)}</span>
                   <span>{compactN(tr.tokens)}</span>
@@ -1417,9 +1502,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               );
             }
             return [(
-              <div className="pos-row" key="sum" title={`${data.name} — ${t("Открыть страницу токена")}`}
+              <div className="pos-row" key="sum"
                    onClick={() => { window.location.hash = `#/token/${tokenAddress}`; window.scrollTo({ top: 0, behavior: "smooth" }); }}>
-                <a className="pos-id tk-cell" href={`#/token/${tokenAddress}`} title={`${data.name} — ${t("Открыть страницу токена")}`}>
+                <a className="pos-id tk-cell" href={`#/token/${tokenAddress}`}>
                   <span>{t("Токен / Активность")}</span>
                   <span className="pos-id-body">
                     <span className={`tok-star ${isFavTok ? "on" : ""}`} style={{ fontSize: 14 }}
@@ -1501,7 +1586,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 </span>
                 <a href={`${EXPLORER}/tx/${tr.tx}`} target="_blank" rel="noreferrer"
                    style={{ color: "inherit" }} title={t("Открыть транзакцию")}>
-                  {ethStr(tr.eth)} ETH <span className="usd-sub">({dollars(tr.eth)})</span>
+                  {ethStr(tr.eth)} ETH <span className="usd-sub">({tradeUsd(tr)})</span>
                 </a>
                 <span>{fmt(tr.tokens, 0)}</span>
                 <a className="mono" href={`${EXPLORER}/address/${tr.addr}`} target="_blank" rel="noreferrer"
@@ -1814,12 +1899,13 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               {history && history.trades.length === 0 && (
                 <div className="dim" style={{ padding: 12 }}>{t("Пока нет сделок.")}</div>
               )}
-              {history && history.trades.slice(0, 60).map((tr, i) => {
+              {history && history.trades.length > 0 && (() => { const saMax = Math.max(...history.trades.slice(0, 60).map((x) => x.eth), 1e-9); return history.trades.slice(0, 60).map((tr, i) => {
                 const buy = tr.side === "buy";
                 const isMine = wallet && tr.addr.toLowerCase() === wallet.account.toLowerCase();
+                const heat = Math.max(6, Math.round((tr.eth / saMax) * 100));
                 return (
-                  <div className="sa-row" key={i} {...rowHover(tr.addr)}>
-                    <span className={buy ? "side-buy" : "side-sell"}>{dollars(tr.eth)}</span>
+                  <div className={`sa-row ${buy ? "is-buy" : "is-sell"}`} key={i} {...rowHover(tr.addr)}>
+                    <span className={`sa-amt ${buy ? "side-buy" : "side-sell"}`} style={{ "--heat": `${heat}%` }}><i />{tradeUsd(tr)}</span>
                     <span className="dim">{compactN(tr.tokens)}</span>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 4, minWidth: 0 }}>
                       <Who addr={tr.addr} title={t("Открыть профиль трейдера")} style={{ color: "inherit" }} /><Badges addr={tr.addr} />
@@ -1830,7 +1916,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                     </a>
                   </div>
                 );
-              })}
+              }); })()}
             </div>
           )}
         </div>
@@ -1861,8 +1947,10 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       const isMe = wallet && inspect.toLowerCase() === wallet.account.toLowerCase();
       const pnlCol = (v) => ({ color: v >= 0 ? "var(--leaf)" : "var(--red)" });
       return (
-        <div className="trader-panel">
-          <div className="tp-head">
+        <div className={`trader-panel ${tpDragging ? "dragging" : ""} ${tpPos || tpSize ? "placed" : ""}`} ref={tpRef}
+             style={{ ...(tpPos ? { left: tpPos.x, top: tpPos.y, right: "auto" } : {}), ...(tpSize ? { width: tpSize.w, height: tpSize.h, maxHeight: "none" } : {}) }}>
+          <div className="tp-head" onPointerDown={onTpDragStart}
+               onDoubleClick={() => { setTpPos(null); setTpSize(null); try { localStorage.removeItem("hood.tpPos"); localStorage.removeItem("hood.tpSize"); } catch (e) { /* ignore */ } }}>
             {meta.image && <img src={meta.image} alt="" style={{ width: 26, height: 26, borderRadius: 7 }} />}
             <a className="mono" href={`${EXPLORER}/address/${inspect}`} target="_blank" rel="noreferrer">
               {short(inspect)}
@@ -1919,7 +2007,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               <span className={`tp-type ${x.side}`}>{t(x.side === "buy" ? "Покупка" : "Продажа")}</span>
               <span className="dim">${fmtEthFine(x.tokens > 0 ? (x.eth / x.tokens) * curRate : 0)}</span>
               <span>{compactN(x.tokens)}</span>
-              <span className={x.side === "buy" ? "side-buy" : "side-sell"}>{dollars(x.eth)}</span>
+              <span className={x.side === "buy" ? "side-buy" : "side-sell"}>{tradeUsd(x)}</span>
               <a className="dim" href={`${EXPLORER}/tx/${x.tx}`} target="_blank" rel="noreferrer"
                  title={x.ts ? new Date(x.ts).toLocaleString() : ""}>
                 {shortAgo(x.ts)} ↗

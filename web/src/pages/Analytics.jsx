@@ -102,11 +102,12 @@ export default function Analytics() {
   const { t } = useLang();
   const split = useSplit();
   const rate = useEthUsd();
-  // ETH → доллары: крупная сумма на карточках
-  const D = (e) => {
-    const v = (e || 0) * rate;
-    return v >= 1000 ? usd(v) : "$" + v.toFixed(2);
-  };
+  // Все суммы аналитики — в долларах. У сделок доллары зафиксированы
+  // индексатором по курсу на момент сделки (не «дышат» вместе с ETH);
+  // если индексатор их не знает — ETH × текущий курс.
+  const D = (v) => ((v || 0) >= 1000 ? usd(v || 0) : "$" + (v || 0).toFixed(2));
+  const V = (tr) => (tr.usd != null ? tr.usd : (tr.eth + tr.fee) * rate);
+  const F = (tr) => (tr.feeUsd != null ? tr.feeUsd : tr.fee * rate);
   const [raw, setRaw] = useState(_anaRaw);
   const [error, setError] = useState("");
   const [period, setPeriod] = useState("all");
@@ -149,13 +150,13 @@ export default function Analytics() {
         if (tk?.creator) {
           const key = tk.creator.toLowerCase();
           const c = creatorsMap[key] ?? { earned: 0, symbols: [] };
-          c.earned += tr.fee * (shareBps / 10000);
+          c.earned += F(tr) * (shareBps / 10000);
           if (!c.symbols.includes(tk.symbol)) c.symbols.push(tk.symbol);
           creatorsMap[key] = c;
         }
         const k = tr.addr.toLowerCase();
         const x = tradersMap[k] ?? { volume: 0, count: 0 };
-        x.volume += tr.eth + tr.fee;
+        x.volume += V(tr);
         x.count += 1;
         tradersMap[k] = x;
       }
@@ -206,8 +207,8 @@ export default function Analytics() {
     const cutoff = secs > 0 ? raw.now - secs * 1000 : 0;
     const filtered = raw.trades.filter((tr) => !cutoff || (tr.ts ?? 0) >= cutoff);
 
-    const volume = filtered.reduce((s, tr) => s + tr.eth + tr.fee, 0);
-    const creatorPaid = filtered.reduce((s, tr) => s + tr.fee * (tr.shareBps / 10000), 0);
+    const volume = filtered.reduce((s, tr) => s + V(tr), 0);
+    const creatorPaid = filtered.reduce((s, tr) => s + F(tr) * (tr.shareBps / 10000), 0);
 
     // График как у Pons: всегда по дням, окно шире выбранного периода —
     // 24ч → 14 дней, неделя → 56, месяц и всё время → 60. Последняя
@@ -222,16 +223,16 @@ export default function Analytics() {
     const buyBars = Array(N).fill(0);
     let chartLau = 0, chartBuy = 0;
     for (const ts of raw.launchTs || []) { if (ts < t0) continue; lauBars[Math.min(N - 1, Math.floor((ts - t0) / DAY))] += 1; chartLau += 1; }
-    for (const b of raw.buybacks || []) { if (b.ts < t0) continue; buyBars[Math.min(N - 1, Math.floor((b.ts - t0) / DAY))] += b.eth; chartBuy += b.eth; }
+    for (const b of raw.buybacks || []) { if (b.ts < t0) continue; buyBars[Math.min(N - 1, Math.floor((b.ts - t0) / DAY))] += b.eth * rate; chartBuy += b.eth * rate; }
     const bins = Array.from({ length: N }, (_, i) => ({ from: t0 + i * DAY, to: t0 + (i + 1) * DAY }));
     let chartVol = 0, chartCnt = 0;
     for (const tr of raw.trades) {
       const ts = tr.ts ?? raw.now;
       if (ts < t0) continue;
       const i = Math.min(N - 1, Math.max(0, Math.floor((ts - t0) / DAY)));
-      volBars[i] += tr.eth + tr.fee;
+      volBars[i] += V(tr);
       cntBars[i] += 1;
-      chartVol += tr.eth + tr.fee; chartCnt += 1;
+      chartVol += V(tr); chartCnt += 1;
     }
     // Предыдущий период той же длины — чтобы показать, куда двинулось.
     // Для «всё время» сравнивать не с чем.
@@ -240,14 +241,14 @@ export default function Analytics() {
       const from = cutoff - secs * 1000;
       const p = raw.trades.filter((tr) => (tr.ts ?? 0) >= from && (tr.ts ?? 0) < cutoff);
       prev = {
-        volume: p.reduce((s2, tr) => s2 + tr.eth + tr.fee, 0),
+        volume: p.reduce((s2, tr) => s2 + V(tr), 0),
         count: p.length,
-        creatorPaid: p.reduce((s2, tr) => s2 + tr.fee * (tr.shareBps / 10000), 0),
+        creatorPaid: p.reduce((s2, tr) => s2 + F(tr) * (tr.shareBps / 10000), 0),
       };
     }
 
     return { volume, creatorPaid, count: filtered.length, volBars, cntBars, bins, t0, tEnd: raw.now, prev, chartVol, chartCnt, chartDays: N, lauBars, buyBars, chartLau, chartBuy };
-  }, [raw, period]);
+  }, [raw, period, rate]); // eslint-disable-line
 
   // подписи оси времени под мини-графиками
   const axisLabels = React.useMemo(() => {
@@ -281,7 +282,7 @@ export default function Analytics() {
       {stats && raw && (() => {
         const series = chart === "count" ? stats.cntBars : chart === "launch" ? stats.lauBars : chart === "buyback" ? stats.buyBars : stats.volBars;
         const isCount = chart === "count" || chart === "launch";
-        const fmtVal = isCount ? (v, axis) => (axis ? String(Math.round(v)) : `${Math.round(v)}`) : (v, axis) => (axis ? usd(v * rate) : D(v));
+        const fmtVal = isCount ? (v, axis) => (axis ? String(Math.round(v)) : `${Math.round(v)}`) : (v, axis) => (axis ? usd(v) : D(v));
         const chartTotal = chart === "count" ? stats.chartCnt : chart === "launch" ? stats.chartLau : chart === "buyback" ? D(stats.chartBuy) : D(stats.chartVol);
         const chartName = { vol: "Объём", count: "Сделки", launch: "Запуски", buyback: "Выкупы" }[chart];
         const hv = hover !== null && stats.bins[hover] ? { v: series[hover], from: stats.bins[hover].from, to: stats.bins[hover].to } : null;

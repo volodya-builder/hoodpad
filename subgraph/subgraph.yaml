@@ -87,10 +87,16 @@ templates:
       kind: ethereum/events
       apiVersion: 0.0.7
       language: wasm/assemblyscript
-      entities: [Token, Trade, Protocol]
+      entities: [Token, Trade, Protocol, PriceSource]
       abis:
         - name: BondingCurvePool
           file: ./abis/BondingCurvePool.json
+        - name: UniswapV3Factory
+          file: ./abis/UniswapV3Factory.json
+        - name: UniswapV3Pool
+          file: ./abis/UniswapV3Pool.json
+        - name: ERC20
+          file: ./abis/ERC20.json
       eventHandlers:
         - event: Buy(indexed address,uint256,uint256,uint256)
           handler: handleBuy

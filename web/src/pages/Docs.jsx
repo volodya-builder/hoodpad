@@ -70,7 +70,7 @@ const SECTIONS = [
       { type: "split", title: T("Комиссия 1% с каждой сделки", "1% fee on every trade", "每笔交易 1% 手续费"), parts: [
         { l: T("Создателю монеты", "Coin creator", "代币创建者"), pct: 70, c: "var(--gold)" },
         { l: T("Арена — выкуп подиума", "Arena — podium buyback", "竞技场——领奖台回购"), pct: 10, c: "#8fd3f4" },
-        { l: T("Выкуп монеты hood", "hood buyback", "hood 回购"), pct: 10, c: "#e6e6e3" },
+        { l: T("Выкуп монеты hood", "hood buyback", "hood 回购"), pct: 10, c: "#e8c65a" },
         { l: T("Команда", "Team", "团队"), pct: 10, c: "#7c7c79" },
       ] },
       [
@@ -87,8 +87,8 @@ const SECTIONS = [
       T("Очки боя = честный объём × (1 + прирост цены за день). Честный объём считается по кошелькам как |покупки − продажи|: накрутка туда-сюда не даёт очков, сделки создателя не считаются, вклад одного кошелька ограничен 25%.", "Battle score = fair volume × (1 + price growth for the day). Fair volume is |buys − sells| per wallet: wash trading earns nothing, creator trades don’t count, and one wallet contributes at most 25%.", "战斗积分 = 真实交易量 ×（1 + 当日价格涨幅）。真实交易量按钱包计算 |买入 − 卖出|：刷量不得分，创建者交易不计入，单个钱包贡献最多 25%。"),
       { type: "split", title: T("Призовой фонд дня — вся казна арены", "Daily prize — the whole arena treasury", "每日奖金——整个竞技场金库"), parts: [
         { l: T("1 место", "1st place", "第 1 名"), pct: 70, c: "var(--gold)" },
-        { l: T("2 место", "2nd place", "第 2 名"), pct: 20, c: "#e6e6e3" },
-        { l: T("3 место", "3rd place", "第 3 名"), pct: 10, c: "#7c7c79" },
+        { l: T("2 место", "2nd place", "第 2 名"), pct: 20, c: "#c3cbd4" },
+        { l: T("3 место", "3rd place", "第 3 名"), pct: 10, c: "#c98a55" },
       ] },
       T("Утром (00:25 UTC) бот тратит всё, что лежит в казне арены, на вчерашний подиум: 70% первому месту, 20% второму, 10% третьему — выкуп монеты с рынка и сжигание в той же транзакции. Монеты за валюту выкупаются из той же валюты в казне. Одна корона на монету: выигравшая однажды больше не участвует.", "In the morning (00:25 UTC) the bot spends everything in the arena treasury on yesterday’s podium: 70% to 1st, 20% to 2nd, 10% to 3rd — buying the coin off the market and burning it in the same transaction. Quote coins are bought from the matching asset held by the treasury. One crown per coin: a past winner never competes again.", "早晨（00:25 UTC）机器人将竞技场金库中的全部资金用于昨日领奖台：70% 给第 1 名，20% 给第 2 名，10% 给第 3 名——从市场买入代币并在同一笔交易中销毁。计价货币代币用金库中对应的资产买入。一枚代币只能夺冠一次：曾经的赢家不再参赛。"),
       { type: "note", text: T("Из казны арены нельзя вывести ни копейки — контракт умеет только покупать монеты площадки и сжигать их.", "Nothing can be withdrawn from the arena treasury — the contract can only buy platform coins and burn them.", "竞技场金库中的资金无法提取——合约只能买入平台代币并销毁。") },
