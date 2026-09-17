@@ -301,10 +301,10 @@ async function verifyOnChain(o, { rd, pub, parseAbi, OWNER, OPERATOR, TEAM }) {
       // оператор реально может звать toEth (упадёт на «bad args», а не на NotOperator)
       const abi = parseAbi(["function toEth(address,uint256,uint256) returns (uint256)", "error NotOperator()"]);
       try { await pub.simulateContract({ account: OPERATOR, address: addr, abi, functionName: "toEth", args: [MAINNET.weth, 0n, 0n] }); }
-      catch (e) { const m = String(e.shortMessage || e.message); if (!/bad args/.test(m)) p.push(`${label}: оператор не может звать toEth (${m.split("\n")[0]})`); }
+      catch (e) { const m = String(e.message || e.shortMessage); /* полный текст: в нём имя ошибки */ if (!/bad args/.test(m)) p.push(`${label}: оператор не может звать toEth (${m.split("\n")[0]})`); }
       const stranger = "0x000000000000000000000000000000000000dEaD";
       try { await pub.simulateContract({ account: stranger, address: addr, abi, functionName: "toEth", args: [MAINNET.weth, 0n, 0n] }); p.push(`${label}: toEth доступен ПОСТОРОННЕМУ`); }
-      catch (e) { const m = String(e.shortMessage || e.message); if (!/NotOperator/.test(m)) p.push(`${label}: посторонний отбит не той ошибкой (${m.split("\n")[0]})`); }
+      catch (e) { const m = String(e.message || e.shortMessage); /* полный текст: в нём имя ошибки */ if (!/NotOperator/.test(m)) p.push(`${label}: посторонний отбит не той ошибкой (${m.split("\n")[0]})`); }
     });
   }
   // сплиттер
