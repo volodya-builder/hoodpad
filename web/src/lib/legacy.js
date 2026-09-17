@@ -24,6 +24,7 @@ import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, EXPLORER } from "./config.js";
 // Все фабрики площадки, старые и текущие (из истории config.js)
 export const ETH_FACTORIES = [
   FACTORY_ADDRESS,
+  "0xbe3e7ca55b6c4fc9e759bc8b43734b57a582da01", // 16–17.09.2026
   "0x08a887196fc31b89305ae03aa991917f6b1d23ec", // 14–15.09.2026
   "0x68a983f0c73f1a5dc13aa3ae71a19a5787162cdb", // 23.07.2026
   "0xb09683cdd8e1dae93e37163eb4e6dd925d4104f9", // 22.07.2026
@@ -31,6 +32,7 @@ export const ETH_FACTORIES = [
 ].map((a) => String(a).toLowerCase());
 export const QUOTE_FACTORIES = [
   QUOTE_FACTORY_ADDRESS,
+  "0x4b55954a2910cfbb04f49e90e727fb1540b3a940", // 16–17.09.2026
   "0xd7299e03c5e7d4f9f4c62f305a0b619359cf9a4f", // 15.09.2026
 ].map((a) => String(a).toLowerCase());
 const LIVE = new Set([String(FACTORY_ADDRESS).toLowerCase(), String(QUOTE_FACTORY_ADDRESS).toLowerCase()]);
