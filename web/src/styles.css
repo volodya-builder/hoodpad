@@ -3692,6 +3692,7 @@ h1, h2, h3, .card-title h3, .sec-h2, .sec-h3 { font-family: var(--font-display-r
 /* аналитика: полоса цифр и одна карточка графика */
 .ana-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 36px 0 26px; }
 .ana-strip { display: grid; grid-template-columns: repeat(4, 1fr); margin: 0 0 28px; padding-bottom: 26px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.ana-strip-vaults { grid-template-columns: 1fr 1fr; margin-top: -8px; }
 .ana-stat { padding: 4px 22px 4px 0; border-left: 1px solid rgba(255,255,255,.08); padding-left: 22px; }
 .ana-stat:first-child { border-left: 0; padding-left: 0; }
 .ana-stat .n { font-size: 40px; font-weight: 400; letter-spacing: -.03em; line-height: 1.1; font-variant-numeric: tabular-nums; }

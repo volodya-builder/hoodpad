@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { allTrades, loadTokens } from "./data.js";
 import { arenaState, buildChain, setSystemAddresses } from "./arena-core.js";
-import { TREASURY_ADDRESS, FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, ARENA_TREASURY_ADDRESS, ARENA_TREASURY_LEGACY_ADDRESS, ARENA_LIVE } from "./config.js";
+import { TREASURY_ADDRESS, FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, ARENA_TREASURY_ADDRESS, ARENA_TREASURY_LEGACY_ADDRESS, BUYBACK_TREASURY_ADDRESS, ARENA_LIVE } from "./config.js";
 import { publicClient } from "./web3.js";
 import { arenaTreasuryAbi, erc20Abi } from "./abi.js";
 import { recentFromBlock } from "./data.js";
@@ -28,7 +28,12 @@ export function loadArenaPot() {
 }
 async function _loadArenaPotFresh() {
   // фонд = казна арены + прежняя казна (туда падают излишки градаций), если задана
-  const vaults = [ARENA_TREASURY_ADDRESS, ARENA_TREASURY_LEGACY_ADDRESS].filter((a) => /^0x[0-9a-fA-F]{40}$/.test(a || ""));
+  return loadVaultPot([ARENA_TREASURY_ADDRESS, ARENA_TREASURY_LEGACY_ADDRESS]);
+}
+/** Что накопилось в казне (или нескольких): ETH + валюты монет за валюту,
+ *  всё пересчитано в доллары; ethEq — то же самое в ETH по курсу. */
+export async function loadVaultPot(addrs) {
+  const vaults = addrs.filter((a) => /^0x[0-9a-fA-F]{40}$/.test(a || ""));
   const [bals, tokens, { ethUsd, quoteUsd }] = await Promise.all([
     Promise.all(vaults.map((a) => publicClient.getBalance({ address: a }).catch(() => 0n))),
     loadTokens().catch(() => []),
@@ -50,7 +55,29 @@ async function _loadArenaPotFresh() {
     } catch (e) { /* валюта не ответила — не показываем */ }
   }));
   assets.sort((a, b) => b.usd - a.usd);
-  return { eth, usd: eth * rate + assets.reduce((s, a) => s + a.usd, 0), assets };
+  const usdTotal = eth * rate + assets.reduce((s, a) => s + a.usd, 0);
+  return { eth, usd: usdTotal, ethEq: rate > 0 ? usdTotal / rate : eth, assets };
+}
+
+/** Казна выкупа hood — те же 10% комиссий, копит и выкупает монету hood. */
+let _bb = { v: null, t: 0, p: null };
+export function loadBuybackPot() {
+  if (_bb.v && Date.now() - _bb.t < 30_000) return Promise.resolve(_bb.v);
+  if (_bb.p) return _bb.p;
+  _bb.p = loadVaultPot([BUYBACK_TREASURY_ADDRESS]).then((v) => { _bb = { v, t: Date.now(), p: null }; return v; })
+    .catch((e) => { _bb.p = null; if (_bb.v) return _bb.v; throw e; });
+  return _bb.p;
+}
+export function useBuybackPot() {
+  const [pot, setPot] = useState(() => _bb.v);
+  useEffect(() => {
+    let alive = true;
+    const pull = () => loadBuybackPot().then((v) => { if (alive) setPot(v); }).catch(() => {});
+    pull();
+    const id = setInterval(pull, 60_000);
+    return () => { alive = false; clearInterval(id); };
+  }, []);
+  return pot;
 }
 
 /** Прогрев арены в простое (main.jsx): сделки, фонд, выплаты — чтобы вкладка
