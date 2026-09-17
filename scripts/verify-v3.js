@@ -164,6 +164,22 @@ async function targets() {
 async function main() {
   const list = await targets();
   if (!list.length) { console.error(`Нечего верифицировать: нет ${OUT_FILE} и EXTRA пуст.`); process.exit(1); }
+  // --dump: не слать в API (его закрывает Cloudflare), а сложить standard-json
+  // для ручной загрузки через сайт обозревателя: scripts/verify-out/<N>-<Имя>.json
+  if (process.argv.includes("--dump")) {
+    const dir = path.join(__dirname, "verify-out");
+    fs.mkdirSync(dir, { recursive: true });
+    const lines = [];
+    list.forEach((t, i) => {
+      const file = fileOf(t.name);
+      const name = `${String(i + 1).padStart(2, "0")}-${t.name}${t.key.includes(":") ? "-" + t.key.replace(":", "_") : ""}.json`;
+      fs.writeFileSync(path.join(dir, name), JSON.stringify(standardInput(file), null, 1));
+      lines.push(`${name}\n  адрес: ${t.address}\n  страница: https://robinhoodchain.blockscout.com/address/${t.address}/contract-verification\n  contract name: ${t.name}   компилятор: ${COMPILER}   лицензия: MIT\n`);
+    });
+    fs.writeFileSync(path.join(dir, "00-README.txt"), `Ручная верификация в Blockscout (standard-json).\n\n${lines.join("\n")}`);
+    console.log(`Сложил ${list.length} файлов в ${dir} — см. 00-README.txt`);
+    return;
+  }
   console.log(`Обозреватель: ${EXPLORER} · компилятор ${COMPILER} · контрактов: ${list.length}\n`);
   const res = [];
   for (const t of list) {
