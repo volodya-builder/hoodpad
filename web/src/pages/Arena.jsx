@@ -77,7 +77,8 @@ export default function Arena() {
   const E = (eth) => `${fmtEth(eth)} ETH`;
   // фонд в долларах сразу (там уже и ETH, и валюты); ETH-часть — отдельно подписью
   const potD = (share = 1) => (pot === null ? "…" : (rate > 0 || pot.usd > 0 ? (pot.usd * share >= 1000 ? usd(pot.usd * share) : usdFine(pot.usd * share)) : "…"));
-  const potSub = pot === null ? "" : [E(pot.eth), ...pot.assets.map((a) => `${a.amt >= 1000 ? Math.round(a.amt) : +a.amt.toPrecision(3)} ${a.sym}`)].join(" · ");
+  // валюты (GME, USDG…) казна сама меняет в ETH перед выплатой — человеку показываем один ETH-эквивалент
+  const potSub = pot === null ? "" : E(pot.ethEq ?? pot.eth);
   const mcapOf = (p) => Number(formatEther(p.price)) * 1e9 * rate;
   const day0 = dayStart();
   const nextCp = st ? (st.nextCheckpoint ?? day0 + 86_400_000) : null;
