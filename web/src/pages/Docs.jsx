@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLang } from "../lib/i18n.jsx";
 import {
   FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, ZAP_ADDRESS, FEE_SPLITTER_ADDRESS,
-  ARENA_TREASURY_ADDRESS, BUYBACK_TREASURY_ADDRESS, WETH_ADDRESS, EXPLORER, CHAIN,
+  ARENA_TREASURY_ADDRESS, BUYBACK_TREASURY_ADDRESS, WETH_ADDRESS, EXPLORER, CHAIN, TEAM_ADDRESS,
 } from "../lib/config.js";
 
 // Документация hood — одна страница с боковым оглавлением (как у Flap/GitBook,
@@ -17,9 +17,10 @@ import {
 const MIGRATOR_ETH = "0x2dec3594dd49e499e37c86c3ab82d99f1a927c1a";
 const MIGRATOR_QUOTE = "0xeb20f87ee1c8359ee8d0a5f770b052e849f1b84c";
 const USDG_ADDRESS = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168";
-const HOOD_TOKEN = "0x70550b0b6fb3d6bc813c7f29f989074bcdb5b51d";
-const TEAM_WALLET = "0x34fB2ff2cbD322C7F744E2818A15eC8b726BE4a6";
-const SUBGRAPH = "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/4.0.2/gn";
+const HOOD_TOKEN = ""; // монета hood перезапускается на новых контрактах 17.09.2026 — адрес появится после запуска
+const TEAM_WALLET = "0x34fB2ff2cbD322C7F744E2818A15eC8b726BE4a6"; // командная доля комиссий (10%)
+const ARENA_BOT = "0x574e7F68F79b9d7C7f7bB77691E3EE5048C6C39a";   // оператор обеих казн: только обмен в ETH и выкуп-сжигание
+const SUBGRAPH = "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/5.0.0/gn";
 const REPO = "https://github.com/volodya-builder/hoodpad";
 const RPC = "https://rpc.mainnet.chain.robinhood.com";
 
@@ -90,22 +91,24 @@ const SECTIONS = [
         { l: T("2 место", "2nd place", "第 2 名"), pct: 20, c: "#c3cbd4" },
         { l: T("3 место", "3rd place", "第 3 名"), pct: 10, c: "#c98a55" },
       ] },
-      T("Утром (00:25 UTC) бот тратит всё, что лежит в казне арены, на вчерашний подиум: 70% первому месту, 20% второму, 10% третьему — выкуп монеты с рынка и сжигание в той же транзакции. Монеты за валюту выкупаются из той же валюты в казне. Одна корона на монету: выигравшая однажды больше не участвует.", "In the morning (00:25 UTC) the bot spends everything in the arena treasury on yesterday’s podium: 70% to 1st, 20% to 2nd, 10% to 3rd — buying the coin off the market and burning it in the same transaction. Quote coins are bought from the matching asset held by the treasury. One crown per coin: a past winner never competes again.", "早晨（00:25 UTC）机器人将竞技场金库中的全部资金用于昨日领奖台：70% 给第 1 名，20% 给第 2 名，10% 给第 3 名——从市场买入代币并在同一笔交易中销毁。计价货币代币用金库中对应的资产买入。一枚代币只能夺冠一次：曾经的赢家不再参赛。"),
-      { type: "note", text: T("Из казны арены нельзя вывести ни копейки — контракт умеет только покупать монеты площадки и сжигать их.", "Nothing can be withdrawn from the arena treasury — the contract can only buy platform coins and burn them.", "竞技场金库中的资金无法提取——合约只能买入平台代币并销毁。") },
+      T("Утром (00:25 UTC) бот тратит всё, что лежит в казне арены, на вчерашний подиум: 70% первому месту, 20% второму, 10% третьему — выкуп монеты с рынка и сжигание в той же транзакции. Казна копит в ETH: доля от монет за акции и крипту приходит в их валюте (GME, USDG…), и перед выплатой казна сама меняет её на ETH через Uniswap V3 — по тем же маршрутам, что использует зап, и только если пул достаточно глубокий. Подиум оплачивается из ETH: ETH-монеты — у кривой, монеты за валюту — через зап. Одна корона на монету: выигравшая однажды больше не участвует.", "In the morning (00:25 UTC) the bot spends everything in the arena treasury on yesterday’s podium: 70% to 1st, 20% to 2nd, 10% to 3rd — buying the coin off the market and burning it in the same transaction. The treasury accumulates in ETH: the share from stock and crypto coins arrives in their asset (GME, USDG…), and before paying out the treasury swaps it to ETH itself via Uniswap V3 — over the same routes the zap uses, and only when the pool is deep enough. The podium is paid in ETH: ETH coins from the curve, quote coins through the zap. One crown per coin: a past winner never competes again.", "早晨（00:25 UTC）机器人将竞技场金库中的全部资金用于昨日领奖台：70% 给第 1 名，20% 给第 2 名，10% 给第 3 名——从市场买入代币并在同一笔交易中销毁。金库以 ETH 累积：来自股票和加密资产代币的份额以其计价货币（GME、USDG…）到账，付款前金库会通过 Uniswap V3 自行换成 ETH——走与 zap 相同的路径，且仅在池子足够深时。领奖台以 ETH 支付：ETH 代币从曲线买入，计价货币代币通过 zap 买入。一枚代币只能夺冠一次：曾经的赢家不再参赛。"),
+      { type: "note", text: T("Из казны арены нельзя вывести ни копейки — контракт умеет только менять валюту на ETH (ETH остаётся в казне), покупать монеты площадки и сжигать их. Кошелёк бота — оператор с правом только на эти действия.", "Nothing can be withdrawn from the arena treasury — the contract can only swap assets to ETH (which stays in the treasury), buy platform coins and burn them. The bot wallet is an operator limited to exactly these actions.", "竞技场金库中的资金无法提取——合约只能把资产换成 ETH（留在金库内）、买入平台代币并销毁。机器人钱包是仅限这些操作的操作员。") },
     ],
   },
   {
     id: "hood", title: T("Монета hood", "The hood coin", "hood 代币"),
     body: [
       T("hood — первая монета площадки, запущена командой на общих условиях (ETH-кривая, 1% комиссия, те же контракты). Никаких особых прав у неё нет.", "hood is the platform’s first coin, launched by the team under the same rules as everyone (ETH curve, 1% fee, same contracts). It has no special privileges.", "hood 是平台的第一枚代币，由团队按与所有人相同的规则发行（ETH 曲线、1% 手续费、相同合约）。它没有任何特权。"),
-      T("10% каждой комиссии площадки приходят в казну выкупа hood. Раз в сутки бот покупает на всё накопленное монету hood и сжигает её. Из казны нельзя вывести ничего — только выкуп и сжигание.", "10% of every platform fee goes to the hood buyback treasury. Once a day the bot spends everything accumulated to buy hood and burn it. Nothing can be withdrawn from the treasury — only buyback and burn.", "平台每笔手续费的 10% 进入 hood 回购金库。机器人每天用累积的全部资金买入 hood 并销毁。金库中的资金无法提取——只能回购和销毁。"),
-      [{ k: T("Адрес монеты", "Token address", "代币地址"), v: HOOD_TOKEN, addr: true }],
+      T("10% каждой комиссии площадки приходят в казну выкупа hood. Казна копит в ETH (валюту от монет за акции она сама меняет на ETH), раз в сутки бот покупает на всё накопленное монету hood и сжигает её. Из казны нельзя вывести ничего — только обмен в ETH внутри казны, выкуп и сжигание.", "10% of every platform fee goes to the hood buyback treasury. It accumulates in ETH (assets from stock coins are swapped to ETH by the treasury itself); once a day the bot spends everything accumulated to buy hood and burn it. Nothing can be withdrawn — only in-treasury swaps to ETH, buyback and burn.", "平台每笔手续费的 10% 进入 hood 回购金库。金库以 ETH 累积（来自股票代币的资产由金库自行换成 ETH）；机器人每天用累积的全部资金买入 hood 并销毁。资金无法提取——只能在金库内换成 ETH、回购和销毁。"),
+      HOOD_TOKEN
+        ? [{ k: T("Адрес монеты", "Token address", "代币地址"), v: HOOD_TOKEN, addr: true }]
+        : T("Площадка перезапущена 17.09.2026 на новых контрактах; монета hood запускается заново — адрес появится здесь.", "The platform was relaunched on 17 Sep 2026 on a new contract set; the hood coin is being launched again — its address will appear here.", "平台于 2026 年 9 月 17 日在新合约上重新启动；hood 代币将重新发行——地址将显示在此处。"),
     ],
   },
   {
     id: "contracts", title: T("Контракты", "Deployed contracts", "已部署合约"),
     body: [
-      T("Все контракты задеплоены 16.09.2026 на Robinhood Chain. Исходники — в репозитории на GitHub (папка contracts/).", "All contracts were deployed on 16 Sep 2026 on Robinhood Chain. Source code is in the GitHub repository (contracts/ folder).", "所有合约于 2026 年 9 月 16 日部署在 Robinhood Chain 上。源代码在 GitHub 仓库（contracts/ 目录）。"),
+      T("Все контракты задеплоены 17.09.2026 на Robinhood Chain — полный перезапуск с новых кошельков. Исходники — в репозитории на GitHub (папка contracts/); собраны solc 0.8.28, optimizer 200, evm paris — любой может пересобрать и сверить байткод.", "All contracts were deployed on 17 Sep 2026 on Robinhood Chain — a full relaunch from fresh wallets. Source code is in the GitHub repository (contracts/ folder); built with solc 0.8.28, optimizer 200, evm paris — anyone can rebuild and compare the bytecode.", "所有合约于 2026 年 9 月 17 日部署在 Robinhood Chain 上——使用全新钱包的完整重启。源代码在 GitHub 仓库（contracts/ 目录）；使用 solc 0.8.28、optimizer 200、evm paris 编译——任何人都可以重新编译并比对字节码。"),
       [
         { k: T("Сеть", "Network", "网络"), v: "Robinhood Chain · chainId 4663" },
         { k: "RPC", v: RPC },
@@ -116,11 +119,13 @@ const SECTIONS = [
         { k: "LaunchpadFactoryQuote — " + T("акции и крипта", "stocks & crypto", "股票与加密资产"), v: QUOTE_FACTORY_ADDRESS, addr: true },
         { k: "CurveZap — " + T("ETH ↔ валюта в одной транзакции", "ETH ↔ asset in one transaction", "ETH ↔ 资产，一笔交易"), v: ZAP_ADDRESS, addr: true },
         { k: "FeeSplitterV6 — " + T("делёж комиссий", "fee split", "手续费分配"), v: FEE_SPLITTER_ADDRESS, addr: true },
-        { k: "ArenaTreasury — " + T("казна арены", "arena treasury", "竞技场金库"), v: ARENA_TREASURY_ADDRESS, addr: true },
-        { k: "ArenaTreasury — " + T("казна выкупа hood", "hood buyback treasury", "hood 回购金库"), v: BUYBACK_TREASURY_ADDRESS, addr: true },
+        { k: "ArenaTreasuryV2 — " + T("казна арены (копит в ETH)", "arena treasury (accumulates in ETH)", "竞技场金库（以 ETH 累积）"), v: ARENA_TREASURY_ADDRESS, addr: true },
+        { k: "ArenaTreasuryV2 — " + T("казна выкупа hood (копит в ETH)", "hood buyback treasury (accumulates in ETH)", "hood 回购金库（以 ETH 累积）"), v: BUYBACK_TREASURY_ADDRESS, addr: true },
         { k: "UniswapV3Migrator — " + T("градация ETH-монет", "ETH coin graduation", "ETH 代币毕业"), v: MIGRATOR_ETH, addr: true },
         { k: "UniswapV3MigratorQuote — " + T("градация монет за валюту", "quote coin graduation", "计价货币代币毕业"), v: MIGRATOR_QUOTE, addr: true },
-        { k: T("Кошелёк команды", "Team wallet", "团队钱包"), v: TEAM_WALLET, addr: true },
+        { k: T("Владелец контрактов", "Contract owner", "合约所有者"), v: TEAM_ADDRESS, addr: true },
+        { k: T("Кошелёк команды (10% комиссий)", "Team wallet (10% of fees)", "团队钱包（10% 手续费）"), v: TEAM_WALLET, addr: true },
+        { k: T("Оператор казн (бот)", "Treasury operator (bot)", "金库操作员（机器人）"), v: ARENA_BOT, addr: true },
         { k: "WETH", v: WETH_ADDRESS, addr: true },
         { k: "USDG", v: USDG_ADDRESS, addr: true },
       ],
@@ -138,10 +143,10 @@ const SECTIONS = [
   {
     id: "bots", title: T("Автоматизация", "Automation", "自动化"),
     body: [
-      T("Всё, что происходит по расписанию, делают открытые боты из репозитория (папка bot/). У них нет прав менять контракты — только вызывать публичные функции и тратить казны по правилам, зашитым в код казны.", "Everything on a schedule is done by open-source bots from the repository (bot/ folder). They cannot change contracts — they only call public functions and spend treasuries by rules hard-coded in the treasury.", "所有定时任务由仓库中的开源机器人（bot/ 目录）执行。它们无法更改合约——只能调用公开函数，并按金库代码中固化的规则支出金库。"),
+      T("Всё, что происходит по расписанию, делают открытые боты из репозитория (папка bot/). У них нет прав менять контракты: в казнах кошелёк бота — оператор, которому доступны только обмен валюты на ETH внутри казны и выкуп-сжигание; владелец контрактов может лишь сменить оператора.", "Everything on a schedule is done by open-source bots from the repository (bot/ folder). They cannot change contracts: in the treasuries the bot wallet is an operator limited to in-treasury swaps to ETH and buyback-and-burn; the contract owner can only replace the operator.", "所有定时任务由仓库中的开源机器人（bot/ 目录）执行。它们无法更改合约：在金库中，机器人钱包是操作员，仅能在金库内把资产换成 ETH 以及回购销毁；合约所有者只能更换操作员。"),
       [
-        { k: T("Дивиденды и сбор комиссий", "Dividends & fee collection", "分红与手续费收集"), v: T("каждый час (в тесте — каждую минуту): выплата держателям от $1, сбор доли площадки в сплиттер", "hourly (every minute during testing): payouts to holders from $1, platform share into the splitter", "每小时（测试期间每分钟）：向持有者发放 $1 起的分红，平台份额进入分配合约") },
-        { k: T("Арена", "Arena", "竞技场"), v: T("ежедневно 00:25 UTC — выкуп и сжигание вчерашнего подиума", "daily 00:25 UTC — buyback & burn of yesterday’s podium", "每日 00:25 UTC——回购并销毁昨日领奖台") },
+        { k: T("Дивиденды и сбор комиссий", "Dividends & fee collection", "分红与手续费收集"), v: T("каждый час: выплата держателям от $1, сбор доли площадки в сплиттер", "hourly: payouts to holders from $1, platform share into the splitter", "每小时：向持有者发放 $1 起的分红，平台份额进入分配合约") },
+        { k: T("Арена", "Arena", "竞技场"), v: T("ежедневно 00:25 UTC — валюта казны → ETH, затем выкуп и сжигание вчерашнего подиума", "daily 00:25 UTC — treasury assets → ETH, then buyback & burn of yesterday’s podium", "每日 00:25 UTC——金库资产 → ETH，然后回购并销毁昨日领奖台") },
         { k: T("Выкуп hood", "hood buyback", "hood 回购"), v: T("ежедневно 00:45 UTC — вся казна выкупа → покупка hood и сжигание", "daily 00:45 UTC — whole buyback treasury → buy hood and burn", "每日 00:45 UTC——整个回购金库 → 买入 hood 并销毁") },
       ],
     ],
@@ -150,6 +155,7 @@ const SECTIONS = [
     id: "security", title: T("Безопасность и риски", "Security & risks", "安全与风险"),
     body: [
       T("Монеты, пулы, мигратор, сплиттер и казны не имеют функций вывода, паузы или изменения правил. У фабрик есть владелец, который может менять только параметры будущих запусков (казна, мигратор, комиссия ≤ 5%) — через заявку с задержкой 48 часов, видимую всем в блокчейне. Уже запущенные монеты это не затрагивает.", "Coins, pools, the migrator, the splitter and treasuries have no withdraw, pause or rule-change functions. The factories have an owner who can only change parameters for future launches (treasury, migrator, fee ≤ 5%) through a proposal with a 48-hour delay visible on-chain. Already launched coins are unaffected.", "代币、池子、迁移合约、分配合约和金库都没有提取、暂停或更改规则的函数。工厂有一个所有者，只能通过链上可见、延迟 48 小时的提案更改未来发行的参数（金库、迁移合约、手续费 ≤ 5%）。已发行的代币不受影响。"),
+      T("Казны (арена и выкуп hood) — ArenaTreasuryV2: два права, оба у оператора-бота и владельца — обменять валюту казны на ETH (ETH остаётся в казне) и выкупить монету площадки с сжиганием. Функции перевода средств на любой адрес нет в принципе. Владелец контрактов — один кошелёк, передача владения в два шага (новый владелец должен принять).", "The treasuries (arena and hood buyback) are ArenaTreasuryV2: two rights, held by the operator bot and the owner — swap treasury assets to ETH (ETH stays inside) and buy a platform coin with burn. There is no function to send funds to any address at all. Contracts have a single owner wallet; ownership transfers in two steps (the new owner must accept).", "金库（竞技场和 hood 回购）为 ArenaTreasuryV2：两项权限，由操作员机器人和所有者持有——把金库资产换成 ETH（ETH 留在金库内）以及买入平台代币并销毁。根本不存在向任何地址转账的函数。合约只有一个所有者钱包；所有权分两步转移（新所有者必须接受）。"),
       { type: "note", text: T("Ни один контракт площадки не имеет функций паузы, вывода средств или изменения правил уже запущенных монет.", "No platform contract has pause, withdraw, or rule-change functions for already launched coins.", "没有任何平台合约对已发行的代币具有暂停、提取或更改规则的函数。") },
       T("Риски: токены волатильны и могут обесцениться полностью; сделки необратимы; курс акций-токенов зависит от ликвидности пулов Uniswap в сети; hood — независимый проект, не аффилированный с Robinhood Markets, Inc.", "Risks: tokens are volatile and can go to zero; transactions are irreversible; stock-token prices depend on Uniswap pool liquidity on the chain; hood is an independent project not affiliated with Robinhood Markets, Inc.", "风险：代币波动剧烈，可能归零；交易不可撤销；股票代币的价格取决于链上 Uniswap 池的流动性；hood 是独立项目，与 Robinhood Markets, Inc. 无关。"),
     ],
