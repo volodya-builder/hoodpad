@@ -4,8 +4,8 @@ import Socials from "../components/Socials.jsx";
 import Who from "../components/Who.jsx";
 import { parseEther, formatEther, parseUnits, formatUnits } from "viem";
 import { publicClient, fmt, fmtEth, fmtEthFine, short } from "../lib/web3.js";
-import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi, zapAbi, feeSplitterAbi } from "../lib/abi.js";
-import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, FEATURES, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE } from "../lib/config.js";
+import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi, zapAbi, feeSplitterAbi, erc20TransferEvent } from "../lib/abi.js";
+import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, FEATURES, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE, FACTORY_START_BLOCK } from "../lib/config.js";
 import { poolTrades, invalidateTrades, loadTokens, allTrades, parseMeta, cachedToken } from "../lib/data.js";
 import { computeTrust } from "../lib/trust.js";
 import { honestVolume } from "../lib/fairvol.js";
@@ -25,7 +25,7 @@ import TokenSidebar from "../components/TokenSidebar.jsx";
 import { useDividends } from "../components/Dividends.jsx";
 import QuoteLogo from "../components/QuoteLogo.jsx";
 import { useFavs, toggleFav } from "../lib/favs.js";
-import { currentPosition, costBasis } from "../lib/position.js";
+import { currentPosition } from "../lib/position.js";
 import RGL, { WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -441,14 +441,42 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   // покупка числилась на человеке, а продажа на запе, и у человека
   // «висело» 4% эмиссии, которых у него нет.
   const [chainBal, setChainBal] = useState({}); // addr → баланс (токены)
+  // Балансы по событиям Transfer самого токена: видны и те, кто получил
+  // монеты переводом или раздачей, а не только торговавшие на кривой.
+  // null — ещё читаем; {} — не вышло, считаем по сделкам.
+  const [xferBal, setXferBal] = useState(null);
+  useEffect(() => {
+    if (!tokenAddress || !data?.pool) return;
+    let alive = true;
+    publicClient.getLogs({ address: tokenAddress, event: erc20TransferEvent, fromBlock: FACTORY_START_BLOCK, toBlock: "latest" })
+      .then((logs) => {
+        const m = {};
+        for (const l of logs) {
+          const v = Number(formatEther(l.args.value));
+          const f = l.args.from.toLowerCase(), to = l.args.to.toLowerCase();
+          m[f] = (m[f] ?? 0) - v; m[to] = (m[to] ?? 0) + v;
+        }
+        delete m["0x0000000000000000000000000000000000000000"];
+        delete m[data.pool.toLowerCase()]; // кривая — отдельной строкой
+        if (alive) setXferBal(m);
+      })
+      .catch(() => { if (alive) setXferBal({}); });
+    return () => { alive = false; };
+  }, [tokenAddress, data?.pool, history]);
+  useEffect(() => { setXferBal(null); }, [tokenAddress]);
   const holders = useMemo(() => {
     if (!history || !data) return null;
+    if (xferBal === null && history.trades.length > 0) return null; // ждём точные балансы
     const m = {};
-    for (const tr of history.trades) {
-      const a = tr.addr.toLowerCase();
-      m[a] = (m[a] ?? 0) + (tr.side === "buy" ? tr.tokens : -tr.tokens);
+    if (xferBal && Object.keys(xferBal).length > 0) {
+      for (const [a, v] of Object.entries(xferBal)) m[a] = v;
+    } else {
+      for (const tr of history.trades) {
+        const a = tr.addr.toLowerCase();
+        m[a] = (m[a] ?? 0) + (tr.side === "buy" ? tr.tokens : -tr.tokens);
+      }
+      for (const [a, v] of Object.entries(chainBal)) if (a in m || v > 0) m[a] = v;
     }
-    for (const [a, v] of Object.entries(chainBal)) if (a in m || v > 0) m[a] = v;
     const TOTAL = 1e9;
     const unsold = Math.max(0, TOTAL - Number(formatEther(data.sold)));
     const list = Object.entries(m)
@@ -456,8 +484,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10)
       .map(([a, v]) => ({ addr: a, bal: v, pct: (v / TOTAL) * 100 }));
-    return { list, unsold, unsoldPct: (unsold / TOTAL) * 100 };
-  }, [history, data, chainBal]);
+    return { list, unsold, unsoldPct: (unsold / TOTAL) * 100, total: Object.values(m).filter((v) => v > 1e-6).length };
+  }, [history, data, chainBal, xferBal]);
   useEffect(() => {
     if (!history || !tokenAddress) return;
     const m = {};
@@ -490,8 +518,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         else if ((tr.ts ?? 0) >= now - 86400e3) creSell24 += tr.tokens;
       }
     }
-    const creBal = Math.max(m[cre] ?? 0, 0);
-    const top5 = Object.values(m).filter((v) => v > 1e-6).sort((a, b) => b - a)
+    const exact = xferBal && Object.keys(xferBal).length > 0 ? xferBal : null;
+    const creBal = Math.max((exact ? exact[cre] : m[cre]) ?? 0, 0);
+    const top5 = Object.values(exact || m).filter((v) => v > 1e-6).sort((a, b) => b - a)
       .slice(0, 5).reduce((s, v) => s + v, 0);
     const day = trades.filter((tr) => (tr.ts ?? 0) >= now - 86400e3);
     const { honest, gross } = honestVolume(day, data.creator);
@@ -503,7 +532,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       honestPct: gross > 0 ? Math.min((honest / gross) * 100, 100) : null,
       dumping,
     };
-  }, [history, data]);
+  }, [history, data, xferBal]);
 
   // Статистика для полосы над графиком
   const tokStats = useMemo(() => {
@@ -1473,14 +1502,11 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             const valEth = balTok * Number(formatEther(data.price));
             const avgBuy = buysTok > 0 ? buysEth / buysTok : 0;   // ETH за токен
             const avgSell = sellsTok > 0 ? sellsEth / sellsTok : 0;
-            // себестоимость с поправкой на переводы: ушедшие с кошелька монеты
-            // уносят свою цену покупки, пришедшие переводом стоят 0
-            const cbNet = costBasis(mine.map((x) => ({ ...x, fee: 0 })), balTok);
-            const costRem = cbNet.heldCost;                        // себестоимость остатка
+            const costRem = balTok * avgBuy;                       // себестоимость остатка
             const uPnl = valEth - costRem;                         // нереализованный
             const uPct = costRem > 0 ? (uPnl / costRem) * 100 : 0;
-            const totPnl = valEth + sellsEth - cbNet.effInvested;  // общая прибыль
-            const totPct = cbNet.effInvested > 0 ? (totPnl / cbNet.effInvested) * 100 : 0;
+            const totPnl = valEth + sellsEth - buysEth;            // общая прибыль
+            const totPct = buysEth > 0 ? (totPnl / buysEth) * 100 : 0;
             const lastTs = mine.reduce((s, x) => Math.max(s, x.ts || 0), 0);
             const firstTs = mine.reduce((s, x) => (x.ts ? Math.min(s, x.ts) : s), Infinity);
             const holdMs = firstTs !== Infinity ? Date.now() - firstTs : 0;
@@ -1619,8 +1645,11 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 const top10 = holders.list.reduce((s, h) => s + h.pct, 0);
                 const cls = top10 >= 40 ? "bad" : top10 >= 20 ? "warn" : "ok";
                 return (
-                  <div className={`conc-note ${cls}`}>
-                    {t("Топ-10 держат")} {fmt(top10, 1)}% {t("сапплая")}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <div className={`conc-note ${cls}`}>
+                      {t("Топ-10 держат")} {fmt(top10, 1)}% {t("сапплая")}
+                    </div>
+                    {holders.total > 0 && <span className="dim" style={{ fontSize: 12 }}>{t("держателей")}: {holders.total}</span>}
                   </div>
                 );
               })()}
@@ -1683,12 +1712,14 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           ) : (
             <div className="panel" style={{ margin: 0, maxWidth: "none" }}>
               <div className="notice">
-                {t("Кривая заполнена! Кто угодно может запустить миграцию.")}
+                {t("Кривая заполнена. Переносим ликвидность на DEX — обычно это занимает меньше минуты.")}
               </div>
-              <button className="btn btn-primary btn-block" onClick={migrate} disabled={busy}>
-                {busy ? t("Мигрирую…") : t("Мигрировать на DEX")}
-              </button>
-              {error && <div className="error">{error}</div>}
+              {FEATURES.manualMigrate && (<>
+                <button className="btn btn-primary btn-block" onClick={migrate} disabled={busy}>
+                  {busy ? t("Мигрирую…") : t("Мигрировать на DEX")}
+                </button>
+                {error && <div className="error">{error}</div>}
+              </>)}
             </div>
           )
         ) : (

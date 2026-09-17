@@ -72,6 +72,8 @@ const EN = {
   "на выкуп": "to buyback",
   "Токен градуировал — торговля на DEX. Кривая закрыта.": "This token graduated — trading moved to the DEX. The curve is closed.",
   "Кривая заполнена! Кто угодно может запустить миграцию.": "The curve is full! Anyone can trigger the migration.",
+  "Кривая заполнена. Переносим ликвидность на DEX — обычно это занимает меньше минуты.": "The curve is full. Moving liquidity to the DEX — this usually takes under a minute.",
+  "держателей": "holders",
   "Мигрирую…": "Migrating…",
   "Мигрировать на DEX": "Migrate to DEX",
   "Выкуп из казны": "Treasury buyback",

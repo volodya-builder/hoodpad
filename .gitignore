@@ -18,3 +18,7 @@ _to_delete/
 # адреса после деплоя quote-фабрики (публичные, но в репозитории им не место — они в config.js)
 quote-addresses.txt
 scripts/verify-out/
+
+# кэш проверки миграций бота (создаётся при локальном запуске)
+.migrate-cache.json
+bot/.migrate-cache.json
