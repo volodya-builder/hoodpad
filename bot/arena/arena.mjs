@@ -180,7 +180,10 @@ async function main() {
     console.warn(`⚠ Индексатор отстаёт на ${lag} блоков или пуст — выплата за ${dayKey} отложена до следующего запуска.`);
     process.exit(DRY ? 0 : 2);
   }
-  const { chain: days } = buildChain(tokens, trades, ARENA_DAYS, yesterday + DAY - 1);
+  // «Сейчас» для цепочки — ровно конец вчерашнего дня (не на миллисекунду
+  // раньше!): иначе ядро считало вчера ещё идущим днём, чемпиона не называло
+  // и бот писал «подиума не было» при живых сделках (17.09.2026).
+  const { chain: days } = buildChain(tokens, trades, ARENA_DAYS, yesterday + DAY);
   const st = days.get(yesterday);
   // градуировавшие монеты выкупить нельзя — кривая закрыта
   const gradSet = new Set(tokens.filter((x) => x.graduated).map((x) => x.token.toLowerCase()));
