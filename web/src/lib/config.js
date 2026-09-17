@@ -144,6 +144,9 @@ export const AGENT_OPERATOR =
 //              contracts/BrokerCats.sol, CatBox.sol, CatMarket.sol, CatStockVault.sol, CatRenderer.sol
 //   vote     — contracts/VotePower.sol, BuybackVote.sol (интерфейса нет с 06.08.2026)
 //   treasury — pages/Treasury.jsx, contracts/BuybackTreasuryV2.sol
+/** Блок деплоя нынешних фабрик (17.09.2026): раньше него событий наших монет нет. */
+export const FACTORY_START_BLOCK = 65_270_286n;
+
 export const FEATURES = {
   arena: true,         // «Арена» — суточный турнир, приз: 10% всех комиссий → выкуп и сжигание подиума (возвращена 15.09.2026)
   grandArena: false,   // месячная Гранд-Арена старой схемы казны — спрятана 15.09.2026 (код в pages/Arena.jsx)
@@ -176,6 +179,7 @@ export const FEATURES = {
   aiChat: true,
   creatorSellBanner: false, // «Создатель продаёт: за сутки слил…» на странице монеты — убрана 15.09.2026 по просьбе владельца
   dividendsCard: false,     // блок дивидендов в «О токене» (чип, «роздано», кнопка «забрать») — убран 15.09.2026: ставка и валюта показаны в шапке монеты, выплаты приходят сами (бот раз в час)
+  manualMigrate: false,     // кнопка «Мигрировать на DEX» на странице монеты — убрана 17.09.2026: перенос ликвидности делает бот сам в течение минуты после заполнения кривой
   activityTab: false,       // вкладка «Активность» в нижней таблице страницы монеты — убрана 15.09.2026 по просьбе владельца (лента сделок есть справа, во вкладке «Активность» боковой панели)
 };
 

@@ -56,6 +56,11 @@ export const tokenAbi = parseAbi([
   "function allowance(address owner, address spender) view returns (uint256)",
 ]);
 
+/** Событие Transfer ERC-20 — по нему считаем точные балансы держателей. */
+export const erc20TransferEvent = parseAbi([
+  "event Transfer(address indexed from, address indexed to, uint256 value)",
+])[0];
+
 export const splitterAbi = parseAbi([
   "function teamBps() view returns (uint16)",
 ]);

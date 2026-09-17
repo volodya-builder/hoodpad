@@ -20,12 +20,14 @@
 //  Запуск:
 //     node bot/dividends/dividends.mjs          # сухой прогон: кому и сколько, без транзакций
 //     node bot/dividends/dividends.mjs --run    # с транзакциями (нужен TREASURER_PRIVATE_KEY)
+//     node bot/dividends/dividends.mjs --run --migrate-only   # только перенос градуировавших монет на DEX
 //
 //  ⚠ Ключ держать ТОЛЬКО в GitHub Secret, не в файле и не в чате.
 // ============================================================================
 import { createPublicClient, createWalletClient, http, defineChain, parseAbi, formatUnits, formatEther } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { quoteUsd, ethUsdRate } from "../lib/quote-price.mjs";
+import { migrateGraduated } from "./migrate.mjs";
 
 const RPC_URL = process.env.RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
 const QUOTE_FACTORY = (process.env.QUOTE_FACTORY || "0x655b7ce112336ad29dacdce7cf434b03930407a3").toLowerCase();
@@ -124,8 +126,19 @@ async function sweepEthPools() {
 }
 
 async function main() {
-  console.log(`hood дивиденды · ${new Date().toISOString()} · ${RUN ? "боевой запуск, кошелёк " + account.address : "сухой прогон"}`);
-  if (RUN) console.log(`баланс на газ: ${formatEther(await pub.getBalance({ address: account.address }))} ETH`);
+  const migrateOnly = process.argv.includes("--migrate-only");
+  if (!migrateOnly) {
+    console.log(`hood дивиденды · ${new Date().toISOString()} · ${RUN ? "боевой запуск, кошелёк " + account.address : "сухой прогон"}`);
+    if (RUN) console.log(`баланс на газ: ${formatEther(await pub.getBalance({ address: account.address }))} ETH`);
+  }
+
+  // 0) градуировавшие монеты — перенос ликвидности на DEX (без кнопок на сайте).
+  //    Кэш между проверками, чтобы каждые 30 секунд не перечитывать всё с нуля.
+  await migrateGraduated({ pub, send, factories: [ETH_FACTORY, QUOTE_FACTORY], fromBlock: FACTORY_FROM_BLOCK,
+                           cacheFile: process.env.MIGRATE_CACHE || ".migrate-cache.json" })
+    .then((r) => { if (r.pending || r.done) console.log(`миграций: ждали ${r.pending}, выполнено ${r.done}`); })
+    .catch((e) => console.log("  миграция: проверка не удалась:", (e.details || e.shortMessage || e.message || "").slice(0, 120)));
+  if (migrateOnly) return;
 
   await sweepEthPools().catch((e) => console.log("  ETH-монеты: сбор не удался:", (e.shortMessage || e.message || "").slice(0, 100)));
 
