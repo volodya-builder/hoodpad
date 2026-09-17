@@ -118,7 +118,8 @@ contract ArenaTreasuryV2 is Ownable2Step, ReentrancyGuard {
         returns (uint256 ethOut)
     {
         require(asset != address(0) && amount > 0, "bad args");
-        require(amount <= IERC20(asset).balanceOf(address(this)), "bad amount");
+        uint256 assetBefore = IERC20(asset).balanceOf(address(this));
+        require(amount <= assetBefore, "bad amount");
         uint256 wethOut;
         if (asset == address(weth)) {
             wethOut = amount;
@@ -137,7 +138,10 @@ contract ArenaTreasuryV2 is Ownable2Step, ReentrancyGuard {
         weth.withdraw(wethOut);
         ethOut = address(this).balance - before;
         totalEthConverted += ethOut;
-        emit Converted(asset, amount, ethOut);
+        // В тонком пуле V3 может взять меньше запрошенного (цена упёрлась в
+        // край диапазона) — в событии честная сумма, остаток лежит здесь.
+        uint256 spent = asset == address(weth) ? amount : assetBefore - IERC20(asset).balanceOf(address(this));
+        emit Converted(asset, spent, ethOut);
     }
 
     // ------------------------------------------------------------- выкупы

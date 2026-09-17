@@ -90,6 +90,9 @@ export const AGENT_TREASURY_ADDRESS = import.meta.env.VITE_AGENT_TREASURY ?? "0x
 // Задеплоить: node scripts/deploy-arena-economy.js --deploy (владелец).
 export const ARENA_TREASURY_ADDRESS = import.meta.env.VITE_ARENA_TREASURY ?? "0x3cecc31c6db73ea1b31a5e1726c3e5e595b59a0a";
 export const ARENA_LIVE = /^0x[0-9a-fA-F]{40}$/.test(ARENA_TREASURY_ADDRESS);
+// Прежняя казна арены: после перехода на казну V2 (копит в ETH) туда всё ещё
+// падают излишки градаций — фонд на сайте считается по обеим. Пусто — одна казна.
+export const ARENA_TREASURY_LEGACY_ADDRESS = import.meta.env.VITE_ARENA_TREASURY_LEGACY ?? "";
 // Казна выкупа монеты hood (тот же контракт ArenaTreasury): 10% каждой
 // комиссии; бот bot/buyback раз в сутки выкупает hood и сжигает.
 export const BUYBACK_TREASURY_ADDRESS = import.meta.env.VITE_BUYBACK_TREASURY ?? "0x64bb9fd0b86489eb037f496a37528a37a6c5187b";

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { allTrades, loadTokens } from "./data.js";
 import { arenaState, buildChain, setSystemAddresses } from "./arena-core.js";
-import { TREASURY_ADDRESS, FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, ARENA_TREASURY_ADDRESS, ARENA_LIVE } from "./config.js";
+import { TREASURY_ADDRESS, FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, ARENA_TREASURY_ADDRESS, ARENA_TREASURY_LEGACY_ADDRESS, ARENA_LIVE } from "./config.js";
 import { publicClient } from "./web3.js";
 import { arenaTreasuryAbi, erc20Abi } from "./abi.js";
 import { recentFromBlock } from "./data.js";
@@ -27,19 +27,22 @@ export function loadArenaPot() {
   return _pot.p;
 }
 async function _loadArenaPotFresh() {
-  const [bal, tokens, { ethUsd, quoteUsd }] = await Promise.all([
-    publicClient.getBalance({ address: ARENA_TREASURY_ADDRESS }),
+  // фонд = казна арены + прежняя казна (туда падают излишки градаций), если задана
+  const vaults = [ARENA_TREASURY_ADDRESS, ARENA_TREASURY_LEGACY_ADDRESS].filter((a) => /^0x[0-9a-fA-F]{40}$/.test(a || ""));
+  const [bals, tokens, { ethUsd, quoteUsd }] = await Promise.all([
+    Promise.all(vaults.map((a) => publicClient.getBalance({ address: a }).catch(() => 0n))),
     loadTokens().catch(() => []),
     import("./price.js"),
   ]);
   const rate = await ethUsd().catch(() => 0);
-  const eth = Number(bal) / 1e18;
+  const eth = bals.reduce((s, b) => s + Number(b) / 1e18, 0);
   const seen = new Map();
   for (const tk of tokens) if (tk.q?.addr && !seen.has(tk.q.addr)) seen.set(tk.q.addr, tk.q);
   const assets = [];
   await Promise.all([...seen.values()].map(async (q) => {
     try {
-      const raw = await publicClient.readContract({ address: q.addr, abi: erc20Abi, functionName: "balanceOf", args: [ARENA_TREASURY_ADDRESS] });
+      const raws = await Promise.all(vaults.map((a) => publicClient.readContract({ address: q.addr, abi: erc20Abi, functionName: "balanceOf", args: [a] }).catch(() => 0n)));
+      const raw = raws.reduce((s, x) => s + x, 0n);
       if (raw === 0n) return;
       const amt = Number(raw) / 10 ** (q.dec ?? 18);
       const px = await quoteUsd(q.addr).catch(() => 0);
