@@ -31,6 +31,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { buildChain, podium, dayStart, DAY, ARENA_DAYS, setSystemAddresses } from "../../web/src/lib/arena-core.js";
 import { quoteUsd, ethUsdRate } from "../lib/quote-price.mjs";
+import { treasuryCanConvert, convertTreasuryToEth } from "../lib/to-eth.mjs";
 
 const DRY = process.argv.includes("--dry");
 const RPC_URL = process.env.RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
@@ -216,6 +217,14 @@ async function main() {
   const fmtA = (v, dec, sym) => `${(Number(v) / 10 ** dec).toFixed(dec >= 8 ? 6 : 4)} ${sym}`;
 
   console.log(`Подиум за ${dayKey}: ${pod.map((p, i) => `${i + 1}. $${p.symbol}`).join("  ")}`);
+  // Казна V2 копит в ETH: сначала переводим всю валюту казны (GME, USDG…) в
+  // ETH, потом весь подиум оплачивается из ETH — любую монету, любой парой.
+  const canConvert = await treasuryCanConvert(pub, TREASURY);
+  if (canConvert) {
+    const assets = [...new Set(trades.map((t) => t.quote).filter(Boolean))];
+    console.log(`Казна V2 · валюта → ETH (${assets.length} актив.)…`);
+    await convertTreasuryToEth(pub, wallet, TREASURY, assets, { dry: DRY });
+  }
   const ethBal = await pub.getBalance({ address: TREASURY });
   console.log(`Казна: ${formatEther(ethBal)} ETH${Object.keys(paidByAsset).length ? ` · уже выплачено сегодня: ${Object.keys(paidByAsset).length} актив(а)` : ""}`);
 
@@ -230,7 +239,8 @@ async function main() {
     if (!isEth) {
       const qPool = await pub.readContract({ address: QUOTE_FACTORY, abi: factoryAbi, functionName: "poolOf", args: [token] }).catch(() => null);
       if (!qPool || qPool === "0x0000000000000000000000000000000000000000") { console.log(`  ${place} место $${pod[i].symbol}: пул не найден, пропуск.`); continue; }
-      asset = (await pub.readContract({ address: qPool, abi: quotePoolAbi, functionName: "quote" })).toLowerCase();
+      // V2: платим ETH через зап; V1: из валюты казны
+      if (!canConvert) asset = (await pub.readContract({ address: qPool, abi: quotePoolAbi, functionName: "quote" })).toLowerCase();
     }
     const { sym, dec } = await assetInfo(asset);
     const { bal, pot } = await potOf(asset);
@@ -242,8 +252,10 @@ async function main() {
       continue;
     }
     const note = `arena ${dayKey} ${place} $${pod[i].symbol}`;
-    const fn = isEth ? "buybackEth" : "buybackQuote";
-    const argsFor = (minOut) => [token, amt, minOut, note];
+    const viaZap = !isEth && canConvert;
+    const fn = isEth ? "buybackEth" : viaZap ? "buybackViaZap" : "buybackQuote";
+    const deadline = BigInt(Math.floor(Date.now() / 1000) + 600);
+    const argsFor = (minOut) => (viaZap ? [token, amt, minOut, deadline, note] : [token, amt, minOut, note]);
     let expected;
     try {
       const sim = await pub.simulateContract({ account, address: TREASURY, abi: treasuryAbi, functionName: fn, args: argsFor(0n) });
