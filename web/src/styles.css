@@ -1892,6 +1892,9 @@ html[data-theme="light"] .tos-ico { background: #ffffff; }
   .wal-btn .wal-addr { overflow: hidden; text-overflow: ellipsis; }
   /* шапка ни при каких условиях не выпускает контент за края */
   .header-inner { overflow: hidden; }
+  /* …но выпадающий список языка она этим же и обрезала (17.09.2026):
+     на телефоне список прибит к окну, а не к кнопке — overflow ему не указ */
+  .net-wrap .lang-menu { position: fixed; top: 64px; right: 12px; left: auto; z-index: 70; } /* .net-wrap — чтобы перебить .net-menu ниже по файлу */
 
   .page-title { font-size: 26px; }
   .page-sub { font-size: 13.5px; }
@@ -4498,3 +4501,28 @@ html[data-theme="light"] .wpick-item:hover { background: rgba(0,0,0,.05); border
 .stg-box .btn-primary { height: 42px; border-radius: 11px; }
 .stg-link { color: var(--text-dim); font-size: 12.5px; text-decoration: none; text-align: center; }
 .stg-link:hover { color: var(--gold); }
+
+/* окно «Подключить кошелёк» — components/WalletModal.jsx (заменяет .wpick-*) */
+.wm { width: min(440px, 94vw); }
+.wm .tos-body { padding: 22px 22px 18px; }
+.wm-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.wm-head .tos-title { margin: 0; font-size: 22px; }
+.wm-x { width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: var(--text-dim); font-size: 20px; line-height: 1; cursor: pointer; }
+.wm-x:hover { color: var(--text); background: var(--card-hover); }
+.wm-group { margin-top: 12px; display: grid; gap: 6px; }
+.wm-k { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim); padding: 4px 2px 2px; }
+.wm-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid transparent; background: transparent; color: var(--text); font: inherit; font-weight: 600; font-size: 14.5px; cursor: pointer; text-align: left; text-decoration: none; transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease); }
+.wm-item:hover { background: var(--card-hover); border-color: var(--border); }
+.wm-item.on { background: var(--card-hover); border-color: var(--border); }
+.wm-item:disabled { opacity: .5; cursor: wait; }
+.wm-ico { width: 32px; height: 32px; border-radius: 9px; flex: none; }
+.wm-ico-ph, .wm-ico-wc { display: inline-flex; align-items: center; justify-content: center; background: var(--bg-soft); border: 1px solid var(--border); color: var(--text-dim); font-size: 14px; font-weight: 600; }
+.wm-ico-wc { color: var(--text); }
+.wm-name { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.wm-name small { font-weight: 400; font-size: 12px; color: var(--text-dim); }
+.wm-chip { flex: none; font-size: 11.5px; font-weight: 500; color: var(--gold); border: 1px solid var(--border-gold); border-radius: 999px; padding: 3px 9px; }
+.wm-chip.dim { color: var(--text-dim); border-color: var(--border); }
+.wm-empty { color: var(--text-dim); font-size: 13.5px; padding: 10px 2px 2px; }
+.wm-help { color: var(--text-dim); font-size: 13px; line-height: 1.55; padding: 4px 12px 8px; }
+.wm-foot { color: var(--text-dim); font-size: 12px; margin-top: 14px; text-align: center; }
+@media (max-width: 560px) { .wm { width: 100vw; max-width: 100vw; border-radius: 20px 20px 0 0; position: fixed; left: 0; bottom: 0; } .modal-back:has(.wm) { padding-top: 0; align-items: flex-end; } .wm .tos-body { padding: 18px 16px 22px; } }

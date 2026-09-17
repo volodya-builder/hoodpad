@@ -35,6 +35,8 @@ jobs:
         env:
           VITE_BUILD: ${{ github.run_number }}
           VITE_COMMIT: ${{ github.sha }}
+          # WalletConnect (телефонные кошельки, Ledger Live): Project ID с cloud.reown.com → Settings → Variables → WC_PROJECT_ID
+          VITE_WC_PROJECT_ID: ${{ vars.WC_PROJECT_ID }}
           # Замок тестового сайта: SHA-256 пароля (Settings → Variables → STAGING_GATE).
           # Пусто — без замка. См. web/src/components/StagingGate.jsx.
           VITE_STAGING_GATE: ${{ vars.STAGING_GATE }}
