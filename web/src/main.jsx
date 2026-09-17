@@ -71,4 +71,23 @@ if (import.meta.env.BASE_URL !== "/") {
 }
 
 // StagingGate — замок тестового сайта (пусто в основной сборке, см. components/StagingGate.jsx)
+// Всплывающие подсказки при наведении (атрибут title) владелец убрал 17.09.2026 —
+// «бесят». Срезаем их у всех элементов разом, включая те, что появятся позже;
+// в коде title остаются как пояснения, но браузер их не показывает.
+(() => {
+  const strip = (root) => {
+    if (root.nodeType !== 1) return;
+    if (root.hasAttribute("title")) root.removeAttribute("title");
+    for (const el of root.querySelectorAll("[title]")) el.removeAttribute("title");
+  };
+  const mo = new MutationObserver((muts) => {
+    for (const m of muts) {
+      if (m.type === "attributes") { if (m.target.hasAttribute("title")) m.target.removeAttribute("title"); continue; }
+      m.addedNodes.forEach(strip);
+    }
+  });
+  mo.observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ["title"] });
+  strip(document.documentElement);
+})();
+
 createRoot(document.getElementById("root")).render(<Boundary><StagingGate><LangProvider><App /></LangProvider></StagingGate></Boundary>);

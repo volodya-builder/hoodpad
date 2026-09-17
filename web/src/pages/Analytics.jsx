@@ -6,7 +6,7 @@ import { treasuryAbi } from "../lib/abi.js";
 import { TREASURY_ADDRESS, EXPLORER, FEATURES } from "../lib/config.js";
 import { useEthUsd, usd } from "../lib/price.js";
 import { loadTokens, allTrades, loadSplit, loadSupport, useSplit, subgraphTreasuryOps } from "../lib/data.js";
-import { loadArenaPayouts, useArenaPot, useBuybackPot } from "../lib/arena.js";
+import { loadArenaPayouts } from "../lib/arena.js";
 import { useLang } from "../lib/i18n.jsx";
 import Leaderboard from "./Leaderboard.jsx";
 
@@ -102,8 +102,6 @@ export default function Analytics() {
   const { t } = useLang();
   const split = useSplit();
   const rate = useEthUsd();
-  const arenaPot = useArenaPot();      // казна арены: { eth, usd, ethEq, assets }
-  const buybackPot = useBuybackPot();  // казна выкупа hood
   // Все суммы аналитики — в долларах. У сделок доллары зафиксированы
   // индексатором по курсу на момент сделки (не «дышат» вместе с ETH);
   // если индексатор их не знает — ETH × текущий курс.
@@ -307,17 +305,6 @@ export default function Analytics() {
           <div className="ana-stat">
             <div className="n">{D(stats.creatorPaid)}</div>
             <div className="l">{t("Создателям")} <Delta now={stats.creatorPaid} was={stats.prev && stats.prev.creatorPaid} period={period} /></div>
-          </div>
-        </div>
-        {/* казны: что накопилось прямо сейчас (не за период) — арена делит утром, выкуп hood копит и сжигает */}
-        <div className="ana-strip ana-strip-vaults">
-          <div className="ana-stat">
-            <div className="n">{arenaPot ? D(arenaPot.usd) : "…"}</div>
-            <div className="l">{t("Казна арены")} <span className="dim">· {arenaPot ? `${fmtEth(arenaPot.ethEq ?? arenaPot.eth)} ETH` : ""} · {t("делится утром между подиумом")}</span></div>
-          </div>
-          <div className="ana-stat">
-            <div className="n">{buybackPot ? D(buybackPot.usd) : "…"}</div>
-            <div className="l">{t("Казна выкупа hood")} <span className="dim">· {buybackPot ? `${fmtEth(buybackPot.ethEq ?? buybackPot.eth)} ETH` : ""} · {t("выкуп и сжигание HOOD")}</span></div>
           </div>
         </div>
 

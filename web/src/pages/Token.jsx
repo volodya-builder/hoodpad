@@ -1122,9 +1122,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           <div className="card-title">
             <h3>{t("О токене")}</h3>
           </div>
-          {meta.description && (
-            <p className="dim" style={{ marginTop: 10 }}>{meta.description}</p>
-          )}
+          {/* описание монеты живёт в шапке рядом с логотипом (17.09.2026); здесь — паспорт и комиссии */}
 
           {/* Паспорт токена: накрутка и риски видны сразу */}
           {/* Плашка «Создатель продаёт» скрыта по просьбе владельца 15.09.2026
@@ -1332,7 +1330,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 {/* описание — сразу под названием, рядом с логотипом (просьба владельца 17.09.2026);
                     длинное сворачивается в две строки, клик раскрывает */}
                 {meta.description && (
-                  <div className={`th-desc ${descOpen ? "open" : ""}`} onClick={() => setDescOpen((v) => !v)} title={descOpen ? "" : t("Показать полностью")}>
+                  <div className={`th-desc ${descOpen ? "open" : ""}`} onClick={() => setDescOpen((v) => !v)}>
                     {meta.description}
                   </div>
                 )}
