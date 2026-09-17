@@ -174,7 +174,9 @@ async function main() {
     const rc = await pub.waitForTransactionReceipt({ hash });
     if (rc.status !== "success") throw new Error(`${name}: деплой упал (${hash})`);
     console.log(`  ${name.padEnd(24)} ${rc.contractAddress}`);
-    progress.addr[key] = rc.contractAddress; progress.tx = progress.tx || {}; progress.tx[key] = hash; save();
+    progress.addr[key] = rc.contractAddress; progress.tx = progress.tx || {}; progress.tx[key] = hash;
+    if (!progress.block) progress.block = Number(rc.blockNumber); // блок первого деплоя — старт индексации сабграфа
+    save();
     return rc.contractAddress;
   }
   async function call(key, address, name, fn, args) {
@@ -235,7 +237,7 @@ async function main() {
   const out = { chainId, at: new Date().toISOString(), deployer: account.address, owner: OWNER, operator: OPERATOR, team: TEAM,
     migrator, factory, migratorQ, quoteFactory, zap, arena, hoodTreasury, splitter,
     routes: { usdg: { mid: ZERO, fee1: feeUsdgWeth }, usde: { mid: MAINNET.usdg, fee1: feeUsdgWeth, fee2: feeUsdeUsdg } },
-    tx: progress.tx || {} };
+    startBlock: Math.max(0, Number(progress.block || 0) - 1), tx: progress.tx || {} };
 
   console.log("\nСверка с цепью…");
   const problems = await verifyOnChain(out, { rd, pub, parseAbi, OWNER, OPERATOR, TEAM });

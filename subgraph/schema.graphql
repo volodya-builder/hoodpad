@@ -60,11 +60,15 @@ type VoteCast @entity(immutable: true) {
 
 type TreasuryOp @entity(immutable: true) {
   id: ID!
-  kind: String!          # received | buyback | burned
+  kind: String!          # received | buyback | burned | converted
+  treasury: Bytes        # какая казна (арена / выкуп hood)
   from: Bytes
   token: Bytes
-  ethAmount: BigInt
+  asset: Bytes           # чем платили: 0x0 — ETH, иначе валюта монеты
+  ethAmount: BigInt      # ETH (для buyback — только если платили ETH; для converted — сколько ETH получено)
+  assetAmount: BigInt    # сколько валюты потрачено (buyback за валюту / converted)
   tokenAmount: BigInt
+  note: String
   timestamp: BigInt!
   tx: Bytes!
 }
