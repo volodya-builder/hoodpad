@@ -4432,12 +4432,13 @@ html[data-theme="light"] .arena-pot-place.p1 { background: rgba(232,198,90,.18);
 html[data-theme="light"] .pos-row:hover { background: rgba(30,32,28,.07); box-shadow: 0 0 0 1px rgba(30,32,28,.08) inset; }
 
 /* подписи подиума стоят ровно под своими сегментами полосы: 70% / 20% / 10% */
-.arena-pot-places { display: grid; grid-template-columns: 70% 20% 10%; gap: 0; position: relative; }
-.arena-pot-place:nth-child(2) { text-align: left; padding-left: 2px; }
+/* 2 и 3 места — по ширине текста, чтобы подписи не наезжали друг на друга */
+.arena-pot-places { display: grid; grid-template-columns: minmax(0, 1fr) max-content max-content; column-gap: 20px; gap: 0 20px; position: relative; }
+.arena-pot-place:nth-child(2) { text-align: left; padding-left: 0; }
 .arena-pot-place:nth-child(2) .v { justify-content: flex-start; }
-.arena-pot-place:nth-child(2) .l { margin-left: 16px; }
-.arena-pot-place:last-child { position: absolute; right: 0; top: 0; text-align: right; }
-@media (max-width: 900px) { .arena-pot-places { display: flex; } .arena-pot-place:last-child { position: static; } }
+.arena-pot-place:nth-child(2) .l { margin-left: 0; }
+.arena-pot-place:last-child { position: static; text-align: right; }
+@media (max-width: 900px) { .arena-pot-places { display: flex; } }
 
 /* подиум как на main: сумма сверху, под ней цветная точка и «1 место · 70%», ровно под сегментами */
 .arena-pot-place .v { display: block; font-size: 22px; }
