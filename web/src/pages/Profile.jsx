@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
 import Icon from "../components/Icon.jsx";
-import { formatEther } from "viem";
+import { formatEther, formatUnits } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { tokenAbi, poolAbi } from "../lib/abi.js";
 import { EXPLORER } from "../lib/config.js";
 import { loadTokens, poolTrades, subgraphUserTrades, priceEthMap, timeAgo, useClock } from "../lib/data.js";
 import { currentPosition } from "../lib/position.js";
-import { useEthUsd, usd } from "../lib/price.js";
+import { useEthUsd, usd, quoteUsd, ethUsdCached } from "../lib/price.js";
 import { useLang } from "../lib/i18n.jsx";
 import { useProfile } from "../lib/profiles.js";
 import { BigAvatar, SocialLinks } from "../components/ProfileCard.jsx";
@@ -124,6 +124,15 @@ export default function Profile({ wallet, onConnect }) {
               : publicClient.readContract({ address: tk.pool, abi: poolAbi, functionName: "creator" }).catch(() => null),
             publicClient.readContract({ address: tk.pool, abi: poolAbi, functionName: "creatorFeesAccrued" }).catch(() => 0n),
           ]);
+          // комиссии создателя у монеты за валюту копятся в валюте (GME, USDG…) —
+          // на сайте всё в ETH, поэтому пересчитываем через курс валюты и ETH
+          let feesEth = 0;
+          if (feesAccrued > 0n) {
+            if (tk.q) {
+              const [px, eth] = await Promise.all([quoteUsd(tk.q.addr).catch(() => 0), Promise.resolve(ethUsdCached())]);
+              feesEth = px > 0 && eth > 0 ? Number(formatUnits(feesAccrued, tk.q.dec)) * px / eth : 0;
+            } else feesEth = Number(formatEther(feesAccrued));
+          }
           // счётчики позиции — только ТЕКУЩИЙ цикл (после последнего обнуления баланса)
           const cur = currentPosition(mine);
           const invested = cur.filter((x) => x.side === "buy").reduce((s, x) => s + x.eth + x.fee, 0);
@@ -131,7 +140,7 @@ export default function Profile({ wallet, onConnect }) {
           return {
             ...tk, bal, mine: cur, mineAll: mine, invested, realized,
             isMine: creatorRpc && creatorRpc.toLowerCase() === me,
-            feesAccrued,
+            feesAccrued, feesEth,
           };
         }));
         enriched.push(...part);
@@ -308,10 +317,10 @@ export default function Profile({ wallet, onConnect }) {
                 {t("Мои запуски")}{state.launched.length > 0 && <span className="bt-count">{state.launched.length}</span>}
               </div>
               {posTab === "launch" && state.launched.length > 0 && (() => {
-                const claimable = state.launched.reduce((s2, tk) => s2 + Number(formatEther(tk.feesAccrued)), 0);
+                const claimable = state.launched.reduce((s2, tk) => s2 + (tk.feesEth || 0), 0);
                 return (
                   <button className="btn btn-primary" style={{ marginLeft: "auto" }}
-                          disabled={claimable <= 0 || claiming === "__all__"}
+                          disabled={!state.launched.some((tk) => tk.feesAccrued > 0n) || claiming === "__all__"}
                           onClick={claimAll}
                           title={t("Заберёт комиссии со всех токенов — по одной транзакции на каждый")}>
                     {claiming === "__all__" ? "…" : <>{t("Забрать все")} · {fmtEth(claimable)} ETH {U(claimable)}</>}
@@ -344,11 +353,11 @@ export default function Profile({ wallet, onConnect }) {
                 (tk, k) =>
                   k === "mcap" ? Number(tk.price)
                   : k === "curve" ? Number((tk.sold * 10000n) / tk.cap)
-                  : Number(tk.feesAccrued)
+                  : (tk.feesEth || 0)
               ).map((tk) => {
                 const mcapEth = (tk.priceEth ?? Number(formatEther(tk.price))) * 1e9;
                 const prog = Number((tk.sold * 10000n) / tk.cap) / 100;
-                const fees = Number(formatEther(tk.feesAccrued));
+                const fees = tk.feesEth || 0;
                 return (
                   <div className="prow6" key={tk.token} style={{ gridTemplateColumns: "1.6fr 1fr 1fr 1.4fr 120px" }}>
                     <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -368,7 +377,7 @@ export default function Profile({ wallet, onConnect }) {
                       {fmtEth(fees)} ETH {U(fees)}
                     </span>
                     <span>
-                      <button className="btn" disabled={fees <= 0 || claiming === tk.token}
+                      <button className="btn" disabled={tk.feesAccrued <= 0n || claiming === tk.token}
                               onClick={() => claim(tk)}>
                         {claiming === tk.token ? "…" : t("Забрать")}
                       </button>
