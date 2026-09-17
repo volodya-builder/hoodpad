@@ -42,6 +42,9 @@ export const localChain = defineChain({
 
 // Active network: switch to robinhoodMainnet for production.
 const NETWORK = import.meta.env.VITE_NETWORK ?? "mainnet";
+// WalletConnect / Reown AppKit: Project ID с cloud.reown.com (переменная GitHub WC_PROJECT_ID).
+// Пусто — окно кошельков работает в простом режиме без WalletConnect (components/WalletModal.jsx).
+export const WC_PROJECT_ID = String(import.meta.env.VITE_WC_PROJECT_ID || "").trim();
 export const CHAIN =
   NETWORK === "mainnet" ? robinhoodMainnet
   : NETWORK === "bsc" ? bnbChain

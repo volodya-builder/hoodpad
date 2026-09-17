@@ -6,7 +6,7 @@ import {
   fallback,
   numberToHex,
 } from "viem";
-import { CHAIN, RPC_URLS } from "./config.js";
+import { CHAIN, RPC_URLS, WC_PROJECT_ID } from "./config.js";
 
 // Устойчивый транспорт: несколько RPC с автопереключением при сбое.
 // Урок 05.08.2026: Alchemy-эндпоинт отдавал 503, а старые настройки
@@ -39,8 +39,7 @@ export const publicClient = createPublicClient({
 // (components/WalletModal.jsx), the choice is remembered.
 const walletId = (d) => d.info?.rdns || d.info?.name || ""; // до слушателя: кошельки отвечают синхронно
 const discovered = [];
-const LS_WALLET = "hood.wallet"; // id кошелька, который выбрал пользователь (rdns или "walletconnect")
-export const WC_ID = "walletconnect";
+const LS_WALLET = "hood.wallet"; // id кошелька, который выбрал пользователь (rdns или "appkit")
 if (typeof window !== "undefined") {
   window.addEventListener("eip6963:announceProvider", (e) => {
     const d = e.detail;
@@ -93,7 +92,7 @@ const byId = (rdns) => discovered.find((d) => walletId(d) === rdns) || null;
 export function pickProvider() {
   // 1) кошелёк, который человек выбрал сам (OKX с Ledger, Rabby…)
   const want = preferredWallet();
-  if (want && want !== WC_ID) { const d = byId(want); if (d) return d.provider; }
+  if (want && want !== "appkit") { const d = byId(want); if (d) return d.provider; }
   // 2) иначе MetaMask, как раньше
   const mm = discovered.find((d) => /metamask/i.test(d.info?.name || ""));
   if (mm) return mm.provider;
@@ -112,47 +111,28 @@ export function hasWallet() {
 export const isMobile = () =>
   typeof navigator !== "undefined" && /android|iphone|ipad|ipod/i.test(navigator.userAgent);
 
-// ---------------------------------------------------------------- WalletConnect
-// Телефонные кошельки, Ledger Live и всё, что не расширение: QR-код / deep link.
-// Библиотека тяжёлая — грузится только по клику (динамический import).
-// Нужен бесплатный Project ID с cloud.reown.com → переменная GitHub
-// WC_PROJECT_ID → VITE_WC_PROJECT_ID. Пусто — пункта в окне нет.
-export const WC_PROJECT_ID = String(import.meta.env.VITE_WC_PROJECT_ID || "").trim();
-export const hasWalletConnect = () => /^[0-9a-f]{32}$/i.test(WC_PROJECT_ID);
-let _wc = null;
-async function wcProvider() {
-  if (_wc) return _wc;
-  const { EthereumProvider } = await import("@walletconnect/ethereum-provider");
-  _wc = await EthereumProvider.init({
-    projectId: WC_PROJECT_ID,
-    // сеть не «обязательная», а «желательная»: кошельки, не знающие Robinhood
-    // Chain, всё равно подключатся, а ensureChain попросит добавить сеть
-    optionalChains: [CHAIN.id, 1],
-    rpcMap: { [CHAIN.id]: CHAIN.rpcUrls.default.http[0] },
-    showQrModal: true,
-    qrModalOptions: { themeMode: document.documentElement.dataset.theme === "light" ? "light" : "dark", themeVariables: { "--wcm-accent-color": "#c8ff3d", "--wcm-z-index": "1000" } },
-    metadata: { name: "hood", description: "hood — launchpad on Robinhood Chain", url: window.location.origin, icons: [`${window.location.origin}/icon-192.png`] },
-  });
-  return _wc;
-}
-async function connectWalletConnect() {
-  const provider = await wcProvider();
-  if (!provider.session) await provider.connect();
-  const accounts = provider.accounts?.length ? provider.accounts : await provider.request({ method: "eth_accounts" });
-  const account = accounts[0];
-  if (!account) throw new Error("Кошелёк не дал доступ к счёту.");
-  setPreferredWallet(WC_ID);
-  try { await ensureChain(provider); } catch (e) { /* сеть добавит позже, при первой транзакции */ }
-  const walletClient = createWalletClient({ account, chain: CHAIN, transport: custom(provider) });
-  return { account, walletClient, provider, wc: true };
-}
-/** Разорвать сессию WalletConnect (при «Отключить»). */
-export async function disconnectWalletConnect() {
-  try { if (_wc?.session) await _wc.disconnect(); } catch (e) { /* ignore */ }
+// ---------------------------------------------------------------- Reown AppKit
+// Полное окно кошельков (расширения, WalletConnect по QR, реестр 540+ с
+// поиском, Ledger Live) — lib/appkit.js, грузится только по клику или при
+// тихом восстановлении сессии. Без Project ID — простое окно WalletModal.
+export const hasAppKit = () => /^[0-9a-f]{32}$/i.test(WC_PROJECT_ID);
+let _ak = null;
+const appkit = () => _ak || (_ak = import("./appkit.js"));
+
+/** Отключить кошелёк, подключённый через AppKit (в т.ч. сессию WalletConnect). */
+export async function disconnectWallet(wallet) {
+  if (!wallet?.appkit) return;
+  try { const ak = await appkit(); await ak.disconnectAll(); } catch (e) { /* ignore */ }
 }
 
 export async function connectWallet(opts = {}) {
-  if (opts.rdns === WC_ID) return connectWalletConnect();
+  if (hasAppKit() && !opts.rdns) {
+    const ak = await appkit();
+    const w = await ak.connect();
+    try { await ensureChain(w.provider); } catch (e) { /* сеть добавится при первой транзакции */ }
+    setPreferredWallet("appkit");
+    return w;
+  }
   let provider = null;
   if (opts.rdns) {
     const d = byId(opts.rdns);
@@ -160,7 +140,6 @@ export async function connectWallet(opts = {}) {
     provider = d.provider;
     setPreferredWallet(opts.rdns);
   } else {
-    if (preferredWallet() === WC_ID) return connectWalletConnect();
     provider = pickProvider();
   }
   if (!provider) {
@@ -187,15 +166,9 @@ export async function connectWallet(opts = {}) {
 /** Тихое восстановление сессии после перезагрузки страницы: без попапов,
  *  через eth_accounts. Возвращает null, если кошелёк не давал доступ. */
 export async function reconnectWallet() {
-  // сессия WalletConnect живёт в localStorage библиотеки — поднимаем её тихо
-  if (preferredWallet() === WC_ID) {
-    if (!hasWalletConnect()) return null;
-    try {
-      const provider = await wcProvider();
-      if (!provider.session || !provider.accounts?.length) return null;
-      const walletClient = createWalletClient({ account: provider.accounts[0], chain: CHAIN, transport: custom(provider) });
-      return { account: provider.accounts[0], walletClient, provider, wc: true };
-    } catch (e) { return null; }
+  // подключались через AppKit — он сам помнит кошелёк (и сессию WalletConnect)
+  if (hasAppKit() && preferredWallet() === "appkit") {
+    try { const ak = await appkit(); return await ak.restore(); } catch (e) { return null; }
   }
   // EIP-6963 объявления приходят асинхронно — подождём провайдера
   for (let i = 0; i < 10 && !pickProvider(); i++) {
