@@ -2580,7 +2580,8 @@ html[data-theme="light"] .ar-volbar { background: #00000010; }
 .net-item.soon { opacity: .55; cursor: default; }
 .net-check { margin-left: auto; color: var(--gold); }
 .net-soon { margin-left: auto; font-size: 10.5px; color: var(--text-dim); border: 1px solid var(--border); border-radius: 99px; padding: 1px 7px; }
-@media (max-width: 900px) { .net-btn { display: none; } }
+/* на телефоне прячем только выбор сети; кнопка языка (тоже .net-btn) остаётся — 17.09.2026 */
+@media (max-width: 900px) { .net-btn:not(.lang-btn) { display: none; } }
 
 /* Выбор типа токена + tax-панель */
 .ttype-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0 6px; }
