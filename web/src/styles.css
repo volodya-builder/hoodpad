@@ -3816,6 +3816,7 @@ html[data-theme="light"] .prow .pbar { background: rgba(0,0,0,.08); }
 .lt-tag { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; }
 .lt-tag.gold { color: var(--gold); }
 .lt-tag.bad { color: var(--red); }
+@media (max-width: 480px) { .lt-tag { font-size: 11px; gap: 4px; } .lt-tag .mono { font-size: 11px; } }
 .lt-spark { width: 120px; height: 34px; display: block; overflow: visible; }
 .lt-spark path { fill: none; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
 .lt-spark.up path { stroke: var(--leaf); }
@@ -4442,7 +4443,7 @@ html[data-theme="light"] .pos-row:hover { background: rgba(30,32,28,.07); box-sh
 .arena-pot-place:nth-child(2) .v { justify-content: flex-start; }
 .arena-pot-place:nth-child(2) .l { margin-left: 0; }
 .arena-pot-place:last-child { position: static; text-align: right; }
-@media (max-width: 900px) { .arena-pot-places { display: flex; } }
+@media (max-width: 900px) { .arena-pot-places { display: flex; flex-direction: column; gap: 10px; width: 100%; min-width: 0; } .arena-pot-place, .arena-pot-place:last-child { text-align: left; width: 100%; min-width: 0; } }
 
 /* подиум как на main: сумма сверху, под ней цветная точка и «1 место · 70%», ровно под сегментами */
 .arena-pot-place .v { display: block; font-size: 22px; }
