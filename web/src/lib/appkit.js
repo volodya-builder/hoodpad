@@ -60,9 +60,7 @@ export const modal = createAppKit({
   // остальное — как у Pons: стандартный вид AppKit (шрифт, скругления), только акцент наш
   themeVariables: {
     "--w3m-accent": isLight() ? "#5f8a00" : "#c8f542",
-    // темнее стандартного, как у Pons: подмешиваем чёрный в фон и плашки
-    "--w3m-color-mix": isLight() ? "#ffffff" : "#000000",
-    "--w3m-color-mix-strength": isLight() ? 0 : 35,
+    // color-mix не трогаем: он затемняет и текст; у Pons — стандартная тёмная тема AppKit
     "--w3m-z-index": 1000,
   },
 });

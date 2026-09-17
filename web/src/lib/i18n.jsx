@@ -569,6 +569,7 @@ const EN = {
   "Подключите кошелёк, чтобы увидеть профиль.": "Connect a wallet to see your profile.",
   "Подключить →": "Connect →",
   "Запустить токен": "Launch token",
+  "Запусков пока нет.": "No launches yet.",
   "Название": "Name",
   "Тикер": "Ticker",
   "Описание": "Description",
