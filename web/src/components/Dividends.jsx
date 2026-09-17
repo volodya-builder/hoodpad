@@ -61,7 +61,7 @@ export function useDividends(token, wallet, q) {
     return n.toLocaleString("ru", { maximumFractionDigits: 2 });
   };
 
-  /** Забрать вручную (раз в час бот и так выплатит). Без кошелька — подключить. */
+  /** Забрать вручную (каждые 5 минут бот и так выплатит, от $1). Без кошелька — подключить. */
   const claim = async (onConnect) => {
     setErr("");
     if (!wallet) return onConnect?.();

@@ -1150,7 +1150,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               {/* Дивиденды холдерам: ставка с каждой сделки, в валюте монеты.
                   Было отдельным блоком на «Активности» — перенесено сюда 15.09.2026. */}
               {FEATURES.dividendsCard && dv.on && (
-                <span className="chip" title={t("С каждой сделки холдерам. Приходит на кошелёк само раз в час.")}>
+                <span className="chip" title={t("С каждой сделки холдерам. Приходит на кошелёк само каждые 5 минут (от $1).")}>
                   <Icon name="droplet" /> {t("Дивиденды")} <b>{dv.st.divBps / 100}%</b>
                 </span>
               )}
@@ -1247,7 +1247,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           )}
           {FEATURES.dividendsCard && dv.on && wallet && dv.st.mine > 0n && (
             <button className="btn" style={{ marginTop: 12, marginLeft: 8 }} disabled={dv.busy}
-                    title={`${t("Накопленное раз в час само приходит на кошелёк; забрать можно и вручную.")} ${t("Придёт в кошелёк в")} ${dv.q.sym}.`}
+                    title={`${t("Накопленное (от $1) каждые 5 минут само приходит на кошелёк; забрать можно и вручную.")} ${t("Придёт в кошелёк в")} ${dv.q.sym}.`}
                     onClick={() => dv.claim(onConnect)}>
               {dv.busy ? t("Забираю…") : `${t("Забрать дивиденды")} ${money(dv.num(dv.st.mine))}`}
             </button>
