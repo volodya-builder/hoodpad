@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
 import { LangProvider } from "./lib/i18n.jsx";
 import { installTooltips } from "./lib/tooltip.js";
+import StagingGate from "./components/StagingGate.jsx";
 import "./styles.css";
 
 installTooltips();
@@ -62,4 +63,5 @@ if (import.meta.env.BASE_URL !== "/") {
   document.head.appendChild(m);
 }
 
-createRoot(document.getElementById("root")).render(<Boundary><LangProvider><App /></LangProvider></Boundary>);
+// StagingGate — замок тестового сайта (пусто в основной сборке, см. components/StagingGate.jsx)
+createRoot(document.getElementById("root")).render(<Boundary><StagingGate><LangProvider><App /></LangProvider></StagingGate></Boundary>);

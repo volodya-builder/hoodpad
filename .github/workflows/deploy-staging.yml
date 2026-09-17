@@ -35,6 +35,9 @@ jobs:
         env:
           VITE_BUILD: ${{ github.run_number }}
           VITE_COMMIT: ${{ github.sha }}
+          # Замок тестового сайта: SHA-256 пароля (Settings → Variables → STAGING_GATE).
+          # Пусто — без замка. См. web/src/components/StagingGate.jsx.
+          VITE_STAGING_GATE: ${{ vars.STAGING_GATE }}
         run: |
           npm ci --no-audit --no-fund   # только версии из package-lock.json — без сюрпризов от свежих релизов
           npx vite build --base=/staging/
