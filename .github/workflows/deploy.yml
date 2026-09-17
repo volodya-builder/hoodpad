@@ -37,6 +37,8 @@ jobs:
         env:
           VITE_BUILD: ${{ github.run_number }}
           VITE_COMMIT: ${{ github.sha }}
+          # WalletConnect (телефонные кошельки, Ledger Live): Project ID с cloud.reown.com → Settings → Variables → WC_PROJECT_ID
+          VITE_WC_PROJECT_ID: ${{ vars.WC_PROJECT_ID }}
         run: |
           npm ci --no-audit --no-fund   # только версии из package-lock.json — без сюрпризов от свежих релизов
           npx vite build

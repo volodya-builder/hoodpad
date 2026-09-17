@@ -35,10 +35,12 @@ export const publicClient = createPublicClient({
 // ---------------------------------------------------------------- providers
 // EIP-6963 multi-wallet discovery: in browsers with several wallet
 // extensions, window.ethereum may be hijacked by a non-MetaMask wallet.
-// We collect announced providers and prefer MetaMask explicitly.
+// We collect announced providers; the user picks one in the wallet modal
+// (components/WalletModal.jsx), the choice is remembered.
 const walletId = (d) => d.info?.rdns || d.info?.name || ""; // до слушателя: кошельки отвечают синхронно
 const discovered = [];
-const LS_WALLET = "hood.wallet"; // rdns кошелька, который выбрал пользователь
+const LS_WALLET = "hood.wallet"; // id кошелька, который выбрал пользователь (rdns или "walletconnect")
+export const WC_ID = "walletconnect";
 if (typeof window !== "undefined") {
   window.addEventListener("eip6963:announceProvider", (e) => {
     const d = e.detail;
@@ -52,23 +54,46 @@ if (typeof window !== "undefined") {
   } catch (e) { /* ignore */ }
 }
 
-/** Кошельки, которые объявились в браузере (EIP-6963): [{rdns, name, icon}] */
+// Известные кошельки (17.09.2026): порядок в окне выбора, ссылки на установку
+// и deep link в приложение на телефоне (сайт откроется во встроенном браузере
+// кошелька, где есть window.ethereum). Иконки не рисуем — берём те, что
+// объявляет само расширение (EIP-6963); у неустановленных — буква.
+const dappUrl = () => `${window.location.host}${window.location.pathname}${window.location.hash}`;
+const fullUrl = () => window.location.href;
+export const KNOWN_WALLETS = [
+  { id: "metamask", name: "MetaMask", match: /metamask/i, install: "https://metamask.io/download/", mobile: () => `https://metamask.app.link/dapp/${dappUrl()}` },
+  { id: "okx", name: "OKX Wallet", match: /okx|okex/i, install: "https://www.okx.com/download", mobile: () => `https://www.okx.com/download?deeplink=${encodeURIComponent(`okx://wallet/dapp/url?dappUrl=${encodeURIComponent(fullUrl())}`)}` },
+  { id: "rabby", name: "Rabby", match: /rabby/i, install: "https://rabby.io/", mobile: null },
+  { id: "coinbase", name: "Coinbase Wallet", match: /coinbase/i, install: "https://www.coinbase.com/wallet/downloads", mobile: () => `https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(fullUrl())}` },
+  { id: "trust", name: "Trust Wallet", match: /trust/i, install: "https://trustwallet.com/download", mobile: () => `https://link.trustwallet.com/open_url?coin_id=60&url=${encodeURIComponent(fullUrl())}` },
+  { id: "phantom", name: "Phantom", match: /phantom/i, install: "https://phantom.com/download", mobile: () => `https://phantom.app/ul/browse/${encodeURIComponent(fullUrl())}?ref=${encodeURIComponent(window.location.origin)}` },
+];
+const knownOf = (d) => KNOWN_WALLETS.find((k) => k.match.test(`${d.info?.rdns || ""} ${d.info?.name || ""}`)) || null;
+
+/** Кошельки, которые объявились в браузере (EIP-6963): [{rdns, name, icon, known}], известные — первыми. */
 export function listWallets() {
-  return discovered.map((d) => ({ rdns: walletId(d), name: d.info?.name || "Wallet", icon: d.info?.icon || "" }));
+  const rows = discovered.map((d) => ({ rdns: walletId(d), name: d.info?.name || "Wallet", icon: d.info?.icon || "", known: knownOf(d)?.id || "" }));
+  const rank = (r) => { const i = KNOWN_WALLETS.findIndex((k) => k.id === r.known); return i < 0 ? 99 : i; };
+  return rows.sort((a, b) => rank(a) - rank(b));
 }
-/** Какой кошелёк выбрал пользователь (rdns) — "" если не выбирал. */
+/** Известные кошельки, которых в браузере нет (для «Установить» / «Открыть в приложении»). */
+export function missingWallets() {
+  const have = new Set(listWallets().map((w) => w.known).filter(Boolean));
+  return KNOWN_WALLETS.filter((k) => !have.has(k.id));
+}
+/** Какой кошелёк выбрал пользователь — "" если не выбирал. */
 export function preferredWallet() {
   try { return localStorage.getItem(LS_WALLET) || ""; } catch (e) { return ""; }
 }
-export function setPreferredWallet(rdns) {
-  try { rdns ? localStorage.setItem(LS_WALLET, rdns) : localStorage.removeItem(LS_WALLET); } catch (e) { /* ignore */ }
+export function setPreferredWallet(id) {
+  try { id ? localStorage.setItem(LS_WALLET, id) : localStorage.removeItem(LS_WALLET); } catch (e) { /* ignore */ }
 }
 const byId = (rdns) => discovered.find((d) => walletId(d) === rdns) || null;
 
 export function pickProvider() {
   // 1) кошелёк, который человек выбрал сам (OKX с Ledger, Rabby…)
   const want = preferredWallet();
-  if (want) { const d = byId(want); if (d) return d.provider; }
+  if (want && want !== WC_ID) { const d = byId(want); if (d) return d.provider; }
   // 2) иначе MetaMask, как раньше
   const mm = discovered.find((d) => /metamask/i.test(d.info?.name || ""));
   if (mm) return mm.provider;
@@ -84,10 +109,50 @@ export function hasWallet() {
   return typeof window !== "undefined" && (discovered.length > 0 || !!window.ethereum);
 }
 
-const isMobile = () =>
+export const isMobile = () =>
   typeof navigator !== "undefined" && /android|iphone|ipad|ipod/i.test(navigator.userAgent);
 
+// ---------------------------------------------------------------- WalletConnect
+// Телефонные кошельки, Ledger Live и всё, что не расширение: QR-код / deep link.
+// Библиотека тяжёлая — грузится только по клику (динамический import).
+// Нужен бесплатный Project ID с cloud.reown.com → переменная GitHub
+// WC_PROJECT_ID → VITE_WC_PROJECT_ID. Пусто — пункта в окне нет.
+export const WC_PROJECT_ID = String(import.meta.env.VITE_WC_PROJECT_ID || "").trim();
+export const hasWalletConnect = () => /^[0-9a-f]{32}$/i.test(WC_PROJECT_ID);
+let _wc = null;
+async function wcProvider() {
+  if (_wc) return _wc;
+  const { EthereumProvider } = await import("@walletconnect/ethereum-provider");
+  _wc = await EthereumProvider.init({
+    projectId: WC_PROJECT_ID,
+    // сеть не «обязательная», а «желательная»: кошельки, не знающие Robinhood
+    // Chain, всё равно подключатся, а ensureChain попросит добавить сеть
+    optionalChains: [CHAIN.id, 1],
+    rpcMap: { [CHAIN.id]: CHAIN.rpcUrls.default.http[0] },
+    showQrModal: true,
+    qrModalOptions: { themeMode: document.documentElement.dataset.theme === "light" ? "light" : "dark", themeVariables: { "--wcm-accent-color": "#c8ff3d", "--wcm-z-index": "1000" } },
+    metadata: { name: "hood", description: "hood — launchpad on Robinhood Chain", url: window.location.origin, icons: [`${window.location.origin}/icon-192.png`] },
+  });
+  return _wc;
+}
+async function connectWalletConnect() {
+  const provider = await wcProvider();
+  if (!provider.session) await provider.connect();
+  const accounts = provider.accounts?.length ? provider.accounts : await provider.request({ method: "eth_accounts" });
+  const account = accounts[0];
+  if (!account) throw new Error("Кошелёк не дал доступ к счёту.");
+  setPreferredWallet(WC_ID);
+  try { await ensureChain(provider); } catch (e) { /* сеть добавит позже, при первой транзакции */ }
+  const walletClient = createWalletClient({ account, chain: CHAIN, transport: custom(provider) });
+  return { account, walletClient, provider, wc: true };
+}
+/** Разорвать сессию WalletConnect (при «Отключить»). */
+export async function disconnectWalletConnect() {
+  try { if (_wc?.session) await _wc.disconnect(); } catch (e) { /* ignore */ }
+}
+
 export async function connectWallet(opts = {}) {
+  if (opts.rdns === WC_ID) return connectWalletConnect();
   let provider = null;
   if (opts.rdns) {
     const d = byId(opts.rdns);
@@ -95,6 +160,7 @@ export async function connectWallet(opts = {}) {
     provider = d.provider;
     setPreferredWallet(opts.rdns);
   } else {
+    if (preferredWallet() === WC_ID) return connectWalletConnect();
     provider = pickProvider();
   }
   if (!provider) {
@@ -102,7 +168,7 @@ export async function connectWallet(opts = {}) {
       // На телефоне MetaMask — приложение, а не расширение браузера.
       // Молча уводим сайт во встроенный браузер MetaMask через deep link:
       // там window.ethereum есть, и подключение работает как на компьютере.
-      const target = `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}${window.location.hash}`;
+      const target = `https://metamask.app.link/dapp/${dappUrl()}`;
       window.location.href = target;
       return new Promise(() => {}); // навигация заберёт управление, алертов не показываем
     }
@@ -121,6 +187,16 @@ export async function connectWallet(opts = {}) {
 /** Тихое восстановление сессии после перезагрузки страницы: без попапов,
  *  через eth_accounts. Возвращает null, если кошелёк не давал доступ. */
 export async function reconnectWallet() {
+  // сессия WalletConnect живёт в localStorage библиотеки — поднимаем её тихо
+  if (preferredWallet() === WC_ID) {
+    if (!hasWalletConnect()) return null;
+    try {
+      const provider = await wcProvider();
+      if (!provider.session || !provider.accounts?.length) return null;
+      const walletClient = createWalletClient({ account: provider.accounts[0], chain: CHAIN, transport: custom(provider) });
+      return { account: provider.accounts[0], walletClient, provider, wc: true };
+    } catch (e) { return null; }
+  }
   // EIP-6963 объявления приходят асинхронно — подождём провайдера
   for (let i = 0; i < 10 && !pickProvider(); i++) {
     await new Promise((r) => setTimeout(r, 200));
