@@ -4,7 +4,7 @@ import { TokenCreated as QuoteTokenCreated } from "../generated/LaunchpadFactory
 import { DividendToken } from "../generated/LaunchpadFactoryQuote/DividendToken";
 import { Token, Protocol } from "../generated/schema";
 import { BondingCurvePool } from "../generated/templates";
-import { BigInt } from "@graphprotocol/graph-ts";
+import { BigInt, BigDecimal } from "@graphprotocol/graph-ts";
 
 export function loadProtocol(): Protocol {
   let p = Protocol.load("1");
@@ -15,6 +15,8 @@ export function loadProtocol(): Protocol {
     p.tradesCount = 0;
     p.volumeEth = BigInt.zero();
     p.feesEth = BigInt.zero();
+    p.volumeUsd = BigDecimal.zero();
+    p.feesUsd = BigDecimal.zero();
     p.treasuryReceived = BigInt.zero();
     p.treasurySpent = BigInt.zero();
   }
@@ -37,6 +39,8 @@ export function handleTokenCreated(e: TokenCreated): void {
   t.tradesCount = 0;
   t.volumeEth = BigInt.zero();
   t.feesEth = BigInt.zero();
+  t.volumeUsd = BigDecimal.zero();
+  t.feesUsd = BigDecimal.zero();
   t.lastTradeAt = BigInt.zero();
   t.save();
 
@@ -73,6 +77,8 @@ export function handleQuoteTokenCreated(e: QuoteTokenCreated): void {
   t.tradesCount = 0;
   t.volumeEth = BigInt.zero();
   t.feesEth = BigInt.zero();
+  t.volumeUsd = BigDecimal.zero();
+  t.feesUsd = BigDecimal.zero();
   t.lastTradeAt = BigInt.zero();
   t.save();
 

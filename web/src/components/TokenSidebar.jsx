@@ -32,7 +32,8 @@ export default function TokenSidebar({ current }) {
   }, []);
 
 
-  const volOf = (tok) => st.vol[(tok.pool || "").toLowerCase()] || 0;
+  // объём в долларах: зафиксированный индексатором на момент сделок, иначе ETH × текущий курс
+  const volOf = (tok) => { const k = (tok.pool || "").toLowerCase(); const f = st.volUsd?.[k]; return f != null ? f : (st.vol[k] || 0) * rate; };
   // Курсы валют монет за акцию/крипту — чтобы капа в списке считалась в
   // долларах через курс валюты, а не через ETH (иначе 10 AAPL → «$25k»).
   const [qRates, setQRates] = useState({});
@@ -104,7 +105,7 @@ export default function TokenSidebar({ current }) {
               <span className="ts-name">
                 <b>${x.symbol}{x.graduated ? <> <Icon name="target" size={11} style={{ margin: 0 }} /></> : ""}</b>
                 <span className="dim" title={t("Объём 24ч")}>
-                  {v > 0 ? (v * rate >= 1000 ? usd(v * rate) : "$" + (v * rate).toFixed(2)) : "—"}
+                  {v > 0 ? (v >= 1000 ? usd(v) : "$" + v.toFixed(2)) : "—"}
                 </span>
               </span>
               <span className="ts-price">{mcapUsdOf(x) > 0 ? usd(mcapUsdOf(x)) : "—"}</span>

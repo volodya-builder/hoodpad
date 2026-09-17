@@ -2,6 +2,7 @@ import { dataSource, BigInt, Bytes } from "@graphprotocol/graph-ts";
 import { Buy, Sell, Graduated } from "../generated/templates/BondingCurvePool/BondingCurvePool";
 import { Token, Trade } from "../generated/schema";
 import { loadProtocol } from "./factory";
+import { quoteUsd, quoteDecimals, toUsd } from "./price";
 
 // CurveZap (перезапуск 16.09.2026): покупка/продажа монеты за валюту за ETH
 // идёт через зап, и в событии пула стороной сделки стоит сам зап. Настоящий
@@ -36,6 +37,12 @@ export function handleBuy(e: Buy): void {
   tr.ethAmount = e.params.ethIn;
   tr.tokenAmount = e.params.tokensOut;
   tr.fee = e.params.fee;
+  let q = quoteOf();
+  let rate = quoteUsd(q, e.block.timestamp);
+  let qd = quoteDecimals(q);
+  tr.rateUsd = rate;
+  tr.usd = toUsd(tr.ethAmount.plus(e.params.fee), qd, rate);
+  tr.feeUsd = toUsd(e.params.fee, qd, rate);
   tr.timestamp = e.block.timestamp;
   tr.block = e.block.number;
   tr.tx = e.transaction.hash;
@@ -46,11 +53,15 @@ export function handleBuy(e: Buy): void {
   t.tradesCount += 1;
   t.volumeEth = t.volumeEth.plus(e.params.ethIn).plus(e.params.fee);
   t.feesEth = t.feesEth.plus(e.params.fee);
+  t.volumeUsd = t.volumeUsd.plus(tr.usd);
+  t.feesUsd = t.feesUsd.plus(tr.feeUsd);
   t.lastTradeAt = e.block.timestamp;
   t.save();
 
   let p = loadProtocol();
   p.tradesCount += 1;
+  p.volumeUsd = p.volumeUsd.plus(tr.usd);
+  p.feesUsd = p.feesUsd.plus(tr.feeUsd);
   if (quoteOf() === null) {
     p.volumeEth = p.volumeEth.plus(e.params.ethIn).plus(e.params.fee);
     p.feesEth = p.feesEth.plus(e.params.fee);
@@ -71,6 +82,12 @@ export function handleSell(e: Sell): void {
   tr.ethAmount = e.params.ethOut;
   tr.tokenAmount = e.params.tokensIn;
   tr.fee = e.params.fee;
+  let q = quoteOf();
+  let rate = quoteUsd(q, e.block.timestamp);
+  let qd = quoteDecimals(q);
+  tr.rateUsd = rate;
+  tr.usd = toUsd(tr.ethAmount.plus(e.params.fee), qd, rate);
+  tr.feeUsd = toUsd(e.params.fee, qd, rate);
   tr.timestamp = e.block.timestamp;
   tr.block = e.block.number;
   tr.tx = e.transaction.hash;
@@ -81,11 +98,15 @@ export function handleSell(e: Sell): void {
   t.tradesCount += 1;
   t.volumeEth = t.volumeEth.plus(e.params.ethOut).plus(e.params.fee);
   t.feesEth = t.feesEth.plus(e.params.fee);
+  t.volumeUsd = t.volumeUsd.plus(tr.usd);
+  t.feesUsd = t.feesUsd.plus(tr.feeUsd);
   t.lastTradeAt = e.block.timestamp;
   t.save();
 
   let p = loadProtocol();
   p.tradesCount += 1;
+  p.volumeUsd = p.volumeUsd.plus(tr.usd);
+  p.feesUsd = p.feesUsd.plus(tr.feeUsd);
   if (quoteOf() === null) {
     p.volumeEth = p.volumeEth.plus(e.params.ethOut).plus(e.params.fee);
     p.feesEth = p.feesEth.plus(e.params.fee);

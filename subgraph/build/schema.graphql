@@ -15,6 +15,8 @@ type Token @entity(immutable: false) {
   tradesCount: Int!
   volumeEth: BigInt!
   feesEth: BigInt!
+  volumeUsd: BigDecimal!  # объём в долларах по курсу на момент каждой сделки (не «дышит»)
+  feesUsd: BigDecimal!
   lastTradeAt: BigInt!
   trades: [Trade!]! @derivedFrom(field: "token")
 }
@@ -29,9 +31,23 @@ type Trade @entity(immutable: true) {
   ethAmount: BigInt!
   tokenAmount: BigInt!
   fee: BigInt!
+  usd: BigDecimal!       # (ethAmount + fee) в долларах по курсу блока сделки; 0 — курса не было
+  feeUsd: BigDecimal!
+  rateUsd: BigDecimal!   # курс валюты сделки (ETH или квот-актива) в долларах в этом блоке
   timestamp: BigInt!
   block: BigInt!
   tx: Bytes!
+}
+
+# Откуда берём курс валюты: самый глубокий пул Uniswap V3 против USDG или WETH
+type PriceSource @entity(immutable: false) {
+  id: ID!                # адрес валюты
+  pool: Bytes!
+  base: String!          # "usdg" | "weth" | "" (пула нет)
+  quoteIsToken0: Boolean!
+  quoteDec: Int!
+  baseDec: Int!
+  checkedAt: BigInt!
 }
 
 type VoteCast @entity(immutable: true) {
@@ -60,6 +76,8 @@ type Protocol @entity(immutable: false) {
   tradesCount: Int!
   volumeEth: BigInt!
   feesEth: BigInt!
+  volumeUsd: BigDecimal!  # все монеты (ETH и за валюту) по курсу на момент сделки
+  feesUsd: BigDecimal!
   treasuryReceived: BigInt!
   treasurySpent: BigInt!
 }

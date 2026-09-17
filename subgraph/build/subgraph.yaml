@@ -1,9 +1,4 @@
 specVersion: 0.0.5
-features:
-  - grafting
-graft:
-  base: QmNYxmheyHF6vRyQgoujKYxyf6BGPNDpkMPWkRzV7KMzCY
-  block: 62830000
 schema:
   file: schema.graphql
 dataSources:
@@ -11,9 +6,9 @@ dataSources:
     name: LaunchpadFactory
     network: robinhood-mainnet
     source:
-      address: "0x08a887196fc31b89305ae03aa991917f6b1d23ec"
+      address: "0xbe3e7ca55b6c4fc9e759bc8b43734b57a582da01"
       abi: LaunchpadFactory
-      startBlock: 18192900
+      startBlock: 64580000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -32,9 +27,9 @@ dataSources:
     name: LaunchpadFactoryQuote
     network: robinhood-mainnet
     source:
-      address: "0xd7299e03c5e7d4f9f4c62f305a0b619359cf9a4f"
+      address: "0x4b55954a2910cfbb04f49e90e727fb1540b3a940"
       abi: LaunchpadFactoryQuote
-      startBlock: 62830000
+      startBlock: 64580000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -57,7 +52,7 @@ dataSources:
     source:
       address: "0xb45661df6625decdc697dd2fa0556c2637ea063a"
       abi: BuybackTreasury
-      startBlock: 18192900
+      startBlock: 64580000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -90,9 +85,16 @@ templates:
         - Token
         - Trade
         - Protocol
+        - PriceSource
       abis:
         - name: BondingCurvePool
           file: BondingCurvePool/BondingCurvePool.json
+        - name: UniswapV3Factory
+          file: BondingCurvePool/UniswapV3Factory.json
+        - name: UniswapV3Pool
+          file: BondingCurvePool/UniswapV3Pool.json
+        - name: ERC20
+          file: BondingCurvePool/ERC20.json
       eventHandlers:
         - event: Buy(indexed address,uint256,uint256,uint256)
           handler: handleBuy
