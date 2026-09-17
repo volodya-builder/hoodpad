@@ -14,11 +14,11 @@ import {
 // монета hood, контракты, боты, безопасность. Цифры — те, что зашиты в
 // контрактах (LaunchpadFactoryV2: 1B / 800M / 1.625 ETH → 6.5 ETH).
 
-const MIGRATOR_ETH = "0x01f1ca21fc5e64c8dc9c90bc2891e2b9776f1b66";
-const MIGRATOR_QUOTE = "0x76fe74640daca66c861856ea3a6295f4b2d47801";
+const MIGRATOR_ETH = "0x2dec3594dd49e499e37c86c3ab82d99f1a927c1a";
+const MIGRATOR_QUOTE = "0xeb20f87ee1c8359ee8d0a5f770b052e849f1b84c";
 const USDG_ADDRESS = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168";
 const HOOD_TOKEN = "0x70550b0b6fb3d6bc813c7f29f989074bcdb5b51d";
-const TEAM_WALLET = "0x79182232155dd09fBC53dd2Bb0380479F96EB11c";
+const TEAM_WALLET = "0x34fB2ff2cbD322C7F744E2818A15eC8b726BE4a6";
 const SUBGRAPH = "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/4.0.2/gn";
 const REPO = "https://github.com/volodya-builder/hoodpad";
 const RPC = "https://rpc.mainnet.chain.robinhood.com";

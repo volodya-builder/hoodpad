@@ -2,14 +2,14 @@ name: subgraph
 
 # Деплой сабграфа на Goldsky кнопкой: Actions → subgraph → Run workflow.
 # Нужен секрет GOLDSKY_API_KEY (Settings → Secrets and variables → Actions →
-# Secrets). Версия — поле version (по умолчанию 4.0.0 = перезапуск 16.09.2026).
+# Secrets). Версия — поле version (по умолчанию 5.0.0 = перезапуск 17.09.2026).
 on:
   workflow_dispatch:
     inputs:
       version:
         description: "Версия сабграфа (hood-mainnet/<version>)"
         required: true
-        default: "4.0.0"
+        default: "5.0.0"
 
 concurrency:
   group: subgraph

@@ -1,0 +1,38 @@
+{
+  "chainId": 4663,
+  "at": "2026-09-17T09:47:54.709Z",
+  "deployer": "0xd2E49356804b8a82E5DED94a4D3E1a14d80A6F33",
+  "owner": "0xd2E49356804b8a82E5DED94a4D3E1a14d80A6F33",
+  "operator": "0x574e7F68F79b9d7C7f7bB77691E3EE5048C6C39a",
+  "team": "0x34fB2ff2cbD322C7F744E2818A15eC8b726BE4a6",
+  "migrator": "0x2dec3594dd49e499e37c86c3ab82d99f1a927c1a",
+  "factory": "0xe16ccf7c12ce0256473fff60a1c3f18def64f861",
+  "migratorQ": "0xeb20f87ee1c8359ee8d0a5f770b052e849f1b84c",
+  "quoteFactory": "0x655b7ce112336ad29dacdce7cf434b03930407a3",
+  "zap": "0x81345f67f3cb7c68ad17a4b63f9f6f1392c013ce",
+  "arena": "0x0f82981d3630595b38943f4349f41ac1f2045eca",
+  "hoodTreasury": "0x7800ef8dbef42ffbce7573291d6e1fe4828b5936",
+  "splitter": "0xad10637462a0e8abaabacc1cceb16ffabe56e529",
+  "routes": {
+    "usdg": {
+      "mid": "0x0000000000000000000000000000000000000000",
+      "fee1": 100
+    },
+    "usde": {
+      "mid": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+      "fee1": 100,
+      "fee2": 500
+    }
+  },
+  "startBlock": 65270286,
+  "tx": {
+    "migrator": "0x35559bcc7f42ab84f74419e87dcc2e33ce886e9d13ca230d0d43e0767d3babf9",
+    "factory": "0xffc5a792aa97c0896575dd62dc760c2b9ebd0b9fcc6eb415e77cbb3a0e8c31e0",
+    "migratorQ": "0x6e8ecf111ba344784da0b9e2bea4db3376ae5c83ff44ba20a2cfb2385e280def",
+    "quoteFactory": "0x56e46c3c4fa116c50abe70a0fea04af66cc158b51ed19dd73df83ab5c5f9a4f7",
+    "zap": "0x858b014989efe5dcde51901ec500c4f73a2de7aeb33966a0679338e64ced31a6",
+    "arena": "0x4425e5043b94063833872ae04359e5c69bbb3d58077dc39b52fb4fe3a1bd98b1",
+    "hoodTreasury": "0x0197cd006a63d2c45d289654cdc64652ff011f884b58cb284c75c64d061b242d",
+    "splitter": "0xbd3d27a74e639f900dc0a48e297a34c5df807f2ac14942bfa509e0ae6513d85a"
+  }
+}

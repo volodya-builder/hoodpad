@@ -28,9 +28,9 @@ import { privateKeyToAccount } from "viem/accounts";
 import { quoteUsd, ethUsdRate } from "../lib/quote-price.mjs";
 
 const RPC_URL = process.env.RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
-const QUOTE_FACTORY = (process.env.QUOTE_FACTORY || "0x4b55954a2910cfbb04f49e90e727fb1540b3a940").toLowerCase();
-const ETH_FACTORY = (process.env.FACTORY || "0xbe3e7ca55b6c4fc9e759bc8b43734b57a582da01").toLowerCase();
-const FEE_SPLITTER = (process.env.FEE_SPLITTER || "0x82a083e8a99b0f434c03b5c513c8b8c071bcf6e7").toLowerCase();
+const QUOTE_FACTORY = (process.env.QUOTE_FACTORY || "0x655b7ce112336ad29dacdce7cf434b03930407a3").toLowerCase();
+const ETH_FACTORY = (process.env.FACTORY || "0xe16ccf7c12ce0256473fff60a1c3f18def64f861").toLowerCase();
+const FEE_SPLITTER = (process.env.FEE_SPLITTER || "0xad10637462a0e8abaabacc1cceb16ffabe56e529").toLowerCase();
 const BLOCKSCOUT = process.env.BLOCKSCOUT || "https://robinhoodchain.blockscout.com";
 // Блок деплоя quote-фабрики: раньше него её событий не бывает.
 const FACTORY_FROM_BLOCK = BigInt(process.env.FACTORY_FROM_BLOCK || 64_580_000);
