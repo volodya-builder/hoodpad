@@ -109,6 +109,7 @@ const SECTIONS = [
     id: "contracts", title: T("Контракты", "Deployed contracts", "已部署合约"),
     body: [
       T("Все контракты задеплоены 17.09.2026 на Robinhood Chain — полный перезапуск с новых кошельков. Исходники — в репозитории на GitHub (папка contracts/); собраны solc 0.8.28, optimizer 200, evm paris — любой может пересобрать и сверить байткод.", "All contracts were deployed on 17 Sep 2026 on Robinhood Chain — a full relaunch from fresh wallets. Source code is in the GitHub repository (contracts/ folder); built with solc 0.8.28, optimizer 200, evm paris — anyone can rebuild and compare the bytecode.", "所有合约于 2026 年 9 月 17 日部署在 Robinhood Chain 上——使用全新钱包的完整重启。源代码在 GitHub 仓库（contracts/ 目录）；使用 solc 0.8.28、optimizer 200、evm paris 编译——任何人都可以重新编译并比对字节码。"),
+      T("Исходники всех десяти контрактов верифицированы в обозревателе Blockscout: на странице каждого адреса виден код, совпадающий с байткодом в сети, и его можно читать прямо там.", "The source code of all ten contracts is verified on the Blockscout explorer: each address page shows the code matching the on-chain bytecode, readable right there.", "全部十个合约的源代码已在 Blockscout 浏览器上完成验证：每个地址页面都显示与链上字节码一致的代码，可直接在那里阅读。"),
       [
         { k: T("Сеть", "Network", "网络"), v: "Robinhood Chain · chainId 4663" },
         { k: "RPC", v: RPC },
