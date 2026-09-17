@@ -1699,6 +1699,7 @@ const EN = {
   "Мне есть 18 лет, я не гражданин и не резидент США, не нахожусь в запрещённой юрисдикции и не под санкциями": "I am 18 or older, not a U.S. citizen or resident, not located in a prohibited jurisdiction and not subject to sanctions",
   "делится утром между подиумом": "split among the podium in the morning",
   "выкуп и сжигание HOOD": "buyback and burn of HOOD",
+  "Показать полностью": "Show in full",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

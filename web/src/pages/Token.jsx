@@ -337,6 +337,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [bbAmt, setBbAmt] = useState("");
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCA, setCopiedCA] = useState(null); // где нажали копирование: "about" | "head" | "pos"
+  const [descOpen, setDescOpen] = useState(false); // описание в шапке: свёрнуто в 2 строки / полностью
   const [tf, setTf] = useState("all"); // таймфрейм графика
   const [trSort, setTrSort] = useState({ key: "ts", dir: "desc" }); // сортировка таблицы сделок
   // избранное (общий список с главной и боковой панелью)
@@ -1328,6 +1329,13 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 <div className="mono th-addr" onClick={() => copyCA("head")} title={t("Скопировать адрес")}>
                   {short(tokenAddress)} {copiedCA === "head" ? "✓" : "⧉"}
                 </div>
+                {/* описание — сразу под названием, рядом с логотипом (просьба владельца 17.09.2026);
+                    длинное сворачивается в две строки, клик раскрывает */}
+                {meta.description && (
+                  <div className={`th-desc ${descOpen ? "open" : ""}`} onClick={() => setDescOpen((v) => !v)} title={descOpen ? "" : t("Показать полностью")}>
+                    {meta.description}
+                  </div>
+                )}
               </div>
             </h3>
             <div className="pill-group">
