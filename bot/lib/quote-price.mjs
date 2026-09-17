@@ -54,8 +54,10 @@ export async function quoteUsd(pub, addr, ethUsd = null) {
   const rd = (address, abi, functionName, args = []) => pub.readContract({ address, abi, functionName, args });
   const dec = Number(await rd(a, erc20, "decimals").catch(() => 18));
   let usd = 0;
+  let depthUsd = 0;   // глубина пула, по которому взят курс (в долларах базы): тонкий пул — курсу веры нет
+  let explorerUsd = 0; // независимая сверка: курс обозревателя
   try {
-    if (a === USDG_ADDR) usd = 1;
+    if (a === USDG_ADDR) { usd = 1; depthUsd = Infinity; }
     else {
       const eth = ethUsd ?? await ethUsdRate(pub);
       const best = async (b, bDec) => {
@@ -70,21 +72,22 @@ export async function quoteUsd(pub, addr, ethUsd = null) {
         const sq = Number(s0[0]) / 2 ** 96; const p = sq * sq;
         return t0.toLowerCase() === a ? p * 10 ** (dec - bDec) : (1 / p) * 10 ** (dec - bDec);
       };
-      if (a === WETH_ADDR) usd = eth;
+      if (a === WETH_ADDR) { usd = eth; depthUsd = Infinity; }
       else {
         const [u, w] = await Promise.all([best(USDG_ADDR, 6), best(WETH_ADDR, 18)]);
         const uDepth = u ? u.bal : 0, wDepth = w ? w.bal * eth : 0;
-        if (wDepth > 0 || uDepth > 0) usd = wDepth > uDepth ? (await priceOf(w.p, 18)) * eth : await priceOf(u.p, 6);
+        if (wDepth > 0 || uDepth > 0) { usd = wDepth > uDepth ? (await priceOf(w.p, 18)) * eth : await priceOf(u.p, 6); depthUsd = Math.max(uDepth, wDepth); }
       }
     }
   } catch (e) { usd = 0; }
-  if (!(usd > 0) || !isFinite(usd)) {
+  if (a !== USDG_ADDR && a !== WETH_ADDR) {
     try {
       const j = await (await fetch(`${EXPLORER_API}/tokens/${a}`, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(8000) })).json();
-      const v = parseFloat(j?.exchange_rate); if (v > 0) usd = v;
-    } catch (e) { /* нет курса */ }
+      const v = parseFloat(j?.exchange_rate); if (v > 0) explorerUsd = v;
+    } catch (e) { /* обозреватель молчит */ }
+    if (!(usd > 0) || !isFinite(usd)) usd = explorerUsd;
   }
-  const out = { usd: usd > 0 && isFinite(usd) ? usd : 0, dec };
+  const out = { usd: usd > 0 && isFinite(usd) ? usd : 0, dec, depthUsd, explorerUsd };
   cache.set(a, out);
   return out;
 }

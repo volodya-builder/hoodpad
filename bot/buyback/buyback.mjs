@@ -29,6 +29,7 @@ import {
   createPublicClient, createWalletClient, http, parseAbi, formatEther, defineChain,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { treasuryCanConvert, convertTreasuryToEth } from "../lib/to-eth.mjs";
 
 const DRY = process.argv.includes("--dry");
 const RPC_URL = process.env.RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
@@ -38,6 +39,7 @@ const HOOD = (process.env.HOOD_TOKEN || "").toLowerCase();
 const DUST_ETH = Number(process.env.DUST_ETH || 0.0003);       // меньше — не тратим газ, копим
 const SLIPPAGE_BPS = BigInt(process.env.SLIPPAGE_BPS || 300);  // 3% от симуляции: анти-MEV
 const LOOKBACK_DAYS = 3;
+const SUBGRAPH = process.env.SUBGRAPH || "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/4.0.2/gn";
 
 let PK = (process.env.ARENA_PRIVATE_KEY || process.env.TREASURER_PRIVATE_KEY || "").replace(/["'\s]/g, "");
 if (PK && !PK.startsWith("0x")) PK = "0x" + PK;
@@ -92,6 +94,17 @@ async function main() {
   const symbol = await pub.readContract({ address: HOOD, abi: tokenAbi, functionName: "symbol" }).catch(() => "HOOD");
   const graduated = await pub.readContract({ address: pool, abi: poolAbi, functionName: "graduated" });
 
+  // Казна V2 копит в ETH: сперва вся валюта (GME, USDG…) → ETH, потом выкуп hood за ETH
+  if (await treasuryCanConvert(pub, TREASURY)) {
+    let assets = [];
+    try {
+      const d = await fetch(SUBGRAPH, { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: "{ trades(first: 1000, orderBy: timestamp, orderDirection: desc) { quote } }" }) }).then((r) => r.json());
+      assets = [...new Set((d?.data?.trades || []).map((t) => t.quote).filter(Boolean))];
+    } catch (e) { /* без индексатора — менять нечего */ }
+    console.log(`Казна V2 · валюта → ETH (${assets.length} актив.)…`);
+    await convertTreasuryToEth(pub, wallet, TREASURY, assets, { dry: DRY });
+  }
   const bal = await pub.getBalance({ address: TREASURY });
   const balEth = Number(formatEther(bal));
   console.log(`Казна выкупа: ${balEth.toFixed(6)} ETH · монета $${symbol} ${HOOD}${graduated ? " · ГРАДУИРОВАЛА" : " · на кривой"}`);

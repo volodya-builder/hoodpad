@@ -1,5 +1,6 @@
 import React from "react";
 import { useLang } from "../lib/i18n.jsx";
+import { PRIVACY_ZH, TERMS_ZH, PRIVACY_ZH_AI, TERMS_ZH_AI } from "./legal-zh.js";
 import { FEATURES } from "../lib/config.js";
 
 // Разделы про ИИ показываются только при включённом ИИ (FEATURES.ai) — сами
@@ -12,25 +13,27 @@ const ifAI = (...secs) => (FEATURES.ai ? secs : []);
 const AI_RE = /(^|[^а-яёa-z])(ИИ|AI|агент(?:а|ы|у|ов|ом|ам|ами)?|agents?)(?=$|[^а-яёa-z])/i;
 function stripAI(txt) {
   if (FEATURES.ai || !AI_RE.test(txt)) return txt;
-  const sentences = txt.split(/(?<=[.!?])\s+/);
+  // предложения: латиница — по «. », китайский — по «。！？» без пробела
+  const zh = /[\u4e00-\u9fff]/.test(txt);
+  const sentences = txt.split(zh ? /(?<=[。！？])|(?<=[.!?])\s+/ : /(?<=[.!?])\s+/);
   const out = [];
   for (let sent of sentences) {
     if (!AI_RE.test(sent)) { out.push(sent); continue; }
     // части через «;» / «,» — выкидываем только те, где ИИ
-    for (const sep of ["; ", ", "]) {
+    for (const sep of zh ? ["；", "，", "、", "; ", ", "] : ["; ", ", "]) {
       if (!AI_RE.test(sent)) break;
       const parts = sent.split(sep);
       if (parts.length > 1) {
         const kept = parts.filter((x) => !AI_RE.test(x));
         if (kept.length) {
           sent = kept.join(sep);
-          if (!/[.!?]$/.test(sent)) sent += ".";
+          if (!/[.!?。！？]$/.test(sent)) sent += zh ? "。" : ".";
         }
       }
     }
     if (!AI_RE.test(sent)) out.push(sent);
   }
-  return out.join(" ").replace(/\s+([.;,])/g, "$1").replace(/\(\s*\)/g, "");
+  return out.join(zh ? "" : " ").replace(/\s+([.;,])/g, "$1").replace(/\(\s*\)/g, "").replace(/（\s*）/g, "");
 }
 
 // Юридические тексты сайта. Обновлены 15.09.2026 под текущий продукт:
@@ -45,7 +48,8 @@ function Doc({ title, updated, sections }) {
   sections.forEach(([h], i) => { const m = /^(\d+)\./.exec(h); if (m) map[m[1]] = String(i + 1); });
   const fix = (txt) => stripAI(String(txt))
     .replace(/section (\d+)/g, (a, n) => `section ${map[n] || n}`)
-    .replace(/(раздел[а-яё]*) (\d+)/g, (a, w, n) => `${w} ${map[n] || n}`);
+    .replace(/(раздел[а-яё]*) (\d+)/g, (a, w, n) => `${w} ${map[n] || n}`)
+    .replace(/第 (\d+) 条/g, (a, n) => `第 ${map[n] || n} 条`);
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", paddingBottom: 70 }}>
       <div className="page-title">{title}</div>
@@ -62,6 +66,12 @@ function Doc({ title, updated, sections }) {
 
 export function Privacy() {
   const { lang } = useLang();
+  if (lang === "zh") {
+    // китайский: перевод английской версии (web/src/pages/legal-zh.js); раздел про ИИ — за флагом, как и у остальных языков
+    const secs = [...PRIVACY_ZH.sections];
+    if (FEATURES.ai) for (const x of PRIVACY_ZH_AI) secs.splice(9, 0, x);
+    return <Doc title={PRIVACY_ZH.title} updated={PRIVACY_ZH.updated} sections={secs} />;
+  }
   if (lang !== "ru") {
     return (
       <Doc
@@ -156,6 +166,11 @@ export function Privacy() {
 
 export function Terms() {
   const { lang } = useLang();
+  if (lang === "zh") {
+    const secs = [...TERMS_ZH.sections];
+    if (FEATURES.ai) secs.splice(18, 0, ...TERMS_ZH_AI);
+    return <Doc title={TERMS_ZH.title} updated={TERMS_ZH.updated} sections={secs} />;
+  }
   if (lang !== "ru") {
     return (
       <Doc
