@@ -1,0 +1,1 @@
+import{h as e}from"./web3-C3WT_DfE.js";export{e as publicClient};
