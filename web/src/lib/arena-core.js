@@ -8,6 +8,7 @@
 // результат у каждого зрителя и у бота.
 // ============================================================================
 import { honestVolume } from "./fairvol.js";
+import { VIRTUAL_ETH } from "./config.js";
 
 export const DAY = 86_400_000;
 
@@ -59,7 +60,7 @@ export function arenaState(tokens, trades, d0, now = Date.now(), excluded = null
   const checkpoints = Array.from({ length: Math.max(0, N - 1) }, (_, i) => d0 + step * (i + 1));
 
   // ---- «очки боя» = честный объём × (1 + прирост капитализации за день) ----
-  const VIRT = 1.625, TOTAL = 1e9;
+  const VIRT = VIRTUAL_ETH, TOTAL = 1e9;
   const dayTrades = trades.filter((tr) => tr.ts >= d0 && tr.ts < end);
   const byPool = {};
   for (const tr of dayTrades) (byPool[tr.pool] ??= []).push(tr);

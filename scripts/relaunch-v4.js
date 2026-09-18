@@ -242,7 +242,7 @@ async function main() {
 
   console.log("11/11 Базовые валюты: WETH, USDG, USDe (порог $16k) + маршруты запа…");
   // virtualQuote = порог/4, кап создателя = порог/10 (как у акций в allow-stocks)
-  await call("qWeth", quoteFactory, "LaunchpadFactoryQuoteV3", "setQuote", [MAINNET.weth, true, parseEther("1.625"), parseEther("0.65")]);
+  await call("qWeth", quoteFactory, "LaunchpadFactoryQuoteV3", "setQuote", [MAINNET.weth, true, parseEther("1"), parseEther("0.4")]);
   await call("qUsdg", quoteFactory, "LaunchpadFactoryQuoteV3", "setQuote", [MAINNET.usdg, true, parseUnits("4000", 6), parseUnits("1600", 6)]);
   await call("qUsde", quoteFactory, "LaunchpadFactoryQuoteV3", "setQuote", [MAINNET.usde, true, parseEther("4000"), parseEther("1600")]);
   await call("rUsdg", zap, "CurveZap", "setRoute", [MAINNET.usdg, ZERO, feeUsdgWeth, 0, true]);

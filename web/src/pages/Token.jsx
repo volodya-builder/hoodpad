@@ -5,7 +5,7 @@ import Who from "../components/Who.jsx";
 import { parseEther, formatEther, parseUnits, formatUnits } from "viem";
 import { publicClient, fmt, fmtEth, fmtEthFine, short } from "../lib/web3.js";
 import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi, zapAbi, feeSplitterAbi, erc20TransferEvent } from "../lib/abi.js";
-import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, FEATURES, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE, FACTORY_START_BLOCK } from "../lib/config.js";
+import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, FEATURES, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE, FACTORY_START_BLOCK, VIRTUAL_ETH } from "../lib/config.js";
 import { poolTrades, invalidateTrades, loadTokens, allTrades, parseMeta, cachedToken } from "../lib/data.js";
 import { computeTrust } from "../lib/trust.js";
 import { honestVolume } from "../lib/fairvol.js";
@@ -60,7 +60,7 @@ function smoothPath(xs, ys) {
   return d;
 }
 
-function MiniChart({ points, rate, marks, base = 1.625 }) {
+function MiniChart({ points, rate, marks, base = VIRTUAL_ETH }) {
   const [hover, setHover] = React.useState(null);
   const W = 680, H = 300, PADB = 30, PADT = 14, PADL = 8, PADR = 62;
   let en = false;
@@ -693,7 +693,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const loadExtras = useCallback(async () => {
     if (!data?.pool || !sameTok(data)) return; // data ещё от прошлой монеты — её пул не наш
     // Монета за валюту: ждём виртуал из сети — без него сделки считались бы
-    // как у ETH-монеты (1.625) и график врал в разы.
+    // как у ETH-монеты и график врал в разы.
     if (data.q && !(data.q.virt > 0)) return;
     // Дата создания — отдельно и не блокируя график: обозреватель (запасной
     // источник) отвечает по 5–9 с, и раньше сделки/держатели/график ждали его
@@ -1403,7 +1403,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           {history && history.points && history.points.filter((p) => p.ts).length >= 2 ? (
             <CandleChart points={history.points} trades={history.trades} rate={curRate} marks={marks} />
           ) : history ? (
-            <MiniChart points={chartPoints} rate={curRate} marks={marks} base={data.q ? data.q.virt : 1.625} />
+            <MiniChart points={chartPoints} rate={curRate} marks={marks} base={data.q ? data.q.virt : VIRTUAL_ETH} />
           ) : (
             /* события ещё идут и кэша нет: пустое место того же размера, без «пустого» графика */
             <svg viewBox="0 0 680 300" style={{ width: "100%", display: "block", marginTop: 8 }} aria-hidden="true" />

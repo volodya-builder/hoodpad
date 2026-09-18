@@ -2,7 +2,7 @@ import { parseAbi, parseAbiItem } from "viem";
 import { useEffect, useState } from "react";
 import { publicClient } from "./web3.js";
 import { factoryAbi, poolAbi, tokenAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi } from "./abi.js";
-import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE } from "./config.js";
+import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE, VIRTUAL_ETH } from "./config.js";
 
 // Метаданные приходят из блокчейна и полностью подконтрольны создателю токена.
 // Любой мусор здесь не должен ронять интерфейс: JSON.parse("null") исключения
@@ -113,7 +113,7 @@ export async function recentFromBlock(lookback = LOG_LOOKBACK) {
   } catch (e) { return 0n; }
 }
 
-const VIRT_WEI = 1625000000000000000n;      // 1.625 ETH
+const VIRT_WEI = BigInt(Math.round(VIRTUAL_ETH * 1e6)) * 10n ** 12n; // виртуальный резерв ETH-кривой
 const TOTAL_WEI = 10n ** 27n;               // 1e9 токенов
 const CAP_WEI = 8n * 10n ** 26n;            // 800M
 
@@ -600,7 +600,7 @@ export function invalidateTrades(pool) {
 }
 
 // cur — валюта кривой для монет за ERC20 (quote-фабрика): { dec, virt }.
-// Без cur — ETH-пул (18 знаков, виртуал 1.625 ETH). Сабграф индексирует
+// Без cur — ETH-пул (18 знаков, виртуал VIRTUAL_ETH). Сабграф индексирует
 // только ETH-фабрику, поэтому монеты за валюту читаем прямо из логов.
 /** Прогрев страницы монеты при наведении на карточку: сделки и график
  *  подтягиваются заранее, клик открывает страницу уже с данными. */
@@ -616,7 +616,7 @@ export function prefetchToken(token) {
 
 export async function poolTrades(pool, cur = null) {
   // Кэш — по пулу И виртуалу: у монеты за валюту virt приходит с сетью позже
-  // кэша (сначала 0) — иначе первый расчёт с 1.625 «ETH» оседал в кэше и
+  // кэша (сначала 0) — иначе первый расчёт с виртуалом ETH-кривой оседал в кэше и
   // график монеты за AAPL показывал капу в разы меньше шапки.
   const key = cur ? `${pool}:${cur.virt || 0}:${cur.dec ?? 18}` : pool;
   const c = _trades.get(key);
@@ -644,7 +644,7 @@ async function _poolTradesSubgraph(pool) {
     where: { pool: "${pool.toLowerCase()}" }) {
     isBuy trader ethAmount tokenAmount fee timestamp block tx${uf} } }`);
   if (!d?.trades) throw new Error("no trades field");
-  const VIRT = 1.625, TOTAL = 1e9;
+  const VIRT = VIRTUAL_ETH, TOTAL = 1e9;
   let eth = 0, sold = 0;
   const trades = [];
   const points = [{ i: 0, mcap: (VIRT / TOTAL) * TOTAL, ts: null }];
@@ -696,7 +696,7 @@ async function _poolTradesRpc(pool, cur = null) {
     } catch (e) { /* без запа — продавцом останется его адрес */ }
   }
 
-  const VIRT = cur?.virt || 1.625, TOTAL = 1e9;
+  const VIRT = cur?.virt || VIRTUAL_ETH, TOTAL = 1e9;
   const D = 10 ** (cur?.dec ?? 18);
   let eth = 0, sold = 0;
   const trades = [];

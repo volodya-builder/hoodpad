@@ -23,21 +23,21 @@ const hoodArg = (() => { const i = process.argv.indexOf("--hood"); return i > 0 
 const out = JSON.parse(fs.readFileSync(path.join(__dirname, "relaunch-v4-output.json"), "utf8"));
 const low = (a) => String(a).toLowerCase();
 
-// Прежний комплект (17.09.2026, V2) — что заменяем
+// Прежний комплект (18.09.2026 утро, V3 с градацией 6.5 ETH) — что заменяем
 const OLD = {
-  factory: "0xe16ccf7c12ce0256473fff60a1c3f18def64f861",
-  quoteFactory: "0x655b7ce112336ad29dacdce7cf434b03930407a3",
-  zap: "0x81345f67f3cb7c68ad17a4b63f9f6f1392c013ce",
-  splitter: "0xad10637462a0e8abaabacc1cceb16ffabe56e529",
-  arena: "0x0f82981d3630595b38943f4349f41ac1f2045eca",
-  hoodTreasury: "0x7800ef8dbef42ffbce7573291d6e1fe4828b5936",
-  migrator: "0x2dec3594dd49e499e37c86c3ab82d99f1a927c1a",
-  migratorQ: "0xeb20f87ee1c8359ee8d0a5f770b052e849f1b84c",
-  adminOld: "0xd2E49356804b8a82E5DED94a4D3E1a14d80A6F33",   // TEAM_ADDRESS на сайте = владелец/админ
-  teamOld: "0x34fB2ff2cbD322C7F744E2818A15eC8b726BE4a6",    // кошелёк команды в Docs
-  arenaBotOld: "0x574e7F68F79b9d7C7f7bB77691E3EE5048C6C39a", // оператор казн в Docs
-  hoodOld: "0x9eFD74eDA2640de53982097539Cd435318FC3d62",    // монета hood в Docs
-  startBlockOld: "65270286",                                 // FACTORY_START_BLOCK на сайте, startBlock сабграфа, FACTORY_FROM_BLOCK ботов
+  factory: "0x0a7233ae853dd4c2315dcc53ce7b8939aeb01107",
+  quoteFactory: "0x094ae4f59d855165a326bbb4773f674ef795751f",
+  zap: "0x645a33ccc81b9cd8a0304c4d91064da6c6c4df57",
+  splitter: "0x5a8ce0ebf1496189a8313e71a091b9a48db2edef",
+  arena: "0x26f83c7537346a925c311817ca5554db0f393609",
+  hoodTreasury: "0xd55e3f8405a3af1d219eea0e5d69b56d3a0118ad",
+  migrator: "0xe11727b682e86ced24ed0da2aa6c113ae30672f4",
+  migratorQ: "0xac360e752e9e12952e27f202d5814fa8c6220878",
+  adminOld: "0x53eB687F618A491B037818292Bc3427bD654F736",   // те же кошельки, что и сейчас (замена вхолостую)
+  teamOld: "0x0462C1Efe9CA880E901807d5386EBcc6705087b3",
+  arenaBotOld: "0x4fC073049012c52c6B291E08D69D13b3a33d8B63",
+  hoodOld: "0x67b7a5342a85d623436f049f87517cd1fd73a239",    // монета hood в Docs
+  startBlockOld: "66023560",                                 // FACTORY_START_BLOCK на сайте, startBlock сабграфа, FACTORY_FROM_BLOCK ботов
 };
 const NEW = { ...out, adminOld: out.owner, teamOld: out.team, arenaBotOld: out.operator, hoodOld: hoodArg, startBlockOld: String(out.startBlock || "") };
 for (const k of ["factory", "quoteFactory", "zap", "splitter", "arena", "hoodTreasury", "migrator", "migratorQ", "owner", "team"]) {
@@ -70,8 +70,8 @@ for (const rel of FILES) {
   // legacy.js — старые фабрики в списки прошлых версий
   if (rel.endsWith("legacy.js")) {
     const ins = (anchor, line) => { if (!text.includes(line) && text.includes(anchor)) { text = text.replace(anchor, anchor + "\n" + line); changes.push(`${rel}: +${line.trim()}`); } };
-    ins("export const ETH_FACTORIES = [\n  FACTORY_ADDRESS,", `  "${OLD.factory}", // 17.09.2026 (V2)`);
-    ins("export const QUOTE_FACTORIES = [\n  QUOTE_FACTORY_ADDRESS,", `  "${OLD.quoteFactory}", // 17.09.2026 (V2)`);
+    ins("export const ETH_FACTORIES = [\n  FACTORY_ADDRESS,", `  "${OLD.factory}", // 18.09.2026 утро (V3, градация 6.5)`);
+    ins("export const QUOTE_FACTORIES = [\n  QUOTE_FACTORY_ADDRESS,", `  "${OLD.quoteFactory}", // 18.09.2026 утро (V3, градация 6.5)`);
   }
   // арена: старой казны-легаси больше нет
   if (rel.endsWith("arena.mjs")) {
