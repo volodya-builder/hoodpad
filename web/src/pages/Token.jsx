@@ -843,10 +843,22 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             setQuote(eth !== null ? { kind: "eth", value: eth } : { kind: "quote", value: net });
           }
         } else if (tab === "buy") {
-          const out = await publicClient.readContract({
+          let out = await publicClient.readContract({
             address: data.pool, abi: pAbi, functionName: "quoteBuy",
             args: [pq(amount)],
           });
+          // Контракт оценивает кривую без потолка продажи: у самой градации
+          // он обещает больше монет, чем осталось, а в buy() отдаёт остаток
+          // и возвращает лишний ETH. Режем оценку по остатку — иначе защита
+          // от проскальзывания отклоняет последнюю, градационную покупку.
+          try {
+            const [cap, sold] = await Promise.all([
+              publicClient.readContract({ address: data.pool, abi: pAbi, functionName: "saleCap" }),
+              publicClient.readContract({ address: data.pool, abi: pAbi, functionName: "tokensSold" }),
+            ]);
+            const remaining = cap > sold ? cap - sold : 0n;
+            if (out > remaining) out = remaining;
+          } catch { /* старый пул без saleCap — оценка как есть */ }
           setQuote({ kind: "tokens", value: out });
         } else {
           const gross = await publicClient.readContract({
