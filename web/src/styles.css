@@ -997,6 +997,8 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
 }
 .lines-toggle input { accent-color: var(--gold); cursor: pointer; }
 .lines-toggle:hover { color: var(--text); }
+.marks-toggle input { accent-color: #c8f542; }
+.mk-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #c8f542; }
 .candle-ivs-overlay {
   position: absolute; top: 12px; left: 12px; right: 66px; z-index: 7;
   margin-top: 0;
@@ -4518,23 +4520,23 @@ html[data-theme="light"] .wpick-item:hover { background: rgba(0,0,0,.05); border
 @media (max-width: 560px) { .wm { width: 100vw; max-width: 100vw; border-radius: 20px 20px 0 0; position: fixed; left: 0; bottom: 0; } .modal-back:has(.wm) { padding-top: 0; align-items: flex-end; } .wm .tos-body { padding: 18px 16px 22px; } }
 
 /* ---- админка: таймеры ботов (18.09.2026) ---- */
-.bt-panel { padding-bottom: 20px; }
-.bt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-.bt-card { display: flex; align-items: center; gap: 16px; padding: 14px 16px; border-radius: 16px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.07); }
-.bt-ring { position: relative; width: 72px; height: 72px; flex: 0 0 72px; }
-.bt-ring svg { transform: rotate(-90deg); }
-.bt-track { fill: none; stroke: rgba(255,255,255,.08); stroke-width: 4; }
-.bt-fill { fill: none; stroke: var(--accent, #c8f542); stroke-width: 4; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
-.bt-card.busy .bt-fill { stroke: var(--gold, #e9c46a); animation: bt-spin 1.2s linear infinite; stroke-dasharray: 40 148 !important; stroke-dashoffset: 0 !important; }
-@keyframes bt-spin { to { transform: rotate(360deg); } }
-.bt-card.busy .bt-ring svg { transform-origin: 50% 50%; }
-.bt-time { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--mono, ui-monospace, monospace); font-size: 13px; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
-.bt-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--gold, #e9c46a); animation: bt-pulse 1s ease-in-out infinite; }
-@keyframes bt-pulse { 0%, 100% { transform: scale(.7); opacity: .5; } 50% { transform: scale(1.15); opacity: 1; } }
-.bt-title { font-weight: 500; font-size: 14px; }
-.bt-sub { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; }
-.bt-card.busy .bt-sub { color: var(--gold, #e9c46a); }
-.bt-last { font-size: 12px; color: var(--text-dim); margin-top: 6px; }
-html[data-theme="light"] .bt-card { background: rgba(0,0,0,.03); border-color: rgba(0,0,0,.08); }
-html[data-theme="light"] .bt-track { stroke: rgba(0,0,0,.08); }
-@media (max-width: 900px) { .bt-grid { grid-template-columns: 1fr; } }
+.tm-panel { padding-bottom: 20px; }
+.tm-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.tm-card { display: flex; align-items: center; gap: 16px; padding: 14px 16px; border-radius: 16px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.07); }
+.tm-ring { position: relative; width: 72px; height: 72px; flex: 0 0 72px; }
+.tm-ring svg { transform: rotate(-90deg); }
+.tm-track { fill: none; stroke: rgba(255,255,255,.08); stroke-width: 4; }
+.tm-fill { fill: none; stroke: var(--accent, #c8f542); stroke-width: 4; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+.tm-card.busy .tm-fill { stroke: var(--gold, #e9c46a); animation: tm-spin 1.2s linear infinite; stroke-dasharray: 40 148 !important; stroke-dashoffset: 0 !important; }
+@keyframes tm-spin { to { transform: rotate(360deg); } }
+.tm-card.busy .tm-ring svg { transform-origin: 50% 50%; }
+.tm-time { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--mono, ui-monospace, monospace); font-size: 13px; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.tm-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--gold, #e9c46a); animation: tm-pulse 1s ease-in-out infinite; }
+@keyframes tm-pulse { 0%, 100% { transform: scale(.7); opacity: .5; } 50% { transform: scale(1.15); opacity: 1; } }
+.tm-title { font-weight: 500; font-size: 14px; }
+.tm-sub { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; }
+.tm-card.busy .tm-sub { color: var(--gold, #e9c46a); }
+.tm-last { font-size: 12px; color: var(--text-dim); margin-top: 6px; }
+html[data-theme="light"] .tm-card { background: rgba(0,0,0,.03); border-color: rgba(0,0,0,.08); }
+html[data-theme="light"] .tm-track { stroke: rgba(0,0,0,.08); }
+@media (max-width: 900px) { .tm-grid { grid-template-columns: 1fr; } }

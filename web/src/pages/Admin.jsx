@@ -148,18 +148,18 @@ function BotCard({ title, sub, due, period, last, busyFor, t }) {
   const busy = left <= 0 || (last && now - last.ts < 60_000 && now - due < busyFor);
   const R = 30, C = 2 * Math.PI * R;
   return (
-    <div className={`bt-card ${busy ? "busy" : ""}`}>
-      <div className="bt-ring">
+    <div className={`tm-card ${busy ? "busy" : ""}`}>
+      <div className="tm-ring">
         <svg viewBox="0 0 72 72" width="72" height="72">
-          <circle cx="36" cy="36" r={R} className="bt-track" />
-          <circle cx="36" cy="36" r={R} className="bt-fill" style={{ strokeDasharray: C, strokeDashoffset: C * (1 - frac) }} />
+          <circle cx="36" cy="36" r={R} className="tm-track" />
+          <circle cx="36" cy="36" r={R} className="tm-fill" style={{ strokeDasharray: C, strokeDashoffset: C * (1 - frac) }} />
         </svg>
-        <div className="bt-time">{busy ? <span className="bt-dot" /> : hms(left)}</div>
+        <div className="tm-time">{busy ? <span className="tm-dot" /> : hms(left)}</div>
       </div>
-      <div className="bt-text">
-        <div className="bt-title">{title}</div>
-        <div className="bt-sub">{busy ? t("выполняется…") : sub}</div>
-        <div className="bt-last">{last ? <>{t("последний")}: {last.text} · {ago(last.ts, t)}</> : t("ещё не было")}</div>
+      <div className="tm-text">
+        <div className="tm-title">{title}</div>
+        <div className="tm-sub">{busy ? t("выполняется…") : sub}</div>
+        <div className="tm-last">{last ? <>{t("последний")}: {last.text} · {ago(last.ts, t)}</> : t("ещё не было")}</div>
       </div>
     </div>
   );
@@ -198,14 +198,14 @@ function BotTimers({ t, rate }) {
   }, [rate, t]);
   const now = Date.now();
   return (
-    <div className="ana-panel bt-panel">
+    <div className="ana-panel tm-panel">
       <div className="ana-panel-head" style={{ marginBottom: 12 }}>
         <div>
           <div className="ana-panel-val" style={{ fontSize: 18 }}>{t("Боты")}</div>
           <div className="ana-panel-sub">{t("Обратный отсчёт до следующего запуска · по времени UTC · последнее — из событий в цепи")}</div>
         </div>
       </div>
-      <div className="bt-grid">
+      <div className="tm-grid">
         <BotCard t={t} title={t("Выкуп hood")} sub={t("раз в час, в :02")} due={nextHourly(now)} period={3_600_000} last={ev.hood} busyFor={120_000} />
         <BotCard t={t} title={t("Арена — выплата подиуму")} sub={t("раз в сутки, 00:25 UTC")} due={nextDaily(now)} period={86_400_000} last={ev.arena} busyFor={180_000} />
         <BotCard t={t} title={t("Дивиденды и сбор комиссий")} sub={t("каждые 5 минут")} due={nextFive(now)} period={300_000} last={ev.div} busyFor={90_000} />

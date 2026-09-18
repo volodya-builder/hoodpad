@@ -779,6 +779,8 @@ const EN = {
   "от текущей": "from current",
   "линия появится на графике": "the level shows on the chart",
   "Заявки": "Orders",
+  "выкуп": "buyback",
+  "Показывать выкупы казны на графике": "Show treasury buybacks on the chart",
   "Показывать уровни заявок на графике": "Show order levels on the chart",
   "Время": "Time",
   "Трейдер": "Trader",

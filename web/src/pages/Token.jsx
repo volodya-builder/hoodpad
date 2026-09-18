@@ -62,6 +62,7 @@ function smoothPath(xs, ys) {
 
 function MiniChart({ points, rate, marks, base = VIRTUAL_ETH }) {
   const [hover, setHover] = React.useState(null);
+  const { t } = useLang();
   const W = 680, H = 300, PADB = 30, PADT = 14, PADL = 8, PADR = 62;
   let en = false;
   try { en = localStorage.getItem("hood_lang") === "en"; } catch (e) { /* ignore */ }
@@ -108,9 +109,10 @@ function MiniChart({ points, rate, marks, base = VIRTUAL_ETH }) {
     }
   }
 
-  // счётчики событий для легенды
+  // выкупы казны: точки под графиком, переключатель (выбор запоминаем)
   const nBuy = (marks ?? []).filter((m) => m.kind === "buyback").length;
-  const nBurn = (marks ?? []).filter((m) => m.kind === "burned").length;
+  const [showMarks, setShowMarks] = useState(() => { try { return localStorage.getItem("hood_chart_marks") !== "0"; } catch (e) { return true; } });
+  const toggleMarks = (v) => { setShowMarks(v); try { localStorage.setItem("hood_chart_marks", v ? "1" : "0"); } catch (e) { /* ignore */ } };
 
   const onMove = (e) => {
     const box = e.currentTarget.getBoundingClientRect();
@@ -122,10 +124,12 @@ function MiniChart({ points, rate, marks, base = VIRTUAL_ETH }) {
 
   return (
     <div style={{ position: "relative" }}>
-      {(nBuy > 0 || nBurn > 0) && (
+      {nBuy > 0 && (
         <div className="ch-legend">
-          {nBuy > 0 && <span className="ch-chip"><i className="cbuy">BUY</i> {en ? "Treasury buyback" : "Выкуп казны"} {nBuy}</span>}
-          {nBurn > 0 && <span className="ch-chip"><i className="cburn">BRN</i> {en ? "Burn" : "Сжигание"} {nBurn}</span>}
+          <label className="lines-toggle marks-toggle" title={t("Показывать выкупы казны на графике")}>
+            <input type="checkbox" checked={showMarks} onChange={(e) => toggleMarks(e.target.checked)} />
+            <i className="mk-dot" />{t("Выкуп")} {nBuy}
+          </label>
         </div>
       )}
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", display: "block", marginTop: 8 }}
@@ -153,7 +157,7 @@ function MiniChart({ points, rate, marks, base = VIRTUAL_ETH }) {
         {!empty && (
           <circle cx={xs[xs.length - 1]} cy={Y(last.mcap)} r="4.5" fill="#dcff6e" stroke="#0b0b0b" strokeWidth="2" />
         )}
-        {(marks ?? []).map((mk, k) => {
+        {showMarks && (marks ?? []).filter((mk) => mk.kind === "buyback").map((mk, k) => {
           if (!pts.some((pp) => pp.ts)) return null;
           let best = -1, bd = Infinity;
           pts.forEach((pp, ii) => {
@@ -161,19 +165,10 @@ function MiniChart({ points, rate, marks, base = VIRTUAL_ETH }) {
           });
           if (best < 0) return null;
           const bx = X(best), by = Y(pts[best].mcap);
-          const isBurn = mk.kind === "burned";
-          const bw = 34;
           return (
             <g key={`mk${k}`}>
-              <line x1={bx} x2={bx} y1={by} y2={by - 22}
-                    stroke={isBurn ? "#c2502e" : "#c8f542"} strokeWidth="1.5" strokeOpacity=".8" />
-              <circle cx={bx} cy={by} r="3.5" fill={isBurn ? "#c2502e" : "#c8f542"} stroke="#0b0b0b" strokeWidth="1.5" />
-              <rect x={bx - bw / 2} y={by - 40} width={bw} height="18" rx="6"
-                    fill={isBurn ? "#c2502e" : "#c8f542"} />
-              <text x={bx} y={by - 27} textAnchor="middle" fontSize="10" fontWeight="800"
-                    fill={isBurn ? "#ffffff" : "#101100"}>
-                {isBurn ? "BRN" : "BUY"}
-              </text>
+              <circle cx={bx} cy={by + 12} r="3" fill="#c8f542" />
+              <text x={bx} y={by + 26} textAnchor="middle" fontSize="9" fill="#c8f542" fillOpacity=".85">{t("выкуп")}</text>
             </g>
           );
         })}
