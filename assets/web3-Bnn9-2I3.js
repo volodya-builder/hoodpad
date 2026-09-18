@@ -1,0 +1,1 @@
+import{h as e}from"./web3-OYTT3uAX.js";export{e as publicClient};
