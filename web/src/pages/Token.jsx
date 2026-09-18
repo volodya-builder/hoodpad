@@ -218,7 +218,7 @@ function readTokenCache(addr) {
   // (имя, цена, резерв, картинка). Остального нет — придёт с сетью.
   const t = cachedToken(addr);
   if (!t || !t.pool) return null;
-  return { pool: t.pool, name: t.name, symbol: t.symbol, uri: "", price: t.price ?? 0n, sold: t.sold ?? 0n,
+  return { token: String(addr).toLowerCase(), pool: t.pool, name: t.name, symbol: t.symbol, uri: "", price: t.price ?? 0n, sold: t.sold ?? 0n,
            cap: t.cap ?? 0n, reserve: t.reserve ?? 0n, graduated: !!t.graduated, migrated: false, creator: t.creator || "",
            balance: 0n, walletEth: 0n, walletQuote: 0n, q: t.q ? { virt: 0, ...t.q } : null, divBps: t.divBps || 0, zapOk: false,
            _meta: t.meta || {} };
@@ -233,8 +233,8 @@ function writeTokenCache(addr, d) {
 // ---- кэш истории сделок: график и лента рисуются сразу, без секунды
 // «пустого» графика, пока идут события (просьба владельца 15.09.2026).
 // Храним последние 150 сделок и 400 точек, не больше 15 монет (LRU).
-const HIST_CACHE = "hood_hist_v1_";
-const HIST_IDX = "hood_hist_idx";
+const HIST_CACHE = "hood_hist_v2_"; // v2: v1 мог хранить сделки чужой монеты (18.09.2026)
+const HIST_IDX = "hood_hist_idx2";
 function readHistCache(addr) {
   if (!addr) return null;
   try {
@@ -282,9 +282,16 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   // последовательных обращений к RPC — «Загружаю…» на пару секунд (просьба
   // владельца 15.09.2026: открываться сразу). Балансы кошелька в кэш не
   // пишем — они у каждого свои.
-  const [data, setData] = useState(() => readTokenCache(tokenAddress));
+  // Какая монета открыта сейчас — для проверок после await: ответ сети о
+  // прошлой монете не должен попасть на страницу (и в кэш) новой. 18.09.2026:
+  // при переходе TSLA → GOOGL сделки TSLA рисовались у GOOGL и оседали в её кэше.
+  const curTok = useRef(String(tokenAddress || "").toLowerCase());
+  curTok.current = String(tokenAddress || "").toLowerCase();
+  const sameTok = (d) => !!d && (!d.token || d.token === String(tokenAddress || "").toLowerCase());
+  const [data, setData] = useState(() => { const c = readTokenCache(tokenAddress); return c && (!c.token || c.token === String(tokenAddress || "").toLowerCase()) ? c : null; });
   useEffect(() => { // смена монеты — её кэш (или пусто), старые цифры не показываем
-    const c = readTokenCache(tokenAddress);
+    const c0 = readTokenCache(tokenAddress);
+    const c = c0 && (!c0.token || c0.token === String(tokenAddress || "").toLowerCase()) ? c0 : null;
     setData(c); setMeta(c?._meta || parseMeta(c?.uri || "")); setError("");
   }, [tokenAddress]);
   // Курс валюты кривой в долларах — для монет за AAPL/USDG. У ETH-монет 0.
@@ -669,7 +676,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           ? publicClient.readContract({ address: ZAP_ADDRESS, abi: zapAbi, functionName: "supported", args: [tokenAddress] }).catch(() => false)
           : Promise.resolve(false),
       ]);
-    const next = { pool, name, symbol, uri, price, sold, cap, reserve, graduated, migrated, creator, balance, walletEth, walletQuote, q, divBps, zapOk };
+    const next = { token: String(tokenAddress).toLowerCase(), pool, name, symbol, uri, price, sold, cap, reserve, graduated, migrated, creator, balance, walletEth, walletQuote, q, divBps, zapOk };
+    if (curTok.current !== next.token) return; // пока читали — открыли другую монету
     setData(next);
     writeTokenCache(tokenAddress, next);
     setMeta(parseMeta(uri)); // нормализует мусор: null/массив/числа не роняют страницу
@@ -683,7 +691,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
 
   // trades + chart from on-chain events; treasury/creator extras
   const loadExtras = useCallback(async () => {
-    if (!data?.pool) return;
+    if (!data?.pool || !sameTok(data)) return; // data ещё от прошлой монеты — её пул не наш
     // Монета за валюту: ждём виртуал из сети — без него сделки считались бы
     // как у ETH-монеты (1.625) и график врал в разы.
     if (data.q && !(data.q.virt > 0)) return;
@@ -717,6 +725,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         h.now = Number(latestB.timestamp) * 1000;
       } catch (e) { /* график останется в режиме «всё время» */ }
     }
+    if (curTok.current !== String(tokenAddress).toLowerCase()) return; // ответ пришёл уже на другой странице
     setHistory(h);
     writeHistCache(tokenAddress, h);
     setExtra((x) => ({ ...x, creatorFees, treasuryOwner, treasuryHeld, burned }));
