@@ -69,8 +69,10 @@ jobs:
             node bot/dividends/dividends.mjs --run > last-run.log 2>&1 || echo "прогон $N завершился с ошибкой"
             cat last-run.log
             [ $(date -u +%s) -ge "$END" ] && break
-            T0=$(date -u +%s)
-            while [ $(( $(date -u +%s) - T0 )) -lt "$EVERY" ]; do
+            # следующий полный прогон — на ближайшей круглой отметке (…:00, :05, :10 UTC),
+            # чтобы таймер в админке совпадал с ботом (18.09.2026)
+            NEXT=$(( ( $(date -u +%s) / EVERY + 1 ) * EVERY ))
+            while [ $(date -u +%s) -lt "$NEXT" ]; do
               sleep 30
               node bot/dividends/dividends.mjs --run --migrate-only || echo "проверка миграций завершилась с ошибкой"
             done
