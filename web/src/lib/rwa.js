@@ -211,8 +211,24 @@ export const RWA_TOKENS = [
 // Популярные тикеры — показываются первыми в форме
 export const RWA_POPULAR = ["NVDA", "AAPL", "TSLA", "MSFT", "AMZN", "GOOGL", "META", "COIN", "MSTR", "PLTR", "SPY", "QQQ", "GME", "AMC", "HIMS", "RDDT", "SPCX", "CRCL", "DJT", "GLD"];
 
-// Логотипы компаний (parqet CDN, покрывает и ETF); фолбэк — скрыть картинку
-export const stockLogo = (sym) => `https://assets.parqet.com/logos/symbol/${sym}?format=png&size=64`;
+// Логотипы крипто-валют кривой (USDG, USDe, WETH…): у parqet их нет —
+// берём из реестра Trust Wallet (GitHub raw). cbBTC — значок биткоина
+// (у Trust Wallet нет cbBTC), TAO пока без логотипа (кружок с буквами).
+const TW = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains";
+export const CRYPTO_LOGOS = {
+  USDG: `${TW}/ethereum/assets/0xe343167631d89B6Ffc58B88d6b7fB0228795491D/logo.png`,
+  USDE: `${TW}/ethereum/assets/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3/logo.png`,
+  WETH: `${TW}/ethereum/assets/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/logo.png`,
+  ETH: `${TW}/ethereum/info/logo.png`,
+  LINK: `${TW}/ethereum/assets/0x514910771AF9Ca656af840dff83E8264EcF986CA/logo.png`,
+  PENDLE: `${TW}/ethereum/assets/0x808507121B80c02388fAd14726482e061B8da827/logo.png`,
+  VIRTUAL: `${TW}/base/assets/0x0b3e328455c4059EEb9e3f84b5543F74E24e7E1b/logo.png`,
+  CBBTC: `${TW}/bitcoin/info/logo.png`,
+};
+
+// Логотипы компаний (parqet CDN, покрывает и ETF); крипта — из CRYPTO_LOGOS;
+// фолбэк — кружок с буквами тикера
+export const stockLogo = (sym) => CRYPTO_LOGOS[String(sym).toUpperCase()] || `https://assets.parqet.com/logos/symbol/${sym}?format=png&size=64`;
 
 // Значки сетей (DefiLlama icons)
 export const CHAIN_LOGOS = {
