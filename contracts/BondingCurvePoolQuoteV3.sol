@@ -70,6 +70,7 @@ contract BondingCurvePoolQuoteV3 is ReentrancyGuard, OpeningTax {
     event Sell(address indexed seller, uint256 tokensIn, uint256 quoteOut, uint256 fee);
     event Graduated(uint256 quoteReserve, uint256 dexTokenReserve);
     event Migrated(address indexed migrator, uint256 quoteAmount, uint256 tokenAmount);
+    event MigrationDeferred();
     event FeesClaimed(address indexed to, uint256 amount, bool isCreator);
     event Dividend(uint256 amount);
 
@@ -212,6 +213,10 @@ contract BondingCurvePoolQuoteV3 is ReentrancyGuard, OpeningTax {
         emit Buy(recipient, m.quoteIn, tokensOut, m.fee + m.tax);
         if (willGraduate) {
             emit Graduated(quoteReserve, totalSupply - saleCap);
+            // Как у Pons: на DEX в той же покупке; сорвалось — доделает migrate()
+            try this.migrateSelf() {} catch {
+                emit MigrationDeferred();
+            }
         }
     }
 
@@ -285,6 +290,16 @@ contract BondingCurvePoolQuoteV3 is ReentrancyGuard, OpeningTax {
     // ------------------------------------------------------------- migration
 
     function migrate() external nonReentrant {
+        _migrate();
+    }
+
+    /// @dev Вызов из buy() той же транзакции; только сам контракт.
+    function migrateSelf() external {
+        if (msg.sender != address(this)) revert NotAuthorized();
+        _migrate();
+    }
+
+    function _migrate() internal {
         if (!graduated) revert NotGraduated();
         if (migrated) revert AlreadyMigrated();
         migrated = true;

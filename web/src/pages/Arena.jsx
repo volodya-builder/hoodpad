@@ -62,6 +62,37 @@ function Spark({ trades, pool, from }) {
   return <svg className={`lt-spark ${up ? "up" : "down"}`} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none"><path d={d} /></svg>;
 }
 
+// Строка списка — компонент уровня модуля, не внутри Arena: страница
+// перерисовывается каждую секунду (таймер), а компонент, объявленный внутри,
+// каждый раз «новый» для React — строки пересоздавались целиком, и на телефоне
+// логотипы мерцали (18.09.2026).
+const Row = React.memo(function Row({ p, i, trend = true, right, sub, dim, podium, st, day0, t, D, mcapOf }) {
+  // монета за валюту: капа через курс валюты, а не ETH
+  const qPrice = useQuoteUsd(p.q?.addr);
+  const mcap = p.q ? Number(formatUnits(p.price, p.q.dec)) * 1e9 * qPrice : mcapOf(p);
+  return (
+  <a className={`lt-row ${dim ? "dim" : ""} ${podium ? `podium podium-${podium}` : ""}`} href={`#/token/${p.token}`}>
+    <span className="lt-rank">{i != null ? i + 1 : ""}</span>
+    <Logo src={p.meta?.image} />
+    <span className="lt-tok">
+      <span className="lt-name">{p.name || p.symbol} <em>${p.symbol}</em>
+        {p.q && <em className="lt-q" title={p.divBps > 0 ? t("дивиденды холдерам с каждой сделки") : t("валюта курвы")}><QuoteLogo q={p.q} size={14} withSym />{p.divBps > 0 ? ` · ${p.divBps / 100}%` : ""}</em>}
+      </span>
+      <span className="lt-sub">
+        {p.creator && <Who addr={p.creator} size={14} />}
+        {p.creator && p.createdAt ? " · " : ""}
+        {p.createdAt ? timeAgo(p.createdAt) : ""}
+        {sub}
+      </span>
+    </span>
+    <span className="lt-trend">{trend && st ? <Spark trades={st.trades} pool={p.pool} from={day0} /> : null}</span>
+    <span className="lt-num">{p.q && !(qPrice > 0) ? "…" : usd(mcap)}</span>
+    <span className="lt-num">{D(p.score ?? p.dayVol ?? 0)}</span>
+    <span className="lt-st">{right}</span>
+  </a>
+  );
+});
+
 export default function Arena() {
   const [potHi, setPotHi] = useState(null); // наведённый сегмент подиума (0..2); состояние живёт здесь, в Arena, — не в useTick
   const { t } = useLang();
@@ -81,6 +112,7 @@ export default function Arena() {
   const potSub = pot === null ? "" : E(pot.ethEq ?? pot.eth);
   const mcapOf = (p) => Number(formatEther(p.price)) * 1e9 * rate;
   const day0 = dayStart();
+  const rowCtx = { st, day0, t, D, mcapOf };
   const nextCp = st ? (st.nextCheckpoint ?? day0 + 86_400_000) : null;
 
   const tabs = [
@@ -90,32 +122,6 @@ export default function Arena() {
     ["rules", t("Правила")],
   ];
 
-  const Row = ({ p, i, trend = true, right, sub, dim, podium }) => {
-    // монета за валюту: капа через курс валюты, а не ETH
-    const qPrice = useQuoteUsd(p.q?.addr);
-    const mcap = p.q ? Number(formatUnits(p.price, p.q.dec)) * 1e9 * qPrice : mcapOf(p);
-    return (
-    <a className={`lt-row ${dim ? "dim" : ""} ${podium ? `podium podium-${podium}` : ""}`} href={`#/token/${p.token}`}>
-      <span className="lt-rank">{i != null ? i + 1 : ""}</span>
-      <Logo src={p.meta?.image} />
-      <span className="lt-tok">
-        <span className="lt-name">{p.name || p.symbol} <em>${p.symbol}</em>
-          {p.q && <em className="lt-q" title={p.divBps > 0 ? t("дивиденды холдерам с каждой сделки") : t("валюта курвы")}><QuoteLogo q={p.q} size={14} withSym />{p.divBps > 0 ? ` · ${p.divBps / 100}%` : ""}</em>}
-        </span>
-        <span className="lt-sub">
-          {p.creator && <Who addr={p.creator} size={14} />}
-          {p.creator && p.createdAt ? " · " : ""}
-          {p.createdAt ? timeAgo(p.createdAt) : ""}
-          {sub}
-        </span>
-      </span>
-      <span className="lt-trend">{trend && st ? <Spark trades={st.trades} pool={p.pool} from={day0} /> : null}</span>
-      <span className="lt-num">{p.q && !(qPrice > 0) ? "…" : usd(mcap)}</span>
-      <span className="lt-num">{D(p.score ?? p.dayVol ?? 0)}</span>
-      <span className="lt-st">{right}</span>
-    </a>
-    );
-  };
 
   return (
     <>
@@ -173,7 +179,7 @@ export default function Arena() {
             <div className="lt-h"><span /><span /><span>{t("Токен")}</span><span /><span className="r">{t("Капа")}</span><span className="r">{t("Очки боя")}</span><span className="r">{t("День")}</span></div>
             {hof.map(({ day, champion: c }) => {
               const d = new Date(day);
-              return <Row key={day} p={c} trend={false} right={<span className="dim">{d.getDate()} {t(MONTHS[d.getMonth()])}</span>} />;
+              return <Row key={day} {...rowCtx} p={c} trend={false} right={<span className="dim">{d.getDate()} {t(MONTHS[d.getMonth()])}</span>} />;
             })}
           </div>
         );
@@ -185,7 +191,7 @@ export default function Arena() {
           <div className="lt">
             <div className="lt-h"><span /><span /><span>{t("Токен")}</span><span /><span className="r">{t("Капа")}</span><span className="r">{t("Очки")}</span><span className="r">{t("Побед")}</span></div>
             {ga.table.map((row, i) => (
-              <Row key={row.token.token} p={{ ...row.token, score: row.points + (row.pendingPoints || 0) }} i={i} trend={false} right={row.wins} />
+              <Row key={row.token.token} {...rowCtx} p={{ ...row.token, score: row.points + (row.pendingPoints || 0) }} i={i} trend={false} right={row.wins} />
             ))}
           </div>
         );
@@ -243,10 +249,10 @@ export default function Arena() {
                 : danger
                   ? <span className="lt-tag bad">{t("выбывает")} <span className="mono">{clock(nextCp)}</span></span>
                   : i === 0 ? <span className="lt-tag gold">{t("лидер")}</span> : null;
-              return <Row key={p.token} p={p} i={i} right={right} podium={i < 3 ? i + 1 : 0} />;
+              return <Row key={p.token} {...rowCtx} p={p} i={i} right={right} podium={i < 3 ? i + 1 : 0} />;
             })}
             {st.eliminated.slice().reverse().map(({ token: p, at }) => (
-              <Row key={p.token} p={p} dim
+              <Row key={p.token} {...rowCtx} p={p} dim
                    right={<span className="dim">{t("выбыл")} {new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>} />
             ))}
           </div>

@@ -101,7 +101,8 @@ before(async () => {
 });
 after(async () => {
   // вернуть майнер и сдвинуть часы вперёд, чтобы следующие файлы не упёрлись в прошлое
-  await rpc("evm_setTime", [(T0 + 1000) * 1000]);
+  const last = await pub.getBlock();
+  await rpc("evm_setTime", [(Number(last.timestamp) + 1000) * 1000]);
   await rpc("miner_start");
 });
 
@@ -235,8 +236,14 @@ test("заполнение кривой внутри окна налога: сд
   const tax = one(rc, poolAbi, "OpeningTaxPaid");
   assert.equal(await read(pool, "graduated"), true);
   assert.equal(await read(pool, "tokensSold"), await read(pool, "saleCap"));
-  const reserve = await read(pool, "ethReserve");
+  // как у Pons: ликвидность уехала на DEX в той же покупке
+  assert.equal(await read(pool, "migrated"), true, "мигрировала в той же транзакции");
+  assert.ok(one(rc, poolAbi, "Migrated"), "событие Migrated в покупке");
+  assert.equal(events(rc, poolAbi, "MigrationDeferred").length, 0);
+  const reserve = one(rc, poolAbi, "Graduated").args.ethReserve;
   assert.ok(reserve >= E("6.5") && reserve <= E("6.5") + 100n, `резерв 6.5 ETH (${reserve})`);
+  assert.equal(await read(ethMigrator, "lastEthAmount"), reserve, "весь резерв ушёл мигратору");
+  assert.equal(await read(pool, "ethReserve"), 0n);
   // взяли ровно столько, сколько нужно: gross = ethIn / (0.75 * 0.99), остальное вернули
   const gasCost = rc.gasUsed * rc.effectiveGasPrice;
   const spent = before - (await pub.getBalance({ address: t1.address })) - gasCost;
@@ -310,6 +317,8 @@ test("монета за валюту: налог с полной суммы, д�
   const sb = await read(stock, "balanceOf", [t1.address]);
   const g = await writeAt(T0 + 701, t1, p2, "buy", [E("500"), 0n, t1.address]); // 25% налога
   assert.equal(await read(p2, "graduated"), true);
+  assert.equal(await read(p2, "migrated"), true, "на Uniswap в той же покупке");
+  assert.ok(one(g, ART("UniswapV3MigratorQuote").abi, "LiquidityLocked"), "ликвидность заперта в покупке");
   const spent = sb - (await read(stock, "balanceOf", [t1.address]));
   const gb = one(g, qpAbi, "Buy"), gd = one(g, qpAbi, "Dividend");
   assert.equal(spent, gb.args.quoteIn + gb.args.fee + gd.args.amount, "списано = кривая + площадка + дивиденды");
@@ -356,14 +365,15 @@ test("казна V3: выкуп градуировавшей ETH-монеты н
   const burned1 = await read(token, "balanceOf", [DEAD]);
   assert.ok(burned1 > 0n);
 
-  // на DEX до градации — пула ещё нет
-  assert.equal(await revertsWith(operator, treasury, "buybackDex", [token.address, E("0.1"), 0n, "x"]), "NoRoute");
+  // на DEX до градации нельзя: ликвидность ещё на кривой (даже если кто-то создал чужой пул Uniswap)
+  assert.equal(await revertsWith(operator, treasury, "buybackDex", [token.address, E("0.1"), 0n, "x"]), "NotMigrated");
 
   // градация и миграция на настоящий Uniswap
-  await write(t1, pool, "buy", [0n, t1.address], E("10"));
+  const mrc = await write(t1, pool, "buy", [0n, t1.address], E("10"));
   assert.equal(await read(pool, "graduated"), true);
-  const mrc = await write(t1, pool, "migrate", []);
+  assert.equal(await read(pool, "migrated"), true, "миграция в покупке");
   assert.ok(one(mrc, migrator.abi, "LiquidityLocked"), "ликвидность заперта");
+  assert.equal(await revertsWith(t1, pool, "migrate", []), "AlreadyMigrated");
   assert.equal(await revertsWith(operator, treasury, "buybackEth", [token.address, E("0.1"), 0n, "x"]), "TradingClosed", "кривая закрыта");
 
   // после градации: покупка на DEX + сжигание
@@ -390,4 +400,40 @@ test("казна V3: выкуп градуировавшей ETH-монеты н
   assert.equal(await revertsWith(operator, treasury, "buybackDex", [weth.address, E("0.1"), 0n, "x"]), "NotPlatformToken");
   assert.equal(await revertsWith(t1, treasury, "buybackDex", [token.address, E("0.1"), 0n, "x"]), "NotOperator");
   assert.equal(await revertsWith(operator, treasury, "buybackDex", [token.address, E("5"), 0n, "x"]), "bad amount");
+});
+
+test("миграция сорвалась в покупке — покупка проходит, деньги на кривой, migrate() доделывает", async () => {
+  // мигратор без функции migrate (любой контракт) — перенос откатится, покупка нет
+  const bad = await deploy(deployer, "MockStock", ["Bad", "BAD"]);
+  const f = await deploy(deployer, "LaunchpadFactoryV3", [deployer.address, bad.address]);
+  await write(deployer, f, "initConfig", [deployer.address, bad.address, ZERO, 100, 7000]);
+  const rc0 = await write(creator, f, "createToken", ["Coin", "COIN", "", creator.address, []]);
+  const ev = one(rc0, f.abi, "TokenCreated");
+  const pool = { address: ev.args.pool, abi: poolAbi };
+  const token = { address: ev.args.token, abi: tokenAbi };
+  await rpc("evm_increaseTime", [10]); await rpc("evm_mine", []);
+
+  const rc = await write(t1, pool, "buy", [0n, t1.address], E("10"));
+  assert.equal(rc.status, "success", "покупка прошла, хотя перенос сорвался");
+  assert.equal(await read(pool, "graduated"), true);
+  assert.equal(await read(pool, "migrated"), false, "не мигрировала");
+  assert.equal(events(rc, poolAbi, "MigrationDeferred").length, 1, "событие MigrationDeferred");
+  assert.equal(events(rc, poolAbi, "Migrated").length, 0);
+  assert.ok((await read(token, "balanceOf", [t1.address])) > 0n, "монеты у покупателя");
+  const reserve = await read(pool, "ethReserve");
+  assert.ok(reserve >= E("6.5"), "резерв остался на кривой");
+  await assertSolvent(pool);
+  assert.equal(await revertsWith(t1, pool, "buy", [0n, t1.address], E("1")), "TradingClosed");
+  // migrateSelf снаружи не вызвать
+  assert.equal(await revertsWith(t1, pool, "migrateSelf", []), "NotAuthorized");
+
+  // владелец чинит мигратор (таймлок 48 ч), бот зовёт migrate()
+  await write(deployer, f, "proposeConfig", [deployer.address, ethMigrator.address, ZERO, 100, 7000]);
+  await rpc("evm_increaseTime", [48 * 3600 + 1]); await rpc("evm_mine", []);
+  await write(deployer, f, "applyConfig", []);
+  const m = await write(t2, pool, "migrate", []);
+  assert.ok(one(m, poolAbi, "Migrated"), "доделали migrate()");
+  assert.equal(await read(pool, "migrated"), true);
+  assert.equal(await read(pool, "ethReserve"), 0n);
+  assert.equal(await read(ethMigrator, "lastEthAmount"), reserve);
 });

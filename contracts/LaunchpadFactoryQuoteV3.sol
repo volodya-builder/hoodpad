@@ -70,13 +70,30 @@ contract LaunchpadFactoryQuoteV3 is Ownable2Step {
 
     /// @notice Потолок налога в пользу холдеров. Выбирает создатель: 0–3%.
     uint16 public constant MAX_DIV_BPS = 300;
+    error ZeroAddr();
+    error ZeroVirtual();
+    error BadName();
+    error BadSymbol();
+    error BadUri();
+    error NotConfigured();
+    error QuoteNotAllowed();
+    error DivTooHigh();
+    error AddrMismatch();
+    error NoPending();
+    error Timelock();
+    error Expired();
+    error AlreadyLaunched();
+    error MigratorNoCode();
+    error FeeTooHigh();
+    error ShareTooHigh();
+
     event QuoteSet(address indexed quote, bool allowed, uint256 virtualQuote, uint256 creatorBuyCap);
     event ConfigUpdated(address treasury, address migrator, uint16 feeBps, uint16 creatorFeeShareBps);
     event ConfigProposed(address treasury, address migrator, uint16 feeBps, uint16 creatorFeeShareBps, uint256 readyAt);
     event ConfigCancelled();
 
     constructor(address treasury_, address migrator_) Ownable(msg.sender) {
-        require(treasury_ != address(0) && migrator_ != address(0), "zero addr");
+        if (!(treasury_ != address(0) && migrator_ != address(0))) revert ZeroAddr();
         treasury = treasury_;
         migrator = migrator_;
     }
@@ -88,8 +105,8 @@ contract LaunchpadFactoryQuoteV3 is Ownable2Step {
         external
         onlyOwner
     {
-        require(quote != address(0), "zero quote");
-        if (allowed) require(virtualQuote_ > 0, "zero virtual");
+        if (!(quote != address(0))) revert ZeroAddr();
+        if (allowed) if (!(virtualQuote_ > 0)) revert ZeroVirtual();
         bool existed = quoteConfig[quote].virtualQuote != 0 || quoteConfig[quote].allowed;
         quoteConfig[quote] = QuoteConfig({ allowed: allowed, virtualQuote: virtualQuote_, creatorBuyCap: creatorBuyCap_ });
         if (!existed && allowed) allowedQuotes.push(quote);
@@ -119,12 +136,12 @@ contract LaunchpadFactoryQuoteV3 is Ownable2Step {
         uint16 divBps,
         address[] calldata exempt
     ) external returns (address tokenAddr, address poolAddr) {
-        require(bytes(name).length > 0 && bytes(name).length <= MAX_NAME_LEN, "name len");
-        require(bytes(symbol).length > 0 && bytes(symbol).length <= MAX_SYMBOL_LEN, "symbol len");
-        require(bytes(metadataURI).length <= MAX_URI_LEN, "uri len");
-        require(configured, "not configured");
-        require(quoteConfig[quote].allowed, "quote not allowed");
-        require(divBps <= MAX_DIV_BPS, "div>3%");
+        if (!(bytes(name).length > 0 && bytes(name).length <= MAX_NAME_LEN)) revert BadName();
+        if (!(bytes(symbol).length > 0 && bytes(symbol).length <= MAX_SYMBOL_LEN)) revert BadSymbol();
+        if (!(bytes(metadataURI).length <= MAX_URI_LEN)) revert BadUri();
+        if (!(configured)) revert NotConfigured();
+        if (!(quoteConfig[quote].allowed)) revert QuoteNotAllowed();
+        if (!(divBps <= MAX_DIV_BPS)) revert DivTooHigh();
         address creator_ = creatorWallet == address(0) ? msg.sender : creatorWallet;
         return _launch(name, symbol, metadataURI, quote, creator_, divBps, exempt);
     }
@@ -143,7 +160,7 @@ contract LaunchpadFactoryQuoteV3 is Ownable2Step {
     ) internal returns (address tokenAddr, address poolAddr) {
         poolAddr = _newPool(quote, creator_, divBps, exempt);
         tokenAddr = _newToken(name, symbol, metadataURI, poolAddr, quote, divBps);
-        require(tokenAddr == address(BondingCurvePoolQuoteV3(poolAddr).token()), "mismatch");
+        if (!(tokenAddr == address(BondingCurvePoolQuoteV3(poolAddr).token()))) revert AddrMismatch();
 
         allTokens.push(tokenAddr);
         poolOf[tokenAddr] = poolAddr;
@@ -221,9 +238,9 @@ contract LaunchpadFactoryQuoteV3 is Ownable2Step {
 
     function applyConfig() external onlyOwner {
         PendingConfig memory p = pendingConfig;
-        require(p.readyAt != 0, "no pending");
-        require(block.timestamp >= p.readyAt, "timelock");
-        require(block.timestamp <= p.readyAt + CONFIG_GRACE, "expired");
+        if (!(p.readyAt != 0)) revert NoPending();
+        if (!(block.timestamp >= p.readyAt)) revert Timelock();
+        if (!(block.timestamp <= p.readyAt + CONFIG_GRACE)) revert Expired();
         treasury = p.treasury;
         migrator = p.migrator;
         feeBps = p.feeBps;
@@ -241,7 +258,7 @@ contract LaunchpadFactoryQuoteV3 is Ownable2Step {
         external
         onlyOwner
     {
-        require(allTokens.length == 0, "launched");
+        if (!(allTokens.length == 0)) revert AlreadyLaunched();
         _checkConfig(treasury_, migrator_, feeBps_, creatorFeeShareBps_);
         treasury = treasury_;
         migrator = migrator_;
@@ -254,10 +271,10 @@ contract LaunchpadFactoryQuoteV3 is Ownable2Step {
     /// @dev Общие проверки: мигратор обязан быть контрактом (пустой адрес
     ///      заморозил бы градацию всех монет).
     function _checkConfig(address treasury_, address migrator_, uint16 feeBps_, uint16 creatorFeeShareBps_) internal view {
-        require(treasury_ != address(0) && migrator_ != address(0), "zero addr");
-        require(migrator_.code.length > 0, "no code");
-        require(feeBps_ <= 500, "fee>5%");
-        require(creatorFeeShareBps_ <= 10_000, "share>100%");
+        if (!(treasury_ != address(0) && migrator_ != address(0))) revert ZeroAddr();
+        if (!(migrator_.code.length > 0)) revert MigratorNoCode();
+        if (!(feeBps_ <= 500)) revert FeeTooHigh();
+        if (!(creatorFeeShareBps_ <= 10_000)) revert ShareTooHigh();
     }
 
     // ------------------------------------------------------------- views

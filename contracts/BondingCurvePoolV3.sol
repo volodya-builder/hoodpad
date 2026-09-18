@@ -56,6 +56,8 @@ contract BondingCurvePoolV3 is ReentrancyGuard, OpeningTax {
     event Sell(address indexed seller, uint256 tokensIn, uint256 ethOut, uint256 fee);
     event Graduated(uint256 ethReserve, uint256 dexTokenReserve);
     event Migrated(address indexed migrator, uint256 ethAmount, uint256 tokenAmount);
+    /// @notice Перенос на DEX в покупке-градации не прошёл — доделает migrate().
+    event MigrationDeferred();
     event FeesClaimed(address indexed to, uint256 amount, bool isCreator);
 
     error TradingClosed();
@@ -192,6 +194,13 @@ contract BondingCurvePoolV3 is ReentrancyGuard, OpeningTax {
         emit Buy(recipient, ethIn, tokensOut, fee + tax);
         if (willGraduate) {
             emit Graduated(ethReserve, totalSupply - saleCap);
+            // Как у Pons: ликвидность уезжает на DEX в той же покупке, что
+            // добила кривую, — без паузы. Если перенос сорвался (цена в пуле
+            // Uniswap сбита сильнее допуска мигратора), покупку не ломаем:
+            // деньги остаются на кривой, migrate() дозовёт бот или кто угодно.
+            try this.migrateSelf() {} catch {
+                emit MigrationDeferred();
+            }
         }
     }
 
@@ -228,6 +237,17 @@ contract BondingCurvePoolV3 is ReentrancyGuard, OpeningTax {
     // ------------------------------------------------------------- migration
 
     function migrate() external nonReentrant {
+        _migrate();
+    }
+
+    /// @dev Вызов из buy() той же транзакции (см. там). Только сам контракт;
+    ///      замок nonReentrant уже держит buy(), поэтому здесь его нет.
+    function migrateSelf() external {
+        if (msg.sender != address(this)) revert NotAuthorized();
+        _migrate();
+    }
+
+    function _migrate() internal {
         if (!graduated) revert NotGraduated();
         if (migrated) revert AlreadyMigrated();
         migrated = true;

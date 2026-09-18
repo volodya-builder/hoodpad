@@ -72,7 +72,7 @@ const EN = {
   "на выкуп": "to buyback",
   "Токен градуировал — торговля на DEX. Кривая закрыта.": "This token graduated — trading moved to the DEX. The curve is closed.",
   "Кривая заполнена! Кто угодно может запустить миграцию.": "The curve is full! Anyone can trigger the migration.",
-  "Кривая заполнена. Переносим ликвидность на DEX — обычно это занимает меньше минуты.": "The curve is full. Moving liquidity to the DEX — this usually takes under a minute.",
+  "Кривая заполнена. Переносим ликвидность на DEX — секунды.": "The curve is full. Moving liquidity to the DEX — seconds.",
   "держателей": "holders",
   "Освободить от стартового налога": "Exempt from the opening tax",
   "Первые 5 секунд после запуска покупка облагается налогом 99% → 0 — это отсекает снайпер-ботов. Создатель освобождён всегда; сюда можно добавить до 32 адресов (команда, партнёры), по одному в строке.": "For the first 5 seconds after launch, buys are taxed 99% → 0 — this cuts off sniper bots. The creator is always exempt; add up to 32 more addresses here (team, partners), one per line.",
