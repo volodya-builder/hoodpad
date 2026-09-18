@@ -1,0 +1,18 @@
+{
+  "chainId": 4663,
+  "at": "2026-09-18T06:51:01.508Z",
+  "deployer": "0x53eB687F618A491B037818292Bc3427bD654F736",
+  "owner": "0x53eB687F618A491B037818292Bc3427bD654F736",
+  "operator": "0x4fC073049012c52c6B291E08D69D13b3a33d8B63",
+  "team": "0x0462C1Efe9CA880E901807d5386EBcc6705087b3",
+  "migrator": "0xe11727b682e86ced24ed0da2aa6c113ae30672f4",
+  "factory": "0x0a7233ae853dd4c2315dcc53ce7b8939aeb01107",
+  "migratorQ": "0xac360e752e9e12952e27f202d5814fa8c6220878",
+  "quoteFactory": "0x094ae4f59d855165a326bbb4773f674ef795751f",
+  "zap": "0x645a33ccc81b9cd8a0304c4d91064da6c6c4df57",
+  "arena": "0x26f83c7537346a925c311817ca5554db0f393609",
+  "hoodTreasury": "0xd55e3f8405a3af1d219eea0e5d69b56d3a0118ad",
+  "splitter": "0x5a8ce0ebf1496189a8313e71a091b9a48db2edef",
+  "routes": { "usdg": { "mid": "0x0000000000000000000000000000000000000000", "fee1": 100 }, "usde": { "mid": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168", "fee1": 100, "fee2": 500 } },
+  "startBlock": 66023560
+}
