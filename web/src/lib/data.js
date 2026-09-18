@@ -242,7 +242,7 @@ async function subgraphHasQuote() {
 /** Сделки монет за валюту переводим в ETH-эквивалент: аналитика и арена
  *  считают всё в ETH. Курс валюты — с обозревателя, ETH — как везде.
  *  Нет курса — сделка остаётся с eth = 0 (в объём не попадёт, но видна). */
-async function toEthEquivalent(rows) {
+export async function toEthEquivalent(rows) {
   const qrows = rows.filter((r) => r.quote);
   if (!qrows.length) return rows;
   const { quoteUsd, ethUsd, ethUsdCached } = await import("./price.js");

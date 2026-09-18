@@ -138,7 +138,7 @@ export async function dexTrades(pool, token, { otherDec = 18, fromBlock = FACTOR
     const ts = (ts0 + (Number(l.blockNumber) - minB) * avg) * 1000;
     const price = Number(formatUnits(priceFromSqrt(l.args.sqrtPriceX96, tokenIsToken0, otherDec), otherDec));
     trades.push({
-      side, addr, dex: true,
+      side, addr, dex: true, price,
       eth: Math.abs(Number(othAmt)) / D, tokens: Math.abs(Number(tokAmt)) / 1e18, fee: 0,
       block: l.blockNumber, tx: l.transactionHash, ts,
     });
@@ -209,3 +209,38 @@ export async function dexSell(walletClient, account, token, quoteAddr, tokensIn,
 }
 
 export const fmtDexEth = (v) => formatEther(v);
+
+// ---------------------------------------------------------------- для арены
+// Сделки Uniswap градуировавших монет в формате allTrades(): pool — адрес
+// КРИВОЙ (по нему арена группирует), quote/ethRaw — чтобы монеты за валюту
+// пересчитались в ETH тем же кодом, price — цена после сделки (ETH или валюта
+// за монету) для роста капитализации. Кэш 60 с.
+let _arenaDex = { v: null, t: 0, p: null };
+export async function dexTradesForArena(tokens) {
+  if (_arenaDex.v && Date.now() - _arenaDex.t < 60_000) return _arenaDex.v;
+  if (_arenaDex.p) return _arenaDex.p;
+  _arenaDex.p = (async () => {
+    const grads = (tokens || []).filter((t) => t.graduated && t.pool);
+    const out = [];
+    await Promise.all(grads.map(async (t) => {
+      try {
+        const dp = await dexPoolOf(t.token, t.q ? t.q.addr : null);
+        if (!dp) return;
+        const dec = t.q ? t.q.dec : 18;
+        const d = await dexTrades(dp, t.token, { otherDec: dec });
+        for (const tr of d.trades) {
+          out.push({
+            pool: String(t.pool).toLowerCase(), side: tr.side, addr: tr.addr,
+            eth: tr.eth, tokens: tr.tokens, fee: 0, ts: tr.ts, block: tr.block, tx: tr.tx,
+            quote: t.q ? String(t.q.addr).toLowerCase() : null,
+            ethRaw: String(BigInt(Math.round(tr.eth * 10 ** dec))), feeRaw: "0",
+            dex: true, price: tr.price,
+          });
+        }
+      } catch (e) { /* без DEX-сделок этой монеты */ }
+    }));
+    _arenaDex = { v: out, t: Date.now(), p: null };
+    return out;
+  })().catch((e) => { _arenaDex.p = null; throw e; });
+  return _arenaDex.p;
+}

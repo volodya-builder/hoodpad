@@ -191,7 +191,16 @@ export function useArena(enabled = true) {
     let alive = true;
     const pull = async () => {
       try {
-        const [tokens, trades] = await Promise.all([loadTokens(), allTrades()]);
+        const [tokens, trades0] = await Promise.all([loadTokens(), allTrades()]);
+        if (!alive) return;
+        // градуировавшие монеты: их сделки с Uniswap — в общий список (в ETH)
+        let trades = trades0;
+        try {
+          const { dexTradesForArena } = await import("./dex.js");
+          const { toEthEquivalent } = await import("./data.js");
+          const dx = await dexTradesForArena(tokens);
+          if (dx.length) { await toEthEquivalent(dx); trades = [...trades0, ...dx]; }
+        } catch (e) { /* без DEX-сделок */ }
         if (!alive) return;
         setSt(computeArena(tokens, trades));
         writeArenaCache(tokens, trades);
