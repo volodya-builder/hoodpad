@@ -10,18 +10,18 @@ import {BondingCurvePoolV3} from "./BondingCurvePoolV3.sol";
 ///         со стартовым налогом против снайперов (99% → 0 за пять секунд,
 ///         создатель и до 32 названных им адресов освобождены). Комиссия 1%,
 ///         доля создателя задаётся initConfig (7000 = 70%), остаток — в казну
-///         (сплиттер). Кривая: 1B сапплая, 800M на кривой, градация на 6.5 ETH
+///         (сплиттер). Кривая: 1B сапплая, 800M на кривой, градация на 4 ETH (18.09.2026: было 6.5, у Pons 4.2)
 ///         в навсегда запертую позицию DEX.
 contract LaunchpadFactoryV3 is Ownable2Step {
     // ------------------------------------------------------------- config
     uint256 public constant TOTAL_SUPPLY = 1_000_000_000e18;
     uint256 public constant SALE_CAP     =   800_000_000e18;
-    uint256 public constant VIRTUAL_ETH  = 1.625 ether; // -> graduates at 6.5 ETH
+    uint256 public constant VIRTUAL_ETH  = 1 ether; // -> graduates at 4 ETH (4 × virtual)
 
     /// @notice Потолок первой покупки создателя. Без него создатель забирал
     ///         сколь угодно большой мешок по стартовой цене и мог сливать его
     ///         в выкупы казны — то есть выкачивать общий призовой фонд.
-    uint256 public constant CREATOR_MAX_FIRST_BUY = 0.13 ether; // ~2% кривой
+    uint256 public constant CREATOR_MAX_FIRST_BUY = 0.08 ether; // ~2% кривой (4 ETH)
 
     /// @notice Лимиты метаданных: неограниченные строки ломают вёрстку
     ///         списков и раздувают кэш у каждого посетителя.

@@ -47,8 +47,8 @@ contract BondingCurvePoolV3 is ReentrancyGuard, OpeningTax {
     /// @notice Сколько стартового налога собрано за жизнь кривой.
     uint256 public openingTaxPaid;
 
-    /// @notice Потолок суммарных покупок создателя на этой кривой (~2% от 6.5 ETH).
-    uint256 public constant CREATOR_BUY_CAP = 0.13 ether;
+    /// @notice Потолок суммарных покупок создателя на этой кривой (~2% от 4 ETH).
+    uint256 public constant CREATOR_BUY_CAP = 0.08 ether;
     uint256 public creatorSpent;
 
     // ------------------------------------------------------------- events

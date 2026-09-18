@@ -7,7 +7,7 @@ import { timeAgo, loadTokens, useClock, useSupport, prefetchToken } from "../lib
 import { useLang } from "../lib/i18n.jsx";
 import { useFavs, toggleFav } from "../lib/favs.js";
 import { useArena } from "../lib/arena.js";
-import { FEATURES } from "../lib/config.js";
+import { FEATURES, GRADUATION_ETH } from "../lib/config.js";
 import { modelLogo, makerOf } from "../lib/models.mjs";
 import Who from "../components/Who.jsx";
 import QuoteLogo from "../components/QuoteLogo.jsx";
@@ -76,7 +76,7 @@ function TokenCard({ t, fav, onFav, cushion = 0 }) {
         <span className="mono addr-copy" title={tr("Скопировать адрес")} onClick={copyCA}>
           {t.token.slice(0, 6)}…{t.token.slice(-4)} {cp ? "✓" : "⧉"}
         </span>
-        <span>{t.createdAt ? timeAgo(t.createdAt) : q ? moneyEth(formatUnits(t.reserve, q.dec), qPrice, rate) : `${fmtEth(Number(formatEther(t.reserve)))} / 6.5 ETH`}</span>
+        <span>{t.createdAt ? timeAgo(t.createdAt) : q ? moneyEth(formatUnits(t.reserve, q.dec), qPrice, rate) : `${fmtEth(Number(formatEther(t.reserve)))} / ${GRADUATION_ETH} ETH`}</span>
       </div>
     </a>
   );

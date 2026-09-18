@@ -10,7 +10,7 @@ export default function About() {
   const steps = [
     [t("Запуск за секунды"), t("Имя, тикер, картинка — и токен уже в блокчейне.")],
     [t("Честная кривая"), t("Цена растёт по кривой. Без предпродаж и инсайдеров.")],
-    [t("Градация на DEX"), t("6.5 ETH — и токен на DEX с запертой ликвидностью.")],
+    [t("Градация на DEX"), t("4 ETH — и токен на DEX с запертой ликвидностью.")],
     [t("Комиссии работают"), t("1% с трейда: создателю, команде, в казну выкупа.")],
   ];
 
@@ -31,7 +31,7 @@ export default function About() {
       <div className="hero-chips">
         <span className="chip">{t("Комиссия запуска")} <b>0 ETH</b></span>
         <span className="chip">{t("Комиссия трейда")} <b>1%</b></span>
-        <span className="chip">{t("Градация")} <b>6.5 ETH</b></span>
+        <span className="chip">{t("Градация")} <b>4 ETH</b></span>
         <span className="chip">{t("Ликвидность")} <b>{t("Заперта навсегда")}</b></span>
       </div>
 

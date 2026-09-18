@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { parseEther, formatEther, parseUnits, decodeEventLog } from "viem";
 import { publicClient } from "../lib/web3.js";
 import { factoryAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi, zapAbi, feeSplitterAbi } from "../lib/abi.js";
-import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, FEATURES, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE, CREATOR_FEE_PCT } from "../lib/config.js";
+import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, FEATURES, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE, CREATOR_FEE_PCT, CREATOR_CAP_ETH, GRADUATION_ETH } from "../lib/config.js";
 import { useSplit, injectNewToken } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 import { useEthUsd, useQuoteUsd, moneyEth, ethOf, usdFine } from "../lib/price.js";
@@ -37,9 +37,8 @@ const SparkIcon = () => (
   </svg>
 );
 
-// Max developer buy: 5% of supply bought at launch.
-// gross ETH = (VIRT * s / (TOTAL - s)) / (1 - fee), s = 50M, VIRT = 1.625
-const MAX_DEV_BUY_ETH = 1.625 * 0.05e9 / 0.95e9 / 0.99; // ≈ 0.0864
+// Потолок покупки создателя при запуске — константа фабрики (CREATOR_MAX_FIRST_BUY, ~2% кривой).
+const MAX_DEV_BUY_ETH = CREATOR_CAP_ETH;
 
 /** Downscale an image file to a square data URL (kept small enough to live
  *  on-chain inside the token's metadata URI).
@@ -136,7 +135,7 @@ export default function Create({ wallet, onConnect }) {
   const moneyQ = (n) => moneyEth(n, quoteUsd, ethUsd);
   // Порог градации монеты за акцию задан в штуках акции (≈$15.7k на момент
   // включения), в ETH он плавает с курсами — показываем округлённо и с «≈»,
-  // чтобы не выглядело как «6.51» против ровных 6.5 у ETH-монет.
+  // чтобы не выглядело как «4.01» против ровных 4 у ETH-монет.
   const gradQ = (n) => { const e = ethOf(n, quoteUsd, ethUsd); return e == null ? "…" : `≈ ${e.toFixed(1)} ETH (${usdFine(e * ethUsd)})`; };
   const pickEth = () => { setQuote("ETH"); setQuoteAddr(""); setQuoteDec(18); };
   const quoteAllowed = quote === "ETH" || (QUOTE_LIVE && allowed.has(quoteAddr));
@@ -262,7 +261,7 @@ export default function Create({ wallet, onConnect }) {
     if (bytes(form.name.trim()) > 64) return setError(t("Название слишком длинное для контракта — укоротите (эмодзи и кириллица считаются за несколько знаков)."));
     if (bytes(form.symbol.trim()) > 12) return setError(t("Тикер слишком длинный для контракта — укоротите."));
     if (!symbolOk) return setError(t("Тикер: только буквы и цифры."));
-    if (quote === "ETH" && !buyOk) return setError(t("Покупка создателя ограничена {max} ETH (5% сапплая).").replace("{max}", MAX_DEV_BUY_ETH.toFixed(4)));
+    if (quote === "ETH" && !buyOk) return setError(t("Покупка создателя ограничена {max} ETH.").replace("{max}", String(MAX_DEV_BUY_ETH)));
     if (!walletOk) return setError(t("Кошелёк создателя: неверный адрес (нужен 0x… из 42 символов)."));
     if (!exemptOk) return setError(exemptList.length > 32 ? t("Освободить от стартового налога можно не больше 32 адресов.") : t("Освобождённые адреса: есть неверный адрес (нужен 0x… из 42 символов)."));
 
@@ -758,9 +757,9 @@ export default function Create({ wallet, onConnect }) {
                     .replace("{how}", ZAP_LIVE ? t("Платите ETH, одной транзакцией.") : t("Нужен {q} на кошельке и разрешение пулу.").replace("{q}", quote))
                 : t("Лимит покупки создателя задаёт фабрика для каждой валюты. Перебор откатит контракт."))
             : (buyOk
-                ? t("Макс {max} ETH · 5% сапплая. Исполняется в той же транзакции — защита от снайперов.")
-                : t("Больше лимита: максимум {max} ETH (5% сапплая).")
-              ).replace("{max}", MAX_DEV_BUY_ETH.toFixed(4))}
+                ? t("Макс {max} ETH (~2% кривой). Исполняется в той же транзакции, без стартового налога.")
+                : t("Больше лимита: максимум {max} ETH.")
+              ).replace("{max}", String(MAX_DEV_BUY_ETH))}
         </div>
 
         <div
@@ -834,7 +833,7 @@ export default function Create({ wallet, onConnect }) {
             {quote === "ETH" ? "ETH" : <><Logo cls="pv-qlogo" src={quoteIcon} />{quote}</>}
           </span></div>
           <div className="row"><span className="k">{t("Градация")}</span><span className="v">
-            {quote === "ETH" ? "6.5 ETH" : qcfg ? gradQ(qcfg.threshold) : "…"}
+            {quote === "ETH" ? `${GRADUATION_ETH} ETH` : qcfg ? gradQ(qcfg.threshold) : "…"}
           </span></div>
           {quote !== "ETH" && divBps > 0 && (
             <div className="row"><span className="k">{t("Дивиденды холдерам")}</span><span className="v">{divBps / 100}%</span></div>

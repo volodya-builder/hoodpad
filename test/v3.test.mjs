@@ -132,7 +132,7 @@ test("шкала налога по секундам: 99 / 25 / 3 / 0.4 / 0.05 / 
 // ---------------------------------------------------------------- ETH-пул
 let coin; // монета с покупкой создателя и освобождённым t2
 test("запуск: покупка создателя в той же транзакции без налога, список освобождённых", async () => {
-  coin = await launchEth(T0, [t2.address], E("0.1"));
+  coin = await launchEth(T0, [t2.address], E("0.05"));
   const { pool, token, rc } = coin;
   assert.equal(await read(pool, "taxExempt", [creator.address]), true, "создатель освобождён");
   assert.equal(await read(pool, "taxExempt", [t2.address]), true, "t2 освобождён");
@@ -143,7 +143,7 @@ test("запуск: покупка создателя в той же транз�
   assert.equal(await read(pool, "openingTaxPaid"), 0n);
   // комиссия 1% как обычно, налога нет
   const fees = (await read(pool, "protocolFeesAccrued")) + (await read(pool, "creatorFeesAccrued"));
-  assert.equal(fees, E("0.001"));
+  assert.equal(fees, E("0.0005"));
   assert.ok((await read(token, "balanceOf", [creator.address])) > 0n);
   await assertSolvent(pool);
 });
@@ -215,7 +215,7 @@ test("оценка quoteBuyFor учитывает налог получател�
 });
 
 test("продажа налогом не облагается даже в секунду запуска", async () => {
-  const { pool, token } = await launchEth(T0 + 200, [], E("0.1"));
+  const { pool, token } = await launchEth(T0 + 200, [], E("0.05"));
   const bal = await read(token, "balanceOf", [creator.address]);
   await writeAt(T0 + 200, creator, token, "approve", [pool.address, bal]);
   const rc = await writeAt(T0 + 200, creator, pool, "sell", [bal, 0n]);
@@ -241,7 +241,7 @@ test("заполнение кривой внутри окна налога: сд
   assert.ok(one(rc, poolAbi, "Migrated"), "событие Migrated в покупке");
   assert.equal(events(rc, poolAbi, "MigrationDeferred").length, 0);
   const reserve = one(rc, poolAbi, "Graduated").args.ethReserve;
-  assert.ok(reserve >= E("6.5") && reserve <= E("6.5") + 100n, `резерв 6.5 ETH (${reserve})`);
+  assert.ok(reserve >= E("4") && reserve <= E("4") + 100n, `резерв 4 ETH (${reserve})`);
   assert.equal(await read(ethMigrator, "lastEthAmount"), reserve, "весь резерв ушёл мигратору");
   assert.equal(await read(pool, "ethReserve"), 0n);
   // взяли ровно столько, сколько нужно: gross = ethIn / (0.75 * 0.99), остальное вернули
@@ -421,7 +421,7 @@ test("миграция сорвалась в покупке — покупка �
   assert.equal(events(rc, poolAbi, "Migrated").length, 0);
   assert.ok((await read(token, "balanceOf", [t1.address])) > 0n, "монеты у покупателя");
   const reserve = await read(pool, "ethReserve");
-  assert.ok(reserve >= E("6.5"), "резерв остался на кривой");
+  assert.ok(reserve >= E("4"), "резерв остался на кривой");
   await assertSolvent(pool);
   assert.equal(await revertsWith(t1, pool, "buy", [0n, t1.address], E("1")), "TradingClosed");
   // migrateSelf снаружи не вызвать

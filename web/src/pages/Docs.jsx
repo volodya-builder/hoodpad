@@ -12,12 +12,12 @@ import {
 //
 // Что описываем: кривая, монеты за акции, комиссии 70/10/10/10, арена,
 // монета hood, контракты, боты, безопасность. Цифры — те, что зашиты в
-// контрактах (LaunchpadFactoryV3: 1B / 800M / 1.625 ETH → 6.5 ETH).
+// контрактах (LaunchpadFactoryV3: 1B / 800M / 1 ETH → 4 ETH).
 
 const MIGRATOR_ETH = "0xe11727b682e86ced24ed0da2aa6c113ae30672f4";
 const MIGRATOR_QUOTE = "0xac360e752e9e12952e27f202d5814fa8c6220878";
 const USDG_ADDRESS = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168";
-const HOOD_TOKEN = ""; // монета hood V3 — адрес после запуска с кошелька команды (ETH-фабрика); заполняет switch-addresses.js --hood
+const HOOD_TOKEN = "0x67b7a5342a85d623436f049f87517cd1fd73a239"; // монета hood V3, запущена 18.09.2026 с кошелька команды (ETH-фабрика)
 const TEAM_WALLET = "0x0462C1Efe9CA880E901807d5386EBcc6705087b3"; // командная доля комиссий (10%)
 const ARENA_BOT = "0x4fC073049012c52c6B291E08D69D13b3a33d8B63";   // оператор обеих казн: только обмен в ETH и выкуп-сжигание
 const SUBGRAPH = "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/5.0.0/gn";
@@ -44,14 +44,14 @@ const SECTIONS = [
       { type: "stats", items: [
         { n: "1B", l: T("сапплай", "supply", "总量") },
         { n: "80%", l: T("на кривой", "on the curve", "在曲线上") },
-        { n: "6.5 ETH", l: T("порог градации", "graduation", "毕业阈值") },
+        { n: "4 ETH", l: T("порог градации", "graduation", "毕业阈值") },
         { n: "20%", l: T("в ликвидность навсегда", "locked liquidity", "永久锁定的流动性") },
       ] },
       [
-        { k: T("Формула", "Formula", "公式"), v: "x · y = k · virtual 1.625 ETH" },
-        { k: T("Порог градации (ETH-монеты)", "Graduation threshold (ETH coins)", "毕业阈值（ETH 代币）"), v: "6.5 ETH" },
+        { k: T("Формула", "Formula", "公式"), v: "x · y = k · virtual 1 ETH" },
+        { k: T("Порог градации (ETH-монеты)", "Graduation threshold (ETH coins)", "毕业阈值（ETH 代币）"), v: "4 ETH" },
         { k: T("Порог (монеты за валюту)", "Threshold (quote coins)", "阈值（计价货币代币）"), v: T("виртуальный резерв × 4, ≈ $16k в валюте на момент добавления", "virtual reserve × 4, ≈ $16k in the asset when it was listed", "虚拟储备 × 4，上架时约合 $16k（以该资产计）") },
-        { k: T("Покупка создателя при запуске", "Creator buy at launch", "发行时创建者买入"), v: T("до 0.13 ETH суммарно, первая — в той же транзакции и без стартового налога", "up to 0.13 ETH in total, the first one in the same transaction and free of the opening tax", "累计最多 0.13 ETH，首笔与发行同一笔交易且免开盘税") },
+        { k: T("Покупка создателя при запуске", "Creator buy at launch", "发行时创建者买入"), v: T("до 0.08 ETH суммарно, первая — в той же транзакции и без стартового налога", "up to 0.08 ETH in total, the first one in the same transaction and free of the opening tax", "累计最多 0.08 ETH，首笔与发行同一笔交易且免开盘税") },
       ],
       T("При градации пул отправляет резерв и 20% сапплая в мигратор, тот создаёт full-range позицию Uniswap V3 (комиссия 0.3%) и запирает NFT позиции навсегда — ликвидность нельзя вывести никому, включая команду. Перенос происходит в той же покупке, которая заполнила кривую, — без паузы: монета торгуется на DEX уже в следующем блоке. Если перенос сорвался (цена в пуле Uniswap сбита сильнее допуска), покупка всё равно проходит, а migrate() у пула через полминуты вызывает бот площадки — или любой другой.", "At graduation the pool sends its reserve and 20% of supply to the migrator, which creates a full-range Uniswap V3 position (0.3% fee tier) and locks the position NFT forever — nobody, including the team, can withdraw that liquidity. The migration happens inside the very purchase that fills the curve — no pause: the coin trades on the DEX in the next block. If the migration fails (the Uniswap pool price was pushed beyond the migrator's tolerance), the purchase still goes through and the platform bot calls the pool's migrate() within half a minute — anyone else can too.", "毕业时，池子将储备金和 20% 总量交给迁移合约，后者创建 Uniswap V3 全区间头寸（0.3% 费率）并永久锁定头寸 NFT——包括团队在内，没有人能提取这部分流动性。迁移在填满曲线的那笔购买中直接完成，没有停顿：下一个区块代币即可在 DEX 交易。若迁移失败（Uniswap 池价格被推离超出迁移合约的容差），购买仍会成功，平台机器人会在半分钟内调用池子的 migrate()，任何人也都可以调用。"),
     ],
