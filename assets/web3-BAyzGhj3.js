@@ -1,0 +1,1 @@
+import{h as e}from"./web3-Cn5_EjFX.js";export{e as publicClient};
