@@ -1,0 +1,1 @@
+import{h as e}from"./web3-CDP_0QQT.js";export{e as publicClient};
