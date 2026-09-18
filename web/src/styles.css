@@ -1002,15 +1002,29 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
 .mk-toggle.on { color: var(--text); }
 .mk-dot { flex: 0 0 6px; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .35; transition: opacity .15s, background .15s, box-shadow .15s; }
 .mk-toggle.on .mk-dot { background: #c8f542; opacity: 1; box-shadow: 0 0 0 3px rgba(200,245,66,.18); }
-/* точка выкупа поверх свечного графика: 5px, при наведении — карточка сделки */
-.mk-pt { position: absolute; z-index: 6; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: #c8f542; opacity: .85; cursor: pointer; text-decoration: none; }
-.mk-pt::before { content: ""; position: absolute; inset: -7px; }
-.mk-pt:hover { opacity: 1; box-shadow: 0 0 0 3px rgba(200,245,66,.25); }
-.mk-card { display: none; position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); min-width: 150px; padding: 8px 10px; border-radius: 10px; background: var(--bg-soft, #1c1c1a); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 8px 24px rgba(0,0,0,.4); font-size: 11.5px; line-height: 1.45; color: var(--text-dim); white-space: nowrap; flex-direction: column; }
-.mk-card b { color: var(--text); font-weight: 500; }
-.mk-card em { font-style: normal; color: #c8f542; margin-top: 2px; }
-.mk-pt:hover .mk-card { display: flex; }
+/* метки поверх свечного графика: кружок с буквой (B — выкуп казны, M — миграция),
+   при наведении — карточка сделки, клик — транзакция в обозревателе */
+.mk-badge { position: absolute; z-index: 6; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; line-height: 1; text-decoration: none; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.45); transition: transform .12s; }
+.mk-badge::before { content: ""; position: absolute; inset: -6px; }
+.mk-badge:hover { transform: scale(1.12); z-index: 8; }
+.mk-badge.bb { background: #c8f542; color: #101100; }
+.mk-badge.mig { background: #3b82f6; color: #fff; }
+.mk-card { display: none; position: absolute; left: 50%; transform: translateX(-50%); min-width: 230px; padding: 10px 12px; border-radius: 12px; background: var(--bg-soft, #1c1c1a); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 10px 28px rgba(0,0,0,.45); font-size: 12px; font-weight: 400; line-height: 1.4; color: var(--text-dim); white-space: nowrap; flex-direction: column; gap: 4px; cursor: pointer; }
+.mk-badge.down .mk-card { top: 24px; }
+.mk-badge.up .mk-card { bottom: 24px; }
+.mk-badge:hover .mk-card { display: flex; }
+.mk-card .mk-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.mk-card b { color: var(--text); font-weight: 500; font-size: 13px; }
+.mk-card .mk-ago { font-size: 11.5px; }
+.mk-card .mk-amt { font-size: 20px; font-weight: 600; color: #7ac74f; letter-spacing: -.01em; }
+.mk-card .mk-meta { justify-content: flex-start; gap: 8px; color: var(--text); }
+.mk-card .mk-dim { color: var(--text-dim); }
+.mk-chip { font-style: normal; font-size: 11px; font-weight: 500; padding: 2px 7px; border-radius: 6px; }
+.mk-chip.bb { background: rgba(122,199,79,.18); color: #7ac74f; }
+.mk-chip.mig { background: rgba(59,130,246,.18); color: #6ea1ff; }
+.mk-card em { font-style: normal; color: var(--text-dim); font-size: 11px; margin-top: 2px; }
 html[data-theme="light"] .mk-card { border-color: rgba(0,0,0,.1); }
+html[data-theme="light"] .mk-card .mk-amt { color: #4f8a20; }
 .candle-ivs-overlay {
   position: absolute; top: 12px; left: 12px; right: 66px; z-index: 7;
   margin-top: 0;

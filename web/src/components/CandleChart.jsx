@@ -4,6 +4,7 @@ import { createChart } from "lightweight-charts";
 import { usd } from "../lib/price.js";
 import { EXPLORER } from "../lib/config.js";
 import { useLang } from "../lib/i18n.jsx";
+import { timeAgo } from "../lib/data.js";
 
 // Профессиональный свечной график на TradingView Lightweight Charts.
 // Свечи строятся из сделок кривой (points: mcap после каждой сделки).
@@ -76,7 +77,7 @@ export default function CandleChart({ points, trades, rate, marks, lines, defaul
   const [dots, setDots] = useState([]); // точки выкупов поверх графика (HTML, чтобы ловить наведение и клик)
   const dotsRef = useRef([]); // [{ time, price, m }]
   const toggleMarks = (v) => { setShowMarks(v); try { localStorage.setItem("hood_chart_marks", v ? "1" : "0"); } catch (e) { /* ignore */ } };
-  const hasMarks = (marks || []).some((m) => m.kind === "buyback");
+  const hasMarks = (marks || []).some((m) => m.kind === "buyback" || m.kind === "migrated");
   const linesRef = useRef([]); // для autoscale
 
   // создание графика — только при смене интервала/шкалы/полноэкрана
@@ -146,7 +147,7 @@ export default function CandleChart({ points, trades, rate, marks, lines, defaul
         const x = ts.timeToCoordinate(d.time);
         const y = c.cs.priceToCoordinate(d.price);
         if (x == null || y == null) continue;
-        out.push({ x: Math.round(x), y: Math.round(y), m: d.m });
+        out.push({ x: Math.round(x), y: Math.round(y), above: d.above, mcap: d.mcap, m: d.m });
       }
       // ценовая шкала пересчитывается без события — сверяем и обновляем только при сдвиге
       const key = out.map((d) => `${d.x},${d.y}`).join("|");
@@ -182,17 +183,21 @@ export default function CandleChart({ points, trades, rate, marks, lines, defaul
     // выкупы казны: маленькая точка под свечой (HTML поверх графика — с
     // карточкой при наведении и ссылкой на сделку); сжигание идёт в той же
     // транзакции, отдельно не отмечаем. Переключатель над графиком.
-    const lowByTime = new Map(candles.map((x) => [x.time, x.low]));
+    const byTime = new Map(candles.map((x) => [x.time, x]));
     const seen = new Set();
     dotsRef.current = showMarks ? (marks || [])
-      .filter((m) => m.kind === "buyback")
+      .filter((m) => m.kind === "buyback" || m.kind === "migrated")
       .map((m) => {
         const tb = Math.floor(m.ts / 1000 / iv) * iv;
-        if (!lowByTime.has(tb) || seen.has(tb)) return null;
-        seen.add(tb);
-        return { time: tb, price: lowByTime.get(tb), m };
+        const cd = byTime.get(tb);
+        const key = `${m.kind}:${tb}`;
+        if (!cd || seen.has(key)) return null;
+        seen.add(key);
+        // выкуп — под свечой, миграция — над
+        const above = m.kind === "migrated";
+        return { time: tb, price: above ? cd.high : cd.low, above, mcap: cd.close, m };
       })
-      .filter(Boolean) : [];
+      .filter(Boolean) : []
     if (c.place) [0, 60, 300, 1000].forEach((ms) => setTimeout(c.place, ms));
 
     // пунктирные уровни активных заявок
@@ -236,8 +241,8 @@ export default function CandleChart({ points, trades, rate, marks, lines, defaul
         ))}
         {hasMarks && (
           <div className={`fpill mk-toggle ${showMarks ? "on" : ""}`} style={{ marginLeft: "auto" }}
-               onClick={() => toggleMarks(!showMarks)} title={t("Показывать выкупы казны на графике")}>
-            <i className="mk-dot" />{t("Выкуп")}
+               onClick={() => toggleMarks(!showMarks)} title={t("Показывать выкупы казны и миграцию на графике")}>
+            <i className="mk-dot" />{t("Метки")}
           </div>
         )}
         {(lines || []).length > 0 && (
@@ -256,18 +261,33 @@ export default function CandleChart({ points, trades, rate, marks, lines, defaul
       <div className="chart-area" style={{ position: "relative" }}>
         <div ref={ref} className="chart-resize" />
         <div ref={legendRef} className="chart-legend" />
-        {dots.map((d, i) => (
-          <a key={i} className="mk-pt" style={{ left: d.x, top: d.y + 10 }}
-             href={d.m.tx ? `${EXPLORER}/tx/${d.m.tx}` : undefined} target="_blank" rel="noreferrer">
-            <span className="mk-card">
-              <b>{t("Выкуп казны")}</b>
-              <span>{d.m.eth != null ? `${d.m.eth.toFixed(4)} ETH` : ""}{d.m.eth != null && ethUsd ? ` (${usd(d.m.eth * ethUsd)})` : ""}</span>
-              {d.m.tokens != null && <span>{compactNum(d.m.tokens)} {unit || ""}</span>}
-              <span>{new Date(d.m.ts).toLocaleString()}</span>
-              {d.m.tx && <em>{t("Открыть в обозревателе")}</em>}
-            </span>
-          </a>
-        ))}
+        {dots.map((d, i) => {
+          const mig = d.m.kind === "migrated";
+          const usdAmt = d.m.eth != null && ethUsd ? usd(d.m.eth * ethUsd) : null;
+          // карточка раскрывается вверх, если метка в нижней половине графика (чтобы не обрезалась)
+          const h = ref.current ? ref.current.clientHeight : 0;
+          const cardUp = d.above || (h > 0 && d.y > h * 0.5);
+          return (
+            <a key={i} className={`mk-badge ${mig ? "mig" : "bb"} ${cardUp ? "up" : "down"}`}
+               style={{ left: d.x, top: d.y + (d.above ? -14 : 14) }}
+               href={d.m.tx ? `${EXPLORER}/tx/${d.m.tx}` : undefined} target="_blank" rel="noreferrer">
+              {mig ? "M" : "B"}
+              <span className="mk-card">
+                <span className="mk-row">
+                  <b>{mig ? t("Миграция на DEX") : t("Выкуп казны")}</b>
+                  <span className="mk-ago">{timeAgo(d.m.ts)}</span>
+                </span>
+                <span className="mk-amt">{usdAmt || (d.m.eth != null ? `${d.m.eth.toFixed(4)} ETH` : "")}</span>
+                <span className="mk-row mk-meta">
+                  <i className={`mk-chip ${mig ? "mig" : "bb"}`}>{mig ? t("Миграция") : t("Покупка")}</i>
+                  {d.m.tokens != null && d.m.tokens > 0 && <span>{compactNum(d.m.tokens)}</span>}
+                  {d.mcap > 0 && <span className="mk-dim">@ {usd(d.mcap)} · {t("капитализация")}</span>}
+                </span>
+                {d.m.tx && <em>{t("Открыть в обозревателе")}</em>}
+              </span>
+            </a>
+          );
+        })}
         <div className={`chart-log-btn ${logScale ? "on" : ""}`}
              onClick={() => setLogScale(!logScale)}
              title={t("Логарифмическая шкала цены")}>

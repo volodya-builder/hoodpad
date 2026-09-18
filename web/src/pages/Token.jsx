@@ -110,7 +110,7 @@ function MiniChart({ points, rate, marks, ethUsd = 0, base = VIRTUAL_ETH }) {
   }
 
   // выкупы казны: точки под графиком, переключатель (выбор запоминаем)
-  const nBuy = (marks ?? []).filter((m) => m.kind === "buyback").length;
+  const nBuy = (marks ?? []).filter((m) => m.kind === "buyback" || m.kind === "migrated").length;
   const [showMarks, setShowMarks] = useState(() => { try { return localStorage.getItem("hood_chart_marks") === "1"; } catch (e) { return false; } });
   const toggleMarks = (v) => { setShowMarks(v); try { localStorage.setItem("hood_chart_marks", v ? "1" : "0"); } catch (e) { /* ignore */ } };
 
@@ -127,8 +127,8 @@ function MiniChart({ points, rate, marks, ethUsd = 0, base = VIRTUAL_ETH }) {
       {nBuy > 0 && (
         <div className="ch-legend">
           <div className={`fpill mk-toggle ${showMarks ? "on" : ""}`} onClick={() => toggleMarks(!showMarks)}
-               title={t("Показывать выкупы казны на графике")}>
-            <i className="mk-dot" />{t("Выкуп")} {nBuy}
+               title={t("Показывать выкупы казны и миграцию на графике")}>
+            <i className="mk-dot" />{t("Метки")}
           </div>
         </div>
       )}
@@ -157,18 +157,21 @@ function MiniChart({ points, rate, marks, ethUsd = 0, base = VIRTUAL_ETH }) {
         {!empty && (
           <circle cx={xs[xs.length - 1]} cy={Y(last.mcap)} r="4.5" fill="#dcff6e" stroke="#0b0b0b" strokeWidth="2" />
         )}
-        {showMarks && (marks ?? []).filter((mk) => mk.kind === "buyback").map((mk, k) => {
+        {showMarks && (marks ?? []).filter((mk) => mk.kind === "buyback" || mk.kind === "migrated").map((mk, k) => {
           if (!pts.some((pp) => pp.ts)) return null;
           let best = -1, bd = Infinity;
           pts.forEach((pp, ii) => {
             if (pp.ts) { const d = Math.abs(pp.ts - mk.ts); if (d < bd) { bd = d; best = ii; } }
           });
           if (best < 0) return null;
-          const bx = X(best), by = Y(pts[best].mcap);
+          const mig = mk.kind === "migrated";
+          const bx = X(best), by = Y(pts[best].mcap) + (mig ? -16 : 16);
+          const tip = `${mig ? t("Миграция на DEX") : t("Выкуп казны")} · ${(mk.eth || 0).toFixed(4)} ETH${ethUsd ? ` (${usd((mk.eth || 0) * ethUsd)})` : ""} · ${new Date(mk.ts).toLocaleString()}`;
           return (
-            <a key={`mk${k}`} href={mk.tx ? `${EXPLORER}/tx/${mk.tx}` : undefined} target="_blank" rel="noreferrer">
-              <title>{`${t("Выкуп казны")} · ${(mk.eth || 0).toFixed(4)} ETH${ethUsd ? ` (${usd((mk.eth || 0) * ethUsd)})` : ""} · ${new Date(mk.ts).toLocaleString()}`}</title>
-              <circle cx={bx} cy={by + 12} r="2.5" fill="#c8f542" fillOpacity=".9" style={{ cursor: "pointer" }} />
+            <a key={`mk${k}`} href={mk.tx ? `${EXPLORER}/tx/${mk.tx}` : undefined} target="_blank" rel="noreferrer" style={{ cursor: "pointer" }}>
+              <title>{tip}</title>
+              <circle cx={bx} cy={by} r="8" fill={mig ? "#3b82f6" : "#c8f542"} />
+              <text x={bx} y={by + 3.5} textAnchor="middle" fontSize="9" fontWeight="700" fill={mig ? "#fff" : "#101100"}>{mig ? "M" : "B"}</text>
             </a>
           );
         })}
@@ -576,6 +579,31 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
 
   // Метки выкупов/сжиганий казны по этому токену — на график
   const [marks, setMarks] = useState([]);
+  // миграция на DEX: событие Migrated пула (в сабграфе его нет) — одна метка «M»
+  const [migMark, setMigMark] = useState(null);
+  useEffect(() => {
+    if (!data?.migrated || !data?.pool) { setMigMark(null); return; }
+    let alive = true;
+    (async () => {
+      try {
+        const logs = await publicClient.getLogs({
+          address: data.pool,
+          event: { type: "event", name: "Migrated", inputs: [
+            { type: "address", name: "migrator", indexed: true },
+            { type: "uint256", name: "ethAmount" }, { type: "uint256", name: "tokenAmount" }] },
+          fromBlock: FACTORY_START_BLOCK, toBlock: "latest",
+        });
+        const lg = logs[logs.length - 1];
+        if (!lg || !alive) return;
+        const blk = await publicClient.getBlock({ blockNumber: lg.blockNumber });
+        if (!alive) return;
+        setMigMark({ kind: "migrated", ts: Number(blk.timestamp) * 1000, tx: lg.transactionHash,
+                     eth: Number(lg.args.ethAmount || 0n) / 1e18, tokens: Number(lg.args.tokenAmount || 0n) / 1e18 });
+      } catch (e) { /* нет метки — не страшно */ }
+    })();
+    return () => { alive = false; };
+  }, [data?.migrated, data?.pool]);
+  const allMarks = useMemo(() => (migMark ? [...marks, migMark] : marks), [marks, migMark]);
   useEffect(() => {
     let alive = true;
     import("../lib/data.js").then((m) => m.subgraphTreasuryOps())
@@ -1405,9 +1433,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             </div>
           </div>
           {history && history.points && history.points.filter((p) => p.ts).length >= 2 ? (
-            <CandleChart points={history.points} trades={history.trades} rate={curRate} marks={marks} ethUsd={rate} unit={data.symbol} base={data.q ? data.q.virt : VIRTUAL_ETH} />
+            <CandleChart points={history.points} trades={history.trades} rate={curRate} marks={allMarks} ethUsd={rate} unit={data.symbol} base={data.q ? data.q.virt : VIRTUAL_ETH} />
           ) : history ? (
-            <MiniChart points={chartPoints} rate={curRate} marks={marks} ethUsd={rate} base={data.q ? data.q.virt : VIRTUAL_ETH} />
+            <MiniChart points={chartPoints} rate={curRate} marks={allMarks} ethUsd={rate} base={data.q ? data.q.virt : VIRTUAL_ETH} />
           ) : (
             /* события ещё идут и кэша нет: пустое место того же размера, без «пустого» графика */
             <svg viewBox="0 0 680 300" style={{ width: "100%", display: "block", marginTop: 8 }} aria-hidden="true" />
