@@ -61,6 +61,10 @@ export default function CandleChart({ points, trades, rate, marks, lines, defaul
   const [logScale, setLogScale] = useState(false);
   const [fs, setFs] = useState(false); // полноэкранный режим
   const [showLines, setShowLines] = useState(true); // уровни заявок на графике
+  // точки выкупов казны — можно выключить, выбор запоминаем
+  const [showMarks, setShowMarks] = useState(() => { try { return localStorage.getItem("hood_chart_marks") !== "0"; } catch (e) { return true; } });
+  const toggleMarks = (v) => { setShowMarks(v); try { localStorage.setItem("hood_chart_marks", v ? "1" : "0"); } catch (e) { /* ignore */ } };
+  const hasMarks = (marks || []).some((m) => m.kind === "buyback");
   const linesRef = useRef([]); // для autoscale
 
   // создание графика — только при смене интервала/шкалы/полноэкрана
@@ -141,22 +145,20 @@ export default function CandleChart({ points, trades, rate, marks, lines, defaul
       legendRef.current.innerHTML = volLegendHtml(c, c.times.length ? c.times[c.times.length - 1] : null);
     }
 
-    // отметки казны: выкупы и сжигания
+    // выкупы казны: одна маленькая зелёная точка под свечой (сжигание идёт
+    // в той же транзакции — отдельно не отмечаем); переключатель над графиком
     const times = new Set(candles.map((x) => x.time));
-    const markers = (marks || [])
+    const seen = new Set();
+    const markers = showMarks ? (marks || [])
+      .filter((m) => m.kind === "buyback")
       .map((m) => {
         const tb = Math.floor(m.ts / 1000 / iv) * iv;
-        if (!times.has(tb)) return null;
-        const burn = m.kind === "burned";
-        return {
-          time: tb, position: burn ? "aboveBar" : "belowBar",
-          color: burn ? "#e06a4a" : "#4caf6d",
-          shape: burn ? "arrowDown" : "arrowUp",
-          text: burn ? "BRN" : "BUY",
-        };
+        if (!times.has(tb) || seen.has(tb)) return null;
+        seen.add(tb);
+        return { time: tb, position: "belowBar", color: "#c8f542", shape: "circle", size: 0.5, text: t("выкуп") };
       })
       .filter(Boolean)
-      .sort((a, b) => a.time - b.time);
+      .sort((a, b) => a.time - b.time) : [];
     c.cs.setMarkers(markers);
 
     // пунктирные уровни активных заявок
@@ -178,7 +180,7 @@ export default function CandleChart({ points, trades, rate, marks, lines, defaul
       } catch (e) { try { c.chart.timeScale().fitContent(); } catch (e2) {} }
       c.fitted = true;
     }
-  }, [points, trades, rate, marks, lines, iv, logScale, fs, showLines]);
+  }, [points, trades, rate, marks, lines, iv, logScale, fs, showLines, showMarks]);
 
   useEffect(() => {
     if (!fs) return;
@@ -198,14 +200,21 @@ export default function CandleChart({ points, trades, rate, marks, lines, defaul
             {t(lbl)}
           </div>
         ))}
+        {hasMarks && (
+          <label className="lines-toggle marks-toggle" style={{ marginLeft: "auto" }}
+                 title={t("Показывать выкупы казны на графике")}>
+            <input type="checkbox" checked={showMarks} onChange={(e) => toggleMarks(e.target.checked)} />
+            <i className="mk-dot" />{t("Выкуп")}
+          </label>
+        )}
         {(lines || []).length > 0 && (
-          <label className="lines-toggle" style={{ marginLeft: "auto" }}
+          <label className="lines-toggle" style={hasMarks ? {} : { marginLeft: "auto" }}
                  title={t("Показывать уровни заявок на графике")}>
             <input type="checkbox" checked={showLines} onChange={(e) => setShowLines(e.target.checked)} />
             {t("Заявки")}
           </label>
         )}
-        <div className="fpill" style={(lines || []).length > 0 ? {} : { marginLeft: "auto" }}
+        <div className="fpill" style={(lines || []).length > 0 || hasMarks ? {} : { marginLeft: "auto" }}
              onClick={() => setFs(!fs)}
              title={fs ? t("Свернуть") : t("На весь экран")}>
           {fs ? "✕" : "⛶"}
