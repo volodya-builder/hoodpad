@@ -468,6 +468,18 @@ export async function loadTokens() {
 
 export const dataSource = { v: "" }; // "subgraph" | "rpc" — что реально отвечает
 
+async function withDexPrices(rows) {
+  const grads = rows.filter((x) => x.graduated);
+  if (!grads.length) return;
+  try {
+    const { dexPriceOf } = await import("./dex.js");
+    await Promise.all(grads.map(async (x) => {
+      const px = await dexPriceOf(x.token, x.q ? x.q.addr : null, x.q ? x.q.dec : 18).catch(() => null);
+      if (px && px > 0n) x.price = px;
+    }));
+  } catch (e) { /* без DEX — остаётся цена кривой */ }
+}
+
 async function _loadTokensFresh() {
   let eth;
   try {
@@ -481,6 +493,9 @@ async function _loadTokensFresh() {
   // индексирует. Читаем их с цепи напрямую: их немного, а один упавший
   // запрос не должен ронять весь список.
   const q = await _loadQuoteTokensRpc().catch(() => []);
+  // Градуировавшие монеты торгуются на Uniswap: цена (и капитализация в
+  // карточках) — с пула DEX, а не замёрзшая цена кривой на момент миграции.
+  await withDexPrices([...eth, ...q]);
   if (!q.length) return eth;
   // сабграф 3.1+ тоже знает монеты за валюту — чтобы не было дублей,
   // из его списка их убираем (с цепи они приходят с курсом и валютой)

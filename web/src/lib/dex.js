@@ -91,6 +91,21 @@ export async function dexState(pool, token, otherDec = 18) {
   };
 }
 
+/** Текущая цена градуировавшей монеты на Uniswap — в тех же единицах, что
+ *  spotPrice кривой (wei валюты за 1e18 монеты); null — пула нет. Память 20 с:
+ *  список монет обновляется часто, а цена пула — один вызов на монету. */
+const _dexPx = new Map();
+export async function dexPriceOf(token, quoteAddr = null, otherDec = 18) {
+  const key = `${lower(token)}:${lower(quoteAddr || WETH_ADDRESS)}`;
+  const c = _dexPx.get(key);
+  if (c && Date.now() - c.t < 20_000) return c.v;
+  const pool = await dexPoolOf(token, quoteAddr);
+  if (!pool) return null;
+  const st = await dexState(pool, token, otherDec);
+  _dexPx.set(key, { v: st.price, t: Date.now() });
+  return st.price;
+}
+
 // ---------------------------------------------------------------- сделки
 // Роутеры и зап: если получатель — один из них, настоящий трейдер — отправитель tx.
 const ROUTERS = new Set([lower(SWAP_ROUTER), lower(ZAP_ADDRESS), "0x8876789976decbfcbbbe364623c63652db8c0904", ADDRESS_THIS]);
