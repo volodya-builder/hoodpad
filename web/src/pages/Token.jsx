@@ -19,6 +19,7 @@ import AgentBudget from "../components/AgentBudget.jsx";
 import AgentChat from "../components/AgentChat.jsx";
 import { useSplit, loadCreationTimes, timeAgo, useClock, useSupport } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
+import { dexPoolOf, dexState, dexTrades, dexQuote, dexBuy, dexSell, SWAP_ROUTER } from "../lib/dex.js";
 import { modelLogo, makerOf } from "../lib/models.mjs";
 import CandleChart from "../components/CandleChart.jsx";
 import TokenSidebar from "../components/TokenSidebar.jsx";
@@ -323,8 +324,10 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [payEth, setPayEth] = useState(true);
   const zapOk = Boolean(Q && ZAP_LIVE && data?.zapOk);
   const viaZap = zapOk && (payEth || !FEATURES.payInQuote);
-  // В чём считаем деньги СДЕЛКИ: ETH (обычная монета или zap) или валюта.
-  const PAY = Q && !viaZap ? Q : null;
+  // После градации кривая закрыта — торгуем на Uniswap через роутер, всегда за ETH.
+  const viaDex = Boolean(data?.migrated && data?.dex);
+  // В чём считаем деньги СДЕЛКИ: ETH (обычная монета, zap или DEX) или валюта.
+  const PAY = Q && !viaZap && !viaDex ? Q : null;
   const QSYM = PAY ? PAY.sym : "ETH";
   const pq = (v) => (PAY ? parseUnits(String(v), PAY.dec) : parseEther(String(v)));
   const fq = (v) => (PAY ? formatUnits(v, PAY.dec) : formatEther(v));
@@ -644,13 +647,13 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   // Прайс-импакт: насколько сделка сдвинет цену относительно спота
   const impact = useMemo(() => {
     if (!quote || !data || !amount || Number(amount) <= 0) return null;
-    if (viaZap) return null; // ETH против цены в валюте — несравнимо, честнее промолчать
+    if (viaZap || (viaDex && data.q)) return null; // ETH против цены в валюте — несравнимо, честнее промолчать
     const spot = Number(fq(data.price));
     if (spot <= 0) return null;
     if (tab === "buy" && quote.kind === "tokens") {
       const tokens = Number(formatEther(quote.value));
       if (tokens <= 0) return null;
-      const eff = (Number(amount) * 0.99) / tokens; // за вычетом комиссии 1%
+      const eff = (Number(amount) * (viaDex ? 0.997 : 0.99)) / tokens; // за вычетом комиссии (Uniswap 0,3% / кривая 1%)
       return (eff / spot - 1) * 100;
     }
     if (tab === "sell" && quote.kind === "eth") {
@@ -661,7 +664,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       return (1 - eff / spot) * 100;
     }
     return null;
-  }, [quote, data, amount, tab, viaZap]);
+  }, [quote, data, amount, tab, viaZap, viaDex]);
 
   const load = useCallback(async () => {
     const ZERO = "0x0000000000000000000000000000000000000000";
@@ -714,7 +717,19 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           ? publicClient.readContract({ address: ZAP_ADDRESS, abi: zapAbi, functionName: "supported", args: [tokenAddress] }).catch(() => false)
           : Promise.resolve(false),
       ]);
-    const next = { token: String(tokenAddress).toLowerCase(), pool, name, symbol, uri, price, sold, cap, reserve, graduated, migrated, creator, balance, walletEth, walletQuote, q, divBps, zapOk };
+    // После миграции цена и резервы — с пула Uniswap, кривая их больше не знает.
+    let dex = null, priceLive = price;
+    if (migrated) {
+      try {
+        const dp = await dexPoolOf(tokenAddress, q ? q.addr : null);
+        if (dp) {
+          const st = await dexState(dp, tokenAddress, q ? q.dec : 18);
+          dex = { pool: dp, reserveOther: st.reserveOther, reserveToken: st.reserveToken, liquidity: st.liquidity };
+          if (st.price > 0n) priceLive = st.price;
+        }
+      } catch (e) { /* пул не прочитался — покажем последнюю цену кривой */ }
+    }
+    const next = { token: String(tokenAddress).toLowerCase(), pool, name, symbol, uri, price: priceLive, sold, cap, reserve, graduated, migrated, creator, balance, walletEth, walletQuote, q, divBps, zapOk, dex };
     if (curTok.current !== next.token) return; // пока читали — открыли другую монету
     setData(next);
     writeTokenCache(tokenAddress, next);
@@ -739,7 +754,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     const createdP = data.createdAt > 0
       ? Promise.resolve({ [tokenAddress.toLowerCase()]: data.createdAt })
       : loadCreationTimes([tokenAddress]).catch(() => ({}));
-    const [h, creatorFees, treasuryOwner, treasuryHeld, burned] = await Promise.all([
+    let [h, creatorFees, treasuryOwner, treasuryHeld, burned] = await Promise.all([
       poolTrades(data.pool, data.q ? { dec: data.q.dec, virt: data.q.virt, token: tokenAddress } : null),
       publicClient.readContract({ address: data.pool, abi: poolExtraAbi, functionName: "creatorFeesAccrued" }),
       publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "owner" }).catch(() => null),
@@ -763,12 +778,21 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         h.now = Number(latestB.timestamp) * 1000;
       } catch (e) { /* график останется в режиме «всё время» */ }
     }
+    // После миграции — сделки и график продолжаются с пула Uniswap
+    if (data.migrated && data.dex?.pool) {
+      try {
+        const d = await dexTrades(data.dex.pool, tokenAddress, { otherDec: data.q ? data.q.dec : 18, startIndex: Math.max(0, h.points.length - 1) });
+        if (d.trades.length) {
+          h = { trades: [...d.trades, ...h.trades], points: [...h.points, ...d.points], now: d.now };
+        }
+      } catch (e) { /* без DEX-сделок — покажем кривую */ }
+    }
     if (curTok.current !== String(tokenAddress).toLowerCase()) return; // ответ пришёл уже на другой странице
     setHistory(h);
     writeHistCache(tokenAddress, h);
     setExtra((x) => ({ ...x, creatorFees, treasuryOwner, treasuryHeld, burned }));
     createdP.then((createdMap) => setExtra((x) => ({ ...x, createdAt: createdMap[tokenAddress.toLowerCase()] })));
-  }, [data?.pool, data?.q?.virt, tokenAddress]); // virt приходит с сетью после кэша — сделки пересчитать
+  }, [data?.pool, data?.q?.virt, tokenAddress, data?.migrated, data?.dex?.pool]); // virt приходит с сетью после кэша — сделки пересчитать
 
   useEffect(() => {
     loadExtras().catch(() => {});
@@ -812,7 +836,10 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     const t = setTimeout(async () => {
       try {
         const pAbi = data.q ? quotePoolAbi : poolAbi;
-        if (viaZap) {
+        if (viaDex) {
+          const out = await dexQuote(tokenAddress, data.q ? data.q.addr : null, tab, parseEther(amount), wallet?.account);
+          setQuote(tab === "buy" ? { kind: "tokens", value: out } : { kind: "eth", value: out });
+        } else if (viaZap) {
           // Оценка — симуляция того же вызова, что уйдёт в сеть: она учитывает
           // и обмен на Uniswap, и кривую, и налог холдерам. Точнее не бывает.
           const deadline = BigInt(Math.floor(Date.now() / 1000) + 600);
@@ -873,7 +900,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       } catch { setQuote(null); }
     }, 250);
     return () => clearTimeout(t);
-  }, [amount, tab, data, viaZap]);
+  }, [amount, tab, data, viaZap, viaDex]);
 
   async function trade() {
     setError("");
@@ -881,11 +908,27 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     if (!quote) return;
     setBusy(true);
     try {
-      const slipPct = slip === "auto" ? (viaZap ? AUTO_SLIP_ZAP : AUTO_SLIP_CURVE) : Math.min(MAX_SLIP, Number(slip));
+      const slipPct = slip === "auto" ? ((viaZap || (viaDex && data.q)) ? AUTO_SLIP_ZAP : AUTO_SLIP_CURVE) : Math.min(MAX_SLIP, Number(slip));
       const slipBps = BigInt(Math.round(slipPct * 100));
       let hash;
       const deadline = BigInt(Math.floor(Date.now() / 1000) + 600);
-      if (viaZap && tab === "buy") {
+      if (viaDex && tab === "buy") {
+        const minOut = quote.value - (quote.value * slipBps) / 10000n;
+        hash = await dexBuy(wallet.walletClient, wallet.account, tokenAddress, data.q ? data.q.addr : null, parseEther(amount), minOut);
+      } else if (viaDex) {
+        const tokensIn = parseEther(amount);
+        const allowance = await publicClient.readContract({
+          address: tokenAddress, abi: tokenAbi, functionName: "allowance", args: [wallet.account, SWAP_ROUTER],
+        });
+        if (allowance < tokensIn) {
+          const a = await wallet.walletClient.writeContract({
+            address: tokenAddress, abi: tokenAbi, functionName: "approve", args: [SWAP_ROUTER, tokensIn],
+          });
+          await publicClient.waitForTransactionReceipt({ hash: a });
+        }
+        const minEth = quote.value - (quote.value * slipBps) / 10000n;
+        hash = await dexSell(wallet.walletClient, wallet.account, tokenAddress, data.q ? data.q.addr : null, tokensIn, minEth);
+      } else if (viaZap && tab === "buy") {
         const minOut = quote.value - (quote.value * slipBps) / 10000n;
         hash = await wallet.walletClient.writeContract({
           address: ZAP_ADDRESS, abi: zapAbi, functionName: "buyWithEth",
@@ -1455,7 +1498,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             </div>
             <div className="tk-cells">
               <div className="tk-cell"><span>{t("Цена")}</span><b>{ethStr(fc(data.price))} ETH</b></div>
-              <div className="tk-cell"><span>{t("Собрано")}</span><b>{money(fc(data.reserve))}</b></div>
+              {data.migrated && data.dex
+                ? <div className="tk-cell"><span>{t("Ликвидность")}</span><b>{money(fc(data.dex.reserveOther))}</b></div>
+                : <div className="tk-cell"><span>{t("Собрано")}</span><b>{money(fc(data.reserve))}</b></div>}
               <div className="tk-cell"><span>{t("Объём 24ч")}</span><b>{tokStats ? (tokStats.vol24Usd != null ? money(tokStats.vol24).replace(/\(\$[^)]*\)/, "(" + fmtUsd(tokStats.vol24Usd) + ")") : money(tokStats.vol24)) : "0 ETH"}</b></div>
               <div className="tk-cell"><span>ATH</span><b>{tokStats && curRate > 0 ? usd(tokStats.ath * curRate) : "—"}</b></div>
               {!data.graduated && (
@@ -1781,7 +1826,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         </div>
 
         <div key="swap" className="grid-item" data-blk="swap"><Handle />
-        {data.graduated ? (
+        {data.graduated && !(data.migrated && data.dex) ? (
           data.migrated ? (
             <div className="panel" style={{ margin: 0, maxWidth: "none" }}>
               <div className="notice">
