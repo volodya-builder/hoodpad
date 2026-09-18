@@ -1,0 +1,1 @@
+import{h as e}from"./web3-_iE7-G3G.js";export{e as publicClient};
