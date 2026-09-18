@@ -1,0 +1,1 @@
+import{h as e}from"./web3-yorcfCw9.js";export{e as publicClient};
