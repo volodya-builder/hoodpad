@@ -139,7 +139,7 @@ export default function Arena() {
         ))}
         {st && st.participants.length > 0 && view === "day" && (
           <span className="ttabs-right">
-            {st.alive.length > 1 ? t("выбывание через") : t("финал через")} <span className="mono">{clock(nextCp)}</span>
+            {st.alive.length > 3 ? t("выбывание через") : t("финал через")} <span className="mono">{clock(nextCp)}</span>
           </span>
         )}
       </div>
@@ -157,7 +157,7 @@ export default function Arena() {
         <div className="rules-min">
           <div>
             <h3>{t("Как проходит день")}</h3>
-            <p>{t("В 00:00 UTC в бой вступают все неградуировавшие токены. День делится на чекпоинты — по числу участников; на каждом выбывает токен с наименьшими очками боя. Последний выживший — чемпион дня. Выбывание — витрина: торговля не останавливается. Чемпион больше не участвует — одна корона на монету, у остальных честный шанс.")}</p>
+            <p>{t("В 00:00 UTC в бой вступают все неградуировавшие токены. День делится на чекпоинты — по числу участников; на каждом выбывает токен с наименьшими очками боя, пока не останется подиум из трёх. Ночью места делятся по очкам боя: лучший из троих — чемпион дня. Выбывание — витрина: торговля не останавливается. Чемпион больше не участвует — одна корона на монету, у остальных честный шанс.")}</p>
           </div>
           <div>
             <h3>{t("Очки боя")}</h3>
@@ -242,8 +242,8 @@ export default function Arena() {
               <span className="r">{t("Капа")}</span><span className="r">{t("Очки боя")}</span><span className="r" />
             </div>
             {st.alive.map((p, i) => {
-              const danger = st.alive.length > 1 && i === st.alive.length - 1;
-              const champ = st.alive.length === 1;
+              const danger = st.alive.length > 3 && i === st.alive.length - 1;
+              const champ = !!st.champion && i === 0;
               const right = champ
                 ? <span className="lt-tag gold"><Icon name="crown" size={13} style={{ margin: 0 }} /> {t("Чемпион дня")}</span>
                 : danger

@@ -58,8 +58,13 @@ export function arenaState(tokens, trades, d0, now = Date.now(), excluded = null
   }
 
   const N = parts.length;
-  const step = DAY / N; // N-1 чекпоинтов внутри дня, финал в конце
-  const checkpoints = Array.from({ length: Math.max(0, N - 1) }, (_, i) => d0 + step * (i + 1));
+  // Выбывание идёт, пока не останется подиум — три монеты (владелец,
+  // 19.09.2026: «зачем выбывать, когда осталось три призовых»). N-3 чекпоинтов
+  // внутри дня, финал в конце: среди троих места делят очки боя.
+  const PODIUM = 3;
+  const cuts = Math.max(0, N - PODIUM);
+  const step = DAY / (cuts + 1);
+  const checkpoints = Array.from({ length: cuts }, (_, i) => d0 + step * (i + 1));
 
   // ---- «очки боя» = честный объём × (1 + прирост капитализации за день) ----
   const VIRT = VIRTUAL_ETH, TOTAL = 1e9;
@@ -135,7 +140,7 @@ export function arenaState(tokens, trades, d0, now = Date.now(), excluded = null
   const eliminated = [];
   for (const cp of checkpoints) {
     if (cp > cutoff) break;
-    if (alive.size <= 1) break;
+    if (alive.size <= PODIUM) break;
     let worst = null, worstScore = Infinity;
     // монета, созданной ПОСЛЕ чекпоинта, на нём ещё не было — выбывать
     // задним числом с нулём она не может (иначе новичок дня «выбывал» до
@@ -169,7 +174,8 @@ export function arenaState(tokens, trades, d0, now = Date.now(), excluded = null
     .sort((a, b) => b.score - a.score);
 
   const nextCheckpoint = isToday ? checkpoints.find((cp) => cp > now) ?? end : null;
-  const champion = (!isToday || aliveArr.length === 1) && aliveArr.length >= 1 ? aliveArr[0] : null;
+  // Чемпион — лучший по очкам среди выживших, когда день закончился.
+  const champion = !isToday && aliveArr.length >= 1 ? aliveArr[0] : null;
 
   return { participants: parts, alive: aliveArr, eliminated, checkpoints, nextCheckpoint, champion, excluded, finalScores };
 }
@@ -180,7 +186,10 @@ export function arenaState(tokens, trades, d0, now = Date.now(), excluded = null
 export function podium(st) {
   if (!st || !st.champion) return [];
   const out = [st.champion];
-  for (const p of st.finalScores || []) {
+  // сначала выжившие (они и есть подиум), потом — остальные по очкам
+  const order = [...(st.alive || []), ...(st.finalScores || [])];
+  for (const p of order) {
+    if (out.some((x) => x.token.toLowerCase() === p.token.toLowerCase())) continue;
     if (out.length >= 3) break;
     if (p.token.toLowerCase() === st.champion.token.toLowerCase()) continue;
     if ((p.score ?? 0) <= 0) continue;
