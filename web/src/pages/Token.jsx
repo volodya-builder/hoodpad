@@ -2023,9 +2023,15 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       const balTok = inspBal ? Number(formatEther(inspBal.tok)) : null;
       const priceEth = Number(formatEther(data.price));
       const holdVal = balTok != null ? balTok * priceEth : null;
-      const uPnl2 = holdVal != null ? holdVal - balTok * avgB : null;
-      const totPnl2 = holdVal != null ? holdVal + sEth - bEth : null;
-      const posPct = balTok != null && bTok > 0 ? Math.min(100, (balTok / bTok) * 100) : null;
+      // Монеты, которые пришли не с кривой, а переводом с другого кошелька:
+      // на балансе больше, чем куплено минус продано. У них нет цены покупки,
+      // поэтому в прибыль их не считаем и честно пишем, что это перевод.
+      const xferTok = balTok != null ? Math.max(0, balTok - (bTok - sTok)) : 0;
+      const ownTok = balTok != null ? Math.max(0, balTok - xferTok) : null;
+      const onlyXfer = trs.length === 0 && xferTok > 0;
+      const uPnl2 = ownTok != null && bTok > 0 ? ownTok * priceEth - ownTok * avgB : (ownTok != null ? 0 : null);
+      const totPnl2 = ownTok != null && trs.length > 0 ? ownTok * priceEth + sEth - bEth : (ownTok != null ? 0 : null);
+      const posPct = ownTok != null && bTok > 0 ? Math.min(100, (ownTok / bTok) * 100) : null;
       const firstTs = trs.reduce((s, x) => (x.ts ? Math.min(s, x.ts) : s), Infinity);
       const holdMs2 = firstTs !== Infinity ? Date.now() - firstTs : 0;
       const holdStr2 = firstTs === Infinity ? "—"
@@ -2050,13 +2056,13 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
 
           <div className="tp-grid">
             <div className="tp-cell"><span>{t("Общая прибыль")}</span>
-              <b style={totPnl2 != null ? pnlCol(totPnl2) : {}}>
-                {totPnl2 != null ? `${dollars(totPnl2)} (${bEth > 0 ? `${totPnl2 >= 0 ? "+" : ""}${fmt((totPnl2 / bEth) * 100, 1)}%` : "—"})` : "…"}
+              <b style={totPnl2 != null && trs.length > 0 ? pnlCol(totPnl2) : {}}>
+                {totPnl2 == null ? "…" : trs.length === 0 ? "—" : `${dollars(totPnl2)} (${bEth > 0 ? `${totPnl2 >= 0 ? "+" : ""}${fmt((totPnl2 / bEth) * 100, 1)}%` : "—"})`}
               </b>
             </div>
             <div className="tp-cell"><span>uPnL</span>
-              <b style={uPnl2 != null ? pnlCol(uPnl2) : {}}>
-                {uPnl2 != null ? dollars(uPnl2) : "…"}
+              <b style={uPnl2 != null && bTok > 0 ? pnlCol(uPnl2) : {}}>
+                {uPnl2 == null ? "…" : bTok > 0 ? dollars(uPnl2) : "—"}
               </b>
             </div>
             <div className="tp-cell"><span>{t("Баланс")} ETH</span>
@@ -2066,8 +2072,14 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               <b>{holdVal != null ? dollars(holdVal) : "…"}</b>
             </div>
             <div className="tp-cell"><span>{t("Позиция")}</span>
-              <b>{posPct != null ? `${fmt(posPct, 1)}% (${compactN(balTok)} ${t("из")} ${compactN(bTok)})` : "…"}</b>
+              <b>{posPct != null ? `${fmt(posPct, 1)}% (${compactN(ownTok)} ${t("из")} ${compactN(bTok)})` : balTok != null ? "—" : "…"}</b>
             </div>
+            {xferTok > 0 && (
+              <div className="tp-cell"><span>{t("Получено переводом")}</span>
+                <b>{compactN(xferTok)}</b>
+                <span>{dollars(xferTok * priceEth)}</span>
+              </div>
+            )}
             <div className="tp-cell"><span>{t("Время удержания")}</span><b>{holdStr2}</b></div>
             <div className="tp-cell"><span>{t("Ср. покупка / продажа")}</span>
               <b>${fmtEthFine(avgB * curRate)} / {sTok > 0 ? `$${fmtEthFine(avgS * curRate)}` : "—"}</b>
@@ -2082,6 +2094,13 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             </div>
           </div>
 
+          {xferTok > 0 && (
+            <div className="dim" style={{ fontSize: 12.5, marginTop: 12, lineHeight: 1.45 }}>
+              {onlyXfer
+                ? t("Этот кошелёк ничего не покупал на кривой — монеты пришли переводом с другого кошелька. Цена покупки неизвестна, прибыль не считаем.")
+                : t("Часть монет пришла переводом с другого кошелька — в прибыли учтены только покупки на кривой.")}
+            </div>
+          )}
           <div className="orders-head" style={{ margin: "18px 0 4px" }}>{t("Сделки трейдера")}</div>
           <div className="tp-row hdr">
             <ThP k="side">{t("Тип")}</ThP>
