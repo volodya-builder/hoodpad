@@ -231,30 +231,54 @@ export const fmtDexEth = (v) => formatEther(v);
 // пересчитались в ETH тем же кодом, price — цена после сделки (ETH или валюта
 // за монету) для роста капитализации. Кэш 60 с.
 let _arenaDex = { v: null, t: 0, p: null };
+// Память по монете: если сеть не ответила (лимит RPC, обрыв), берём прошлый
+// удачный ответ — иначе объём то есть, то нет (владелец, 19.09.2026).
+const _dexByTok = new Map(); // tokenLower -> rows
+const DEX_LS = "hood_dex_tr_v1_";
+function readDexLs(tok) {
+  try { const c = JSON.parse(localStorage.getItem(DEX_LS + tok) || "null"); return Array.isArray(c) ? c.map((r) => ({ ...r, block: BigInt(r.block || 0) })) : null; } catch (e) { return null; }
+}
+function writeDexLs(tok, rows) {
+  try { localStorage.setItem(DEX_LS + tok, JSON.stringify(rows.slice(0, 600).map((r) => ({ ...r, block: String(r.block) })))); } catch (e) { /* нет места */ }
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function dexRowsOf(t) {
+  const tok = lower(t.token);
+  const dec = t.q ? t.q.dec : 18;
+  let lastErr = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const dp = await dexPoolOf(t.token, t.q ? t.q.addr : null);
+      if (!dp) return [];
+      const d = await dexTrades(dp, t.token, { otherDec: dec });
+      const rows = d.trades.map((tr) => ({
+        pool: String(t.pool).toLowerCase(), side: tr.side, addr: tr.addr,
+        eth: tr.eth, tokens: tr.tokens, fee: 0, ts: tr.ts, block: tr.block, tx: tr.tx,
+        quote: t.q ? String(t.q.addr).toLowerCase() : null,
+        ethRaw: String(BigInt(Math.round(tr.eth * 10 ** dec))), feeRaw: "0",
+        dex: true, price: tr.price,
+      }));
+      _dexByTok.set(tok, rows);
+      writeDexLs(tok, rows);
+      return rows;
+    } catch (e) { lastErr = e; await sleep(400 * (attempt + 1)); }
+  }
+  const prev = _dexByTok.get(tok) || readDexLs(tok);
+  if (prev) return prev;
+  throw lastErr || new Error("dex trades failed");
+}
 export async function dexTradesForArena(tokens) {
   if (_arenaDex.v && Date.now() - _arenaDex.t < 60_000) return _arenaDex.v;
   if (_arenaDex.p) return _arenaDex.p;
   _arenaDex.p = (async () => {
     const grads = (tokens || []).filter((t) => t.graduated && t.pool);
     const out = [];
+    let failed = false;
     await Promise.all(grads.map(async (t) => {
-      try {
-        const dp = await dexPoolOf(t.token, t.q ? t.q.addr : null);
-        if (!dp) return;
-        const dec = t.q ? t.q.dec : 18;
-        const d = await dexTrades(dp, t.token, { otherDec: dec });
-        for (const tr of d.trades) {
-          out.push({
-            pool: String(t.pool).toLowerCase(), side: tr.side, addr: tr.addr,
-            eth: tr.eth, tokens: tr.tokens, fee: 0, ts: tr.ts, block: tr.block, tx: tr.tx,
-            quote: t.q ? String(t.q.addr).toLowerCase() : null,
-            ethRaw: String(BigInt(Math.round(tr.eth * 10 ** dec))), feeRaw: "0",
-            dex: true, price: tr.price,
-          });
-        }
-      } catch (e) { /* без DEX-сделок этой монеты */ }
+      try { out.push(...(await dexRowsOf(t))); } catch (e) { failed = true; }
     }));
-    _arenaDex = { v: out, t: Date.now(), p: null };
+    // если какая-то монета так и не прочиталась — кэш короткий, попробуем скоро снова
+    _arenaDex = { v: out, t: failed ? Date.now() - 45_000 : Date.now(), p: null };
     return out;
   })().catch((e) => { _arenaDex.p = null; throw e; });
   return _arenaDex.p;
