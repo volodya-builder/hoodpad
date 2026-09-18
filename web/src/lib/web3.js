@@ -117,7 +117,9 @@ export const isMobile = () =>
 // тихом восстановлении сессии. Без Project ID — простое окно WalletModal.
 export const hasAppKit = () => /^[0-9a-f]{32}$/i.test(WC_PROJECT_ID);
 let _ak = null;
-const appkit = () => _ak || (_ak = import("./appkit.js"));
+// Не загрузился (оборвалась сеть на телефоне, реле WalletConnect не ответило) —
+// забываем неудачу, иначе «Подключить» до перезагрузки страницы молча не работает.
+const appkit = () => _ak || (_ak = import("./appkit.js").catch((e) => { _ak = null; throw e; }));
 
 /** Отключить кошелёк, подключённый через AppKit (в т.ч. сессию WalletConnect). */
 export async function disconnectWallet(wallet) {
