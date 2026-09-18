@@ -495,7 +495,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     const list = Object.entries(m)
       .filter(([, v]) => v > 1e-6)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
+      .slice(0, 100) // до 100 кошельков, список прокручивается
       .map(([a, v]) => ({ addr: a, bal: v, pct: (v / TOTAL) * 100 }));
     return { list, unsold, unsoldPct: (unsold / TOTAL) * 100, total: Object.values(m).filter((v) => v > 1e-6).length };
   }, [history, data, chainBal, xferBal]);
@@ -1683,7 +1683,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           {holders && holders.list.length > 0 && (
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
               {(() => {
-                const top10 = holders.list.reduce((s, h) => s + h.pct, 0);
+                const top10 = holders.list.slice(0, 10).reduce((s, h) => s + h.pct, 0);
                 const cls = top10 >= 40 ? "bad" : top10 >= 20 ? "warn" : "ok";
                 return (
                   <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -1701,38 +1701,45 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             </div>
           )}
           {holders && (
-            <div style={{ marginTop: 6 }}>
-              <div className="holder-row">
-                <span className="hr-rank dim">—</span>
-                <span className="hr-who" style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M3 20C11 20 16 15 20 5" stroke="var(--gold)" strokeWidth="2.4" strokeLinecap="round" />
-                    <circle cx="20" cy="5" r="2.4" fill="var(--gold)" />
-                  </svg>
-                  {t("Бондинг-кривая")}
-                </span>
-                <span className="hr-bar"><span style={{ width: `${Math.min(holders.unsoldPct, 100)}%` }} /></span>
-                <span className="hr-pct">{fmt(holders.unsoldPct, 1)}%</span>
-              </div>
-              {(hSort === "desc" ? holders.list : [...holders.list].reverse()).map((h, i) => {
-                const isCre = h.addr === String(data.creator || "").toLowerCase();
-                const isTre = h.addr === TREASURY_ADDRESS.toLowerCase();
-                const isMe = wallet && h.addr === wallet.account.toLowerCase();
-                return (
-                  <div className="holder-row" key={h.addr}>
-                    <span className="hr-rank dim">{hSort === "desc" ? i + 1 : holders.list.length - i}</span>
-                    <span className="hr-who">
-                      <Who addr={h.addr} title={t("Открыть профиль трейдера")} />
-                      <Badges addr={h.addr} />
-                      {isCre && <span className="badge hr-badge"><Icon name="user" size={11} /> {t("Создатель")}</span>}
-                      {isTre && <span className="badge hr-badge"><Icon name="bank" size={11} /> {t("Казна")}</span>}
-                      {isMe && <span className="badge hr-badge">{t("Вы")}</span>}
+            <div className="holders-scroll" style={{ marginTop: 6 }}>
+              {(() => {
+                // кривая — строка среди держателей, на своём месте по доле
+                const rows = [...holders.list.map((h, i) => ({ ...h, rank: i + 1 })), { curve: true, pct: holders.unsoldPct }]
+                  .sort((x, y) => y.pct - x.pct);
+                if (hSort === "asc") rows.reverse();
+                return rows.map((h) => h.curve ? (
+                  <div className="holder-row" key="curve">
+                    <span className="hr-rank dim">—</span>
+                    <span className="hr-who" style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M3 20C11 20 16 15 20 5" stroke="var(--gold)" strokeWidth="2.4" strokeLinecap="round" />
+                        <circle cx="20" cy="5" r="2.4" fill="var(--gold)" />
+                      </svg>
+                      {t("Бондинг-кривая")}
                     </span>
                     <span className="hr-bar"><span style={{ width: `${Math.min(h.pct * 4, 100)}%` }} /></span>
-                    <span className="hr-pct">{fmt(h.pct, 2)}%</span>
+                    <span className="hr-pct">{fmt(h.pct, 1)}%</span>
                   </div>
-                );
-              })}
+                ) : (() => {
+                  const isCre = h.addr === String(data.creator || "").toLowerCase();
+                  const isTre = h.addr === TREASURY_ADDRESS.toLowerCase();
+                  const isMe = wallet && h.addr === wallet.account.toLowerCase();
+                  return (
+                    <div className="holder-row" key={h.addr}>
+                      <span className="hr-rank dim">{h.rank}</span>
+                      <span className="hr-who">
+                        <Who addr={h.addr} title={t("Открыть профиль трейдера")} />
+                        <Badges addr={h.addr} />
+                        {isCre && <span className="badge hr-badge"><Icon name="user" size={11} /> {t("Создатель")}</span>}
+                        {isTre && <span className="badge hr-badge"><Icon name="bank" size={11} /> {t("Казна")}</span>}
+                        {isMe && <span className="badge hr-badge">{t("Вы")}</span>}
+                      </span>
+                      <span className="hr-bar"><span style={{ width: `${Math.min(h.pct * 4, 100)}%` }} /></span>
+                      <span className="hr-pct">{fmt(h.pct, 2)}%</span>
+                    </div>
+                  );
+                })());
+              })()}
               {holders.list.length === 0 && (
                 <div className="dim" style={{ padding: "8px 0" }}>{t("Пока нет сделок.")}</div>
               )}

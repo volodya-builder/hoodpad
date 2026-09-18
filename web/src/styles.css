@@ -4566,3 +4566,6 @@ html[data-theme="light"] .wpick-item:hover { background: rgba(0,0,0,.05); border
 html[data-theme="light"] .tm-card { background: rgba(0,0,0,.03); border-color: rgba(0,0,0,.08); }
 html[data-theme="light"] .tm-track { stroke: rgba(0,0,0,.08); }
 @media (max-width: 900px) { .tm-grid { grid-template-columns: 1fr; } }
+
+/* держатели: до 100 строк, прокрутка внутри блока */
+.holders-scroll { max-height: 520px; overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; }
