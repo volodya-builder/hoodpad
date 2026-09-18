@@ -1,0 +1,1 @@
+import{h as e}from"./web3-_ADVLi2c.js";export{e as publicClient};
