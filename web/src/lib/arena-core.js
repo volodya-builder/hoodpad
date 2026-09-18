@@ -8,7 +8,7 @@
 // результат у каждого зрителя и у бота.
 // ============================================================================
 import { honestVolume } from "./fairvol.js";
-import { VIRTUAL_ETH } from "./config.js";
+import { VIRTUAL_ETH } from "./curve.js";
 
 export const DAY = 86_400_000;
 

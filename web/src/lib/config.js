@@ -146,11 +146,8 @@ export const AGENT_OPERATOR =
 //   treasury — pages/Treasury.jsx, contracts/BuybackTreasuryV2.sol
 /** Блок деплоя нынешних фабрик (17.09.2026): раньше него событий наших монет нет. */
 export const FACTORY_START_BLOCK = 66_096_189n;
-// Кривая ETH-монет (LaunchpadFactoryV3): виртуальный резерв и порог градации = 4 × virtual.
-// 18.09.2026: 1.625 → 1 ETH (градация 6.5 → 4 ETH, у Pons 4.2); кап создателя 0.13 → 0.08 ETH.
-export const VIRTUAL_ETH = 1;
-export const GRADUATION_ETH = 4;
-export const CREATOR_CAP_ETH = 0.08;
+// Кривая ETH-монет: константы в lib/curve.js (без import.meta — их читают и боты).
+export { VIRTUAL_ETH, GRADUATION_ETH, CREATOR_CAP_ETH } from "./curve.js";
 
 export const FEATURES = {
   arena: true,         // «Арена» — суточный турнир, приз: 10% всех комиссий → выкуп и сжигание подиума (возвращена 15.09.2026)
