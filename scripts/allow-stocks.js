@@ -31,7 +31,10 @@ const V3 = "0x1f7d7550b1b028f7571e69a784071f0205fd2efa";
 const QUOTE_FACTORY = process.env.QUOTE_FACTORY || "0x2501e3667622f21ce3f72c84a9b29e70439f4969";
 const ZAP = process.env.ZAP || "0x79b2282e269a6cea96cd6f4572068c3641411371";
 const FEES = [100, 500, 3000, 10000];
-const TARGET_USD = Number(process.env.TARGET_USD || 16000); // порог градации, как у USDG
+// Порог градации монет за акции — как у ETH-монет: TARGET_ETH (4 ETH) по курсу ETH на момент
+// запуска скрипта, пересчитанный в штуки акции. TARGET_USD — если задать сумму в долларах напрямую.
+const TARGET_ETH = Number(process.env.TARGET_ETH || (process.env.TARGET_USD ? 0 : 4));
+let TARGET_USD = Number(process.env.TARGET_USD || 16000); // переопределяется по TARGET_ETH ниже
 const MIN_DEPTH_USD = Number(process.env.MIN_DEPTH_USD || 2000); // тоньше — не открываем
 const ZERO = "0x0000000000000000000000000000000000000000";
 
@@ -190,7 +193,8 @@ async function main() {
   const ethPool = await bestPool(WETH, USDG, 6);
   const ethUsd = ethPool ? await priceOf(ethPool.p, WETH, 18, 6) : 0;
   const ethFee = ethPool ? ethPool.fee : 500;
-  console.log(`ETH ≈ $${ethUsd.toFixed(0)} (пул WETH/USDG, fee ${ethFee}) · порог градации $${TARGET_USD} · минимальная глубина пула $${MIN_DEPTH_USD}\n`);
+  if (TARGET_ETH > 0) { if (!(ethUsd > 0)) { console.error("Нет курса ETH — порог в ETH не посчитать."); process.exit(1); } TARGET_USD = Math.round(TARGET_ETH * ethUsd); }
+  console.log(`ETH ≈ $${ethUsd.toFixed(0)} (пул WETH/USDG, fee ${ethFee}) · порог градации ${TARGET_ETH > 0 ? TARGET_ETH + " ETH = " : ""}$${TARGET_USD} · минимальная глубина пула $${MIN_DEPTH_USD}\n`);
 
   // --only=COIN,MSFT — проверить/поправить только эти тикеры (быстро)
   const onlyArg = process.argv.find((x) => x.startsWith("--only="));
@@ -224,6 +228,18 @@ async function main() {
     const what = skip ? `— пропуск: ${skip}` :
       `$${price.toFixed(2)} · порог ${shares.toFixed(2)} шт · ${viaWeth ? `WETH/${w.fee}` : `WETH→USDG→${u.fee}`} · ${cfg[0] ? (off ? `сейчас $${curUsd.toFixed(0)}${fix ? " → setQuote" : " (--fix поправит)"}` : "уже верно") : "setQuote"} · ${route ? "маршрут есть" : "setRoute"}`;
     console.log(`${s.sym.padEnd(6)} глубина $${String(Math.round(depth)).padStart(8)}  ${what}`);
+  }
+
+  // Долларовые базовые валюты (USDG 6 зн., USDe 18 зн.) — тот же порог в долларах,
+  // что и у акций: virtual = порог/4, кап = порог/10. Курс 1:1.
+  const STABLES = [{ sym: "USDG", addr: USDG, dec: 6 }, { sym: "USDe", addr: "0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34", dec: 18 }];
+  for (const st of STABLES) {
+    const cfg = await read(QUOTE_FACTORY, qfAbi, "quoteConfig", [st.addr]);
+    const curUsd = cfg[0] ? Number(formatUnits(cfg[1] * 4n, st.dec)) : 0;
+    const off = cfg[0] && Math.abs(curUsd - TARGET_USD) / TARGET_USD > FIX_TOL;
+    const virtual = parseUnits((TARGET_USD / 4).toFixed(2), st.dec), cap = parseUnits((TARGET_USD / 10).toFixed(2), st.dec);
+    plan.push({ sym: st.sym, addr: st.addr, dec: st.dec, virtual, cap, allowed: cfg[0] && !(fix && off), hasRoute: true, routeArgs: null, skip: "" });
+    console.log(`${st.sym.padEnd(6)} стейбл           порог $${TARGET_USD} · ${cfg[0] ? (off ? `сейчас $${curUsd.toFixed(0)}${fix ? " → setQuote" : " (--fix поправит)"}` : "уже верно") : "setQuote"}`);
   }
 
   const todoQuote = plan.filter((r) => !r.skip && !r.allowed);
