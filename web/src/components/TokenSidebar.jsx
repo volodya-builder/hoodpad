@@ -16,7 +16,13 @@ export default function TokenSidebar({ current }) {
   const [tokens, setTokens] = useState(null);
   const [st, setSt] = useState({ vol: {}, first: {} });
   const [q, setQ] = useState("");
-  const [sort, setSort] = useState({ k: "vol", d: -1 }); // d: -1 убывание, 1 возрастание
+  // d: -1 убывание, 1 возрастание. По умолчанию — объём от большего к
+  // меньшему; выбор человека запоминаем.
+  const [sort, setSortRaw] = useState(() => {
+    try { const v = JSON.parse(localStorage.getItem("hood.tsSort") || "null"); if (v && v.k && (v.d === 1 || v.d === -1)) return v; } catch (e) { /* ignore */ }
+    return { k: "vol", d: -1 };
+  });
+  const setSort = (f) => setSortRaw((s) => { const n = typeof f === "function" ? f(s) : f; try { localStorage.setItem("hood.tsSort", JSON.stringify(n)); } catch (e) { /* ignore */ } return n; });
   const [favOnly, setFavOnly] = useState(false);
   const favs = useFavs();
 
@@ -69,7 +75,7 @@ export default function TokenSidebar({ current }) {
   }
   if (favOnly) list = list.filter((x) => favs.has(x.token));
   list = [...list];
-  const dir = -sort.d;
+  const dir = sort.d; // -1: от большего к меньшему
   if (sort.k === "vol") list.sort((a, b) => (volOf(a) - volOf(b)) * dir);
   if (sort.k === "chg") list.sort((a, b) => ((chgOf(a) ?? -1e18) - (chgOf(b) ?? -1e18)) * dir);
   if (sort.k === "mcap") list.sort((a, b) => (mcapOf(a) - mcapOf(b)) * dir);
