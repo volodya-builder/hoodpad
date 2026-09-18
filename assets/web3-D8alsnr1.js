@@ -1,0 +1,1 @@
+import{h as e}from"./web3-D-r-hw67.js";export{e as publicClient};
