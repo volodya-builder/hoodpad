@@ -226,11 +226,10 @@ export default function CandleChart({ points, trades, rate, marks, lines, defaul
           </div>
         ))}
         {hasMarks && (
-          <label className="lines-toggle marks-toggle" style={{ marginLeft: "auto" }}
-                 title={t("Показывать выкупы казны на графике")}>
-            <input type="checkbox" checked={showMarks} onChange={(e) => toggleMarks(e.target.checked)} />
+          <div className={`fpill mk-toggle ${showMarks ? "on" : ""}`} style={{ marginLeft: "auto" }}
+               onClick={() => toggleMarks(!showMarks)} title={t("Показывать выкупы казны на графике")}>
             <i className="mk-dot" />{t("Выкуп")}
-          </label>
+          </div>
         )}
         {(lines || []).length > 0 && (
           <label className="lines-toggle" style={hasMarks ? {} : { marginLeft: "auto" }}

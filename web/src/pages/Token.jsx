@@ -126,10 +126,10 @@ function MiniChart({ points, rate, marks, ethUsd = 0, base = VIRTUAL_ETH }) {
     <div style={{ position: "relative" }}>
       {nBuy > 0 && (
         <div className="ch-legend">
-          <label className="lines-toggle marks-toggle" title={t("Показывать выкупы казны на графике")}>
-            <input type="checkbox" checked={showMarks} onChange={(e) => toggleMarks(e.target.checked)} />
+          <div className={`fpill mk-toggle ${showMarks ? "on" : ""}`} onClick={() => toggleMarks(!showMarks)}
+               title={t("Показывать выкупы казны на графике")}>
             <i className="mk-dot" />{t("Выкуп")} {nBuy}
-          </label>
+          </div>
         </div>
       )}
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", display: "block", marginTop: 8 }}
