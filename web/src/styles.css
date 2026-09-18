@@ -999,6 +999,15 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
 .lines-toggle:hover { color: var(--text); }
 .marks-toggle input { accent-color: #c8f542; }
 .mk-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #c8f542; }
+/* точка выкупа поверх свечного графика: 5px, при наведении — карточка сделки */
+.mk-pt { position: absolute; z-index: 6; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: #c8f542; opacity: .85; cursor: pointer; text-decoration: none; }
+.mk-pt::before { content: ""; position: absolute; inset: -7px; }
+.mk-pt:hover { opacity: 1; box-shadow: 0 0 0 3px rgba(200,245,66,.25); }
+.mk-card { display: none; position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); min-width: 150px; padding: 8px 10px; border-radius: 10px; background: var(--bg-soft, #1c1c1a); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 8px 24px rgba(0,0,0,.4); font-size: 11.5px; line-height: 1.45; color: var(--text-dim); white-space: nowrap; flex-direction: column; }
+.mk-card b { color: var(--text); font-weight: 500; }
+.mk-card em { font-style: normal; color: #c8f542; margin-top: 2px; }
+.mk-pt:hover .mk-card { display: flex; }
+html[data-theme="light"] .mk-card { border-color: rgba(0,0,0,.1); }
 .candle-ivs-overlay {
   position: absolute; top: 12px; left: 12px; right: 66px; z-index: 7;
   margin-top: 0;

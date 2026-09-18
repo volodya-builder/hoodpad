@@ -781,6 +781,7 @@ const EN = {
   "Заявки": "Orders",
   "выкуп": "buyback",
   "Показывать выкупы казны на графике": "Show treasury buybacks on the chart",
+  "Открыть в обозревателе": "Open in explorer",
   "Показывать уровни заявок на графике": "Show order levels on the chart",
   "Время": "Time",
   "Трейдер": "Trader",

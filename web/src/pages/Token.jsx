@@ -60,7 +60,7 @@ function smoothPath(xs, ys) {
   return d;
 }
 
-function MiniChart({ points, rate, marks, base = VIRTUAL_ETH }) {
+function MiniChart({ points, rate, marks, ethUsd = 0, base = VIRTUAL_ETH }) {
   const [hover, setHover] = React.useState(null);
   const { t } = useLang();
   const W = 680, H = 300, PADB = 30, PADT = 14, PADL = 8, PADR = 62;
@@ -111,7 +111,7 @@ function MiniChart({ points, rate, marks, base = VIRTUAL_ETH }) {
 
   // выкупы казны: точки под графиком, переключатель (выбор запоминаем)
   const nBuy = (marks ?? []).filter((m) => m.kind === "buyback").length;
-  const [showMarks, setShowMarks] = useState(() => { try { return localStorage.getItem("hood_chart_marks") !== "0"; } catch (e) { return true; } });
+  const [showMarks, setShowMarks] = useState(() => { try { return localStorage.getItem("hood_chart_marks") === "1"; } catch (e) { return false; } });
   const toggleMarks = (v) => { setShowMarks(v); try { localStorage.setItem("hood_chart_marks", v ? "1" : "0"); } catch (e) { /* ignore */ } };
 
   const onMove = (e) => {
@@ -166,10 +166,10 @@ function MiniChart({ points, rate, marks, base = VIRTUAL_ETH }) {
           if (best < 0) return null;
           const bx = X(best), by = Y(pts[best].mcap);
           return (
-            <g key={`mk${k}`}>
-              <circle cx={bx} cy={by + 12} r="3" fill="#c8f542" />
-              <text x={bx} y={by + 26} textAnchor="middle" fontSize="9" fill="#c8f542" fillOpacity=".85">{t("выкуп")}</text>
-            </g>
+            <a key={`mk${k}`} href={mk.tx ? `${EXPLORER}/tx/${mk.tx}` : undefined} target="_blank" rel="noreferrer">
+              <title>{`${t("Выкуп казны")} · ${(mk.eth || 0).toFixed(4)} ETH${ethUsd ? ` (${usd((mk.eth || 0) * ethUsd)})` : ""} · ${new Date(mk.ts).toLocaleString()}`}</title>
+              <circle cx={bx} cy={by + 12} r="2.5" fill="#c8f542" fillOpacity=".9" style={{ cursor: "pointer" }} />
+            </a>
           );
         })}
         {hover !== null && !empty && (
@@ -584,7 +584,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         setMarks(ops
           .filter((o) => (o.token || "").toLowerCase() === tokenAddress.toLowerCase()
                          && (o.kind === "buyback" || o.kind === "burned"))
-          .map((o) => ({ ts: Number(o.timestamp) * 1000, kind: o.kind })));
+          .map((o) => ({ ts: Number(o.timestamp) * 1000, kind: o.kind, tx: o.tx,
+                         eth: Number(o.ethAmount || 0) / 1e18, tokens: Number(o.tokenAmount || 0) / 1e18 })));
       })
       .catch(() => {});
     return () => { alive = false; };
@@ -1404,9 +1405,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             </div>
           </div>
           {history && history.points && history.points.filter((p) => p.ts).length >= 2 ? (
-            <CandleChart points={history.points} trades={history.trades} rate={curRate} marks={marks} />
+            <CandleChart points={history.points} trades={history.trades} rate={curRate} marks={marks} ethUsd={rate} unit={data.symbol} />
           ) : history ? (
-            <MiniChart points={chartPoints} rate={curRate} marks={marks} base={data.q ? data.q.virt : VIRTUAL_ETH} />
+            <MiniChart points={chartPoints} rate={curRate} marks={marks} ethUsd={rate} base={data.q ? data.q.virt : VIRTUAL_ETH} />
           ) : (
             /* события ещё идут и кэша нет: пустое место того же размера, без «пустого» графика */
             <svg viewBox="0 0 680 300" style={{ width: "100%", display: "block", marginTop: 8 }} aria-hidden="true" />

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { createChart } from "lightweight-charts";
 import { usd } from "../lib/price.js";
+import { EXPLORER } from "../lib/config.js";
 import { useLang } from "../lib/i18n.jsx";
 
 // Профессиональный свечной график на TradingView Lightweight Charts.
@@ -11,6 +12,9 @@ import { useLang } from "../lib/i18n.jsx";
 const INTERVALS = [
   ["1м", 60], ["5м", 300], ["15м", 900], ["1ч", 3600], ["4ч", 14400], ["1д", 86400],
 ];
+
+// число токенов компактно: 334.9K, 1.2M
+const compactNum = (n) => (n >= 1e9 ? (n / 1e9).toFixed(2) + "B" : n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "K" : n.toFixed(2));
 
 // объём в долларах: маленькие суммы с центами, большие — компактно ($3.1k)
 const volUsd = (x) => (x >= 1000 ? usd(x) : "$" + (x || 0).toFixed(2));
@@ -52,7 +56,7 @@ function buildCandles(points, trades, rate, ivSec) {
   return { candles, volumes };
 }
 
-export default function CandleChart({ points, trades, rate, marks, lines, defaultIv = 300, unit }) {
+export default function CandleChart({ points, trades, rate, marks, lines, defaultIv = 300, unit, ethUsd = 0 }) {
   const { t } = useLang();
   const ref = useRef(null);
   const chartRef = useRef(null); // { chart, cs, vs, priceLines, fitted, volByTime, volTotal, dirByTime, times, rate }
@@ -62,7 +66,9 @@ export default function CandleChart({ points, trades, rate, marks, lines, defaul
   const [fs, setFs] = useState(false); // полноэкранный режим
   const [showLines, setShowLines] = useState(true); // уровни заявок на графике
   // точки выкупов казны — можно выключить, выбор запоминаем
-  const [showMarks, setShowMarks] = useState(() => { try { return localStorage.getItem("hood_chart_marks") !== "0"; } catch (e) { return true; } });
+  const [showMarks, setShowMarks] = useState(() => { try { return localStorage.getItem("hood_chart_marks") === "1"; } catch (e) { return false; } });
+  const [dots, setDots] = useState([]); // точки выкупов поверх графика (HTML, чтобы ловить наведение и клик)
+  const dotsRef = useRef([]); // [{ time, price, m }]
   const toggleMarks = (v) => { setShowMarks(v); try { localStorage.setItem("hood_chart_marks", v ? "1" : "0"); } catch (e) { /* ignore */ } };
   const hasMarks = (marks || []).some((m) => m.kind === "buyback");
   const linesRef = useRef([]); // для autoscale
@@ -124,7 +130,26 @@ export default function CandleChart({ points, trades, rate, marks, lines, defaul
       el2.innerHTML = volLegendHtml(c, tkey);
     });
 
-    return () => { chart.remove(); chartRef.current = null; };
+    // точки выкупов: пересчитываем позиции при скролле/зуме и смене размера
+    const place = () => {
+      const c = chartRef.current;
+      if (!c) return;
+      const ts = c.chart.timeScale();
+      const out = [];
+      for (const d of dotsRef.current) {
+        const x = ts.timeToCoordinate(d.time);
+        const y = c.cs.priceToCoordinate(d.price);
+        if (x == null || y == null) continue;
+        out.push({ x, y, m: d.m });
+      }
+      setDots(out);
+    };
+    chart.timeScale().subscribeVisibleLogicalRangeChange(place);
+    const ro = new ResizeObserver(() => setTimeout(place, 0));
+    ro.observe(el);
+    chartRef.current.place = place;
+
+    return () => { ro.disconnect(); chart.remove(); chartRef.current = null; };
   }, [iv, logScale, fs]);
 
   // обновление данных — без пересоздания и без сброса зума
@@ -145,21 +170,21 @@ export default function CandleChart({ points, trades, rate, marks, lines, defaul
       legendRef.current.innerHTML = volLegendHtml(c, c.times.length ? c.times[c.times.length - 1] : null);
     }
 
-    // выкупы казны: одна маленькая зелёная точка под свечой (сжигание идёт
-    // в той же транзакции — отдельно не отмечаем); переключатель над графиком
-    const times = new Set(candles.map((x) => x.time));
+    // выкупы казны: маленькая точка под свечой (HTML поверх графика — с
+    // карточкой при наведении и ссылкой на сделку); сжигание идёт в той же
+    // транзакции, отдельно не отмечаем. Переключатель над графиком.
+    const lowByTime = new Map(candles.map((x) => [x.time, x.low]));
     const seen = new Set();
-    const markers = showMarks ? (marks || [])
+    dotsRef.current = showMarks ? (marks || [])
       .filter((m) => m.kind === "buyback")
       .map((m) => {
         const tb = Math.floor(m.ts / 1000 / iv) * iv;
-        if (!times.has(tb) || seen.has(tb)) return null;
+        if (!lowByTime.has(tb) || seen.has(tb)) return null;
         seen.add(tb);
-        return { time: tb, position: "belowBar", color: "#c8f542", shape: "circle", size: 0.5, text: t("выкуп") };
+        return { time: tb, price: lowByTime.get(tb), m };
       })
-      .filter(Boolean)
-      .sort((a, b) => a.time - b.time) : [];
-    c.cs.setMarkers(markers);
+      .filter(Boolean) : [];
+    if (c.place) setTimeout(c.place, 0);
 
     // пунктирные уровни активных заявок
     for (const pl of c.priceLines) { try { c.cs.removePriceLine(pl); } catch (e) { /* ignore */ } }
@@ -223,6 +248,18 @@ export default function CandleChart({ points, trades, rate, marks, lines, defaul
       <div className="chart-area" style={{ position: "relative" }}>
         <div ref={ref} className="chart-resize" />
         <div ref={legendRef} className="chart-legend" />
+        {dots.map((d, i) => (
+          <a key={i} className="mk-pt" style={{ left: d.x, top: d.y + 10 }}
+             href={d.m.tx ? `${EXPLORER}/tx/${d.m.tx}` : undefined} target="_blank" rel="noreferrer">
+            <span className="mk-card">
+              <b>{t("Выкуп казны")}</b>
+              <span>{d.m.eth != null ? `${d.m.eth.toFixed(4)} ETH` : ""}{d.m.eth != null && ethUsd ? ` (${usd(d.m.eth * ethUsd)})` : ""}</span>
+              {d.m.tokens != null && <span>{compactNum(d.m.tokens)} {unit || ""}</span>}
+              <span>{new Date(d.m.ts).toLocaleString()}</span>
+              {d.m.tx && <em>{t("Открыть в обозревателе")}</em>}
+            </span>
+          </a>
+        ))}
         <div className={`chart-log-btn ${logScale ? "on" : ""}`}
              onClick={() => setLogScale(!logScale)}
              title={t("Логарифмическая шкала цены")}>
