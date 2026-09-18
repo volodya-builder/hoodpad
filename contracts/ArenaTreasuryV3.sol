@@ -8,11 +8,13 @@ import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step
 
 interface IEthPoolA3 {
     function buy(uint256 minTokensOut, address recipient) external payable returns (uint256);
+    function migrated() external view returns (bool);
 }
 
 interface IQuotePoolA3 {
     function buy(uint256 quoteInGross, uint256 minTokensOut, address recipient) external returns (uint256);
     function quote() external view returns (address);
+    function migrated() external view returns (bool);
 }
 
 interface IFactoryA3 {
@@ -104,6 +106,7 @@ contract ArenaTreasuryV3 is Ownable2Step, ReentrancyGuard {
     error Slippage();
     error NotOperator();
     error NotPlatformToken();
+    error NotMigrated();
 
     /// @dev Владелец или оператор.
     modifier onlyOperator() {
@@ -244,12 +247,17 @@ contract ArenaTreasuryV3 is Ownable2Step, ReentrancyGuard {
         returns (uint256 tokensOut)
     {
         require(ethAmount > 0 && ethAmount <= address(this).balance, "bad amount");
-        bool isEth = address(ethFactory) != address(0) && ethFactory.poolOf(token) != address(0);
+        address pool = address(ethFactory) != address(0) ? ethFactory.poolOf(token) : address(0);
+        bool isEth = pool != address(0);
         address quote = address(0);
         if (!isEth) {
-            if (address(quoteFactory) == address(0) || quoteFactory.poolOf(token) == address(0)) revert NotPlatformToken();
+            pool = address(quoteFactory) != address(0) ? quoteFactory.poolOf(token) : address(0);
+            if (pool == address(0)) revert NotPlatformToken();
             quote = quoteFactory.quoteOf(token);
         }
+        // Пока ликвидность не уехала на DEX, там нечего покупать: любой пул
+        // Uniswap с этим адресом — чужой, покупать в нём казна не должна.
+        if (!IEthPoolA3(pool).migrated()) revert NotMigrated();
         weth.deposit{value: ethAmount}();
         tokensOut = (isEth || quote == address(weth))
             ? _swap(address(weth), token, DEX_FEE, ethAmount)

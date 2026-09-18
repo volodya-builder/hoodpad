@@ -32,7 +32,12 @@ async function deploy(account, name, args = []) {
 }
 const read = (c, fn, args = []) => pub.readContract({ address: c.address, abi: c.abi, functionName: fn, args });
 async function write(account, c, fn, args = [], value) {
-  const hash = await w(account).writeContract({ address: c.address, abi: c.abi, functionName: fn, args, value });
+  // газ задаём явно: оценка ganache делается по времени блока оценки, а
+  // стартовый налог зависит от секунды — при смене секунды между оценкой и
+  // майнингом покупка упиралась бы в лимит газа (в сети время только растёт,
+  // налог только падает, там такого нет)
+  const est = await pub.estimateContractGas({ account, address: c.address, abi: c.abi, functionName: fn, args, value });
+  const hash = await w(account).writeContract({ address: c.address, abi: c.abi, functionName: fn, args, value, gas: (est * 15n) / 10n });
   return pub.waitForTransactionReceipt({ hash });
 }
 
