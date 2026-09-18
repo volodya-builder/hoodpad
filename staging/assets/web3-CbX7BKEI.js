@@ -1,0 +1,1 @@
+import{h as e}from"./web3--gzgvuvO.js";export{e as publicClient};
