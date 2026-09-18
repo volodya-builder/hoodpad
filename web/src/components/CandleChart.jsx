@@ -27,7 +27,7 @@ function volLegendHtml(c, tkey) {
   return `Volume: <span style="color:${up ? "var(--leaf, #7ac74f)" : "var(--red, #e06a4a)"}">${volUsd(v * (c.rate || 0))}</span>`;
 }
 
-function buildCandles(points, trades, rate, ivSec) {
+function buildCandles(points, trades, rate, ivSec, base) {
   const pts = points.filter((p) => p.ts).sort((a, b) => a.ts - b.ts);
   const buckets = new Map();
   for (const p of pts) {
@@ -38,6 +38,12 @@ function buildCandles(points, trades, rate, ivSec) {
     else { c.high = Math.max(c.high, v); c.low = Math.min(c.low, v); c.close = v; }
   }
   const candles = [...buckets.values()].sort((a, b) => a.time - b.time);
+  // первая свеча начинается со стартовой капитализации кривой (до первой сделки),
+  // иначе первая покупка — плоская чёрточка, а не свеча
+  if (candles.length && base > 0) {
+    const v0 = base * rate, c0 = candles[0];
+    c0.open = v0; c0.low = Math.min(c0.low, v0); c0.high = Math.max(c0.high, v0);
+  }
   // непрерывность: open свечи = close предыдущей
   for (let i = 1; i < candles.length; i++) {
     const prev = candles[i - 1].close, c = candles[i];
@@ -56,7 +62,7 @@ function buildCandles(points, trades, rate, ivSec) {
   return { candles, volumes };
 }
 
-export default function CandleChart({ points, trades, rate, marks, lines, defaultIv = 300, unit, ethUsd = 0 }) {
+export default function CandleChart({ points, trades, rate, marks, lines, defaultIv = 300, unit, ethUsd = 0, base = 0 }) {
   const { t } = useLang();
   const ref = useRef(null);
   const chartRef = useRef(null); // { chart, cs, vs, priceLines, fitted, volByTime, volTotal, dirByTime, times, rate }
@@ -140,11 +146,14 @@ export default function CandleChart({ points, trades, rate, marks, lines, defaul
         const x = ts.timeToCoordinate(d.time);
         const y = c.cs.priceToCoordinate(d.price);
         if (x == null || y == null) continue;
-        out.push({ x, y, m: d.m });
+        out.push({ x: Math.round(x), y: Math.round(y), m: d.m });
       }
-      setDots(out);
+      // ценовая шкала пересчитывается без события — сверяем и обновляем только при сдвиге
+      const key = out.map((d) => `${d.x},${d.y}`).join("|");
+      if (key !== c.dotsKey) { c.dotsKey = key; setDots(out); }
     };
     chart.timeScale().subscribeVisibleLogicalRangeChange(place);
+    chart.subscribeCrosshairMove(place);
     const ro = new ResizeObserver(() => setTimeout(place, 0));
     ro.observe(el);
     chartRef.current.place = place;
@@ -158,7 +167,7 @@ export default function CandleChart({ points, trades, rate, marks, lines, defaul
     if (!c) return;
     const shown = showLines ? (lines || []).filter((l) => l.value > 0) : [];
     linesRef.current = shown; // до setData — autoscale учтёт уровни
-    const { candles, volumes } = buildCandles(points, trades, rate, iv);
+    const { candles, volumes } = buildCandles(points, trades, rate, iv, base);
     c.cs.setData(candles);
     c.vs.setData(volumes);
     c.volByTime = new Map(volumes.map((v) => [v.time, v.value]));
@@ -184,7 +193,7 @@ export default function CandleChart({ points, trades, rate, marks, lines, defaul
         return { time: tb, price: lowByTime.get(tb), m };
       })
       .filter(Boolean) : [];
-    if (c.place) setTimeout(c.place, 0);
+    if (c.place) [0, 60, 300, 1000].forEach((ms) => setTimeout(c.place, ms));
 
     // пунктирные уровни активных заявок
     for (const pl of c.priceLines) { try { c.cs.removePriceLine(pl); } catch (e) { /* ignore */ } }
@@ -205,7 +214,7 @@ export default function CandleChart({ points, trades, rate, marks, lines, defaul
       } catch (e) { try { c.chart.timeScale().fitContent(); } catch (e2) {} }
       c.fitted = true;
     }
-  }, [points, trades, rate, marks, lines, iv, logScale, fs, showLines, showMarks]);
+  }, [points, trades, rate, marks, lines, iv, logScale, fs, showLines, showMarks, base]);
 
   useEffect(() => {
     if (!fs) return;
