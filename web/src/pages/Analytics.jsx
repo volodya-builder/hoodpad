@@ -121,7 +121,7 @@ export default function Analytics() {
     (async () => {
       // Масштабируемая схема: 2 запроса к индексатору (токены + сделки),
       // казна — из кэша treasuryOps, и всего 3 RPC-вызова. Никаких циклов по пулам.
-      const [tokens, trades, split2, sup, ops, arenaPays] = await Promise.all([
+      const [tokens, trades0, split2, sup, ops, arenaPays] = await Promise.all([
         loadTokens(),
         allTrades(),
         loadSplit(),
@@ -129,6 +129,14 @@ export default function Analytics() {
         subgraphTreasuryOps().catch(() => []),
         loadArenaPayouts().catch(() => []),
       ]);
+      // Градуировавшие монеты торгуются на Uniswap — их обмены тоже объём
+      // платформы (комиссия создателю с них не идёт, fee = 0).
+      let trades = trades0;
+      try {
+        const [{ dexTradesForArena }, { toEthEquivalent }] = await Promise.all([import("../lib/dex.js"), import("../lib/data.js")]);
+        const dx = await dexTradesForArena(tokens);
+        if (dx.length) { await toEthEquivalent(dx); trades = [...trades0, ...dx].sort((a, b) => b.ts - a.ts); }
+      } catch (e) { /* без DEX-сделок */ }
       // выкупы по дням: старая казна (сабграф) + казна арены (события Buyback)
       const buybacks = [
         ...ops.filter((o) => o.kind === "buyback").map((o) => ({ ts: Number(o.timestamp) * 1000, eth: Number(o.ethAmount || 0) / 1e18 })),

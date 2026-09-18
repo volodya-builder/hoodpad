@@ -1458,7 +1458,7 @@ html[data-theme="light"] .mk-card .mk-amt { color: #4f8a20; }
 
 /* -------- token page: holders + favorites -------- */
 .holder-row {
-  display: grid; grid-template-columns: 26px minmax(0, 1.4fr) 1fr 64px;
+  display: grid; grid-template-columns: 26px minmax(0, 1.4fr) 84px 1fr 72px;
   gap: 12px; align-items: center; padding: 9px 0;
   border-bottom: 1px solid var(--border); font-size: 13px;
 }
@@ -1470,6 +1470,13 @@ html[data-theme="light"] .mk-card .mk-amt { color: #4f8a20; }
 .hr-bar { height: 6px; border-radius: 4px; background: var(--border); overflow: hidden; display: block; }
 .hr-bar span { display: block; height: 100%; border-radius: 4px; background: var(--gold); }
 .hr-pct { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-dim); }
+.hr-val { text-align: right; font-variant-numeric: tabular-nums; color: var(--text); font-weight: 600; font-size: 12.5px; white-space: nowrap; }
+.hr-chip { display: inline-block; padding: 2px 7px; border-radius: 6px; background: #ffffff0f; color: var(--text-dim); font-size: 11.5px; font-weight: 600; }
+html[data-theme="light"] .hr-chip { background: #00000010; }
+@media (max-width: 720px) {
+  .holder-row { grid-template-columns: 22px minmax(0, 1fr) 70px 64px; gap: 8px; }
+  .holder-row .hr-bar { display: none; }
+}
 
 .timg { position: relative; }
 .fav-btn {
