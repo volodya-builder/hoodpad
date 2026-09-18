@@ -27,6 +27,7 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { treasuryCanConvert, convertTreasuryToEth, treasuryAccess } from "../lib/to-eth.mjs";
+import { getLogsSafe, DEPLOY_BLOCK, maxBig } from "../lib/logs.mjs";
 
 const DRY = process.argv.includes("--dry");
 const RPC_URL = process.env.RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
@@ -68,13 +69,9 @@ async function alreadyPaid(hourKey) {
   const old = await pub.getBlock({ blockNumber: head > 5000n ? head - 5000n : 0n });
   const secPerBlock = Math.max(0.05, (Number(hb.timestamp) - Number(old.timestamp)) / Number(head - old.number || 1n));
   const span = BigInt(Math.ceil((LOOKBACK_DAYS * 86400) / secPerBlock));
-  const fromBlock = head > span ? head - span : 0n;
-  const STEP = 50_000n;
-  for (let from = fromBlock; from <= head; from += STEP + 1n) {
-    const to = from + STEP > head ? head : from + STEP;
-    const logs = await pub.getLogs({ address: TREASURY, event: treasuryAbi.find((x) => x.type === "event"), fromBlock: from, toBlock: to });
-    for (const l of logs) if ((l.args.note || "") === `hood ${hourKey}`) return true;
-  }
+  const fromBlock = maxBig(DEPLOY_BLOCK, head > span ? head - span : 0n);
+  const logs = await getLogsSafe(pub, { address: TREASURY, event: treasuryAbi.find((x) => x.type === "event"), fromBlock, toBlock: head, log: console.log });
+  for (const l of logs) if ((l.args.note || "") === `hood ${hourKey}`) return true;
   return false;
 }
 
