@@ -17,7 +17,7 @@ import {
 const MIGRATOR_ETH = "0xa305c5b0bc38b3351e432c50752fd6f99ce8b241";
 const MIGRATOR_QUOTE = "0x49764ab6326bba7990959e990f3b45caf4b79ef2";
 const USDG_ADDRESS = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168";
-const HOOD_TOKEN = ""; // монета hood — адрес после запуска с кошелька команды на комплекте 4 ETH
+const HOOD_TOKEN = "0x948449a04689bc0199fee040e34f7a26ddfff0a5"; // монета hood, запущена 18.09.2026 с кошелька команды (комплект 4 ETH)
 const TEAM_WALLET = "0x492eC12B89AAbB2fCF41c297Bd909B8e3498Db0c"; // командная доля комиссий (10%)
 const ARENA_BOT = "0xB2DDdF862C52aEe0c9d27c9D4AD7a2099fE7D164";   // оператор обеих казн: только обмен в ETH и выкуп-сжигание
 const SUBGRAPH = "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/5.0.0/gn";
