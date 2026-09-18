@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { formatEther, formatUnits, parseUnits } from "viem";
 import { publicClient, fmt, fmtEth, short } from "../lib/web3.js";
 import { tokenAbi, poolExtraAbi, feeSplitterAbi, erc20Abi } from "../lib/abi.js";
-import { ARENA_TREASURY_ADDRESS, BUYBACK_TREASURY_ADDRESS, FEE_SPLITTER_ADDRESS, CHAT_DB_URL, EXPLORER } from "../lib/config.js";
+import { ARENA_TREASURY_ADDRESS, BUYBACK_TREASURY_ADDRESS, FEE_SPLITTER_ADDRESS, CHAT_DB_URL, EXPLORER, FACTORY_START_BLOCK } from "../lib/config.js";
 import { loadTokens, allTrades, useClock, dataSource } from "../lib/data.js";
 import { useEthUsd, usd, quoteUsd } from "../lib/price.js";
 import { loadBans, saveBans } from "../lib/bans.js";
@@ -119,6 +119,99 @@ async function treasuryHoldings(addr, quotes, rate) {
   }));
   assets.sort((a, b) => b.usd - a.usd);
   return { addr, bal, eth, assets, usd: eth * rate + assets.reduce((s, a) => s + a.usd, 0) };
+}
+
+// ---------------------------------------------------------------- боты: таймеры
+// Три бота площадки живут в GitHub Actions по расписанию: выкуп hood — в начале
+// каждого часа (+2 мин), арена — в 00:25 UTC, дивиденды и сбор комиссий — на
+// круглых отметках каждые 5 минут. Здесь — обратный отсчёт до каждого и
+// последнее сделанное (по событиям в цепи: Buyback казн, SplitEth/SplitErc20
+// сплиттера). Кольцо заполняется по мере ожидания; после срока, пока в цепи
+// не появилось новое событие, карточка показывает «выполняется».
+const botEvAbi = parseAbi([
+  "event Buyback(address indexed token, address indexed asset, uint256 amountIn, uint256 tokensOut, string note)",
+  "event SplitEth(address indexed token, uint256 toArena, uint256 toBuyback, uint256 toTeam)",
+  "event SplitErc20(address indexed token, address indexed asset, uint256 toArena, uint256 toBuyback, uint256 toTeam)",
+]);
+const nextHourly = (now) => { const h = 3_600_000; return Math.floor(now / h) * h + 120_000 > now ? Math.floor(now / h) * h + 120_000 : (Math.floor(now / h) + 1) * h + 120_000; };
+const nextDaily = (now) => { const d = 86_400_000; const at = Math.floor(now / d) * d + 25 * 60_000; return at > now ? at : at + d; };
+const nextFive = (now) => (Math.floor(now / 300_000) + 1) * 300_000;
+const pad2 = (n) => String(n).padStart(2, "0");
+const hms = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)); return s >= 3600 ? `${pad2(Math.floor(s / 3600))}:${pad2(Math.floor((s % 3600) / 60))}:${pad2(s % 60)}` : `${pad2(Math.floor(s / 60))}:${pad2(s % 60)}`; };
+const ago = (ts, t) => { const m = Math.max(0, Math.round((Date.now() - ts) / 60_000)); return m < 1 ? t("только что") : m < 60 ? `${m} ${t("мин назад")}` : `${Math.floor(m / 60)} ${t("ч назад")}`; };
+
+function BotCard({ title, sub, due, period, last, busyFor, t }) {
+  const now = Date.now();
+  const left = due - now;
+  const frac = Math.min(1, Math.max(0, 1 - left / period));
+  // после срока: «выполняется», пока нет свежего события (не позже busyFor после срока)
+  const busy = left <= 0 || (last && now - last.ts < 60_000 && now - due < busyFor);
+  const R = 30, C = 2 * Math.PI * R;
+  return (
+    <div className={`bt-card ${busy ? "busy" : ""}`}>
+      <div className="bt-ring">
+        <svg viewBox="0 0 72 72" width="72" height="72">
+          <circle cx="36" cy="36" r={R} className="bt-track" />
+          <circle cx="36" cy="36" r={R} className="bt-fill" style={{ strokeDasharray: C, strokeDashoffset: C * (1 - frac) }} />
+        </svg>
+        <div className="bt-time">{busy ? <span className="bt-dot" /> : hms(left)}</div>
+      </div>
+      <div className="bt-text">
+        <div className="bt-title">{title}</div>
+        <div className="bt-sub">{busy ? t("выполняется…") : sub}</div>
+        <div className="bt-last">{last ? <>{t("последний")}: {last.text} · {ago(last.ts, t)}</> : t("ещё не было")}</div>
+      </div>
+    </div>
+  );
+}
+
+function BotTimers({ t, rate }) {
+  useClock(1000);
+  const [ev, setEv] = useState({ hood: null, arena: null, div: null });
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      try {
+        const [bb, ar, sp] = await Promise.all([
+          publicClient.getLogs({ address: BUYBACK_TREASURY_ADDRESS, event: botEvAbi[0], fromBlock: FACTORY_START_BLOCK }),
+          publicClient.getLogs({ address: ARENA_TREASURY_ADDRESS, event: botEvAbi[0], fromBlock: FACTORY_START_BLOCK }),
+          publicClient.getLogs({ address: FEE_SPLITTER_ADDRESS, events: [botEvAbi[1], botEvAbi[2]], fromBlock: FACTORY_START_BLOCK }),
+        ]);
+        const pick = async (logs, text) => {
+          const l = logs[logs.length - 1];
+          if (!l) return null;
+          const b = await publicClient.getBlock({ blockNumber: l.blockNumber });
+          return { ts: Number(b.timestamp) * 1000, text: text(l) };
+        };
+        const usdEth = (wei) => rate > 0 ? usd(Number(formatEther(wei)) * rate) : `${fmtEth(Number(formatEther(wei)))} ETH`;
+        const [hood, arena, div] = await Promise.all([
+          pick(bb, (l) => `${usdEth(l.args.amountIn)} → ${t("сожжено")}`),
+          pick(ar.filter((l) => String(l.args.note || "").startsWith("arena")), (l) => `${usdEth(l.args.amountIn)} · ${String(l.args.note).replace(/^arena \S+ /, "")}${t(" место")}`),
+          pick(sp, (l) => l.eventName === "SplitEth" ? `${usdEth(l.args.toArena + l.args.toBuyback + l.args.toTeam)} ${t("в казны")}` : t("комиссия в валюте монеты")),
+        ]);
+        if (alive) setEv({ hood, arena, div });
+      } catch (e) { /* узел молчит — покажем в следующий раз */ }
+    };
+    load();
+    const id = setInterval(load, 30_000);
+    return () => { alive = false; clearInterval(id); };
+  }, [rate, t]);
+  const now = Date.now();
+  return (
+    <div className="ana-panel bt-panel">
+      <div className="ana-panel-head" style={{ marginBottom: 12 }}>
+        <div>
+          <div className="ana-panel-val" style={{ fontSize: 18 }}>{t("Боты")}</div>
+          <div className="ana-panel-sub">{t("Обратный отсчёт до следующего запуска · по времени UTC · последнее — из событий в цепи")}</div>
+        </div>
+      </div>
+      <div className="bt-grid">
+        <BotCard t={t} title={t("Выкуп hood")} sub={t("раз в час, в :02")} due={nextHourly(now)} period={3_600_000} last={ev.hood} busyFor={120_000} />
+        <BotCard t={t} title={t("Арена — выплата подиуму")} sub={t("раз в сутки, 00:25 UTC")} due={nextDaily(now)} period={86_400_000} last={ev.arena} busyFor={180_000} />
+        <BotCard t={t} title={t("Дивиденды и сбор комиссий")} sub={t("каждые 5 минут")} due={nextFive(now)} period={300_000} last={ev.div} busyFor={90_000} />
+      </div>
+    </div>
+  );
 }
 
 export default function Admin({ wallet, onConnect }) {
@@ -492,6 +585,8 @@ export default function Admin({ wallet, onConnect }) {
         {aud ? <Bars data={aud.bars} bins={aud.bins} hover={hover} setHover={setHover} fmtAxis={fmtAxis} /> : <div className="ana-svg" />}
         <div className="ana-panel-sub" style={{ marginTop: 6 }}>{t("Уникальные браузеры по корзинам")} · {rangeLbl.toLowerCase()} · {t("без IP и персональных данных")}</div>
       </div>
+
+      <BotTimers t={t} rate={rate} />
 
       <div className="ttabs">
         <button type="button" className={`ttab ${tab === "buyback" ? "on" : ""}`} onClick={() => setTab("buyback")}>{t("Выкуп с казны")}</button>

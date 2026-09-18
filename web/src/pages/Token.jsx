@@ -77,11 +77,18 @@ function MiniChart({ points, rate, marks, base = VIRTUAL_ETH }) {
   if (!isFinite(mn) || !isFinite(mx)) { mn = 0; mx = 1; }
   if (mx - mn < mx * 0.02) { mx *= 1.03; mn *= 0.97; }
   if (!(mx > mn)) { mx = mn + 1; } // все точки по нулям — иначе NaN в path
-  const X = (i) => PADL + (i / (pts.length - 1)) * (W - PADL - PADR);
+  // Мало сделок (18.09.2026): плавная кривая между двумя-тремя точками рисовала
+  // «плавный рост» там, где была одна покупка. Пока точек мало — ступеньки
+  // (цена держится до следующей сделки) и ось X по времени, а не по номеру.
+  const sparse = pts.length < 40;
+  const tsOk = sparse && pts.every((p) => p.ts) && pts[pts.length - 1].ts > pts[0].ts;
+  const t0 = tsOk ? pts[0].ts : 0, t1 = tsOk ? pts[pts.length - 1].ts : 1;
+  const X = (i) => PADL + ((tsOk ? (pts[i].ts - t0) / (t1 - t0) : i / (pts.length - 1))) * (W - PADL - PADR);
   const Y = (v) => PADT + (1 - ((isFinite(v) ? v : mn) - mn) / (mx - mn)) * (H - PADT - PADB);
   const xs = pts.map((_, i) => X(i));
   const ys = pts.map((p) => Y(p.mcap));
-  const line = smoothPath(xs, ys);
+  const stepPath = () => xs.map((x, i) => i === 0 ? `M${x.toFixed(1)} ${ys[0].toFixed(1)}` : `L${x.toFixed(1)} ${ys[i - 1].toFixed(1)} L${x.toFixed(1)} ${ys[i].toFixed(1)}`).join(" ");
+  const line = sparse ? stepPath() : smoothPath(xs, ys);
   const area = `${line} L${xs[xs.length - 1].toFixed(1)} ${H - PADB} L${PADL} ${H - PADB} Z`;
   const last = pts[pts.length - 1];
   const usdV = (m) => usd(m * rate);
@@ -108,8 +115,9 @@ function MiniChart({ points, rate, marks, base = VIRTUAL_ETH }) {
   const onMove = (e) => {
     const box = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - box.left) / box.width) * W;
-    const idx = Math.round(((x - PADL) / (W - PADL - PADR)) * (pts.length - 1));
-    setHover(Math.max(0, Math.min(pts.length - 1, idx)));
+    let idx = 0, bd = Infinity;
+    xs.forEach((px, i) => { const d = Math.abs(px - x); if (d < bd) { bd = d; idx = i; } });
+    setHover(idx);
   };
 
   return (

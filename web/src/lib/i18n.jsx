@@ -1706,6 +1706,21 @@ const EN = {
   "делится утром между подиумом": "split among the podium in the morning",
   "выкуп и сжигание HOOD": "buyback and burn of HOOD",
   "Показать полностью": "Show in full",
+  "ч назад": "h ago",
+  "выполняется…": "running…",
+  "последний": "last",
+  "ещё не было": "none yet",
+  " место": " place",
+  "в казны": "to treasuries",
+  "комиссия в валюте монеты": "fee in the coin's asset",
+  "Боты": "Bots",
+  "Обратный отсчёт до следующего запуска · по времени UTC · последнее — из событий в цепи": "Countdown to the next run · UTC · last — from on-chain events",
+  "Выкуп hood": "hood buyback",
+  "раз в час, в :02": "hourly, at :02",
+  "Арена — выплата подиуму": "Arena — podium payout",
+  "раз в сутки, 00:25 UTC": "daily, 00:25 UTC",
+  "Дивиденды и сбор комиссий": "Dividends and fee collection",
+  "каждые 5 минут": "every 5 minutes",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });
