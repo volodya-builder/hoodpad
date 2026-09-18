@@ -24,6 +24,7 @@ import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, EXPLORER } from "./config.js";
 // Все фабрики площадки, старые и текущие (из истории config.js)
 export const ETH_FACTORIES = [
   FACTORY_ADDRESS,
+  "0x0a7233ae853dd4c2315dcc53ce7b8939aeb01107", // 18.09.2026 утро (V3, градация 6.5)
   "0xe16ccf7c12ce0256473fff60a1c3f18def64f861", // 17.09.2026 (V2)
   "0xbe3e7ca55b6c4fc9e759bc8b43734b57a582da01", // 16–17.09.2026
   "0x08a887196fc31b89305ae03aa991917f6b1d23ec", // 14–15.09.2026
@@ -33,6 +34,7 @@ export const ETH_FACTORIES = [
 ].map((a) => String(a).toLowerCase());
 export const QUOTE_FACTORIES = [
   QUOTE_FACTORY_ADDRESS,
+  "0x094ae4f59d855165a326bbb4773f674ef795751f", // 18.09.2026 утро (V3, градация 6.5)
   "0x655b7ce112336ad29dacdce7cf434b03930407a3", // 17.09.2026 (V2)
   "0x4b55954a2910cfbb04f49e90e727fb1540b3a940", // 16–17.09.2026
   "0xd7299e03c5e7d4f9f4c62f305a0b619359cf9a4f", // 15.09.2026

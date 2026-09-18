@@ -40,5 +40,5 @@ export async function getLogsSafe(pub, { address, event, fromBlock, toBlock, log
 }
 
 /** Не раньше блока деплоя: события до него искать бессмысленно. */
-export const DEPLOY_BLOCK = BigInt(process.env.FACTORY_FROM_BLOCK || 66_023_560);
+export const DEPLOY_BLOCK = BigInt(process.env.FACTORY_FROM_BLOCK || 66_096_189);
 export const maxBig = (a, b) => (a > b ? a : b);

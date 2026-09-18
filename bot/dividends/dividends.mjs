@@ -30,12 +30,12 @@ import { quoteUsd, ethUsdRate } from "../lib/quote-price.mjs";
 import { migrateGraduated } from "./migrate.mjs";
 
 const RPC_URL = process.env.RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
-const QUOTE_FACTORY = (process.env.QUOTE_FACTORY || "0x094ae4f59d855165a326bbb4773f674ef795751f").toLowerCase();
-const ETH_FACTORY = (process.env.FACTORY || "0x0a7233ae853dd4c2315dcc53ce7b8939aeb01107").toLowerCase();
-const FEE_SPLITTER = (process.env.FEE_SPLITTER || "0x5a8ce0ebf1496189a8313e71a091b9a48db2edef").toLowerCase();
+const QUOTE_FACTORY = (process.env.QUOTE_FACTORY || "0x2501e3667622f21ce3f72c84a9b29e70439f4969").toLowerCase();
+const ETH_FACTORY = (process.env.FACTORY || "0xad8af2b36ff1c5891322cb4c82d74bac54fd80fb").toLowerCase();
+const FEE_SPLITTER = (process.env.FEE_SPLITTER || "0x2275bb417c13ab4a256cfb17cdd21ff4a93aed90").toLowerCase();
 const BLOCKSCOUT = process.env.BLOCKSCOUT || "https://robinhoodchain.blockscout.com";
 // Блок деплоя quote-фабрики: раньше него её событий не бывает.
-const FACTORY_FROM_BLOCK = BigInt(process.env.FACTORY_FROM_BLOCK || 66_023_560);
+const FACTORY_FROM_BLOCK = BigInt(process.env.FACTORY_FROM_BLOCK || 66_096_189);
 const MIN_PAYOUT_USD = Number(process.env.MIN_PAYOUT_USD || 1);
 const MIN_SWEEP_USD = Number(process.env.MIN_SWEEP_USD || 0.5);
 const MAX_TX = Number(process.env.MAX_TX || 150);

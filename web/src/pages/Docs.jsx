@@ -14,12 +14,12 @@ import {
 // монета hood, контракты, боты, безопасность. Цифры — те, что зашиты в
 // контрактах (LaunchpadFactoryV3: 1B / 800M / 1 ETH → 4 ETH).
 
-const MIGRATOR_ETH = "0xe11727b682e86ced24ed0da2aa6c113ae30672f4";
-const MIGRATOR_QUOTE = "0xac360e752e9e12952e27f202d5814fa8c6220878";
+const MIGRATOR_ETH = "0xa305c5b0bc38b3351e432c50752fd6f99ce8b241";
+const MIGRATOR_QUOTE = "0x49764ab6326bba7990959e990f3b45caf4b79ef2";
 const USDG_ADDRESS = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168";
-const HOOD_TOKEN = "0x67b7a5342a85d623436f049f87517cd1fd73a239"; // монета hood V3, запущена 18.09.2026 с кошелька команды (ETH-фабрика)
-const TEAM_WALLET = "0x0462C1Efe9CA880E901807d5386EBcc6705087b3"; // командная доля комиссий (10%)
-const ARENA_BOT = "0x4fC073049012c52c6B291E08D69D13b3a33d8B63";   // оператор обеих казн: только обмен в ETH и выкуп-сжигание
+const HOOD_TOKEN = ""; // монета hood — адрес после запуска с кошелька команды на комплекте 4 ETH
+const TEAM_WALLET = "0x492eC12B89AAbB2fCF41c297Bd909B8e3498Db0c"; // командная доля комиссий (10%)
+const ARENA_BOT = "0xB2DDdF862C52aEe0c9d27c9D4AD7a2099fE7D164";   // оператор обеих казн: только обмен в ETH и выкуп-сжигание
 const SUBGRAPH = "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/5.0.0/gn";
 const REPO = "https://github.com/volodya-builder/hoodpad";
 const RPC = "https://rpc.mainnet.chain.robinhood.com";

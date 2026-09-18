@@ -31,13 +31,13 @@ import { getLogsSafe, DEPLOY_BLOCK, maxBig } from "../lib/logs.mjs";
 
 const DRY = process.argv.includes("--dry");
 const RPC_URL = process.env.RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
-const FACTORY = (process.env.FACTORY || "0x0a7233ae853dd4c2315dcc53ce7b8939aeb01107").toLowerCase();
-const TREASURY = (process.env.BUYBACK_TREASURY || "0xd55e3f8405a3af1d219eea0e5d69b56d3a0118ad").toLowerCase();
+const FACTORY = (process.env.FACTORY || "0xad8af2b36ff1c5891322cb4c82d74bac54fd80fb").toLowerCase();
+const TREASURY = (process.env.BUYBACK_TREASURY || "0x868b79a57f7e347e4ae35f68d467d1555cbffa25").toLowerCase();
 const HOOD = (process.env.HOOD_TOKEN || "").toLowerCase();
 const DUST_ETH = Number(process.env.DUST_ETH || 0.0003);       // меньше — не тратим газ, копим
 const SLIPPAGE_BPS = BigInt(process.env.SLIPPAGE_BPS || 300);  // 3% от симуляции: анти-MEV
 const LOOKBACK_DAYS = 3;
-const SUBGRAPH = process.env.SUBGRAPH || "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/6.0.0/gn";
+const SUBGRAPH = process.env.SUBGRAPH || "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/6.1.0/gn";
 
 let PK = (process.env.ARENA_PRIVATE_KEY || process.env.TREASURER_PRIVATE_KEY || "").replace(/["'\s]/g, "");
 if (PK && !PK.startsWith("0x")) PK = "0x" + PK;
