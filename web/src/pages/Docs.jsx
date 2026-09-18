@@ -14,12 +14,12 @@ import {
 // монета hood, контракты, боты, безопасность. Цифры — те, что зашиты в
 // контрактах (LaunchpadFactoryV3: 1B / 800M / 1.625 ETH → 6.5 ETH).
 
-const MIGRATOR_ETH = "0x2dec3594dd49e499e37c86c3ab82d99f1a927c1a";
-const MIGRATOR_QUOTE = "0xeb20f87ee1c8359ee8d0a5f770b052e849f1b84c";
+const MIGRATOR_ETH = "0xe11727b682e86ced24ed0da2aa6c113ae30672f4";
+const MIGRATOR_QUOTE = "0xac360e752e9e12952e27f202d5814fa8c6220878";
 const USDG_ADDRESS = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168";
 const HOOD_TOKEN = "0x9eFD74eDA2640de53982097539Cd435318FC3d62"; // монета hood, запущена 17.09.2026 с кошелька команды (ETH-фабрика)
-const TEAM_WALLET = "0x34fB2ff2cbD322C7F744E2818A15eC8b726BE4a6"; // командная доля комиссий (10%)
-const ARENA_BOT = "0x574e7F68F79b9d7C7f7bB77691E3EE5048C6C39a";   // оператор обеих казн: только обмен в ETH и выкуп-сжигание
+const TEAM_WALLET = "0x0462C1Efe9CA880E901807d5386EBcc6705087b3"; // командная доля комиссий (10%)
+const ARENA_BOT = "0x4fC073049012c52c6B291E08D69D13b3a33d8B63";   // оператор обеих казн: только обмен в ETH и выкуп-сжигание
 const SUBGRAPH = "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/5.0.0/gn";
 const REPO = "https://github.com/volodya-builder/hoodpad";
 const RPC = "https://rpc.mainnet.chain.robinhood.com";
