@@ -226,7 +226,7 @@ function readTokenCache(addr) {
   const t = cachedToken(addr);
   if (!t || !t.pool) return null;
   return { token: String(addr).toLowerCase(), pool: t.pool, name: t.name, symbol: t.symbol, uri: "", price: t.price ?? 0n, sold: t.sold ?? 0n,
-           cap: t.cap ?? 0n, reserve: t.reserve ?? 0n, graduated: !!t.graduated, migrated: false, creator: t.creator || "",
+           cap: t.cap ?? 0n, reserve: t.reserve ?? 0n, graduated: !!t.graduated, migrated: !!t.graduated, creator: t.creator || "",
            balance: 0n, walletEth: 0n, walletQuote: 0n, q: t.q ? { virt: 0, ...t.q } : null, divBps: t.divBps || 0, zapOk: false,
            _meta: t.meta || {} };
 }
@@ -779,9 +779,13 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       } catch (e) { /* график останется в режиме «всё время» */ }
     }
     // После миграции — сделки и график продолжаются с пула Uniswap
-    if (data.migrated && data.dex?.pool) {
+    // (пул DEX ещё не известен на первом заходе — узнаём сами, чтобы не
+    // мигал график кривой, а потом правильный)
+    if (data.migrated) {
       try {
-        const d = await dexTrades(data.dex.pool, tokenAddress, { otherDec: data.q ? data.q.dec : 18, startIndex: Math.max(0, h.points.length - 1) });
+        const dexPool = data.dex?.pool || await dexPoolOf(tokenAddress, data.q ? data.q.addr : null);
+        if (!dexPool) throw new Error("no pool");
+        const d = await dexTrades(dexPool, tokenAddress, { otherDec: data.q ? data.q.dec : 18, startIndex: Math.max(0, h.points.length - 1) });
         if (d.trades.length) {
           h = { trades: [...d.trades, ...h.trades], points: [...h.points, ...d.points], now: d.now };
         }
