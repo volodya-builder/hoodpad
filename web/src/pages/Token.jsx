@@ -1405,7 +1405,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             </div>
           </div>
           {history && history.points && history.points.filter((p) => p.ts).length >= 2 ? (
-            <CandleChart points={history.points} trades={history.trades} rate={curRate} marks={marks} ethUsd={rate} unit={data.symbol} />
+            <CandleChart points={history.points} trades={history.trades} rate={curRate} marks={marks} ethUsd={rate} unit={data.symbol} base={data.q ? data.q.virt : VIRTUAL_ETH} />
           ) : history ? (
             <MiniChart points={chartPoints} rate={curRate} marks={marks} ethUsd={rate} base={data.q ? data.q.virt : VIRTUAL_ETH} />
           ) : (
