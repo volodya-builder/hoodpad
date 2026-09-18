@@ -15,9 +15,9 @@ dataSources:
     name: LaunchpadFactory
     network: robinhood-mainnet
     source:
-      address: "0x0a7233ae853dd4c2315dcc53ce7b8939aeb01107"
+      address: "0xad8af2b36ff1c5891322cb4c82d74bac54fd80fb"
       abi: LaunchpadFactory
-      startBlock: 66023560
+      startBlock: 66096189
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -37,9 +37,9 @@ dataSources:
     name: LaunchpadFactoryQuote
     network: robinhood-mainnet
     source:
-      address: "0x094ae4f59d855165a326bbb4773f674ef795751f"
+      address: "0x2501e3667622f21ce3f72c84a9b29e70439f4969"
       abi: LaunchpadFactoryQuote
-      startBlock: 66023560
+      startBlock: 66096189
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -62,9 +62,9 @@ dataSources:
     name: ArenaTreasury
     network: robinhood-mainnet
     source:
-      address: "0x26f83c7537346a925c311817ca5554db0f393609"
+      address: "0x8b1157247e9bda9f51497c65b8bd0b851d1e3842"
       abi: ArenaTreasuryV2
-      startBlock: 66023560
+      startBlock: 66096189
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -87,9 +87,9 @@ dataSources:
     name: HoodTreasury
     network: robinhood-mainnet
     source:
-      address: "0xd55e3f8405a3af1d219eea0e5d69b56d3a0118ad"
+      address: "0x868b79a57f7e347e4ae35f68d467d1555cbffa25"
       abi: ArenaTreasuryV2
-      startBlock: 66023560
+      startBlock: 66096189
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7

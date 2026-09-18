@@ -38,15 +38,15 @@ import { treasuryCanConvert, convertTreasuryToEth, treasuryAccess } from "../lib
 
 const DRY = process.argv.includes("--dry");
 const RPC_URL = process.env.RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
-const FACTORY = (process.env.FACTORY || "0x0a7233ae853dd4c2315dcc53ce7b8939aeb01107").toLowerCase();
-const QUOTE_FACTORY = (process.env.QUOTE_FACTORY || "0x094ae4f59d855165a326bbb4773f674ef795751f").toLowerCase();
+const FACTORY = (process.env.FACTORY || "0xad8af2b36ff1c5891322cb4c82d74bac54fd80fb").toLowerCase();
+const QUOTE_FACTORY = (process.env.QUOTE_FACTORY || "0x2501e3667622f21ce3f72c84a9b29e70439f4969").toLowerCase();
 const TREASURY = (process.env.ARENA_TREASURY || "").toLowerCase();
 // Прежняя казна арены (V1, 0x3cec…): туда всё ещё приходят излишки градаций
 // (dustSink мигратора менять нельзя) и там лежит старый остаток. Бот платит
 // подиуму и из неё — своим фондом, с пометкой «arena-old». Пусто — пропуск.
 const LEGACY_TREASURY = (process.env.ARENA_TREASURY_LEGACY ?? "").toLowerCase();
 const SUBGRAPH = process.env.SUBGRAPH ||
-  "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/6.0.0/gn";
+  "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/6.1.0/gn";
 const SPLIT = [0.7, 0.2, 0.1];                          // 1 / 2 / 3 места
 const DUST_ETH = Number(process.env.DUST_ETH || 0.0003); // меньше — не тратим газ, копим
 const SLIPPAGE_BPS = BigInt(process.env.SLIPPAGE_BPS || 300); // 3% от симуляции: анти-MEV
