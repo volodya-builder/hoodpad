@@ -2,7 +2,7 @@ name: verify
 
 # Верификация исходников контрактов hood в обозревателе (Blockscout):
 # Actions → verify → Run workflow. Адреса берутся из
-# scripts/relaunch-v3-output.json (комплект перезапуска 17.09.2026) плюс по
+# scripts/relaunch-v4-output.json (комплект перезапуска 18.09.2026) плюс по
 # одному экземпляру токена и пула каждого вида, если монеты уже есть.
 # Дополнительные адреса — поле extra: "Имя=0x…,Имя2=0x…".
 # Ключи не нужны: верификация — публичное действие.
@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       only:
-        description: "Только один контракт (ключ или имя, напр. zap / ArenaTreasuryV2); пусто — все"
+        description: "Только один контракт (ключ или имя, напр. zap / ArenaTreasuryV3); пусто — все"
         required: false
         default: ""
       extra:
@@ -39,4 +39,4 @@ jobs:
       - name: Верифицировать
         env:
           EXTRA: ${{ inputs.extra }}
-        run: node scripts/verify-v3.js ${{ inputs.only != '' && format('--only {0}', inputs.only) || '' }}
+        run: node scripts/verify-v4.js ${{ inputs.only != '' && format('--only {0}', inputs.only) || '' }}
