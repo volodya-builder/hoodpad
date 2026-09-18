@@ -1712,7 +1712,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           ) : (
             <div className="panel" style={{ margin: 0, maxWidth: "none" }}>
               <div className="notice">
-                {t("Кривая заполнена. Переносим ликвидность на DEX — обычно это занимает меньше минуты.")}
+                {t("Кривая заполнена. Переносим ликвидность на DEX — секунды.")}
               </div>
               {FEATURES.manualMigrate && (<>
                 <button className="btn btn-primary btn-block" onClick={migrate} disabled={busy}>

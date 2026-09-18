@@ -1,17 +1,17 @@
 name: hood buyback
 
-# Выкуп монеты hood из казны выкупа (10% всех комиссий платформы).
-# Раз в сутки: всё, что накопилось в казне, покупает монету hood с кривой
-# и сжигает. Нужны: секрет ARENA_PRIVATE_KEY (владелец казны, тот же, что у
-# арены) и переменная HOOD_TOKEN (адрес монеты hood — Settings → Variables).
-# Адрес казны выкупа — переменная BUYBACK_TREASURY (необязательно: по умолчанию
-# зашит в bot/buyback/buyback.mjs).
+# Выкуп монеты hood из казны выкупа (10% всех комиссий платформы) — РАЗ В ЧАС
+# (решение владельца 17.09.2026). Всё, что накопилось в казне, покупает монету
+# hood (на кривой или, после градации, на Uniswap V3) и сжигает. Нужны:
+# секрет ARENA_PRIVATE_KEY (оператор казн, тот же, что у арены) и переменная
+# HOOD_TOKEN (адрес монеты hood — Settings → Variables). Адрес казны выкупа —
+# переменная BUYBACK_TREASURY (необязательно: по умолчанию зашит в bot/buyback/buyback.mjs).
 #
-# Расписание GitHub срабатывает с опозданием на часы (17.09.2026 cron 00:45
-# сработал в 05:27), поэтому ритм держит эстафета, как у арены: каждый заход
-# в конце ждёт до 00:40 UTC следующих суток (но не дольше 5 ч 40 мин) и
-# запускает следующий сам. Бот идемпотентен — лишний запуск не покупает дважды.
-# Выключить эстафету: Settings → Variables → BUYBACK_RELAY = off.
+# Расписание GitHub срабатывает с опозданием на часы, поэтому ритм держит сам
+# заход: бот крутится внутри одного запуска до ~5,5 ч (потолок GitHub — 6 ч),
+# делая выкуп в начале каждого часа, а в конце передаёт эстафету следующему
+# заходу. Бот идемпотентен: пометка «hood <день> <час>» в цепи не даёт купить
+# дважды за час. Выключить эстафету: Settings → Variables → BUYBACK_RELAY = off.
 # Первый заход эстафеты запускается вручную: Actions → hood buyback → Run workflow.
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ on:
         type: boolean
         default: false
   schedule:
-    - cron: '45 0 * * *'
+    - cron: '5 * * * *'
 
 permissions:
   contents: read
@@ -51,15 +51,29 @@ jobs:
         run: |
           [ -n "$HOOD_TOKEN" ] || { echo "::error::Нет переменной HOOD_TOKEN (Settings → Variables) — адрес монеты hood"; exit 1; }
           [ "$HAS_KEY" = "true" ] || { echo "::error::Нет секрета ARENA_PRIVATE_KEY"; exit 1; }
-      - name: Выкупить hood
+      - name: Выкупить hood (раз в час)
         env:
           ARENA_PRIVATE_KEY: ${{ secrets.ARENA_PRIVATE_KEY }}
           HOOD_TOKEN: ${{ vars.HOOD_TOKEN }}
           BUYBACK_TREASURY: ${{ vars.BUYBACK_TREASURY }}
-        run: node bot/buyback/buyback.mjs ${{ inputs.dry && '--dry' || '' }}
+        run: |
+          set -o pipefail
+          if [ "${{ inputs.dry }}" = "true" ]; then
+            node bot/buyback/buyback.mjs --dry | tee -a "$GITHUB_STEP_SUMMARY"; exit 0
+          fi
+          # цикл: выкуп сейчас, затем в начале каждого следующего часа (+2 мин), пока заход жив (~5,5 ч)
+          END=$(( $(date -u +%s) + 330 * 60 )); N=0
+          while :; do
+            N=$((N + 1)); echo "=== выкуп $N · $(date -u +%H:%M:%S) UTC"
+            node bot/buyback/buyback.mjs > last-run.log 2>&1 || echo "выкуп $N завершился с ошибкой"
+            cat last-run.log
+            NOW=$(date -u +%s); NEXT=$(( (NOW / 3600 + 1) * 3600 + 120 ))
+            [ "$NEXT" -ge "$END" ] && break
+            sleep $(( NEXT - NOW ))
+          done
+          { echo "Выкупов за заход: $N · последний:"; echo; cat last-run.log; } >> "$GITHUB_STEP_SUMMARY"
 
-      # Эстафета: ждём до 00:40 UTC следующих суток, но не дольше 5 ч 40 мин
-      # (потолок GitHub на запуск — 6 часов), и запускаем следующий заход.
+      # Эстафета: следующий заход сразу (он сам подождёт до начала часа).
       - name: Передать эстафету
         if: always() && !inputs.dry
         env:
@@ -67,11 +81,8 @@ jobs:
           RELAY: ${{ vars.BUYBACK_RELAY }}
         run: |
           if [ "$RELAY" = "off" ]; then echo "Эстафета выключена (BUYBACK_RELAY=off)."; exit 0; fi
-          NOW=$(date -u +%s)
-          NEXT=$(( (NOW / 86400 + 1) * 86400 + 2400 ))   # завтра 00:40 UTC
-          WAIT=$(( NEXT - NOW )); MAX=$(( 5 * 3600 + 40 * 60 ))
-          [ "$WAIT" -gt "$MAX" ] && WAIT=$MAX
           OTHERS=$(gh run list --workflow buyback.yml --limit 20 --json status --jq '[.[] | select(.status=="queued" or .status=="pending" or .status=="waiting" or .status=="requested")] | length' || echo 0)
           if [ "$OTHERS" != "0" ]; then echo "В очереди уже есть запуск — эстафету не передаю."; exit 0; fi
+          NOW=$(date -u +%s); NEXT=$(( (NOW / 3600 + 1) * 3600 + 120 )); WAIT=$(( NEXT - NOW ))
           echo "Следующий заход через $((WAIT / 60)) мин…"; sleep "$WAIT"
           gh workflow run buyback.yml --ref main && echo "Следующий заход запущен."

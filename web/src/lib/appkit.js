@@ -16,9 +16,59 @@ import { createAppKit } from "@reown/appkit";
 import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 import { defineChain, mainnet } from "@reown/appkit/networks";
 import { AssetController } from "@reown/appkit-controllers";
+import UniversalProvider from "@walletconnect/universal-provider";
 import { reconnect, getAccount, watchAccount, disconnect as wagmiDisconnect } from "@wagmi/core";
 import { createWalletClient, custom } from "viem";
 import { CHAIN, WC_PROJECT_ID as PROJECT_ID } from "./config.js";
+
+// ---------------------------------------------------------------- хранилище WC
+// WalletConnect по умолчанию держит сессии в IndexedDB. На iPhone (Safari и
+// встроенные браузеры Telegram/Twitter) система закрывает соединение с базой,
+// когда вкладка уходит в фон, а библиотека держит старое соединение — и
+// каждое обращение падает с «IDBDatabase: The database connection is
+// closing»: окно кошелька показывает ошибку, «Подключить» перестаёт работать
+// (18.09.2026, скриншот владельца). localStorage такой болезни не знает —
+// отдаём WalletConnect его (так же хранил WalletConnect v2 до IndexedDB).
+class LocalKV {
+  constructor() {
+    let ls = null;
+    try { ls = window.localStorage; ls.setItem("hood.wc.probe", "1"); ls.removeItem("hood.wc.probe"); } catch (e) { ls = null; }
+    this.ls = ls;
+    this.mem = new Map(); // приватный режим без localStorage — хотя бы до перезагрузки
+  }
+  async getKeys() { return this.ls ? Object.keys(this.ls) : [...this.mem.keys()]; }
+  async getEntries() {
+    const keys = await this.getKeys();
+    return keys.map((k) => [k, this._parse(this.ls ? this.ls.getItem(k) : this.mem.get(k))]);
+  }
+  async getItem(k) {
+    const v = this.ls ? this.ls.getItem(k) : this.mem.get(k);
+    if (v == null) return undefined;
+    return this._parse(v);
+  }
+  async setItem(k, v) {
+    const s = typeof v === "string" ? v : JSON.stringify(v);
+    if (this.ls) this.ls.setItem(k, s); else this.mem.set(k, s);
+  }
+  async removeItem(k) { if (this.ls) this.ls.removeItem(k); else this.mem.delete(k); }
+  _parse(s) { if (typeof s !== "string") return s; try { return JSON.parse(s); } catch (e) { return s; } }
+}
+
+const METADATA = {
+  name: "hood",
+  description: "hood — launchpad on Robinhood Chain",
+  url: window.location.origin,
+  icons: [`${window.location.origin}/icon-192.png`],
+};
+
+// Провайдер WalletConnect создаём сами (с нашим хранилищем) и отдаём AppKit;
+// иначе AppKit сделает свой — с IndexedDB. Не поднялся (нет сети до реле) —
+// модуль падает, web3.js забудет его и попробует снова при следующем клике.
+const universalProvider = await UniversalProvider.init({
+  projectId: PROJECT_ID,
+  metadata: METADATA,
+  storage: new LocalKV(),
+});
 
 const robinhood = defineChain({
   id: CHAIN.id,
@@ -44,12 +94,8 @@ export const modal = createAppKit({
   networks: NETWORKS,
   defaultNetwork: robinhood,
   projectId: PROJECT_ID,
-  metadata: {
-    name: "hood",
-    description: "hood — launchpad on Robinhood Chain",
-    url: window.location.origin,
-    icons: [`${window.location.origin}/icon-192.png`],
-  },
+  metadata: METADATA,
+  universalProvider,
   // только кошельки: без почты, соцсетей, свопов, покупки крипты и истории
   features: { analytics: false, email: false, socials: false, swaps: false, onramp: false, send: false, receive: false, history: false, emailShowWallets: false },
   allWallets: "SHOW",
@@ -111,15 +157,34 @@ export function connect() {
   if (getAccount(wagmiConfig).status === "connected") return current();
   return new Promise((resolve, reject) => {
     let done = false;
-    const finish = (fn) => { if (done) return; done = true; unAcc(); unState(); fn(); };
+    let wentAway = false; // вкладка пряталась (ушли в приложение кошелька)
+    const onVis = () => { if (document.visibilityState === "hidden") wentAway = true; };
+    document.addEventListener("visibilitychange", onVis);
+    const finish = (fn) => {
+      if (done) return;
+      done = true; unAcc(); unState();
+      document.removeEventListener("visibilitychange", onVis);
+      fn();
+    };
+    const rejected = () => finish(() => reject(Object.assign(new Error("rejected"), { code: 4001 })));
     const unAcc = watchAccount(wagmiConfig, {
       onChange(acc) {
         if (acc.status === "connected" && acc.address) finish(() => current().then(resolve, reject));
       },
     });
+    let closed = false;
     const unState = modal.subscribeState((s) => {
-      // окно закрыли, а подключения нет — человек передумал
-      if (!s.open && getAccount(wagmiConfig).status !== "connected") setTimeout(() => finish(() => reject(Object.assign(new Error("rejected"), { code: 4001 }))), 300);
+      if (s.open || closed || getAccount(wagmiConfig).status === "connected") return;
+      closed = true;
+      // Окно закрылось без подключения. На телефоне это бывает и посреди
+      // подключения: сайт ушёл в приложение кошелька по deep link, вкладка
+      // спряталась. Тогда ждём ответа кошелька до полутора минут; если
+      // вкладка никуда не уходила — человек просто закрыл окно.
+      setTimeout(() => {
+        if (done) return;
+        if (!wentAway && document.visibilityState !== "hidden") { rejected(); return; }
+        setTimeout(rejected, 90_000);
+      }, 1500);
     });
     modal.open({ view: "Connect" }).catch((e) => finish(() => reject(e)));
   });

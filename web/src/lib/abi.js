@@ -1,7 +1,7 @@
 import { parseAbi } from "viem";
 
 export const factoryAbi = parseAbi([
-  "function createToken(string name, string symbol, string metadataURI, address creatorWallet) payable returns (address token, address pool)",
+  "function createToken(string name, string symbol, string metadataURI, address creatorWallet, address[] exempt) payable returns (address token, address pool)",
   "function tokenCount() view returns (uint256)",
   "function tokens(uint256 offset, uint256 limit) view returns (address[])",
   "function poolOf(address token) view returns (address)",
@@ -15,8 +15,14 @@ export const poolAbi = parseAbi([
   "function buy(uint256 minTokensOut, address recipient) payable returns (uint256)",
   "function sell(uint256 tokensIn, uint256 minEthOut) returns (uint256)",
   "function quoteBuy(uint256 ethInGross) view returns (uint256)",
+  "function quoteBuyFor(address recipient, uint256 ethInGross) view returns (uint256)",
   "function quoteSell(uint256 tokensIn) view returns (uint256)",
   "function spotPrice() view returns (uint256)",
+  "function openingTaxBps() view returns (uint16)",
+  "function launchedAt() view returns (uint256)",
+  "function taxExempt(address) view returns (bool)",
+  "function exemptList() view returns (address[])",
+  "function openingTaxPaid() view returns (uint256)",
   "function ethReserve() view returns (uint256)",
   "function tokensSold() view returns (uint256)",
   "function saleCap() view returns (uint256)",
@@ -143,7 +149,7 @@ export const catMarketAbi = parseAbi([
 // списке). Отличие от ETH-версии: валюта приходит через transferFrom,
 // поэтому перед покупкой нужен approve; продажа и клеймы платят в валюте.
 export const quoteFactoryAbi = parseAbi([
-  "function createToken(string name, string symbol, string metadataURI, address quote, address creatorWallet, uint16 divBps) returns (address token, address pool)",
+  "function createToken(string name, string symbol, string metadataURI, address quote, address creatorWallet, uint16 divBps, address[] exempt) returns (address token, address pool)",
   "function tokenCount() view returns (uint256)",
   "function tokens(uint256 offset, uint256 limit) view returns (address[])",
   "function poolOf(address token) view returns (address)",

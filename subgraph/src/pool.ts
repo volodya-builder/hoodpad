@@ -8,7 +8,7 @@ import { quoteUsd, quoteDecimals, toUsd } from "./price";
 // идёт через зап, и в событии пула стороной сделки стоит сам зап. Настоящий
 // трейдер — тот, кто отправил транзакцию. Без этого PnL и «честный объём»
 // считали продажи через зап чужими (профиль показывал −100%).
-const ZAP = "0x81345f67f3cb7c68ad17a4b63f9f6f1392c013ce";
+const ZAP = "0x645a33ccc81b9cd8a0304c4d91064da6c6c4df57";
 function realTrader(party: Bytes, from: Bytes): Bytes {
   return party.toHexString().toLowerCase() == ZAP ? from : party;
 }

@@ -122,9 +122,9 @@ if (isMain) {
   const { createPublicClient, createWalletClient, http, defineChain } = await import("viem");
   const { privateKeyToAccount } = await import("viem/accounts");
   const RPC_URL = process.env.RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
-  const ETH_FACTORY = (process.env.FACTORY || "0xe16ccf7c12ce0256473fff60a1c3f18def64f861").toLowerCase();
-  const QUOTE_FACTORY = (process.env.QUOTE_FACTORY || "0x655b7ce112336ad29dacdce7cf434b03930407a3").toLowerCase();
-  const FROM = BigInt(process.env.FACTORY_FROM_BLOCK || 65_270_000);
+  const ETH_FACTORY = (process.env.FACTORY || "0x0a7233ae853dd4c2315dcc53ce7b8939aeb01107").toLowerCase();
+  const QUOTE_FACTORY = (process.env.QUOTE_FACTORY || "0x094ae4f59d855165a326bbb4773f674ef795751f").toLowerCase();
+  const FROM = BigInt(process.env.FACTORY_FROM_BLOCK || 66_023_560);
   const RUN = process.argv.includes("--run");
   let PK = (process.env.TREASURER_PRIVATE_KEY || "").replace(/["'\s]/g, "");
   if (PK && !PK.startsWith("0x")) PK = "0x" + PK;

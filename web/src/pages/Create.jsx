@@ -183,6 +183,11 @@ export default function Create({ wallet, onConnect }) {
   const [consent, setConsent] = useState(false);
   const [image, setImage] = useState("");
   const [advOpen, setAdvOpen] = useState(false);
+  // адреса, освобождённые от стартового налога (до 32; создатель освобождён всегда)
+  const [exemptText, setExemptText] = useState("");
+  const exemptList = exemptText.split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean);
+  const exemptBad = exemptList.filter((x) => !/^0x[0-9a-fA-F]{40}$/.test(x));
+  const exemptOk = exemptBad.length === 0 && exemptList.length <= 32;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   // Что после запуска: вторая подпись «включить ИИ» (сплиттер), её итог.
@@ -259,6 +264,7 @@ export default function Create({ wallet, onConnect }) {
     if (!symbolOk) return setError(t("Тикер: только буквы и цифры."));
     if (quote === "ETH" && !buyOk) return setError(t("Покупка создателя ограничена {max} ETH (5% сапплая).").replace("{max}", MAX_DEV_BUY_ETH.toFixed(4)));
     if (!walletOk) return setError(t("Кошелёк создателя: неверный адрес (нужен 0x… из 42 символов)."));
+    if (!exemptOk) return setError(exemptList.length > 32 ? t("Освободить от стартового налога можно не больше 32 адресов.") : t("Освобождённые адреса: есть неверный адрес (нужен 0x… из 42 символов)."));
 
     setBusy(true);
     try {
@@ -277,7 +283,7 @@ export default function Create({ wallet, onConnect }) {
           address: QUOTE_FACTORY_ADDRESS,
           abi: quoteFactoryAbi,
           functionName: "createToken",
-          args: [form.name.trim(), form.symbol.trim(), uri, quoteAddr, form.creatorWallet.trim() || ZERO, divBps],
+          args: [form.name.trim(), form.symbol.trim(), uri, quoteAddr, form.creatorWallet.trim() || ZERO, divBps, exemptList],
         });
       } else {
         const value = buyValue > 0 ? parseEther(form.initialBuy) : 0n;
@@ -285,7 +291,7 @@ export default function Create({ wallet, onConnect }) {
           address: FACTORY_ADDRESS,
           abi: factoryAbi,
           functionName: "createToken",
-          args: [form.name.trim(), form.symbol.trim(), uri, form.creatorWallet.trim() || ZERO],
+          args: [form.name.trim(), form.symbol.trim(), uri, form.creatorWallet.trim() || ZERO, exemptList],
           value,
         });
       }
@@ -777,6 +783,20 @@ export default function Create({ wallet, onConnect }) {
               {walletOk
                 ? t("Получает долю создателя в комиссиях ({pct}%) и покупку создателя. Оставьте пустым, чтобы использовать подключённый кошелёк.").replace("{pct}", split.creator)
                 : t("Неверный адрес: нужен формат 0x… (42 символа).")}
+            </div>
+
+            <label>{t("Освободить от стартового налога")}</label>
+            <textarea
+              value={exemptText}
+              onChange={(e) => setExemptText(e.target.value)}
+              placeholder={"0x…\n0x…"}
+              rows={2}
+              spellCheck={false}
+            />
+            <div className={`hint ${exemptOk ? "" : "bad"}`}>
+              {exemptOk
+                ? t("Первые 5 секунд после запуска покупка облагается налогом 99% → 0 — это отсекает снайпер-ботов. Создатель освобождён всегда; сюда можно добавить до 32 адресов (команда, партнёры), по одному в строке.")
+                : exemptList.length > 32 ? t("Освободить от стартового налога можно не больше 32 адресов.") : t("Освобождённые адреса: есть неверный адрес (нужен 0x… из 42 символов).")}
             </div>
 
             <label>{t("Сайт")}</label>

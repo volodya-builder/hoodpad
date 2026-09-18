@@ -23,7 +23,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ------------------------------------------------------------ конфиг
 const HOOD_RPC   = process.env.RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
-const HOOD_FACTORY = process.env.HOOD_FACTORY || "0xe16ccf7c12ce0256473fff60a1c3f18def64f861";
+const HOOD_FACTORY = process.env.HOOD_FACTORY || "0x0a7233ae853dd4c2315dcc53ce7b8939aeb01107";
 const SEED_N     = Number(process.env.SEED_N || 16);      // сколько тематических токенов создать
 const WALLETS    = Number(process.env.WALLETS || 4);      // тестовых кошельков
 const BUDGET_USD = Number(process.env.BUDGET_USD || 10);  // лимит трат в сутки, $
