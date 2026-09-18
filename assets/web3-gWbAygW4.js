@@ -1,0 +1,1 @@
+import{h as e}from"./web3-BXl4TpAy.js";export{e as publicClient};
