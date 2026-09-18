@@ -242,7 +242,7 @@ export default function CandleChart({ points, trades, rate, marks, lines, defaul
         {hasMarks && (
           <div className={`fpill mk-toggle ${showMarks ? "on" : ""}`} style={{ marginLeft: "auto" }}
                onClick={() => toggleMarks(!showMarks)} title={t("Показывать выкупы казны и миграцию на графике")}>
-            <i className="mk-dot" />{t("Метки")}
+            <i className="mk-dot" />{t("Выкуп")}
           </div>
         )}
         {(lines || []).length > 0 && (

@@ -128,7 +128,7 @@ function MiniChart({ points, rate, marks, ethUsd = 0, base = VIRTUAL_ETH }) {
         <div className="ch-legend">
           <div className={`fpill mk-toggle ${showMarks ? "on" : ""}`} onClick={() => toggleMarks(!showMarks)}
                title={t("Показывать выкупы казны и миграцию на графике")}>
-            <i className="mk-dot" />{t("Метки")}
+            <i className="mk-dot" />{t("Выкуп")}
           </div>
         </div>
       )}

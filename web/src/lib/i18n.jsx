@@ -782,7 +782,6 @@ const EN = {
   "выкуп": "buyback",
   "Показывать выкупы казны на графике": "Show treasury buybacks on the chart",
   "Открыть в обозревателе": "Open in explorer",
-  "Метки": "Marks",
   "Показывать выкупы казны и миграцию на графике": "Show treasury buybacks and migration on the chart",
   "Миграция на DEX": "Migration to DEX",
   "Миграция": "Migration",
