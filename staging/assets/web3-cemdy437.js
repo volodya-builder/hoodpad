@@ -1,0 +1,1 @@
+import{h as e}from"./web3-ChmV9fe0.js";export{e as publicClient};
