@@ -997,8 +997,11 @@ html[data-theme="light"] .wallet-panel { background: var(--card); }
 }
 .lines-toggle input { accent-color: var(--gold); cursor: pointer; }
 .lines-toggle:hover { color: var(--text); }
-.marks-toggle input { accent-color: #c8f542; }
-.mk-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #c8f542; }
+/* пилюля «Выкуп» над графиком: точка гаснет/зажигается вместо чекбокса */
+.mk-toggle { display: inline-flex; align-items: center; gap: 7px; }
+.mk-toggle.on { color: var(--text); }
+.mk-dot { flex: 0 0 6px; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .35; transition: opacity .15s, background .15s, box-shadow .15s; }
+.mk-toggle.on .mk-dot { background: #c8f542; opacity: 1; box-shadow: 0 0 0 3px rgba(200,245,66,.18); }
 /* точка выкупа поверх свечного графика: 5px, при наведении — карточка сделки */
 .mk-pt { position: absolute; z-index: 6; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: #c8f542; opacity: .85; cursor: pointer; text-decoration: none; }
 .mk-pt::before { content: ""; position: absolute; inset: -7px; }
