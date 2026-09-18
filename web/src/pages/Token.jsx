@@ -6,7 +6,7 @@ import { parseEther, formatEther, parseUnits, formatUnits } from "viem";
 import { publicClient, fmt, fmtEth, fmtEthFine, short } from "../lib/web3.js";
 import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi, zapAbi, feeSplitterAbi, erc20TransferEvent } from "../lib/abi.js";
 import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, FEATURES, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE, FACTORY_START_BLOCK, VIRTUAL_ETH } from "../lib/config.js";
-import { poolTrades, invalidateTrades, loadTokens, allTrades, parseMeta, cachedToken } from "../lib/data.js";
+import { poolTrades, invalidateTrades, loadTokens, allTrades, parseMeta, cachedToken, tokensCacheTime } from "../lib/data.js";
 import { computeTrust } from "../lib/trust.js";
 import { honestVolume } from "../lib/fairvol.js";
 import { useEthUsd, useQuoteUsd, usd, moneyEth, ethOf, quoteUsd as quoteUsdOf } from "../lib/price.js";
@@ -219,7 +219,17 @@ function readTokenCache(addr) {
   try {
     const raw = localStorage.getItem(TOK_CACHE + addr.toLowerCase());
     const d = raw ? JSON.parse(raw, bigIn) : null;
-    if (d && d.pool && d.symbol) return d;
+    if (d && d.pool && d.symbol) {
+      // Кэш страницы может быть старше списка монет (главная обновляет его
+      // каждые 20 с): цену и прогресс берём из того, что свежее — иначе
+      // первые секунды висит капитализация многочасовой давности.
+      const t = cachedToken(addr);
+      if (t && t.pool && tokensCacheTime() > (d._t || 0)) {
+        d.price = t.price ?? d.price; d.sold = t.sold ?? d.sold; d.reserve = t.reserve ?? d.reserve;
+        if (t.graduated) { d.graduated = true; d.migrated = true; }
+      }
+      return d;
+    }
   } catch (e) { /* дальше — список монет */ }
   // Первый заход на монету: берём то, что уже знает список с главной
   // (имя, цена, резерв, картинка). Остального нет — придёт с сетью.
@@ -234,7 +244,7 @@ function writeTokenCache(addr, d) {
   try {
     // Балансы — не в кэш: они принадлежат кошельку, а не монете.
     const { balance, walletEth, walletQuote, ...rest } = d;
-    localStorage.setItem(TOK_CACHE + addr.toLowerCase(), JSON.stringify({ ...rest, balance: 0n, walletEth: 0n, walletQuote: 0n }, bigOut));
+    localStorage.setItem(TOK_CACHE + addr.toLowerCase(), JSON.stringify({ ...rest, _t: Date.now(), balance: 0n, walletEth: 0n, walletQuote: 0n }, bigOut));
   } catch (e) { /* нет места — не страшно */ }
 }
 // ---- кэш истории сделок: график и лента рисуются сразу, без секунды
@@ -500,13 +510,18 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       for (const [a, v] of Object.entries(chainBal)) if (a in m || v > 0) m[a] = v;
     }
     const TOTAL = 1e9;
-    const unsold = Math.max(0, TOTAL - Number(formatEther(data.sold)));
+    // После миграции монеты кривой нет — ликвидность лежит в пуле Uniswap.
+    // Пул — не кошелёк: показываем его отдельной строкой, как раньше кривую.
+    const dexPool = data.migrated && data.dex?.pool ? String(data.dex.pool).toLowerCase() : null;
+    const dexBal = dexPool ? (m[dexPool] ?? 0) : 0;
+    if (dexPool) delete m[dexPool];
+    const unsold = data.migrated ? 0 : Math.max(0, TOTAL - Number(formatEther(data.sold)));
     const list = Object.entries(m)
       .filter(([, v]) => v > 1e-6)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 100) // до 100 кошельков, список прокручивается
       .map(([a, v]) => ({ addr: a, bal: v, pct: (v / TOTAL) * 100 }));
-    return { list, unsold, unsoldPct: (unsold / TOTAL) * 100, total: Object.values(m).filter((v) => v > 1e-6).length };
+    return { list, unsold, unsoldPct: (unsold / TOTAL) * 100, dexPct: (dexBal / TOTAL) * 100, total: Object.values(m).filter((v) => v > 1e-6).length };
   }, [history, data, chainBal, xferBal]);
   useEffect(() => {
     if (!history || !tokenAddress) return;
@@ -542,7 +557,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     }
     const exact = xferBal && Object.keys(xferBal).length > 0 ? xferBal : null;
     const creBal = Math.max((exact ? exact[cre] : m[cre]) ?? 0, 0);
-    const top5 = Object.values(exact || m).filter((v) => v > 1e-6).sort((a, b) => b - a)
+    const dexPool = data.migrated && data.dex?.pool ? String(data.dex.pool).toLowerCase() : null;
+    const top5 = Object.entries(exact || m).filter(([a, v]) => v > 1e-6 && a !== dexPool).map(([, v]) => v).sort((a, b) => b - a)
       .slice(0, 5).reduce((s, v) => s + v, 0);
     const day = trades.filter((tr) => (tr.ts ?? 0) >= now - 86400e3);
     const { honest, gross } = honestVolume(day, data.creator);
@@ -1784,18 +1800,22 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <div className="holders-scroll" style={{ marginTop: 6 }}>
               {(() => {
                 // кривая — строка среди держателей, на своём месте по доле
-                const rows = [...holders.list.map((h, i) => ({ ...h, rank: i + 1 })), { curve: true, pct: holders.unsoldPct }]
+                const rows = [...holders.list.map((h, i) => ({ ...h, rank: i + 1 })),
+                  ...(data.migrated ? [] : [{ curve: true, pct: holders.unsoldPct }]),
+                  ...(holders.dexPct > 0 ? [{ curve: true, dex: true, pct: holders.dexPct }] : [])]
                   .sort((x, y) => y.pct - x.pct);
                 if (hSort === "asc") rows.reverse();
                 return rows.map((h) => h.curve ? (
-                  <div className="holder-row" key="curve">
+                  <div className="holder-row" key={h.dex ? "dex" : "curve"}>
                     <span className="hr-rank dim">—</span>
                     <span className="hr-who" style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M3 20C11 20 16 15 20 5" stroke="var(--gold)" strokeWidth="2.4" strokeLinecap="round" />
-                        <circle cx="20" cy="5" r="2.4" fill="var(--gold)" />
-                      </svg>
-                      {t("Бондинг-кривая")}
+                      {h.dex ? <Icon name="droplet" size={15} /> : (
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <path d="M3 20C11 20 16 15 20 5" stroke="var(--gold)" strokeWidth="2.4" strokeLinecap="round" />
+                          <circle cx="20" cy="5" r="2.4" fill="var(--gold)" />
+                        </svg>
+                      )}
+                      {h.dex ? t("Пул Uniswap") : t("Бондинг-кривая")}
                     </span>
                     <span className="hr-bar"><span style={{ width: `${Math.min(h.pct * 4, 100)}%` }} /></span>
                     <span className="hr-pct">{fmt(h.pct, 1)}%</span>
