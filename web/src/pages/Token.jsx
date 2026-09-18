@@ -797,19 +797,34 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     // После миграции — сделки и график продолжаются с пула Uniswap
     // (пул DEX ещё не известен на первом заходе — узнаём сами, чтобы не
     // мигал график кривой, а потом правильный)
+    // Причина бага «сначала график до миграции»: при открытии страницы идёт
+    // пачка запросов, и запрос обменов Uniswap иногда падал (лимит RPC);
+    // страница молча рисовала кривую и даже писала её в кэш. Теперь три
+    // попытки, а если всё равно не вышло — кривую поверх DEX-истории не
+    // кладём и в кэш не пишем, через пару секунд пробуем снова.
+    let dexOk = !data.migrated;
     if (data.migrated) {
-      try {
-        const dexPool = data.dex?.pool || await dexPoolOf(tokenAddress, data.q ? data.q.addr : null);
-        if (!dexPool) throw new Error("no pool");
-        const d = await dexTrades(dexPool, tokenAddress, { otherDec: data.q ? data.q.dec : 18, startIndex: Math.max(0, h.points.length - 1) });
-        if (d.trades.length) {
-          h = { trades: [...d.trades, ...h.trades], points: [...h.points, ...d.points], now: d.now };
-        }
-      } catch (e) { /* без DEX-сделок — покажем кривую */ }
+      for (let attempt = 0; attempt < 3 && !dexOk; attempt++) {
+        try {
+          const dexPool = data.dex?.pool || await dexPoolOf(tokenAddress, data.q ? data.q.addr : null);
+          if (!dexPool) throw new Error("no pool");
+          const d = await dexTrades(dexPool, tokenAddress, { otherDec: data.q ? data.q.dec : 18, startIndex: Math.max(0, h.points.length - 1) });
+          if (d.trades.length) {
+            h = { trades: [...d.trades, ...h.trades], points: [...h.points, ...d.points], now: d.now };
+          }
+          dexOk = true;
+        } catch (e) { await new Promise((r) => setTimeout(r, 500 * (attempt + 1))); }
+      }
     }
     if (curTok.current !== String(tokenAddress).toLowerCase()) return; // ответ пришёл уже на другой странице
-    setHistory(h);
-    writeHistCache(tokenAddress, h);
+    if (!dexOk) {
+      setTimeout(() => { loadExtras().catch(() => {}); }, 3000);
+      // если уже есть история с DEX (из кэша) — не затираем её кривой
+      setHistory((prev) => (prev?.trades?.some((tr) => tr.dex) ? prev : h));
+    } else {
+      setHistory(h);
+      writeHistCache(tokenAddress, h);
+    }
     setExtra((x) => ({ ...x, creatorFees, treasuryOwner, treasuryHeld, burned }));
     createdP.then((createdMap) => setExtra((x) => ({ ...x, createdAt: createdMap[tokenAddress.toLowerCase()] })));
   }, [data?.pool, data?.q?.virt, tokenAddress, data?.migrated, data?.dex?.pool]); // virt приходит с сетью после кэша — сделки пересчитать
