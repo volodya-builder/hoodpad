@@ -458,11 +458,17 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   // монеты переводом или раздачей, а не только торговавшие на кривой.
   // null — ещё читаем; {} — не вышло, считаем по сделкам.
   const [xferBal, setXferBal] = useState(null);
+  // Сами переводы (кошелёк → кошелёк, мимо кривой и запа) — для панели трейдера
+  const [xferLogs, setXferLogs] = useState([]);
   useEffect(() => {
     if (!tokenAddress || !data?.pool) return;
     let alive = true;
     publicClient.getLogs({ address: tokenAddress, event: erc20TransferEvent, fromBlock: FACTORY_START_BLOCK, toBlock: "latest" })
       .then((logs) => {
+        const skip = new Set([data.pool.toLowerCase(), String(ZAP_ADDRESS || "").toLowerCase(), "0x0000000000000000000000000000000000000000"]);
+        if (alive) setXferLogs(logs
+          .filter((l) => !skip.has(l.args.from.toLowerCase()) && !skip.has(l.args.to.toLowerCase()))
+          .map((l) => ({ from: l.args.from.toLowerCase(), to: l.args.to.toLowerCase(), tokens: Number(formatEther(l.args.value)), tx: l.transactionHash, block: l.blockNumber })));
         const m = {};
         for (const l of logs) {
           const v = Number(formatEther(l.args.value));
@@ -1026,6 +1032,19 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   };
   const hovT = useRef(null);
   const [inspBal, setInspBal] = useState(null); // { tok, eth }
+  // время переводов открытого кошелька: номера блоков → метки (кэш на страницу)
+  const blockTsRef = useRef({});
+  const [blockTs, setBlockTs] = useState({});
+  useEffect(() => {
+    if (!inspect) return;
+    const a = inspect.toLowerCase();
+    const need = [...new Set(xferLogs.filter((x) => x.from === a || x.to === a).map((x) => String(x.block)))].filter((b) => !blockTsRef.current[b]).slice(0, 40);
+    if (!need.length) return;
+    let alive = true;
+    Promise.all(need.map((b) => publicClient.getBlock({ blockNumber: BigInt(b) }).then((bl) => [b, Number(bl.timestamp) * 1000]).catch(() => null)))
+      .then((rows) => { if (!alive) return; for (const r of rows) if (r) blockTsRef.current[r[0]] = r[1]; setBlockTs({ ...blockTsRef.current }); });
+    return () => { alive = false; };
+  }, [inspect, xferLogs]);
   useEffect(() => {
     if (!inspect) return;
     let alive = true;
@@ -2050,7 +2069,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               {short(inspect)}
             </a>
             {isMe && <span className="badge hr-badge">{t("Вы")}</span>}
-            <span className="cnt-chip">{trs.length} {t("сделок")}</span>
+            <span className="cnt-chip">{trs.length} {t("сделок")}{(() => { const a = inspect.toLowerCase(); const n = xferLogs.filter((x) => x.from === a || x.to === a).length; return n ? ` · ${n} ${t("переводов")}` : ""; })()}</span>
             <span className="tp-close" onClick={() => setInspect(null)} title="Esc">✕</span>
           </div>
 
@@ -2094,13 +2113,6 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             </div>
           </div>
 
-          {xferTok > 0 && (
-            <div className="dim" style={{ fontSize: 12.5, marginTop: 12, lineHeight: 1.45 }}>
-              {onlyXfer
-                ? t("Этот кошелёк ничего не покупал на кривой — монеты пришли переводом с другого кошелька. Цена покупки неизвестна, прибыль не считаем.")
-                : t("Часть монет пришла переводом с другого кошелька — в прибыли учтены только покупки на кривой.")}
-            </div>
-          )}
           <div className="orders-head" style={{ margin: "18px 0 4px" }}>{t("Сделки трейдера")}</div>
           <div className="tp-row hdr">
             <ThP k="side">{t("Тип")}</ThP>
@@ -2109,18 +2121,40 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             <ThP k="eth">{t("Итого")}</ThP>
             <ThP k="ts">{t("Время")}</ThP>
           </div>
-          {sortTradesBy(trs, tpSort).slice(0, 40).map((x, i) => (
-            <div className="tp-row" key={i}>
-              <span className={`tp-type ${x.side}`}>{t(x.side === "buy" ? "Покупка" : "Продажа")}</span>
-              <span className="dim">${fmtEthFine(x.tokens > 0 ? (x.eth / x.tokens) * curRate : 0)}</span>
-              <span>{compactN(x.tokens)}</span>
-              <span className={x.side === "buy" ? "side-buy" : "side-sell"}>{tradeUsd(x)}</span>
-              <a className="dim" href={`${EXPLORER}/tx/${x.tx}`} target="_blank" rel="noreferrer"
-                 title={x.ts ? new Date(x.ts).toLocaleString() : ""}>
-                {shortAgo(x.ts)} ↗
-              </a>
-            </div>
-          ))}
+          {(() => {
+            const a = inspect.toLowerCase();
+            // переводы кошелёк → кошелёк вместе со сделками, в одной ленте
+            const xfers = xferLogs.filter((x) => x.from === a || x.to === a).map((x) => ({
+              side: x.to === a ? "in" : "out", tokens: x.tokens, eth: 0, tx: x.tx,
+              ts: blockTs[String(x.block)] || 0, other: x.to === a ? x.from : x.to,
+            }));
+            const rows = sortTradesBy([...trs, ...xfers], tpSort).slice(0, 60);
+            return rows.map((x, i) => x.side === "in" || x.side === "out" ? (
+              <div className="tp-row" key={`x${i}`}>
+                <span className={`tp-type xfer ${x.side}`}>{t(x.side === "in" ? "Перевод сюда" : "Перевод отсюда")}</span>
+                <span className="hr-click" onClick={() => setInspect(x.other)} title={t("Открыть кошелёк")}>
+                  <Who addr={x.other} link={false} />
+                </span>
+                <span>{compactN(x.tokens)}</span>
+                <span className="dim">{dollars(x.tokens * priceEth)}</span>
+                <a className="dim" href={`${EXPLORER}/tx/${x.tx}`} target="_blank" rel="noreferrer"
+                   title={x.ts ? new Date(x.ts).toLocaleString() : ""}>
+                  {x.ts ? shortAgo(x.ts) : "…"} ↗
+                </a>
+              </div>
+            ) : (
+              <div className="tp-row" key={i}>
+                <span className={`tp-type ${x.side}`}>{t(x.side === "buy" ? "Покупка" : "Продажа")}</span>
+                <span className="dim">${fmtEthFine(x.tokens > 0 ? (x.eth / x.tokens) * curRate : 0)}</span>
+                <span>{compactN(x.tokens)}</span>
+                <span className={x.side === "buy" ? "side-buy" : "side-sell"}>{tradeUsd(x)}</span>
+                <a className="dim" href={`${EXPLORER}/tx/${x.tx}`} target="_blank" rel="noreferrer"
+                   title={x.ts ? new Date(x.ts).toLocaleString() : ""}>
+                  {shortAgo(x.ts)} ↗
+                </a>
+              </div>
+            ));
+          })()}
         </div>
       );
     })()}
