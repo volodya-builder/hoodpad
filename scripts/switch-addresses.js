@@ -33,7 +33,7 @@ const OLD = {
   hoodTreasury: "0xd55e3f8405a3af1d219eea0e5d69b56d3a0118ad",
   migrator: "0xe11727b682e86ced24ed0da2aa6c113ae30672f4",
   migratorQ: "0xac360e752e9e12952e27f202d5814fa8c6220878",
-  adminOld: "0x53eB687F618A491B037818292Bc3427bD654F736",   // те же кошельки, что и сейчас (замена вхолостую)
+  adminOld: "0x53eB687F618A491B037818292Bc3427bD654F736",   // утренние кошельки 18.09 — меняются на новые
   teamOld: "0x0462C1Efe9CA880E901807d5386EBcc6705087b3",
   arenaBotOld: "0x4fC073049012c52c6B291E08D69D13b3a33d8B63",
   hoodOld: "0x67b7a5342a85d623436f049f87517cd1fd73a239",    // монета hood в Docs

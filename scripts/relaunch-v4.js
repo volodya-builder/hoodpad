@@ -64,10 +64,10 @@ const FEE_TIERS = [100, 500, 3000, 10000];
 
 // Кошельки перезапуска (созданы владельцем 17.09.2026, MetaMask «hood · …»).
 const WALLETS = {
-  owner:    "0x53eB687F618A491B037818292Bc3427bD654F736", // hood · Владелец — деплойер и owner всего
-  team:     "0x0462C1Efe9CA880E901807d5386EBcc6705087b3", // hood · Команда 10%
-  arenaBot: "0x4fC073049012c52c6B291E08D69D13b3a33d8B63", // hood · Бот арены — оператор казн (ARENA_PRIVATE_KEY)
-  divBot:   "0xc6492d81B86AEa1E95fE2F7437d3404F92099b9C", // hood · Бот дивидендов — газ выплат и миграций (TREASURER_PRIVATE_KEY)
+  owner:    "0x262a7F257A20aBf338dB44ffEb37eC3922Bc4168", // hood · Владелец — деплойер и owner всего
+  team:     "0x492eC12B89AAbB2fCF41c297Bd909B8e3498Db0c", // hood · Команда 10%
+  arenaBot: "0xB2DDdF862C52aEe0c9d27c9D4AD7a2099fE7D164", // hood · Бот арены — оператор казн (ARENA_PRIVATE_KEY)
+  divBot:   "0x6974E398dbbe87c4752E27DEa8394488e76e2E56", // hood · Бот дивидендов — газ выплат и миграций (TREASURER_PRIVATE_KEY)
 };
 
 // Экономика (решение владельца 16.09.2026):
