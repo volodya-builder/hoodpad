@@ -1799,46 +1799,51 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           {holders && (
             <div className="holders-scroll" style={{ marginTop: 6 }}>
               {(() => {
-                // кривая — строка среди держателей, на своём месте по доле
-                const rows = [...holders.list.map((h, i) => ({ ...h, rank: i + 1 })),
-                  ...(data.migrated ? [] : [{ curve: true, pct: holders.unsoldPct }]),
-                  ...(holders.dexPct > 0 ? [{ curve: true, dex: true, pct: holders.dexPct }] : [])]
-                  .sort((x, y) => y.pct - x.pct);
+                // Как у GMGN: строки по доле, у каждой — стоимость в долларах и
+                // доля в процентах; пул Uniswap (и кривая до миграции) — в общем
+                // списке со своим местом, но с пометкой, что это не человек.
+                const pxUnits = Q ? Number(formatUnits(data.price || 0n, Q.dec)) : Number(formatEther(data.price || 0n));
+                const pxUsd = pxUnits * ((Q ? quoteRate : rate) || 0);
+                const TOTAL = 1e9;
+                const rows = [...holders.list,
+                  ...(data.migrated ? [] : [{ curve: true, pct: holders.unsoldPct, bal: holders.unsold }]),
+                  ...(holders.dexPct > 0 ? [{ curve: true, dex: true, pct: holders.dexPct, bal: (holders.dexPct / 100) * TOTAL }] : [])]
+                  .sort((x, y) => y.pct - x.pct).map((h, i) => ({ ...h, rank: i + 1 }));
                 if (hSort === "asc") rows.reverse();
-                return rows.map((h) => h.curve ? (
-                  <div className="holder-row" key={h.dex ? "dex" : "curve"}>
-                    <span className="hr-rank dim">—</span>
-                    <span className="hr-who" style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
-                      {h.dex ? <Icon name="droplet" size={15} /> : (
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                          <path d="M3 20C11 20 16 15 20 5" stroke="var(--gold)" strokeWidth="2.4" strokeLinecap="round" />
-                          <circle cx="20" cy="5" r="2.4" fill="var(--gold)" />
-                        </svg>
-                      )}
-                      {h.dex ? t("Пул Uniswap") : t("Бондинг-кривая")}
-                    </span>
-                    <span className="hr-bar"><span style={{ width: `${Math.min(h.pct * 4, 100)}%` }} /></span>
-                    <span className="hr-pct">{fmt(h.pct, 1)}%</span>
-                  </div>
-                ) : (() => {
-                  const isCre = h.addr === String(data.creator || "").toLowerCase();
-                  const isTre = h.addr === TREASURY_ADDRESS.toLowerCase();
-                  const isMe = wallet && h.addr === wallet.account.toLowerCase();
+                return rows.map((h) => {
+                  const isCre = !h.curve && h.addr === String(data.creator || "").toLowerCase();
+                  const isTre = !h.curve && h.addr === TREASURY_ADDRESS.toLowerCase();
+                  const isMe = !h.curve && wallet && h.addr === wallet.account.toLowerCase();
+                  const val = pxUsd > 0 ? usd(h.bal * pxUsd) : "…";
                   return (
-                    <div className="holder-row" key={h.addr}>
+                    <div className="holder-row" key={h.curve ? (h.dex ? "dex" : "curve") : h.addr}>
                       <span className="hr-rank dim">{h.rank}</span>
-                      <span className="hr-who hr-click" {...rowHover(h.addr)}>
-                        <Who addr={h.addr} link={false} />
-                        <Badges addr={h.addr} />
-                        {isCre && <span className="badge hr-badge"><Icon name="user" size={11} /> {t("Создатель")}</span>}
-                        {isTre && <span className="badge hr-badge"><Icon name="bank" size={11} /> {t("Казна")}</span>}
-                        {isMe && <span className="badge hr-badge">{t("Вы")}</span>}
-                      </span>
+                      {h.curve ? (
+                        <span className="hr-who" style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                          {h.dex ? <Icon name="droplet" size={15} /> : (
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <path d="M3 20C11 20 16 15 20 5" stroke="var(--gold)" strokeWidth="2.4" strokeLinecap="round" />
+                              <circle cx="20" cy="5" r="2.4" fill="var(--gold)" />
+                            </svg>
+                          )}
+                          {h.dex ? t("Пул Uniswap") : t("Бондинг-кривая")}
+                          <span className="badge hr-badge">{t("Ликвидность")}</span>
+                        </span>
+                      ) : (
+                        <span className="hr-who hr-click" {...rowHover(h.addr)}>
+                          <Who addr={h.addr} link={false} />
+                          <Badges addr={h.addr} />
+                          {isCre && <span className="badge hr-badge"><Icon name="user" size={11} /> {t("Создатель")}</span>}
+                          {isTre && <span className="badge hr-badge"><Icon name="bank" size={11} /> {t("Казна")}</span>}
+                          {isMe && <span className="badge hr-badge">{t("Вы")}</span>}
+                        </span>
+                      )}
+                      <span className="hr-val">{val}</span>
                       <span className="hr-bar"><span style={{ width: `${Math.min(h.pct * 4, 100)}%` }} /></span>
-                      <span className="hr-pct">{fmt(h.pct, 2)}%</span>
+                      <span className="hr-pct"><span className="hr-chip">{fmt(h.pct, 2)}%</span></span>
                     </div>
                   );
-                })());
+                });
               })()}
               {holders.list.length === 0 && (
                 <div className="dim" style={{ padding: "8px 0" }}>{t("Пока нет сделок.")}</div>
