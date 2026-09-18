@@ -33,6 +33,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { buildChain, podium, dayStart, DAY, ARENA_DAYS, setSystemAddresses } from "../../web/src/lib/arena-core.js";
 import { quoteUsd, ethUsdRate } from "../lib/quote-price.mjs";
+import { getLogsSafe, DEPLOY_BLOCK, maxBig } from "../lib/logs.mjs";
 import { treasuryCanConvert, convertTreasuryToEth, treasuryAccess } from "../lib/to-eth.mjs";
 
 const DRY = process.argv.includes("--dry");
@@ -151,13 +152,10 @@ async function paidPlaces(dayKey, treasury = TREASURY, prefix = "arena") {
   const old = await pub.getBlock({ blockNumber: head > 5000n ? head - 5000n : 0n });
   const secPerBlock = Math.max(0.05, (Number(hb.timestamp) - Number(old.timestamp)) / Number(head - old.number || 1n));
   const span = BigInt(Math.ceil((LOOKBACK_DAYS * 86400) / secPerBlock));
-  const fromBlock = head > span ? head - span : 0n;
+  const fromBlock = maxBig(DEPLOY_BLOCK, head > span ? head - span : 0n);
   const paid = new Map(); // место → { asset, amount } уже потрачено
-  // порциями: публичный RPC не любит большие диапазоны
-  const STEP = 50_000n;
-  for (let from = fromBlock; from <= head; from += STEP + 1n) {
-    const to = from + STEP > head ? head : from + STEP;
-    const logs = await pub.getLogs({ address: treasury, event: treasuryAbi.find((x) => x.type === "event"), fromBlock: from, toBlock: to });
+  {
+    const logs = await getLogsSafe(pub, { address: treasury, event: treasuryAbi.find((x) => x.type === "event"), fromBlock, toBlock: head, log: console.log });
     for (const l of logs) {
       const m = new RegExp(`^${prefix} (\\d{4}-\\d{2}-\\d{2}) (\\d)`).exec(l.args.note || "");
       if (m && m[1] === dayKey) {
