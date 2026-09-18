@@ -17,7 +17,7 @@ import {
 const MIGRATOR_ETH = "0xe11727b682e86ced24ed0da2aa6c113ae30672f4";
 const MIGRATOR_QUOTE = "0xac360e752e9e12952e27f202d5814fa8c6220878";
 const USDG_ADDRESS = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168";
-const HOOD_TOKEN = "0x9eFD74eDA2640de53982097539Cd435318FC3d62"; // монета hood, запущена 17.09.2026 с кошелька команды (ETH-фабрика)
+const HOOD_TOKEN = ""; // монета hood V3 — адрес после запуска с кошелька команды (ETH-фабрика); заполняет switch-addresses.js --hood
 const TEAM_WALLET = "0x0462C1Efe9CA880E901807d5386EBcc6705087b3"; // командная доля комиссий (10%)
 const ARENA_BOT = "0x4fC073049012c52c6B291E08D69D13b3a33d8B63";   // оператор обеих казн: только обмен в ETH и выкуп-сжигание
 const SUBGRAPH = "https://api.goldsky.com/api/public/project_cmrrkubk3ngb401u42u3bggz1/subgraphs/hood-mainnet/5.0.0/gn";
@@ -51,7 +51,7 @@ const SECTIONS = [
         { k: T("Формула", "Formula", "公式"), v: "x · y = k · virtual 1.625 ETH" },
         { k: T("Порог градации (ETH-монеты)", "Graduation threshold (ETH coins)", "毕业阈值（ETH 代币）"), v: "6.5 ETH" },
         { k: T("Порог (монеты за валюту)", "Threshold (quote coins)", "阈值（计价货币代币）"), v: T("виртуальный резерв × 4, ≈ $16k в валюте на момент добавления", "virtual reserve × 4, ≈ $16k in the asset when it was listed", "虚拟储备 × 4，上架时约合 $16k（以该资产计）") },
-        { k: T("Покупка создателя при запуске", "Creator buy at launch", "发行时创建者买入"), v: T("до 5% сапплая, в той же транзакции", "up to 5% of supply, same transaction", "最多 5% 总量，同一笔交易") },
+        { k: T("Покупка создателя при запуске", "Creator buy at launch", "发行时创建者买入"), v: T("до 0.13 ETH суммарно, первая — в той же транзакции и без стартового налога", "up to 0.13 ETH in total, the first one in the same transaction and free of the opening tax", "累计最多 0.13 ETH，首笔与发行同一笔交易且免开盘税") },
       ],
       T("При градации пул отправляет резерв и 20% сапплая в мигратор, тот создаёт full-range позицию Uniswap V3 (комиссия 0.3%) и запирает NFT позиции навсегда — ликвидность нельзя вывести никому, включая команду. Перенос происходит в той же покупке, которая заполнила кривую, — без паузы: монета торгуется на DEX уже в следующем блоке. Если перенос сорвался (цена в пуле Uniswap сбита сильнее допуска), покупка всё равно проходит, а migrate() у пула через полминуты вызывает бот площадки — или любой другой.", "At graduation the pool sends its reserve and 20% of supply to the migrator, which creates a full-range Uniswap V3 position (0.3% fee tier) and locks the position NFT forever — nobody, including the team, can withdraw that liquidity. The migration happens inside the very purchase that fills the curve — no pause: the coin trades on the DEX in the next block. If the migration fails (the Uniswap pool price was pushed beyond the migrator's tolerance), the purchase still goes through and the platform bot calls the pool's migrate() within half a minute — anyone else can too.", "毕业时，池子将储备金和 20% 总量交给迁移合约，后者创建 Uniswap V3 全区间头寸（0.3% 费率）并永久锁定头寸 NFT——包括团队在内，没有人能提取这部分流动性。迁移在填满曲线的那笔购买中直接完成，没有停顿：下一个区块代币即可在 DEX 交易。若迁移失败（Uniswap 池价格被推离超出迁移合约的容差），购买仍会成功，平台机器人会在半分钟内调用池子的 migrate()，任何人也都可以调用。"),
     ],
@@ -110,14 +110,14 @@ const SECTIONS = [
       T("10% каждой комиссии площадки приходят в казну выкупа hood. Казна копит в ETH (валюту от монет за акции она сама меняет на ETH), и раз в час бот покупает на всё накопленное монету hood и сжигает её: пока монета на кривой — у кривой, после градации — на Uniswap V3. Из казны нельзя вывести ничего — только обмен в ETH внутри казны, выкуп и сжигание.", "10% of every platform fee goes to the hood buyback treasury. It accumulates in ETH (assets from stock coins are swapped to ETH by the treasury itself), and every hour the bot spends everything accumulated to buy hood and burn it: from the curve while the coin is on it, on Uniswap V3 after graduation. Nothing can be withdrawn — only in-treasury swaps to ETH, buyback and burn.", "平台每笔手续费的 10% 进入 hood 回购金库。金库以 ETH 累积（来自股票代币的资产由金库自行换成 ETH），机器人每小时用累积的全部资金买入 hood 并销毁：代币在曲线上时从曲线买入，毕业后在 Uniswap V3 上买入。资金无法提取——只能在金库内换成 ETH、回购和销毁。"),
       HOOD_TOKEN
         ? [{ k: T("Адрес монеты", "Token address", "代币地址"), v: HOOD_TOKEN, addr: true }]
-        : T("Площадка перезапущена 17.09.2026 на новых контрактах; монета hood запускается заново — адрес появится здесь.", "The platform was relaunched on 17 Sep 2026 on a new contract set; the hood coin is being launched again — its address will appear here.", "平台于 2026 年 9 月 17 日在新合约上重新启动；hood 代币将重新发行——地址将显示在此处。"),
+        : T("Площадка перезапущена 18.09.2026 на контрактах V3; монета hood запускается заново — адрес появится здесь.", "The platform was relaunched on 18 Sep 2026 on the V3 contracts; the hood coin is being launched again — its address will appear here.", "平台于 2026 年 9 月 18 日在 V3 合约上重新启动；hood 代币将重新发行——地址将显示在此处。"),
     ],
   },
   {
     id: "contracts", title: T("Контракты", "Deployed contracts", "已部署合约"),
     body: [
-      T("Все контракты задеплоены 17.09.2026 на Robinhood Chain — полный перезапуск с новых кошельков. Исходники — в репозитории на GitHub (папка contracts/); собраны solc 0.8.28, optimizer 200, evm paris — любой может пересобрать и сверить байткод.", "All contracts were deployed on 17 Sep 2026 on Robinhood Chain — a full relaunch from fresh wallets. Source code is in the GitHub repository (contracts/ folder); built with solc 0.8.28, optimizer 200, evm paris — anyone can rebuild and compare the bytecode.", "所有合约于 2026 年 9 月 17 日部署在 Robinhood Chain 上——使用全新钱包的完整重启。源代码在 GitHub 仓库（contracts/ 目录）；使用 solc 0.8.28、optimizer 200、evm paris 编译——任何人都可以重新编译并比对字节码。"),
-      T("Исходники всех десяти контрактов верифицированы в обозревателе Blockscout: на странице каждого адреса виден код, совпадающий с байткодом в сети, и его можно читать прямо там.", "The source code of all ten contracts is verified on the Blockscout explorer: each address page shows the code matching the on-chain bytecode, readable right there.", "全部十个合约的源代码已在 Blockscout 浏览器上完成验证：每个地址页面都显示与链上字节码一致的代码，可直接在那里阅读。"),
+      T("Все контракты (V3) задеплоены 18.09.2026 на Robinhood Chain — полный перезапуск с новых кошельков. Исходники — в репозитории на GitHub (папка contracts/); собраны solc 0.8.28, optimizer 200, evm paris — любой может пересобрать и сверить байткод.", "All contracts (V3) were deployed on 18 Sep 2026 on Robinhood Chain — a full relaunch from fresh wallets. Source code is in the GitHub repository (contracts/ folder); built with solc 0.8.28, optimizer 200, evm paris — anyone can rebuild and compare the bytecode.", "所有合约（V3）于 2026 年 9 月 18 日部署在 Robinhood Chain 上——使用全新钱包的完整重启。源代码在 GitHub 仓库（contracts/ 目录）；使用 solc 0.8.28、optimizer 200、evm paris 编译——任何人都可以重新编译并比对字节码。"),
+      T("Исходники контрактов публикуются в обозревателе Blockscout по мере верификации (обозреватель принимает по одному контракту раз в ~25 минут): на странице адреса с отметкой Verified виден код, совпадающий с байткодом в сети.", "Contract sources are published on the Blockscout explorer as verification proceeds (the explorer accepts about one contract per 25 minutes): an address page marked Verified shows the code matching the on-chain bytecode.", "合约源代码随验证进度陆续发布到 Blockscout 浏览器（浏览器约每 25 分钟接受一个合约）：标有 Verified 的地址页面显示与链上字节码一致的代码。"),
       [
         { k: T("Сеть", "Network", "网络"), v: "Robinhood Chain · chainId 4663" },
         { k: "RPC", v: RPC },
@@ -253,7 +253,7 @@ export default function Docs() {
         <div className="docs-hero">
           <div className="docs-eyebrow">hood · docs · Robinhood Chain</div>
           <h1>{t("Документация")}</h1>
-          <div className="docs-lead">{t("Как устроен hood: кривая, комиссии, арена, контракты. Обновлено 17.09.2026.")}</div>
+          <div className="docs-lead">{t("Как устроен hood: кривая, комиссии, арена, контракты. Обновлено 18.09.2026.")}</div>
           <div className="docs-hero-chips">
             {["contracts", "fees", "data"].map((id) => <a key={id} href="#/docs" onClick={go(id)}>{L(SECTIONS.find((s) => s.id === id).title)} →</a>)}
           </div>

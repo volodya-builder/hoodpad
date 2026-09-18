@@ -1652,7 +1652,7 @@ const EN = {
   "сегодня": "today",
   "Утром делится между подиумом": "Split between the podium in the morning",
   "Документация": "Docs",
-  "Как устроен hood: кривая, комиссии, арена, контракты. Обновлено 16.09.2026.": "How hood works: the curve, fees, arena, contracts. Updated 16 Sep 2026.",
+  "Как устроен hood: кривая, комиссии, арена, контракты. Обновлено 18.09.2026.": "How hood works: the curve, fees, arena, contracts. Updated 18 Sep 2026.",
   "Кошелёк команды": "Team wallet",
   "Создателям 70%": "Creators 70%",
   "Команде 10%": "Team 10%",
