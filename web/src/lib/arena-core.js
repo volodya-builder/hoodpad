@@ -46,7 +46,9 @@ export function arenaState(tokens, trades, d0, now = Date.now(), excluded = null
   // excluded — адрес или множество адресов; если кроме них сражаться некому,
   // ограничение снимается.
   const exSet = excluded instanceof Set ? excluded : new Set(excluded ? [excluded] : []);
-  let parts = tokens.filter((t) => !t.graduated && (t.createdAt || 0) < end);
+  // Градуировавшие монеты тоже участвуют: их объём и цена — с Uniswap
+  // (сделки с пометкой dex, см. lib/dex.js); казна умеет выкупать их на DEX.
+  let parts = tokens.filter((t) => (t.createdAt || 0) < end);
   if (exSet.size) {
     const rest = parts.filter((t) => !exSet.has(t.token.toLowerCase()));
     if (rest.length > 0) parts = rest;
@@ -70,7 +72,7 @@ export function arenaState(tokens, trades, d0, now = Date.now(), excluded = null
   // случившиеся ПОСЛЕ этого дня. Без этого очки прошлых дней считались бы
   // от сегодняшней цены — история арены и очки лиги были бы неверными.
   const future = {};
-  for (const tr of trades) if (tr.ts >= end) (future[tr.pool] ??= []).push(tr);
+  for (const tr of trades) if (tr.ts >= end && !tr.dex) (future[tr.pool] ??= []).push(tr);
   const atEnd = {};
   for (const p of parts) {
     const k = (p.pool || "").toLowerCase();
@@ -94,14 +96,28 @@ export function arenaState(tokens, trades, d0, now = Date.now(), excluded = null
     honestVolume((byPool[poolLower] || []).filter((tr) => tr.ts <= t),
       creatorOf[poolLower], SYSTEM_ADDRESSES).honest;
 
+  // Цена градуировавшей монеты в момент t — последняя DEX-сделка не позже t
+  // (по всем дням), а до первой DEX-сделки — её же цена.
+  const dexByPool = {};
+  for (const tr of trades) if (tr.dex && tr.price > 0) (dexByPool[tr.pool] ??= []).push(tr);
+  for (const k in dexByPool) dexByPool[k].sort((a, b) => a.ts - b.ts); // старые первыми
+  const dexPriceAt = (poolLower, t) => {
+    const arr = dexByPool[poolLower];
+    if (!arr || !arr.length) return 0;
+    let px = arr[0].price;
+    for (const tr of arr) { if (tr.ts > t) break; px = tr.price; }
+    return px;
+  };
   // состояние кривой пула в момент t: откатываем сделки новее t
   // от состояния на конец этого дня (не от «сегодня»).
   const stateAt = (p, t) => {
     const k0 = (p.pool || "").toLowerCase();
+    if (dexByPool[k0]) return dexPriceAt(k0, t);
     let res = atEnd[k0]?.res ?? Number(p.reserve) / 1e18;
     let sold = atEnd[k0]?.sold ?? Number(p.sold) / 1e18;
     for (const tr of byPool[(p.pool || "").toLowerCase()] || []) {
       if (tr.ts <= t) break;
+      if (tr.dex) continue;
       if (tr.side === "buy") { res -= tr.eth; sold -= tr.tokens; }
       else { res += tr.eth + tr.fee; sold += tr.tokens; }
     }

@@ -110,6 +110,48 @@ async function quoteTradesToEth(trades) {
 }
 
 /** Токены и сделки в формате сайта — полная история, иначе подиум разойдётся с экраном. */
+const V3_FACTORY = "0x1f7d7550b1b028f7571e69a784071f0205fd2efa";
+const WETH_ADDR = "0x0bd7d308f8e1639fab988df18a8011f41eacad73";
+const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
+const Q96 = 2n ** 96n;
+const v3FactoryAbi = parseAbi(["function getPool(address,address,uint24) view returns (address)"]);
+const v3PoolAbi = parseAbi([
+  "function token0() view returns (address)",
+  "event Swap(address indexed sender, address indexed recipient, int256 amount0, int256 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick)",
+]);
+/** Обмены монеты на Uniswap V3 (пул против WETH, 0,3%) в форме сделок арены:
+ *  eth — сколько ETH прошло, price — ETH за монету после обмена, dex: true
+ *  (ядро арены не гоняет их через кривую, а берёт цену как есть). */
+async function dexTradesOf(t) {
+  const pool = await pub.readContract({ address: V3_FACTORY, abi: v3FactoryAbi, functionName: "getPool", args: [t.token, WETH_ADDR, 3000] });
+  if (!pool || pool.toLowerCase() === ZERO_ADDR) return [];
+  const t0 = await pub.readContract({ address: pool, abi: v3PoolAbi, functionName: "token0" });
+  const isT0 = t0.toLowerCase() === String(t.token).toLowerCase();
+  const head = await pub.getBlockNumber();
+  const logs = await getLogsSafe(pub, { address: pool, event: v3PoolAbi[1], fromBlock: DEPLOY_BLOCK, toBlock: head, log: () => {} });
+  if (!logs.length) return [];
+  logs.sort((a, b) => (a.blockNumber === b.blockNumber ? Number(a.logIndex - b.logIndex) : Number(a.blockNumber - b.blockNumber)));
+  const minB = Number(logs[0].blockNumber);
+  const [hb, ob] = await Promise.all([pub.getBlock({ blockNumber: head }), pub.getBlock({ blockNumber: BigInt(minB) })]);
+  const span = Number(head) - minB;
+  const avg = span > 0 ? (Number(hb.timestamp) - Number(ob.timestamp)) / span : 0;
+  const out = [];
+  for (const l of logs) {
+    const tokAmt = isT0 ? l.args.amount0 : l.args.amount1;
+    const ethAmt = isT0 ? l.args.amount1 : l.args.amount0;
+    const s = BigInt(l.args.sqrtPriceX96);
+    const raw = isT0 ? (s * s * 10n ** 18n) / (Q96 * Q96) : (Q96 * Q96 * 10n ** 18n) / (s * s || 1n);
+    const ethAbs = ethAmt < 0n ? -ethAmt : ethAmt;
+    out.push({
+      pool: t.pool, side: tokAmt < 0n ? "buy" : "sell", addr: String(l.args.recipient).toLowerCase(),
+      eth: Number(ethAbs) / 1e18, tokens: Math.abs(Number(tokAmt)) / 1e18, fee: 0,
+      ts: (Number(ob.timestamp) + (Number(l.blockNumber) - minB) * avg) * 1000,
+      quote: null, ethRaw: ethAbs.toString(), feeRaw: "0", dex: true, price: Number(raw) / 1e18,
+    });
+  }
+  return out;
+}
+
 async function loadArenaData() {
   const td = await gql(`{ tokens(first: 500) { id symbol creator pool createdAt graduated ethReserve tokensSold } }`);
   const tokens = (td?.tokens || []).map((x) => ({
@@ -137,6 +179,11 @@ async function loadArenaData() {
     beforeTs = rows[rows.length - 1].timestamp;
   }
   await quoteTradesToEth(trades);
+  // градуировавшие монеты живут на Uniswap: их обмены — тоже сделки арены
+  for (const t of tokens) {
+    if (!t.graduated || !t.pool) continue;
+    try { trades.push(...(await dexTradesOf(t))); } catch (e) { console.log(`dex ${t.symbol}: ${e.message || e}`); }
+  }
   // свежесть индексатора: платить по отставшим данным нельзя
   const meta = await gql(`{ _meta { block { number } } }`);
   const head = await pub.getBlockNumber();
