@@ -28,7 +28,7 @@
  *   8. FeeSplitterV6            — делёж 30% протокольной доли на три адреса
  *   9. initConfig обеих фабрик  — 1% комиссии, 70% создателю, казна = сплиттер
  *  10. setDustSink миграторов   — излишки градации → казна арены
- *  11. setQuote WETH/USDG/USDe  — базовые валюты (порог $16k) + маршруты запа
+ *  11. setQuote WETH/USDG/USDe  — базовые валюты (порог ≈4 ETH; USDG/USDe затем выравнивает allow-stocks) + маршруты запа
  *
  * ProfileRegistry и FeeClaimer от фабрик не зависят — остаются старые.
  * Акции и остальную крипту заводит отдельный скрипт по живым ценам:
@@ -240,7 +240,7 @@ async function main() {
   await call("dustEth", migrator, "UniswapV3Migrator", "setDustSink", [arena]);
   await call("dustQuote", migratorQ, "UniswapV3MigratorQuote", "setDustSink", [arena]);
 
-  console.log("11/11 Базовые валюты: WETH, USDG, USDe (порог $16k) + маршруты запа…");
+  console.log("11/11 Базовые валюты: WETH, USDG, USDe + маршруты запа (порог долларовых выровняет allow-stocks под 4 ETH)…");
   // virtualQuote = порог/4, кап создателя = порог/10 (как у акций в allow-stocks)
   await call("qWeth", quoteFactory, "LaunchpadFactoryQuoteV3", "setQuote", [MAINNET.weth, true, parseEther("1"), parseEther("0.4")]);
   await call("qUsdg", quoteFactory, "LaunchpadFactoryQuoteV3", "setQuote", [MAINNET.usdg, true, parseUnits("4000", 6), parseUnits("1600", 6)]);

@@ -133,7 +133,7 @@ export default function Create({ wallet, onConnect }) {
   const ethUsd = useEthUsd();
   const quoteUsd = useQuoteUsd(quoteAddr);
   const moneyQ = (n) => moneyEth(n, quoteUsd, ethUsd);
-  // Порог градации монеты за акцию задан в штуках акции (≈$15.7k на момент
+  // Порог градации монеты за акцию задан в штуках акции (≈4 ETH на момент
   // включения), в ETH он плавает с курсами — показываем округлённо и с «≈»,
   // чтобы не выглядело как «4.01» против ровных 4 у ETH-монет.
   const gradQ = (n) => { const e = ethOf(n, quoteUsd, ethUsd); return e == null ? "…" : `≈ ${e.toFixed(1)} ETH (${usdFine(e * ethUsd)})`; };
