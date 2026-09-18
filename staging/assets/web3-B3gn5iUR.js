@@ -1,0 +1,1 @@
+import{h as e}from"./web3-DlwADsAL.js";export{e as publicClient};
