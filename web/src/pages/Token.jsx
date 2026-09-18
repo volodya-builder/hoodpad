@@ -1478,7 +1478,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                   {data.name} <span className="ticker">${data.symbol}</span>
-                  {data.graduated && <span className="badge"><Icon name="target" size={12} /> {t("В яблочке")}</span>}
+                  {data.graduated && <span className="badge"><Icon name="check" size={12} /> {t("Градация")}</span>}
                   {data.q && (
                     <span className="th-pair" title={data.divBps > 0 ? t("Валюта курвы и дивиденды холдерам с каждой сделки") : t("Валюта курвы")}>
                       <QuoteLogo q={data.q} size={16} withSym />
