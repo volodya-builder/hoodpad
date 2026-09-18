@@ -476,6 +476,7 @@ const EN = {
   "Скопировать адрес": "Copy address",
   "Открыть в эксплорере": "Open in explorer",
   "Топ держателей": "Top holders",
+  "Пул Uniswap": "Uniswap pool",
   "Бондинг-кривая": "Bonding curve",
   "Создатель": "Creator",
   "Казна": "Treasury",

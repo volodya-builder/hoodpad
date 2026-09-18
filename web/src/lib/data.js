@@ -453,6 +453,8 @@ function refreshTokens() {
 
 /** Монета из уже загруженного списка (память/localStorage) — синхронно,
  *  для мгновенной отрисовки страницы монеты. Нет — null. */
+/** Когда список монет последний раз пришёл из сети (0 — только из localStorage). */
+export function tokensCacheTime() { return _tok.t || 0; }
 export function cachedToken(addr) {
   const a = String(addr || "").toLowerCase();
   return (_tok.v || []).find((t) => (t.token || "").toLowerCase() === a) || null;
