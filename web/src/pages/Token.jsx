@@ -1727,8 +1727,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                   return (
                     <div className="holder-row" key={h.addr}>
                       <span className="hr-rank dim">{h.rank}</span>
-                      <span className="hr-who">
-                        <Who addr={h.addr} title={t("Открыть профиль трейдера")} />
+                      <span className="hr-who hr-click" {...rowHover(h.addr)}>
+                        <Who addr={h.addr} link={false} />
                         <Badges addr={h.addr} />
                         {isCre && <span className="badge hr-badge"><Icon name="user" size={11} /> {t("Создатель")}</span>}
                         {isTre && <span className="badge hr-badge"><Icon name="bank" size={11} /> {t("Казна")}</span>}

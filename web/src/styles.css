@@ -4568,6 +4568,8 @@ html[data-theme="light"] .tm-track { stroke: rgba(0,0,0,.08); }
 @media (max-width: 900px) { .tm-grid { grid-template-columns: 1fr; } }
 
 /* держатели: до 100 строк, прокрутка внутри блока */
+.hr-click { cursor: pointer; }
+.hr-click:hover .mono, .hr-click:hover .who-name { color: var(--text); }
 .holders-scroll { max-height: 520px; overflow-y: auto; overscroll-behavior: contain; padding-right: 10px; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.14) transparent; }
 .holders-scroll::-webkit-scrollbar { width: 5px; }
 .holders-scroll::-webkit-scrollbar-track { background: transparent; }
