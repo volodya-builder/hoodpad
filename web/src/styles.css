@@ -4586,3 +4586,13 @@ html[data-theme="light"] .tm-track { stroke: rgba(0,0,0,.08); }
 .holders-scroll:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,.26); }
 html[data-theme="light"] .holders-scroll { scrollbar-color: rgba(0,0,0,.18) transparent; }
 html[data-theme="light"] .holders-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,.18); }
+
+/* история побед: чемпион раскрывает 2-е и 3-е места */
+.lt-row.hof-champ { cursor: pointer; }
+.lt-row.hof-champ.open { background: #ffffff06; }
+.hof-day { display: inline-flex; align-items: center; gap: 6px; }
+.hof-chev { transition: transform .18s; opacity: .7; }
+.hof-chev.up { transform: rotate(180deg); }
+.lt-row.hof-sub { padding-left: 28px; background: #ffffff03; }
+.lt-empty.hof-sub { padding: 10px 0 12px 68px; font-size: 13px; }
+html[data-theme="light"] .lt-row.hof-champ.open, html[data-theme="light"] .lt-row.hof-sub { background: #00000005; }

@@ -272,7 +272,7 @@ export function hallOfFame(tokens, trades, days = 14, now = Date.now()) {
   for (let i = 1; i <= days; i++) {
     const d0 = today - i * DAY;
     const st = chain.get(d0);
-    if (st?.champion) out.push({ day: d0, champion: st.champion });
+    if (st?.champion) out.push({ day: d0, champion: st.champion, podium: podium(st) });
   }
   return out;
 }

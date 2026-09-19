@@ -239,6 +239,7 @@ const EN = {
   "Каждый может проверить сам": "Anyone can verify it themselves",
   "Призы дня": "Daily prizes",
   "1 место": "1st place",
+  "Только чемпион — остальные без очков.": "Champion only — nobody else scored.",
   "2 место": "2nd place",
   "3 место": "3rd place",
   "чемпион дня": "champion of the day",

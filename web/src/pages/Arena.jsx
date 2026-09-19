@@ -66,12 +66,13 @@ function Spark({ trades, pool, from }) {
 // перерисовывается каждую секунду (таймер), а компонент, объявленный внутри,
 // каждый раз «новый» для React — строки пересоздавались целиком, и на телефоне
 // логотипы мерцали (18.09.2026).
-const Row = React.memo(function Row({ p, i, trend = true, right, sub, dim, podium, st, day0, t, D, mcapOf }) {
+const Row = React.memo(function Row({ p, i, trend = true, right, sub, dim, podium, st, day0, t, D, mcapOf, onClick, className = "" }) {
   // монета за валюту: капа через курс валюты, а не ETH
   const qPrice = useQuoteUsd(p.q?.addr);
   const mcap = p.q ? Number(formatUnits(p.price, p.q.dec)) * 1e9 * qPrice : mcapOf(p);
   return (
-  <a className={`lt-row ${dim ? "dim" : ""} ${podium ? `podium podium-${podium}` : ""}`} href={`#/token/${p.token}`}>
+  <a className={`lt-row ${dim ? "dim" : ""} ${podium ? `podium podium-${podium}` : ""} ${className}`} href={`#/token/${p.token}`}
+     onClick={onClick ? (e) => { e.preventDefault(); onClick(); } : undefined}>
     <span className="lt-rank">{i != null ? i + 1 : ""}</span>
     <Logo src={p.meta?.image} />
     <span className="lt-tok">
@@ -103,6 +104,7 @@ export default function Arena() {
   const pot = useArenaPot();           // фонд казны арены: { eth, usd, assets }
   const payouts = useArenaPayouts();   // последние выкупы, по дням
   const [view, setView] = useState("day");
+  const [hofOpen, setHofOpen] = useState(null); // раскрытый день в истории побед (2-е и 3-е места)
 
   const D = (eth) => (rate > 0 ? (eth * rate >= 1000 ? usd(eth * rate) : usdFine(eth * rate)) : "…");
   const E = (eth) => `${fmtEth(eth)} ETH`;
@@ -177,9 +179,23 @@ export default function Arena() {
         return (
           <div className="lt">
             <div className="lt-h"><span /><span /><span>{t("Токен")}</span><span /><span className="r">{t("Капа")}</span><span className="r">{t("Очки боя")}</span><span className="r">{t("День")}</span></div>
-            {hof.map(({ day, champion: c }) => {
+            {hof.map(({ day, champion: c, podium: pod }) => {
               const d = new Date(day);
-              return <Row key={day} {...rowCtx} p={c} trend={false} right={<span className="dim">{d.getDate()} {t(MONTHS[d.getMonth()])}</span>} />;
+              const open = hofOpen === day;
+              const rest = (pod || []).slice(1);
+              return (
+                <React.Fragment key={day}>
+                  <Row {...rowCtx} p={c} trend={false} podium={1} className={`hof-champ ${open ? "open" : ""}`}
+                       onClick={() => setHofOpen(open ? null : day)}
+                       right={<span className="dim hof-day">{d.getDate()} {t(MONTHS[d.getMonth()])} <Icon name="chevron" size={13} className={`hof-chev ${open ? "up" : ""}`} /></span>} />
+                  {open && (rest.length === 0
+                    ? <div className="lt-empty hof-sub">{t("Только чемпион — остальные без очков.")}</div>
+                    : rest.map((p, k) => (
+                      <Row key={p.token} {...rowCtx} p={p} i={k + 1} trend={false} podium={k + 2} className="hof-sub"
+                           right={<span className="dim">{k + 2 === 2 ? t("2 место") : t("3 место")}</span>} />
+                    )))}
+                </React.Fragment>
+              );
             })}
           </div>
         );
