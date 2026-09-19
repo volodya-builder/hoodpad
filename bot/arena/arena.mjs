@@ -223,6 +223,7 @@ async function paidPlaces(dayKey, treasury = TREASURY, prefix = "arena") {
   // (если прошлый запуск оборвался посередине, остальные места получают
   // доли от того же фонда). Валюта, которой нет у монет подиума, копится.
 async function payFrom(treasury, prefix, paid, pod, trades, dayKey) {
+  const unpaid = []; // места, которые не удалось выплатить в этом запуске
   const paidByAsset = {}; // asset(lower|"eth") → уже выплачено за день
   for (const v of paid.values()) paidByAsset[v.asset] = (paidByAsset[v.asset] || 0n) + v.amount;
   const potOf = async (asset) => {
@@ -294,12 +295,19 @@ async function payFrom(treasury, prefix, paid, pod, trades, dayKey) {
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 600);
     const argsFor = (minOut) => (viaZap ? [token, amt, minOut, deadline, note] : [token, amt, minOut, note]);
     let expected;
-    try {
-      const sim = await pub.simulateContract({ account, address: treasury, abi: treasuryAbi, functionName: fn, args: argsFor(0n) });
-      expected = sim.result;
-    } catch (e) {
-      console.error(`  ${place} место $${pod[i].symbol}: симуляция выкупа не прошла — ${e.shortMessage || e.message}`);
+    // Симуляция с повторами: узел иногда отвечает отказом на первый запрос
+    // (19.09.2026: $GME пропущен в 00:20 и выплачен только в 06:01).
+    let simErr = null;
+    for (let attempt = 0; attempt < 4 && expected === undefined; attempt++) {
+      try {
+        const sim = await pub.simulateContract({ account, address: treasury, abi: treasuryAbi, functionName: fn, args: argsFor(0n) });
+        expected = sim.result;
+      } catch (e) { simErr = e; await new Promise((r) => setTimeout(r, 3000 * (attempt + 1))); }
+    }
+    if (expected === undefined) {
+      console.error(`  ${place} место $${pod[i].symbol}: симуляция выкупа не прошла (4 попытки) — ${simErr?.shortMessage || simErr?.message}`);
       if (DRY) { console.log(`    (сухо) заплатил бы ${fmtA(amt, dec, sym)} через ${fn}`); }
+      unpaid.push(place);
       continue;
     }
     const minOut = (expected * (10000n - SLIPPAGE_BPS)) / 10000n;
@@ -309,7 +317,11 @@ async function payFrom(treasury, prefix, paid, pod, trades, dayKey) {
     const rc = await pub.waitForTransactionReceipt({ hash });
     console.log(`    ${rc.status} ${hash}`);
     if (rc.status !== "success") { console.error("    выкуп не прошёл — останавливаюсь, остаток фонда ждёт следующего запуска."); process.exit(3); }
+    // Выплаченное в этом же запуске — тоже часть фонда дня: иначе 2-е место
+    // получало 20% от ОСТАТКА после 1-го (6,7% вместо 20% — 19.09.2026, $GOOGL).
+    paidByAsset[asset] = (paidByAsset[asset] || 0n) + amt;
   }
+  return unpaid;
 }
 
 async function main() {
@@ -340,7 +352,7 @@ async function main() {
   if (!pod.length) { console.log(`Арена за ${dayKey}: подиума не было (нет сделок) — выплат нет, фонд копится.`); return; }
 
   console.log(`Подиум за ${dayKey}: ${pod.map((p, i) => `${i + 1}. $${p.symbol}`).join("  ")}`);
-  await payFrom(TREASURY, "arena", paid, pod, trades, dayKey);
+  const unpaid = await payFrom(TREASURY, "arena", paid, pod, trades, dayKey);
   if (/^0x[0-9a-f]{40}$/.test(LEGACY_TREASURY) && LEGACY_TREASURY !== TREASURY) {
     const legacyEth = await pub.getBalance({ address: LEGACY_TREASURY });
     const paidOld = await paidPlaces(dayKey, LEGACY_TREASURY, "arena-old").catch(() => new Map());
@@ -348,6 +360,12 @@ async function main() {
       console.log(`Прежняя казна ${LEGACY_TREASURY.slice(0, 8)}…: ${formatEther(legacyEth)} ETH — платим подиуму и из неё`);
       await payFrom(LEGACY_TREASURY, "arena-old", paidOld, pod, trades, dayKey);
     }
+  }
+  if (unpaid.length && !DRY) {
+    // не всё выплачено — выходим с кодом 3: эстафета вернётся через 30 минут,
+    // а не завтра (выплаченные места повторно не платятся — они в событиях казны)
+    console.error(`Не выплачены места: ${unpaid.join(", ")} — повтор через 30 минут.`);
+    process.exit(3);
   }
   console.log("Готово.");
 }

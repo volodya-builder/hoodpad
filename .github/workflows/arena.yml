@@ -55,6 +55,7 @@ jobs:
           [ -n "$ARENA_TREASURY" ] || { echo "::error::Нет переменной ARENA_TREASURY (Settings → Variables)"; exit 1; }
           [ "$HAS_KEY" = "true" ] || { echo "::error::Нет секрета ARENA_PRIVATE_KEY"; exit 1; }
       - name: Выплатить подиум
+        id: pay
         env:
           ARENA_PRIVATE_KEY: ${{ secrets.ARENA_PRIVATE_KEY }}
           ARENA_TREASURY: ${{ vars.ARENA_TREASURY }}
@@ -73,6 +74,8 @@ jobs:
           NEXT=$(( (NOW / 86400 + 1) * 86400 + 1200 ))   # завтра 00:20 UTC
           WAIT=$(( NEXT - NOW )); MAX=$(( 5 * 3600 + 40 * 60 ))
           [ "$WAIT" -gt "$MAX" ] && WAIT=$MAX
+          # выплата не прошла (узел молчал, индексатор отстал) — вернуться через 30 минут, а не через часы
+          if [ "${{ steps.pay.outcome }}" = "failure" ]; then WAIT=1800; echo "Выплата не завершена — повтор через 30 мин."; fi
           OTHERS=$(gh run list --workflow arena.yml --limit 20 --json status --jq '[.[] | select(.status=="queued" or .status=="pending" or .status=="waiting" or .status=="requested")] | length' || echo 0)
           if [ "$OTHERS" != "0" ]; then echo "В очереди уже есть запуск — эстафету не передаю."; exit 0; fi
           echo "Следующий заход через $((WAIT / 60)) мин…"; sleep "$WAIT"
