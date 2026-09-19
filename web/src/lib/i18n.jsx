@@ -240,6 +240,7 @@ const EN = {
   "Призы дня": "Daily prizes",
   "1 место": "1st place",
   "Только чемпион — остальные без очков.": "Champion only — nobody else scored.",
+  "Сеть не ответила — обновите страницу.": "Network did not respond — reload the page.",
   "2 место": "2nd place",
   "3 место": "3rd place",
   "чемпион дня": "champion of the day",

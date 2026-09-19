@@ -93,9 +93,10 @@ export default function CandleChart({ points, trades, rate, marks, lines, defaul
       timeScale: { timeVisible: true, secondsVisible: false, borderColor: "#80808030", rightOffset: 3, minBarSpacing: 0.5 },
       rightPriceScale: { borderColor: "#80808030", mode: logScale ? 1 : 0,
         // воздух сверху/снизу, чтобы свеча не занимала всю высоту
-        scaleMargins: { top: 0.25, bottom: 0.2 } },
+        scaleMargins: { top: 0.25, bottom: 0.12 } },
       crosshair: { mode: 0 },
-      localization: { priceFormatter: (v) => usd(v) },
+      // ниже нуля цены не бывает: отступ шкалы под свечами не подписываем
+      localization: { priceFormatter: (v) => (v < 0 ? "" : usd(v)) },
     });
     const cs = chart.addCandlestickSeries({
       upColor: "#4caf6d", downColor: "#e06a4a",
