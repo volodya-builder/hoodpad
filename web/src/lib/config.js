@@ -262,7 +262,11 @@ function rpcList() {
   // основной, но web3.js делает быстрый отвал (8с, 1 повтор) + rank —
   // при повторении истории сайт мгновенно уходит на публичный RPC.
   const dedicated = ALCHEMY_RPC[NETWORK];
-  if (dedicated) urls.unshift(dedicated);      // Alchemy — основной
+  // 19.09.2026: Alchemy под пачками запросов страницы монеты то и дело
+  // отвечал отказом (держатели с дыр, «HTTP request failed», замёрзшие цены),
+  // а публичный узел сети отвечал стабильно. Теперь публичный — первый,
+  // Alchemy — запасной; rank в web3.js всё равно ставит вперёд тот, кто жив.
+  if (dedicated) urls.push(dedicated);         // Alchemy — резерв
   const envUrl = import.meta.env.VITE_RPC_URL;
   if (envUrl) urls.unshift(envUrl);
   try {
