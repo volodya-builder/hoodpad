@@ -1,0 +1,1 @@
+import{g as e}from"./web3-ZAq4wmLT.js";export{e as publicClient};
