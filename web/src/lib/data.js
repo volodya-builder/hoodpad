@@ -186,9 +186,10 @@ export async function subgraphStats24() {
     const p = tr.pool;
     vol[p] = (vol[p] || 0) + tr.eth;
     if (volUsd[p] !== null) volUsd[p] = tr.usd == null ? null : (volUsd[p] || 0) + tr.usd;
-    // первая цена дня — в единицах валюты пула (для % изменения сравнивается с ценой в тех же единицах)
-    const q0 = tr.quote ? Number(tr.ethRaw) / 1e18 : tr.eth;
-    if (first[p] == null && tr.tokens > 0) first[p] = q0 / tr.tokens;
+    // первая цена дня — в СЫРЫХ единицах валюты пула за одну монету (у USDG
+    // 6 знаков, у ETH 18: делить на 1e18 нельзя — DOGE показывал +39 960 039%).
+    // Сравнивается с tok.price, который тоже в сырых единицах за монету.
+    if (first[p] == null && tr.tokens > 0) first[p] = Number(tr.ethRaw) / tr.tokens;
   }
   _st24 = { v: { vol, first, volUsd }, t: Date.now() };
   return _st24.v;

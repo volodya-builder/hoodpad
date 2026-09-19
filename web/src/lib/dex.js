@@ -95,15 +95,28 @@ export async function dexState(pool, token, otherDec = 18) {
  *  spotPrice кривой (wei валюты за 1e18 монеты); null — пула нет. Память 20 с:
  *  список монет обновляется часто, а цена пула — один вызов на монету. */
 const _dexPx = new Map();
+const DEXPX_LS = "hood_dexpx_v1_";
 export async function dexPriceOf(token, quoteAddr = null, otherDec = 18) {
   const key = `${lower(token)}:${lower(quoteAddr || WETH_ADDRESS)}`;
   const c = _dexPx.get(key);
   if (c && Date.now() - c.t < 20_000) return c.v;
-  const pool = await dexPoolOf(token, quoteAddr);
-  if (!pool) return null;
-  const st = await dexState(pool, token, otherDec);
-  _dexPx.set(key, { v: st.price, t: Date.now() });
-  return st.price;
+  // Три попытки: если узел молчит, главная показывала замёрзшую цену кривой
+  // ($66k вместо $2k — 19.09.2026). Не вышло — последняя известная цена DEX
+  // из памяти браузера; её нет — null (вызывающий оставит цену кривой).
+  let lastErr = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const pool = await dexPoolOf(token, quoteAddr);
+      if (!pool) return null;
+      const st = await dexState(pool, token, otherDec);
+      _dexPx.set(key, { v: st.price, t: Date.now() });
+      try { localStorage.setItem(DEXPX_LS + key, st.price.toString()); } catch (e) { /* ignore */ }
+      return st.price;
+    } catch (e) { lastErr = e; await new Promise((r) => setTimeout(r, 500 * (attempt + 1))); }
+  }
+  if (c) return c.v;
+  try { const v = localStorage.getItem(DEXPX_LS + key); if (v) return BigInt(v); } catch (e) { /* ignore */ }
+  throw lastErr;
 }
 
 // ---------------------------------------------------------------- сделки
