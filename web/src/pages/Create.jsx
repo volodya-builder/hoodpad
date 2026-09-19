@@ -98,10 +98,12 @@ export default function Create({ wallet, onConnect }) {
     let on = true;
     loadCryptoQuotes(60, (part) => on && setCrypto(part)).then((x) => on && setCrypto(x));
     loadAllowedQuotes().then(async (x) => {
+      if (x === null) { if (on) setAllowedReady(true); return; } // сеть не ответила — остаёмся на прошлом списке из памяти
       // Показываем только то, что можно купить за ETH: у покупателя на
       // кошельке ETH, а не TAO. Валюта без маршрута — мёртвая монета.
       const zapOk = await loadZapQuotes(x);
       if (!on) return;
+      if (zapOk.size === 0 && allowed.size > 0) { setAllowedReady(true); return; } // пустой ответ при живом кэше — не верим
       setAllowed(zapOk); setAllowedReady(true);
       try { localStorage.setItem(ALLOWED_LS, JSON.stringify({ t: Date.now(), list: [...zapOk] })); } catch (e) { /* ignore */ }
     });

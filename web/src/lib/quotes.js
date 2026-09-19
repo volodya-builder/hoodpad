@@ -98,10 +98,14 @@ export const PLANNED = ["WETH", "USDG", "USDE", "CBBTC", "LINK", "TAO", "PENDLE"
 
 export function featuredQuotes(list, allowed, limit = 11) {
   const rows = list || [];
-  if (allowed && allowed.size) {
-    return rows.filter((q) => allowed.has(q.addr)).slice(0, limit);
-  }
   const rank = (q) => { const i = PLANNED.indexOf(q.sym); return i < 0 ? 99 : i; };
+  if (allowed && allowed.size) {
+    // Витрина — только курируемый список (PLANNED) в его порядке; всё
+    // остальное из белого списка (ZFORGE, PENGU, JOHN…) доступно через поиск
+    // (владелец 19.09.2026: «неправильный список крипты»).
+    return rows.filter((q) => allowed.has(q.addr) && PLANNED.includes(q.sym))
+      .sort((a, b) => rank(a) - rank(b)).slice(0, limit);
+  }
   return [...rows].sort((a, b) => rank(a) - rank(b) || b.volume - a.volume).slice(0, limit);
 }
 
@@ -129,22 +133,28 @@ export async function lookupQuote(addr) {
  * Белый список фабрики: адреса валют, за которые запуск реально пройдёт.
  * Фабрика не задеплоена — список пуст, и форма об этом скажет.
  */
+/** null — сеть не ответила (вызывающий оставит прошлый список), Set — ответ. */
 export async function loadAllowedQuotes() {
   if (!QUOTE_LIVE) return new Set();
-  try {
-    const n = Number(await publicClient.readContract({
-      address: QUOTE_FACTORY_ADDRESS, abi: quoteFactoryAbi, functionName: "allowedQuotesCount",
-    }));
-    const addrs = await Promise.all(Array.from({ length: n }, (_, i) =>
-      publicClient.readContract({ address: QUOTE_FACTORY_ADDRESS, abi: quoteFactoryAbi, functionName: "allowedQuotes", args: [BigInt(i)] })
-    ));
-    // allowed могли выключить через setQuote(false) — массив это не чистит,
-    // поэтому сверяемся с конфигом каждой.
-    const cfgs = await Promise.all(addrs.map((q) =>
-      publicClient.readContract({ address: QUOTE_FACTORY_ADDRESS, abi: quoteFactoryAbi, functionName: "quoteConfig", args: [q] })
-    ));
-    return new Set(addrs.filter((q, i) => cfgs[i]?.[0]).map((q) => q.toLowerCase()));
-  } catch { return new Set(); }
+  // Полторы сотни вызовов; узел иногда обрывает пачку на середине — тогда
+  // вкладка «Акции» была пустой. Три попытки, и ошибка — это null, а не пусто.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const n = Number(await publicClient.readContract({
+        address: QUOTE_FACTORY_ADDRESS, abi: quoteFactoryAbi, functionName: "allowedQuotesCount",
+      }));
+      const addrs = await Promise.all(Array.from({ length: n }, (_, i) =>
+        publicClient.readContract({ address: QUOTE_FACTORY_ADDRESS, abi: quoteFactoryAbi, functionName: "allowedQuotes", args: [BigInt(i)] })
+      ));
+      // allowed могли выключить через setQuote(false) — массив это не чистит,
+      // поэтому сверяемся с конфигом каждой.
+      const cfgs = await Promise.all(addrs.map((q) =>
+        publicClient.readContract({ address: QUOTE_FACTORY_ADDRESS, abi: quoteFactoryAbi, functionName: "quoteConfig", args: [q] })
+      ));
+      return new Set(addrs.filter((q, i) => cfgs[i]?.[0]).map((q) => q.toLowerCase()));
+    } catch (e) { await new Promise((r) => setTimeout(r, 800 * (attempt + 1))); }
+  }
+  return null;
 }
 
 /** Поиск по чипам: тикер, название, адрес. */
@@ -168,10 +178,13 @@ export async function loadZapQuotes(allowed) {
   const ok = new Set();
   await Promise.all(list.map(async (q) => {
     if (q === WETH_ADDRESS.toLowerCase()) { ok.add(q); return; }
-    try {
-      const has = await publicClient.readContract({ address: ZAP_ADDRESS, abi: zapAbi, functionName: "hasRoute", args: [q] });
-      if (has) ok.add(q);
-    } catch { /* нет ответа — не показываем */ }
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const has = await publicClient.readContract({ address: ZAP_ADDRESS, abi: zapAbi, functionName: "hasRoute", args: [q] });
+        if (has) ok.add(q);
+        break;
+      } catch { await new Promise((r) => setTimeout(r, 500 * (attempt + 1))); }
+    }
   }));
   return ok;
 }

@@ -157,7 +157,7 @@ export function usd(n) {
 // ---------------------------------------------------------------- валюты курвы
 // Курс любого ERC20 сети в долларах — у обозревателя (Blockscout), он же
 // отдаёт каталог валют для формы запуска. Кэш на минуту, как у ETH.
-const QUOTE_LS = "hood_quoteusd_v1";
+const QUOTE_LS = "hood_quoteusd_v2"; // v2: в v1 могли осесть курсы из обозревателя (19.09.2026)
 let quoteCache = {};
 try { quoteCache = JSON.parse(localStorage.getItem(QUOTE_LS) || "{}") || {}; } catch (e) { /* ignore */ }
 const _qPending = new Map();
@@ -212,17 +212,26 @@ export async function quoteUsd(addr) {
       try { localStorage.setItem(QUOTE_LS, JSON.stringify(quoteCache)); } catch (e) { /* ignore */ }
       return v;
     };
-    try {
-      const v = await quoteUsdOnChain(a);
-      if (v > 0 && isFinite(v)) return keep(v);
-    } catch (e) { /* нет пула/RPC — спросим обозреватель */ }
+    // Пулы сети — единственный надёжный источник (19.09.2026: при икоте узла
+    // курс GME уезжал в обозреватель и давал $94 и $0.81 вместо $22.5 —
+    // капа одной монеты в трёх местах показывала три разных числа).
+    // Три попытки; не вышло — последний известный курс любой давности;
+    // обозреватель — только если курса не было никогда.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const v = await quoteUsdOnChain(a);
+        if (v > 0 && isFinite(v)) return keep(v);
+        break; // пула нет — повторять бессмысленно
+      } catch (e) { await new Promise((r) => setTimeout(r, 500 * (attempt + 1))); }
+    }
+    if (c?.v > 0) return c.v;
     try {
       const { EXPLORER } = await import("./config.js");
       const j = await (await fetch(`${EXPLORER}/api/v2/tokens/${a}`, { signal: AbortSignal.timeout(5000) })).json();
       const v = parseFloat(j?.exchange_rate);
       if (v > 0) return keep(v);
     } catch (e) { /* нет курса — покажем в валюте */ }
-    return c?.v ?? 0;
+    return 0;
   })();
   _qPending.set(a, p);
   try { return await p; } finally { _qPending.delete(a); }
