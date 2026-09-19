@@ -3,7 +3,7 @@ import Icon from "../components/Icon.jsx";
 import Socials from "../components/Socials.jsx";
 import Who from "../components/Who.jsx";
 import { parseEther, formatEther, parseUnits, formatUnits } from "viem";
-import { publicClient, fmt, fmtEth, fmtEthFine, short } from "../lib/web3.js";
+import { getLogsSafe, publicClient, fmt, fmtEth, fmtEthFine, short } from "../lib/web3.js";
 import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi, zapAbi, feeSplitterAbi, erc20TransferEvent } from "../lib/abi.js";
 import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, FEATURES, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE, FACTORY_START_BLOCK, VIRTUAL_ETH } from "../lib/config.js";
 import { poolTrades, invalidateTrades, loadTokens, allTrades, parseMeta, cachedToken, tokensCacheTime } from "../lib/data.js";
@@ -476,7 +476,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   useEffect(() => {
     if (!tokenAddress || !data?.pool) return;
     let alive = true;
-    publicClient.getLogs({ address: tokenAddress, event: erc20TransferEvent, fromBlock: FACTORY_START_BLOCK, toBlock: "latest" })
+    getLogsSafe({ address: tokenAddress, event: erc20TransferEvent, fromBlock: FACTORY_START_BLOCK, toBlock: "latest" })
       .then((logs) => {
         const skip = new Set([data.pool.toLowerCase(), String(ZAP_ADDRESS || "").toLowerCase(), "0x0000000000000000000000000000000000000000"]);
         if (alive) setXferLogs(logs
