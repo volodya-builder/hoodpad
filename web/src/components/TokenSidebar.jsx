@@ -61,7 +61,8 @@ export default function TokenSidebar({ current }) {
   const chgOf = (tok) => {
     const p0 = st.first[(tok.pool || "").toLowerCase()];
     if (!p0) return null;
-    const cur = Number(formatEther(tok.price));
+    const cur = Number(tok.price) / 1e18; // сырые единицы валюты за одну монету
+    if (!(cur > 0)) return null;
     return (cur / p0 - 1) * 100;
   };
 
