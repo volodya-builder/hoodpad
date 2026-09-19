@@ -81,16 +81,19 @@ export async function ethUsd() {
   if (cached.v && Date.now() - cached.t < 60_000) return cached.v;
   if (_pending) return _pending;
   _pending = (async () => {
-    for (const src of SOURCES) {
-      try {
-        const v = await src();
-        if (v && isFinite(v) && v > 0) {
-          cached = { v, t: Date.now() };
-          try { localStorage.setItem(LS_KEY, JSON.stringify({ v })); } catch (e) { /* ignore */ }
-          return v;
-        }
-      } catch (e) { /* следующий источник */ }
-    }
+    // Все источники разом, берём первый живой ответ. Раньше шли по очереди,
+    // и там, где Binance/Coinbase закрыты, курс ждал 5 с × число источников —
+    // сайт «долго грузился» с телефонов.
+    try {
+      const v = await Promise.any(SOURCES.map(async (src) => {
+        const x = await src();
+        if (x && isFinite(x) && x > 0) return x;
+        throw new Error("bad rate");
+      }));
+      cached = { v, t: Date.now() };
+      try { localStorage.setItem(LS_KEY, JSON.stringify({ v })); } catch (e) { /* ignore */ }
+      return v;
+    } catch (e) { /* все легли */ }
     // все источники легли — держим последний известный курс, не прыгаем
     if (!cached.v) cached = { v: FALLBACK, t: Date.now() };
     else cached.t = Date.now(); // не долбим API каждый рендер

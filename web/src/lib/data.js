@@ -1,6 +1,6 @@
 import { parseAbi, parseAbiItem } from "viem";
 import { useEffect, useState } from "react";
-import { publicClient } from "./web3.js";
+import { getLogsSafe, publicClient } from "./web3.js";
 import { factoryAbi, poolAbi, tokenAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi } from "./abi.js";
 import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE, VIRTUAL_ETH } from "./config.js";
 
@@ -697,7 +697,7 @@ async function _poolTradesFresh(pool, cur = null) {
 // декодер общий; отличаются только знаки валюты и виртуальный резерв.
 async function _poolTradesRpc(pool, cur = null) {
   const fromBlock = await recentFromBlock();
-  const logs = await publicClient.getLogs({
+  const logs = await getLogsSafe({
     address: pool, events: tradeEvents, fromBlock, toBlock: "latest",
   });
   logs.sort((a, b) => (a.blockNumber === b.blockNumber

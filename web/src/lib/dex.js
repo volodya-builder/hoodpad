@@ -9,7 +9,7 @@
 //  Платят и получают всегда ETH — как на кривой.
 // ============================================================================
 import { parseAbi, encodePacked, encodeFunctionData, formatEther, formatUnits } from "viem";
-import { publicClient } from "./web3.js";
+import { publicClient, getLogsSafe } from "./web3.js";
 import { WETH_ADDRESS, ZAP_ADDRESS, FACTORY_START_BLOCK } from "./config.js";
 import { zapAbi } from "./abi.js";
 
@@ -125,7 +125,7 @@ async function txFrom(hash) {
 export async function dexTrades(pool, token, { otherDec = 18, fromBlock = FACTORY_START_BLOCK, startIndex = 0 } = {}) {
   const t0 = await publicClient.readContract({ address: pool, abi: poolAbi, functionName: "token0" });
   const tokenIsToken0 = lower(t0) === lower(token);
-  const logs = await publicClient.getLogs({ address: pool, event: poolAbi[4], fromBlock, toBlock: "latest" });
+  const logs = await getLogsSafe({ address: pool, event: poolAbi[4], fromBlock, toBlock: "latest" });
   logs.sort((a, b) => (a.blockNumber === b.blockNumber ? Number(a.logIndex - b.logIndex) : Number(a.blockNumber - b.blockNumber)));
   // время: интерполяция по блокам (2 вызова), как у кривой
   let ts0 = 0, avg = 0, minB = 0;

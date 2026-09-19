@@ -19,18 +19,45 @@ const rpcTransport = fallback(
   RPC_URLS.map((url) =>
     http(url, {
       batch: { wait: 16, batchSize: 20 },
-      timeout: 8_000,
-      retryCount: 1,
-      retryDelay: 300,
+      // 19.09.2026: там, где Alchemy недоступен (часть мобильных сетей), каждый
+      // запрос ждал 8 с × 2 попытки, прежде чем уйти на публичный RPC — главная
+      // грузилась 9+ секунд. Теперь 3 с и без повтора: следующий узел сразу.
+      timeout: 3_000,
+      retryCount: 0,
     })
   ),
-  { rank: { interval: 30_000, sampleCount: 5 }, retryCount: 1 }
+  { rank: { interval: 15_000, sampleCount: 3, timeout: 3_000 }, retryCount: 1 }
 );
 
 export const publicClient = createPublicClient({
   chain: CHAIN,
   transport: rpcTransport,
 });
+
+/** getLogs с повторами и делением диапазона: узел иногда отвечает отказом
+ *  («HTTP request failed», лимит ответа) — тогда держатели, обмены и график
+ *  считались с дыр. Три попытки; если не вышло — режем диапазон пополам. */
+export async function getLogsSafe(params, depth = 0) {
+  let lastErr = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try { return await publicClient.getLogs(params); }
+    catch (e) { lastErr = e; await new Promise((r) => setTimeout(r, 400 * (attempt + 1))); }
+  }
+  const from = typeof params.fromBlock === "bigint" ? params.fromBlock : null;
+  let to = params.toBlock;
+  if (from !== null && depth < 6) {
+    if (typeof to !== "bigint") to = await publicClient.getBlockNumber();
+    if (to - from > 2000n) {
+      const mid = from + (to - from) / 2n;
+      const [a, b] = await Promise.all([
+        getLogsSafe({ ...params, fromBlock: from, toBlock: mid }, depth + 1),
+        getLogsSafe({ ...params, fromBlock: mid + 1n, toBlock: to }, depth + 1),
+      ]);
+      return [...a, ...b];
+    }
+  }
+  throw lastErr;
+}
 
 // ---------------------------------------------------------------- providers
 // EIP-6963 multi-wallet discovery: in browsers with several wallet
