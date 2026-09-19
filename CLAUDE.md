@@ -169,6 +169,15 @@ ETH-фабрику); монеты за валюту войдут, когда с�
    unset GIT_INDEX_FILE; git read-tree HEAD; git update-index --refresh
    for f in .git/*.lock; do [ -e "$f" ] && mv "$f" .git/_trash/; done
    ```
+   **Перед КАЖДЫМ коммитом — `git fetch origin` и свести `origin/main` и
+   `origin/staging` в локальные ветки** (бот-зеркало раз в час пишет
+   `bot/state.json` в `main`; если не свести, GitHub Desktop у владельца не
+   пушит — «Newer commits on remote», а pull у него не работает). Своди
+   плумбингом: `read-tree main` + `update-index --cacheinfo` состояния из
+   `origin/main` + `commit-tree -p main -p origin/main`. После коммита:
+   `git show HEAD:bot/state.json > bot/state.json`, `git reset -q`, перенести
+   замки — чтобы Desktop показывал «0 changed files». Владелец: 19.09.2026
+   «предвидь такие проблемы, чтоб у меня их больше не было».
    Замки в `.git` из песочницы не удаляются — только переносятся. Добавлять в
    индекс **только явные пути** (индекс копит чужое). Сообщения коммитов —
    по-русски, с Co-Authored-By.
