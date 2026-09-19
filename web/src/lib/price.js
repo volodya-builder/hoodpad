@@ -31,7 +31,46 @@ const SOURCES = [
     )).json();
     return parseFloat(j?.data?.amount);
   },
+  // Binance и Coinbase у части операторов (особенно мобильных) закрыты —
+  // 19.09.2026 телефон показывал капитализацию по зашитым $1850. Ещё два
+  // источника с CORS и, в самом конце, курс прямо из сети: пул WETH/USDG.
+  async () => {
+    const j = await (await fetch(
+      "https://api.kraken.com/0/public/Ticker?pair=ETHUSD",
+      { signal: AbortSignal.timeout(5000) }
+    )).json();
+    const k = Object.keys(j?.result || {})[0];
+    return parseFloat(j?.result?.[k]?.c?.[0]);
+  },
+  async () => {
+    const j = await (await fetch(
+      "https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD",
+      { signal: AbortSignal.timeout(5000) }
+    )).json();
+    return parseFloat(j?.USD);
+  },
+  async () => ethUsdOnChain(),
 ];
+
+/** Курс ETH из самого глубокого пула WETH/USDG в сети Robinhood Chain —
+ *  работает везде, где работает сам сайт (нужен только RPC). */
+async function ethUsdOnChain() {
+  const { publicClient } = await import("./web3.js");
+  const { parseAbi } = await import("viem");
+  const v3Abi = parseAbi(["function getPool(address,address,uint24) view returns (address)"]);
+  const poolAbi = parseAbi(["function slot0() view returns (uint160,int24,uint16,uint16,uint16,uint8,bool)", "function token0() view returns (address)"]);
+  const erc20 = parseAbi(["function balanceOf(address) view returns (uint256)"]);
+  const rd = (address, abi, functionName, args = []) => publicClient.readContract({ address, abi, functionName, args });
+  const pools = (await Promise.all(V3_FEES.map((fee) => rd(V3_FACTORY, v3Abi, "getPool", [WETH_ADDR, USDG_ADDR, fee]).catch(() => ZERO_ADDR)))).filter((p) => p && p !== ZERO_ADDR);
+  if (!pools.length) return 0;
+  const bals = await Promise.all(pools.map((p) => rd(USDG_ADDR, erc20, "balanceOf", [p]).catch(() => 0n)));
+  let bi = 0; for (let i = 1; i < pools.length; i++) if (bals[i] > bals[bi]) bi = i;
+  if (bals[bi] < 1000n * 10n ** 6n) return 0; // пул пустой — не верим
+  const [s0, t0] = await Promise.all([rd(pools[bi], poolAbi, "slot0"), rd(pools[bi], poolAbi, "token0")]);
+  const sq = Number(s0[0]) / 2 ** 96; const p = sq * sq; // token1 за token0 в сырых единицах
+  // WETH 18 знаков, USDG 6: цена в долларах за ETH
+  return t0.toLowerCase() === WETH_ADDR ? p * 10 ** (18 - 6) : (1 / p) * 10 ** (18 - 6);
+}
 
 let _pending = null;
 

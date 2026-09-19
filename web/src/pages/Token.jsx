@@ -753,9 +753,20 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   }, [tokenAddress, wallet]);
 
   useEffect(() => {
-    load().catch((e) => setError(e.shortMessage || e.message));
+    // Первый запрос с повторами: узел иногда отвечает отказом («HTTP request
+    // failed»), и красная плашка под кнопкой пугала зря — данные приходят со
+    // второй попытки. Ошибку показываем, только если монету так и не прочитали.
+    let alive = true;
+    (async () => {
+      let lastErr = null;
+      for (let attempt = 0; attempt < 3 && alive; attempt++) {
+        try { await load(); return; } catch (e) { lastErr = e; await new Promise((r) => setTimeout(r, 1500 * (attempt + 1))); }
+      }
+      if (alive && !cachedToken(tokenAddress)) setError(t("Сеть не ответила — обновите страницу."));
+      else if (alive) console.warn("token load:", lastErr?.shortMessage || lastErr?.message);
+    })();
     const id = setInterval(() => load().catch(() => {}), 12000);
-    return () => clearInterval(id);
+    return () => { alive = false; clearInterval(id); };
   }, [load]);
 
   // trades + chart from on-chain events; treasury/creator extras
