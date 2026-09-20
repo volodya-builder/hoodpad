@@ -1,0 +1,1 @@
+import{_ as e}from"./web3-QCsTS_fj.js";export{e as publicClient};
