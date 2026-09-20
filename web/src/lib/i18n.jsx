@@ -1744,7 +1744,11 @@ const EN = {
   "Оценка по сделкам на кривой: события переводов не прочитались.": "Estimated from curve trades: transfer events could not be read.",
   "Сожжено": "Burned",
   "Навсегда": "Forever",
-  "Кошельков-держателей пока нет.": "No holder wallets yet."
+  "Кошельков-держателей пока нет.": "No holder wallets yet.",
+  "вышел": "exited",
+  "Куплено: доллары / монет / сделок": "Bought: dollars / tokens / trades",
+  "Продано: доллары / монет / сделок": "Sold: dollars / tokens / trades",
+  "Прибыль: продано минус куплено, плюс остаток по текущей цене": "PnL: sold minus bought, plus remaining tokens at current price",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

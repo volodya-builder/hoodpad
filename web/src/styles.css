@@ -1466,10 +1466,21 @@ html[data-theme="light"] .mk-card .mk-amt { color: #4f8a20; }
 
 /* -------- token page: holders + favorites -------- */
 .holder-row {
-  display: grid; grid-template-columns: 26px minmax(0, 1.4fr) 84px 1fr 72px;
-  gap: 12px; align-items: center; padding: 9px 0;
+  display: grid; grid-template-columns: 24px minmax(118px, 1.3fr) 82px 82px 76px 76px 64px;
+  gap: 10px; align-items: center; padding: 9px 0;
   border-bottom: 1px solid var(--border); font-size: 13px;
 }
+/* куплено / продано / прибыль — как у GMGN */
+.holder-row.hr-head { font-size: 11px; color: var(--text-dim); padding: 4px 0 6px; text-transform: uppercase; letter-spacing: .04em; }
+.holder-row.hr-head > span { font-weight: 500; font-size: 11px; color: var(--text-dim); }
+.hr-trd { display: flex; flex-direction: column; line-height: 1.2; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hr-trd b { font-weight: 600; font-size: 12.5px; }
+.hr-trd small { font-size: 10.5px; color: var(--text-dim); }
+.hr-pnl { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 12.5px; white-space: nowrap; }
+.holder-row.hr-exited { opacity: .72; }
+.holder-row .hr-bar { display: none; } /* полоса доли убрана: место под куплено/продано/прибыль */
+.hr-who > a, .hr-who .who { white-space: nowrap; }
+.hr-out { background: #ffffff10; color: var(--text-dim); }
 .holder-row:last-child { border-bottom: none; }
 .hr-who { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
 .hr-who a { color: var(--text); }
@@ -1482,8 +1493,8 @@ html[data-theme="light"] .mk-card .mk-amt { color: #4f8a20; }
 .hr-chip { display: inline-block; padding: 2px 7px; border-radius: 6px; background: #ffffff0f; color: var(--text-dim); font-size: 11.5px; font-weight: 600; }
 html[data-theme="light"] .hr-chip { background: #00000010; }
 @media (max-width: 720px) {
-  .holder-row { grid-template-columns: 22px minmax(0, 1fr) 70px 64px; gap: 8px; }
-  .holder-row .hr-bar { display: none; }
+  .holder-row { grid-template-columns: 22px minmax(0, 1fr) 72px 70px 60px; gap: 8px; }
+  .holder-row .hr-trd { display: none; }
 }
 
 .timg { position: relative; }

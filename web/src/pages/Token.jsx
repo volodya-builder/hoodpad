@@ -556,6 +556,30 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       .map(([a, v]) => ({ addr: a, bal: v, pct: (v / TOTAL) * 100 }));
     return { list, unsold, unsoldPct: (unsold / TOTAL) * 100, dexPct: (dexBal / TOTAL) * 100, burnedPct: (burned / TOTAL) * 100, total: Object.values(m).filter((v) => v >= MIN).length, estimate };
   }, [history, data, chainBal, xferBal, xferFail, dexPoolAddr]);
+  // Как у GMGN: по каждому кошельку — куплено / продано (в долларах и
+  // токенах) и прибыль: реализованная по средней цене покупки плюс
+  // нереализованная по текущей цене остатка. Вышедшие (баланс 0) — тоже в
+  // списке, ниже держателей.
+  const walletStats = useMemo(() => {
+    if (!history) return {};
+    const st = {};
+    const usdOf = (tr) => (tr.usd != null && tr.usd > 0 ? tr.usd : tr.eth * (curRate || 0));
+    for (const tr of [...history.trades].reverse()) { // от старых к новым
+      const a = tr.addr.toLowerCase();
+      const s = st[a] ??= { bUsd: 0, bTok: 0, sUsd: 0, sTok: 0, buys: 0, sells: 0, realized: 0, cost: 0, tok: 0 };
+      const u = usdOf(tr);
+      if (tr.side === "buy") { s.bUsd += u; s.bTok += tr.tokens; s.buys += 1; s.cost += u; s.tok += tr.tokens; }
+      else {
+        s.sUsd += u; s.sTok += tr.tokens; s.sells += 1;
+        const avg = s.tok > 0 ? s.cost / s.tok : 0;
+        const sold = Math.min(tr.tokens, s.tok);
+        s.realized += u - sold * avg;
+        s.cost -= sold * avg; s.tok -= sold;
+        if (s.tok < 1) { s.tok = 0; s.cost = 0; }
+      }
+    }
+    return st;
+  }, [history, curRate]);
   useEffect(() => {
     if (!history || !tokenAddress) return;
     const m = {};
@@ -1869,19 +1893,39 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 // списке со своим местом, но с пометкой, что это не человек.
                 const pxUsd = priceUnits * ((Q ? quoteRate : rate) || 0);
                 const TOTAL = 1e9;
+                const inList = new Set(holders.list.map((h) => h.addr));
+                const sysAddr = new Set([String(data.pool || "").toLowerCase(), String(ZAP_ADDRESS || "").toLowerCase(), String(SWAP_ROUTER || "").toLowerCase(), TREASURY_ADDRESS.toLowerCase(), DEAD, dexPoolAddr || ""]);
+                // вышедшие: торговали, но монет не осталось — ниже держателей, по обороту
+                const exited = Object.entries(walletStats)
+                  .filter(([a, s]) => !inList.has(a) && !sysAddr.has(a) && s.bTok + s.sTok > 0)
+                  .sort((x, y) => (y[1].bUsd + y[1].sUsd) - (x[1].bUsd + x[1].sUsd))
+                  .slice(0, 60)
+                  .map(([a]) => ({ addr: a, bal: 0, pct: 0, exited: true }));
                 const rows = [...holders.list,
                   ...(data.migrated ? [] : [{ curve: true, pct: holders.unsoldPct, bal: holders.unsold }]),
                   ...(holders.dexPct > 0 ? [{ curve: true, dex: true, pct: holders.dexPct, bal: (holders.dexPct / 100) * TOTAL }] : []),
                   ...(holders.burnedPct > 0 ? [{ curve: true, burn: true, pct: holders.burnedPct, bal: (holders.burnedPct / 100) * TOTAL }] : [])]
-                  .sort((x, y) => y.pct - x.pct).map((h, i) => ({ ...h, rank: i + 1 }));
+                  .sort((x, y) => y.pct - x.pct).concat(exited).map((h, i) => ({ ...h, rank: i + 1 }));
                 if (hSort === "asc") rows.reverse();
-                return rows.map((h) => {
+                const head = (
+                  <div className="holder-row hr-head" key="head">
+                    <span>#</span><span>{t("Кошелёк")}</span><span className="hr-trd">{t("Куплено")}</span><span className="hr-trd">{t("Продано")}</span>
+                    <span className="hr-pnl">{t("Прибыль")}</span><span className="hr-val">{t("Стоимость")}</span><span className="hr-pct">{t("Доля")}</span>
+                  </div>
+                );
+                const money = (v) => { const a = Math.abs(v); if (a < 0.005) return "$0"; return (v < 0 ? "-" : "") + (a >= 1e3 ? usd(a) : "$" + a.toFixed(2)); };
+                const pnlCell = (v) => (v == null ? <span className="dim">—</span> : <span className={v > 0.005 ? "side-buy" : v < -0.005 ? "side-sell" : "dim"}>{v > 0 ? "+" : ""}{money(v)}</span>);
+                return [head, ...rows.map((h) => {
                   const isCre = !h.curve && h.addr === String(data.creator || "").toLowerCase();
                   const isTre = !h.curve && h.addr === TREASURY_ADDRESS.toLowerCase();
                   const isMe = !h.curve && wallet && h.addr === wallet.account.toLowerCase();
                   const val = pxUsd > 0 ? usd(h.bal * pxUsd) : "…";
+                  const s = !h.curve ? walletStats[h.addr] : null;
+                  // нереализованная: остаток по текущей цене минус его себестоимость
+                  const unreal = s && h.bal >= 1 && pxUsd > 0 ? h.bal * pxUsd - Math.min(h.bal, s.tok) * (s.tok > 0 ? s.cost / s.tok : 0) : 0;
+                  const pnl = s ? s.realized + unreal : null;
                   return (
-                    <div className="holder-row" key={h.curve ? (h.dex ? "dex" : h.burn ? "burn" : "curve") : h.addr}>
+                    <div className={`holder-row ${h.exited ? "hr-exited" : ""}`} key={h.curve ? (h.dex ? "dex" : h.burn ? "burn" : "curve") : h.addr}>
                       <span className="hr-rank dim">{h.rank}</span>
                       {h.curve ? (
                         <span className="hr-who" style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
@@ -1901,14 +1945,21 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                           {isCre && <span className="badge hr-badge"><Icon name="user" size={11} /> {t("Создатель")}</span>}
                           {isTre && <span className="badge hr-badge"><Icon name="bank" size={11} /> {t("Казна")}</span>}
                           {isMe && <span className="badge hr-badge">{t("Вы")}</span>}
+                          {h.exited && <span className="badge hr-badge hr-out">{t("вышел")}</span>}
                         </span>
                       )}
-                      <span className="hr-val">{val}</span>
-                      <span className="hr-bar"><span style={{ width: `${Math.min(h.pct * 4, 100)}%` }} /></span>
-                      <span className="hr-pct"><span className="hr-chip">{fmt(h.pct, 2)}%</span></span>
+                      <span className="hr-trd dim" title={t("Куплено: доллары / монет / сделок")}>
+                        {s && s.buys > 0 ? <><b className="side-buy">{money(s.bUsd)}</b><small>{compactN(s.bTok)} · {s.buys}</small></> : <span>—</span>}
+                      </span>
+                      <span className="hr-trd dim" title={t("Продано: доллары / монет / сделок")}>
+                        {s && s.sells > 0 ? <><b className="side-sell">{money(s.sUsd)}</b><small>{compactN(s.sTok)} · {s.sells}</small></> : <span>—</span>}
+                      </span>
+                      <span className="hr-pnl" title={t("Прибыль: продано минус куплено, плюс остаток по текущей цене")}>{h.curve ? <span className="dim">—</span> : pnlCell(pnl)}</span>
+                      <span className="hr-val">{h.exited ? <span className="dim">$0</span> : val}</span>
+                      <span className="hr-pct"><span className="hr-chip">{h.exited ? "0%" : `${fmt(h.pct, 2)}%`}</span></span>
                     </div>
                   );
-                });
+                })];
               })()}
               {holders.list.length === 0 && (
                 <div className="dim" style={{ padding: "8px 0" }}>{t("Кошельков-держателей пока нет.")}</div>
