@@ -580,10 +580,18 @@ input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #
   border-radius: 0; padding-left: 0; padding-right: 0;
 }
 .side-act {
-  flex: 1; min-height: 0; overflow-y: auto;
-  scrollbar-width: none; -ms-overflow-style: none; /* прокрутка есть, ползунок скрыт */
+  flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 6px;
+  /* 20.09.2026: ползунок был скрыт — казалось, что список не листается */
+  scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.14) transparent;
 }
-.side-act::-webkit-scrollbar { display: none; }
+.side-act::-webkit-scrollbar { width: 5px; }
+.side-act::-webkit-scrollbar-track { background: transparent; }
+.side-act::-webkit-scrollbar-thumb { background: rgba(255,255,255,.14); border-radius: 999px; }
+.side-act:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,.26); }
+html[data-theme="light"] .side-act { scrollbar-color: rgba(0,0,0,.18) transparent; }
+html[data-theme="light"] .side-act::-webkit-scrollbar-thumb { background: rgba(0,0,0,.18); }
+/* на телефоне блок не ограничен по высоте — список длинный, нужен свой потолок */
+@media (max-width: 800px) { .side-act { max-height: 520px; } }
 .sa-row {
   display: grid; grid-template-columns: 1fr 0.9fr 1.4fr auto;
   gap: 8px; padding: 8px 0; border-top: 1px solid var(--border);

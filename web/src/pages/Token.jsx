@@ -2157,7 +2157,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               {history && history.trades.length === 0 && (
                 <div className="dim" style={{ padding: 12 }}>{t("Пока нет сделок.")}</div>
               )}
-              {history && history.trades.length > 0 && (() => { const saMax = Math.max(...history.trades.slice(0, 60).map((x) => x.eth), 1e-9); return history.trades.slice(0, 60).map((tr, i) => {
+              {history && history.trades.length > 0 && (() => { const saMax = Math.max(...history.trades.slice(0, 150).map((x) => x.eth), 1e-9); return history.trades.slice(0, 150).map((tr, i) => {
                 const buy = tr.side === "buy";
                 const isMine = wallet && tr.addr.toLowerCase() === wallet.account.toLowerCase();
                 const heat = Math.max(6, Math.round((tr.eth / saMax) * 100));
