@@ -473,56 +473,89 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const [xferBal, setXferBal] = useState(null);
   // Сами переводы (кошелёк → кошелёк, мимо кривой и запа) — для панели трейдера
   const [xferLogs, setXferLogs] = useState([]);
+  const [xferFail, setXferFail] = useState(false); // логи не прочитались после всех повторов
   useEffect(() => {
     if (!tokenAddress || !data?.pool) return;
     let alive = true;
-    getLogsSafe({ address: tokenAddress, event: erc20TransferEvent, fromBlock: FACTORY_START_BLOCK, toBlock: "latest" })
-      .then((logs) => {
-        const skip = new Set([data.pool.toLowerCase(), String(ZAP_ADDRESS || "").toLowerCase(), "0x0000000000000000000000000000000000000000"]);
-        if (alive) setXferLogs(logs
-          .filter((l) => !skip.has(l.args.from.toLowerCase()) && !skip.has(l.args.to.toLowerCase()))
-          .map((l) => ({ from: l.args.from.toLowerCase(), to: l.args.to.toLowerCase(), tokens: Number(formatEther(l.args.value)), tx: l.transactionHash, block: l.blockNumber })));
-        const m = {};
-        for (const l of logs) {
-          const v = Number(formatEther(l.args.value));
-          const f = l.args.from.toLowerCase(), to = l.args.to.toLowerCase();
-          m[f] = (m[f] ?? 0) - v; m[to] = (m[to] ?? 0) + v;
-        }
-        delete m["0x0000000000000000000000000000000000000000"];
-        delete m[data.pool.toLowerCase()]; // кривая — отдельной строкой
-        if (alive) setXferBal(m);
-      })
-      .catch(() => { if (alive) setXferBal({}); });
+    // Аудит 20.09.2026: при отказе узла балансы молча брались из оценки по
+    // сделкам — у HOOD после миграции список показывал 17 «держателей» по
+    // $10, которых на цепи нет, и без пула Uniswap (98% эмиссии). Теперь
+    // источник один — события Transfer; на отказ — повторы, а не оценка.
+    const run = async () => {
+      for (let attempt = 0; attempt < 6 && alive; attempt++) {
+        try {
+          const logs = await getLogsSafe({ address: tokenAddress, event: erc20TransferEvent, fromBlock: FACTORY_START_BLOCK, toBlock: "latest" });
+          if (!alive) return;
+          const skip = new Set([data.pool.toLowerCase(), String(ZAP_ADDRESS || "").toLowerCase(), "0x0000000000000000000000000000000000000000"]);
+          setXferLogs(logs
+            .filter((l) => !skip.has(l.args.from.toLowerCase()) && !skip.has(l.args.to.toLowerCase()))
+            .map((l) => ({ from: l.args.from.toLowerCase(), to: l.args.to.toLowerCase(), tokens: Number(formatEther(l.args.value)), tx: l.transactionHash, block: l.blockNumber })));
+          const m = {};
+          for (const l of logs) {
+            const v = Number(formatEther(l.args.value));
+            const f = l.args.from.toLowerCase(), to = l.args.to.toLowerCase();
+            m[f] = (m[f] ?? 0) - v; m[to] = (m[to] ?? 0) + v;
+          }
+          delete m["0x0000000000000000000000000000000000000000"];
+          delete m[data.pool.toLowerCase()]; // кривая — отдельной строкой
+          setXferFail(false);
+          setXferBal(m);
+          return;
+        } catch (e) { await new Promise((r) => setTimeout(r, 2000 * (attempt + 1))); }
+      }
+      if (alive) setXferFail(true);
+    };
+    run();
     return () => { alive = false; };
   }, [tokenAddress, data?.pool, history]);
-  useEffect(() => { setXferBal(null); }, [tokenAddress]);
+  useEffect(() => { setXferBal(null); setXferFail(false); }, [tokenAddress]);
+  // адрес пула Uniswap после миграции: из состояния DEX, иначе — с фабрики
+  const [dexPoolAddr, setDexPoolAddr] = useState(null);
+  useEffect(() => {
+    if (!data?.migrated) { setDexPoolAddr(null); return; }
+    if (data.dex?.pool) { setDexPoolAddr(String(data.dex.pool).toLowerCase()); return; }
+    let alive = true;
+    dexPoolOf(tokenAddress, data.q ? data.q.addr : null).then((p) => { if (alive && p) setDexPoolAddr(String(p).toLowerCase()); }).catch(() => {});
+    return () => { alive = false; };
+  }, [tokenAddress, data?.migrated, data?.dex?.pool, data?.q?.addr]);
+  const DEAD = "0x000000000000000000000000000000000000dead";
   const holders = useMemo(() => {
     if (!history || !data) return null;
-    if (xferBal === null && history.trades.length > 0) return null; // ждём точные балансы
+    if (history.trades.length === 0 && !xferBal) return { list: [], unsold: 1e9, unsoldPct: 100, dexPct: 0, burnedPct: 0, total: 0, estimate: false };
     const m = {};
-    if (xferBal && Object.keys(xferBal).length > 0) {
+    let estimate = false;
+    if (xferBal) {
       for (const [a, v] of Object.entries(xferBal)) m[a] = v;
-    } else {
+    } else if (!data.migrated && xferFail) {
+      // логи не прочитались; на кривой все сделки известны — оценка по ним
+      estimate = true;
       for (const tr of history.trades) {
         const a = tr.addr.toLowerCase();
         m[a] = (m[a] ?? 0) + (tr.side === "buy" ? tr.tokens : -tr.tokens);
       }
       for (const [a, v] of Object.entries(chainBal)) if (a in m || v > 0) m[a] = v;
+    } else {
+      return null; // читаем (или повторяем) события Transfer
     }
     const TOTAL = 1e9;
     // После миграции монеты кривой нет — ликвидность лежит в пуле Uniswap.
     // Пул — не кошелёк: показываем его отдельной строкой, как раньше кривую.
-    const dexPool = data.migrated && data.dex?.pool ? String(data.dex.pool).toLowerCase() : null;
+    const dexPool = data.migrated ? dexPoolAddr : null;
     const dexBal = dexPool ? (m[dexPool] ?? 0) : 0;
     if (dexPool) delete m[dexPool];
+    const burned = m[DEAD] ?? 0; // выкупленное казной и сожжённое — не держатель
+    delete m[DEAD];
     const unsold = data.migrated ? 0 : Math.max(0, TOTAL - Number(formatEther(data.sold)));
+    // пыль после округлений (доли токена) — не держатель: у GME висели два
+    // кошелька с 0.0001 токена и «$0.00»
+    const MIN = 1;
     const list = Object.entries(m)
-      .filter(([, v]) => v > 1e-6)
+      .filter(([, v]) => v >= MIN)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 100) // до 100 кошельков, список прокручивается
       .map(([a, v]) => ({ addr: a, bal: v, pct: (v / TOTAL) * 100 }));
-    return { list, unsold, unsoldPct: (unsold / TOTAL) * 100, dexPct: (dexBal / TOTAL) * 100, total: Object.values(m).filter((v) => v > 1e-6).length };
-  }, [history, data, chainBal, xferBal]);
+    return { list, unsold, unsoldPct: (unsold / TOTAL) * 100, dexPct: (dexBal / TOTAL) * 100, burnedPct: (burned / TOTAL) * 100, total: Object.values(m).filter((v) => v >= MIN).length, estimate };
+  }, [history, data, chainBal, xferBal, xferFail, dexPoolAddr]);
   useEffect(() => {
     if (!history || !tokenAddress) return;
     const m = {};
@@ -557,8 +590,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     }
     const exact = xferBal && Object.keys(xferBal).length > 0 ? xferBal : null;
     const creBal = Math.max((exact ? exact[cre] : m[cre]) ?? 0, 0);
-    const dexPool = data.migrated && data.dex?.pool ? String(data.dex.pool).toLowerCase() : null;
-    const top5 = Object.entries(exact || m).filter(([a, v]) => v > 1e-6 && a !== dexPool).map(([, v]) => v).sort((a, b) => b - a)
+    const dexPool = data.migrated ? dexPoolAddr : null;
+    const top5 = Object.entries(exact || m).filter(([a, v]) => v >= 1 && a !== dexPool && a !== DEAD).map(([, v]) => v).sort((a, b) => b - a)
       .slice(0, 5).reduce((s, v) => s + v, 0);
     const day = trades.filter((tr) => (tr.ts ?? 0) >= now - 86400e3);
     const { honest, gross } = honestVolume(day, data.creator);
@@ -570,7 +603,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       honestPct: gross > 0 ? Math.min((honest / gross) * 100, 100) : null,
       dumping,
     };
-  }, [history, data, xferBal]);
+  }, [history, data, xferBal, dexPoolAddr]);
 
   // Статистика для полосы над графиком
   const tokStats = useMemo(() => {
@@ -1806,7 +1839,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
           </>)}
           {btTab === "holders" && (<>
 
-          {!holders && <div className="dim" style={{ padding: "14px 0" }}>{t("Читаю события…")}</div>}
+          {!holders && <div className="dim" style={{ padding: "14px 0" }}>{xferFail ? t("Узел не отдал события переводов — держателей не показываю, чтобы не врать. Обновите страницу.") : t("Читаю события…")}</div>}
+          {holders?.estimate && <div className="dim" style={{ padding: "6px 0", fontSize: 12 }}>{t("Оценка по сделкам на кривой: события переводов не прочитались.")}</div>}
           {holders && holders.list.length > 0 && (
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
               {(() => {
@@ -1837,7 +1871,8 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 const TOTAL = 1e9;
                 const rows = [...holders.list,
                   ...(data.migrated ? [] : [{ curve: true, pct: holders.unsoldPct, bal: holders.unsold }]),
-                  ...(holders.dexPct > 0 ? [{ curve: true, dex: true, pct: holders.dexPct, bal: (holders.dexPct / 100) * TOTAL }] : [])]
+                  ...(holders.dexPct > 0 ? [{ curve: true, dex: true, pct: holders.dexPct, bal: (holders.dexPct / 100) * TOTAL }] : []),
+                  ...(holders.burnedPct > 0 ? [{ curve: true, burn: true, pct: holders.burnedPct, bal: (holders.burnedPct / 100) * TOTAL }] : [])]
                   .sort((x, y) => y.pct - x.pct).map((h, i) => ({ ...h, rank: i + 1 }));
                 if (hSort === "asc") rows.reverse();
                 return rows.map((h) => {
@@ -1846,18 +1881,18 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                   const isMe = !h.curve && wallet && h.addr === wallet.account.toLowerCase();
                   const val = pxUsd > 0 ? usd(h.bal * pxUsd) : "…";
                   return (
-                    <div className="holder-row" key={h.curve ? (h.dex ? "dex" : "curve") : h.addr}>
+                    <div className="holder-row" key={h.curve ? (h.dex ? "dex" : h.burn ? "burn" : "curve") : h.addr}>
                       <span className="hr-rank dim">{h.rank}</span>
                       {h.curve ? (
                         <span className="hr-who" style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
-                          {h.dex ? <Icon name="droplet" size={15} /> : (
+                          {h.dex ? <Icon name="droplet" size={15} /> : h.burn ? <Icon name="flame" size={15} /> : (
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                               <path d="M3 20C11 20 16 15 20 5" stroke="var(--gold)" strokeWidth="2.4" strokeLinecap="round" />
                               <circle cx="20" cy="5" r="2.4" fill="var(--gold)" />
                             </svg>
                           )}
-                          {h.dex ? t("Пул Uniswap") : t("Бондинг-кривая")}
-                          <span className="badge hr-badge">{t("Ликвидность")}</span>
+                          {h.dex ? t("Пул Uniswap") : h.burn ? t("Сожжено") : t("Бондинг-кривая")}
+                          <span className="badge hr-badge">{h.burn ? t("Навсегда") : t("Ликвидность")}</span>
                         </span>
                       ) : (
                         <span className="hr-who hr-click" {...rowHover(h.addr)}>
@@ -1876,7 +1911,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 });
               })()}
               {holders.list.length === 0 && (
-                <div className="dim" style={{ padding: "8px 0" }}>{t("Пока нет сделок.")}</div>
+                <div className="dim" style={{ padding: "8px 0" }}>{t("Кошельков-держателей пока нет.")}</div>
               )}
             </div>
           )}
