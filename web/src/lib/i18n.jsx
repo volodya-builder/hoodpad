@@ -1740,6 +1740,11 @@ const EN = {
   "каждые 5 минут": "every 5 minutes",
   "X: @ник или ссылка": "X: @handle or link",
   "Telegram: @ник или ссылка": "Telegram: @handle or link",
+  "Узел не отдал события переводов — держателей не показываю, чтобы не врать. Обновите страницу.": "The node did not return transfer events — holders are hidden rather than shown wrong. Reload the page.",
+  "Оценка по сделкам на кривой: события переводов не прочитались.": "Estimated from curve trades: transfer events could not be read.",
+  "Сожжено": "Burned",
+  "Навсегда": "Forever",
+  "Кошельков-держателей пока нет.": "No holder wallets yet."
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });
