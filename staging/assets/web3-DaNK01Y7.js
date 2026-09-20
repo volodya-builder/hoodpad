@@ -1,0 +1,1 @@
+import{_ as e}from"./web3-DLfoKmDj.js";export{e as publicClient};
