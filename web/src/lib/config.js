@@ -9,6 +9,9 @@ export const robinhoodMainnet = defineChain({
   blockExplorers: {
     default: { name: "Blockscout", url: "https://robinhoodchain.blockscout.com" },
   },
+  // Multicall3 (канонический адрес, есть в сети — проверено 19.09.2026):
+  // viem клеит чтения контрактов одного тика в один eth_call (web3.js)
+  contracts: { multicall3: { address: "0xcA11bde05977b3631167028862bE2a173976CA11" } },
 });
 
 export const robinhoodTestnet = defineChain({

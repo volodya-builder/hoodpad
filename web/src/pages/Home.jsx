@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import Icon from "../components/Icon.jsx";
 import { formatEther, formatUnits } from "viem";
 import { fmt, fmtEth } from "../lib/web3.js";
-import { useEthUsd, useQuoteUsd, usd, moneyEth } from "../lib/price.js";
+import { useEthUsd, useQuoteUsd, useQuoteRates, usd, moneyEth, priceUnitsOf, mcapUsdOf, raisedUsdOf } from "../lib/price.js";
 import { timeAgo, loadTokens, useClock, useSupport, prefetchToken } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 import { useFavs, toggleFav } from "../lib/favs.js";
@@ -22,7 +22,7 @@ function TokenCard({ t, fav, onFav, cushion = 0 }) {
   // считаем через её курс, а не через ETH. Курса нет — покажем в валюте.
   const q = t.q || null;
   const qPrice = useQuoteUsd(q?.addr);
-  const priceUnits = q ? Number(formatUnits(t.price, q.dec)) : Number(formatEther(t.price));
+  const priceUnits = priceUnitsOf(t); // точная цена, а не резаный spotPrice
   const mcapEth = q ? 0 : priceUnits * 1_000_000_000;
   const mcapQuote = q ? priceUnits * 1_000_000_000 : 0;
   const copyCA = (e) => {
@@ -52,7 +52,7 @@ function TokenCard({ t, fav, onFav, cushion = 0 }) {
       <div className="tmc">
         {q
           ? (qPrice > 0 ? usd(mcapQuote * qPrice) : "…")
-          : usd(mcapEth * rate)}<span>MC</span>
+          : (rate > 0 ? usd(mcapEth * rate) : "…")}<span>MC</span>
         {/* Дивиденды холдерам — ставка. Символ акции на карточке не пишем:
             деньги на сайте в ETH и долларах (решение владельца 15.09.2026). */}
         {q && <em className="tq" title={t.divBps > 0 ? tr("дивиденды холдерам с каждой сделки") : tr("валюта курвы")}><QuoteLogo q={q} size={14} />{t.divBps > 0 ? ` ${t.divBps / 100}%` : ""}</em>}
@@ -90,8 +90,8 @@ function TokenRow({ t, fav, onFav, cushion = 0 }) {
   const progress = t.cap > 0n ? Number((t.sold * 10000n) / t.cap) / 100 : 0;
   const q = t.q || null;
   const qPrice = useQuoteUsd(q?.addr);
-  const priceUnits = q ? Number(formatUnits(t.price, q.dec)) : Number(formatEther(t.price));
-  const mcap = q ? (qPrice > 0 ? priceUnits * 1e9 * qPrice : null) : priceUnits * 1e9 * rate;
+  const priceUnits = priceUnitsOf(t);
+  const mcap = q ? (qPrice > 0 ? priceUnits * 1e9 * qPrice : null) : (rate > 0 ? priceUnits * 1e9 * rate : null);
   return (
     <a className="lt-row home-row" href={`#/token/${t.token}`} onMouseEnter={() => prefetchToken(t.token)}>
       <button className={`fav-btn inline ${fav ? "on" : ""}`} title={tr(fav ? "Убрать из избранного" : "В избранное")}
@@ -127,6 +127,7 @@ export default function Home({ onSearch }) {
   const [lpage, setLpage] = useState(1);
   const LIVE_PER_PAGE = 24; // страницами: вёрстка не тонет при тысячах токенов
   const [tokens, setTokens] = useState(null);
+  const qRates = useQuoteRates(tokens); // курсы валют монет за акцию/крипту — для сортировки в долларах
   const [error, setError] = useState("");
   const [sort, setSort] = useState("new");
   const [view, setView] = useState(() => { try { return localStorage.getItem(VIEW_LS) === "list" ? "list" : "grid"; } catch (e) { return "grid"; } });
@@ -158,8 +159,10 @@ export default function Home({ onSearch }) {
   const bySort = (arr) => {
     let a = [...arr];
     if (sort === "fav") a = a.filter((x) => favs.has(x.token));
-    if (sort === "mcap") a.sort((x, y) => Number(y.price - x.price));
-    if (sort === "raised") a.sort((x, y) => Number(y.reserve - x.reserve));
+    // сортировка в долларах: у ETH-монет и монет за валюту цена в разных единицах
+    const qr = (addr) => qRates[String(addr).toLowerCase()] || 0;
+    if (sort === "mcap") a.sort((x, y) => (mcapUsdOf(y, rate, qr) || 0) - (mcapUsdOf(x, rate, qr) || 0));
+    if (sort === "raised") a.sort((x, y) => raisedUsdOf(y, rate, qr) - raisedUsdOf(x, rate, qr));
     if (sort === "cushion") { a = a.filter((x) => cushionOf(x.token) > 0); a.sort((x, y) => cushionOf(y.token) - cushionOf(x.token)); }
     if (sort === "old") a.reverse(); // базовый порядок — новые первыми
     return a; // "new": loader already returns newest first

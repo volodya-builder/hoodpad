@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { formatEther } from "viem";
 import { fmt, fmtEth } from "../lib/web3.js";
-import { useEthUsd, useQuoteUsd, usd, usdFine } from "../lib/price.js";
+import { useEthUsd, useQuoteUsd, usd, usdFine, priceUnitsOf } from "../lib/price.js";
 import { formatUnits } from "viem";
 import { useClock, timeAgo } from "../lib/data.js";
 import { useArena, grandArena, hallOfFame, dayStart, useArenaPot, useArenaPayouts } from "../lib/arena.js";
@@ -69,7 +69,7 @@ function Spark({ trades, pool, from }) {
 const Row = React.memo(function Row({ p, i, trend = true, right, sub, dim, podium, st, day0, t, D, mcapOf, onClick, className = "" }) {
   // монета за валюту: капа через курс валюты, а не ETH
   const qPrice = useQuoteUsd(p.q?.addr);
-  const mcap = p.q ? Number(formatUnits(p.price, p.q.dec)) * 1e9 * qPrice : mcapOf(p);
+  const mcap = p.q ? priceUnitsOf(p) * 1e9 * qPrice : mcapOf(p);
   return (
   <a className={`lt-row ${dim ? "dim" : ""} ${podium ? `podium podium-${podium}` : ""} ${className}`} href={`#/token/${p.token}`}
      onClick={onClick ? (e) => { e.preventDefault(); onClick(); } : undefined}>
@@ -112,7 +112,7 @@ export default function Arena() {
   const potD = (share = 1) => (pot === null ? "…" : (rate > 0 || pot.usd > 0 ? (pot.usd * share >= 1000 ? usd(pot.usd * share) : usdFine(pot.usd * share)) : "…"));
   // валюты (GME, USDG…) казна сама меняет в ETH перед выплатой — человеку показываем один ETH-эквивалент
   const potSub = pot === null ? "" : E(pot.ethEq ?? pot.eth);
-  const mcapOf = (p) => Number(formatEther(p.price)) * 1e9 * rate;
+  const mcapOf = (p) => priceUnitsOf(p) * 1e9 * rate;
   const day0 = dayStart();
   const rowCtx = { st, day0, t, D, mcapOf };
   const nextCp = st ? (st.nextCheckpoint ?? day0 + 86_400_000) : null;

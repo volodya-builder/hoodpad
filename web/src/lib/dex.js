@@ -9,7 +9,7 @@
 //  Платят и получают всегда ETH — как на кривой.
 // ============================================================================
 import { parseAbi, encodePacked, encodeFunctionData, formatEther, formatUnits } from "viem";
-import { publicClient, getLogsSafe } from "./web3.js";
+import { publicClient, getLogsSafe, txSenderOf } from "./web3.js";
 import { WETH_ADDRESS, ZAP_ADDRESS, FACTORY_START_BLOCK } from "./config.js";
 import { zapAbi } from "./abi.js";
 
@@ -47,14 +47,33 @@ const Q96 = 2n ** 96n;
 // ---------------------------------------------------------------- пул
 const _pools = new Map(); // token:quote → address
 /** Пул Uniswap монеты: против WETH (ETH-монета) или против валюты кривой. */
+// адрес пула пары не меняется — помним навсегда (меньше кругов до узла)
+const POOL_LS = "hood_dexpool_v1", POOLTOK_LS = "hood_pooltok_v1";
+const lsMap = (k) => { try { const v = JSON.parse(localStorage.getItem(k) || "{}"); return v && typeof v === "object" ? v : {}; } catch (e) { return {}; } };
+const lsPut = (k, key, val) => { try { const m = lsMap(k); m[key] = val; localStorage.setItem(k, JSON.stringify(m)); } catch (e) { /* ignore */ } };
 export async function dexPoolOf(token, quoteAddr = null) {
   const other = quoteAddr || WETH_ADDRESS;
   const key = `${lower(token)}:${lower(other)}`;
   if (_pools.has(key)) return _pools.get(key);
+  const c = lsMap(POOL_LS)[key];
+  if (c && /^0x[0-9a-fA-F]{40}$/.test(c)) { _pools.set(key, c); return c; }
   const p = await publicClient.readContract({ address: V3_FACTORY, abi: factoryAbi, functionName: "getPool", args: [token, other, POOL_FEE] });
   const res = lower(p) === ZERO ? null : p;
-  if (res) _pools.set(key, res);
+  if (res) { _pools.set(key, res); lsPut(POOL_LS, key, res); }
   return res;
+}
+/** token0/token1 пула — не меняются, помним навсегда. */
+async function poolTokens(pool) {
+  const key = lower(pool);
+  const c = lsMap(POOLTOK_LS)[key];
+  if (c && c.t0 && c.t1) return c;
+  const [t0, t1] = await Promise.all([
+    publicClient.readContract({ address: pool, abi: poolAbi, functionName: "token0" }),
+    publicClient.readContract({ address: pool, abi: poolAbi, functionName: "token1" }),
+  ]);
+  const v = { t0: lower(t0), t1: lower(t1) };
+  lsPut(POOLTOK_LS, key, v);
+  return v;
 }
 
 /** Цена монеты в единицах второй монеты пула (wei на 1e18 монеты), как spotPrice кривой. */
@@ -71,23 +90,33 @@ function priceFromSqrt(sqrtPriceX96, tokenIsToken0, otherDec) {
 }
 
 /** Состояние пула: цена (как spotPrice), ликвидность, резервы. */
+/** Та же цена числом, без потери дробных сырых единиц (у USDG 6 знаков —
+ *  BigInt-цена режет 2,5 → 2). Единицы валюты за одну монету. */
+function priceFloatFromSqrt(sqrtPriceX96, tokenIsToken0, otherDec) {
+  const s = BigInt(sqrtPriceX96);
+  const num = s * s;
+  const SC = 10n ** 36n;
+  const raw = tokenIsToken0 ? (num * SC) / (Q96 * Q96) : (Q96 * Q96 * SC) / (num === 0n ? 1n : num);
+  return (Number(raw) / 1e36) * 1e18 / 10 ** otherDec;
+}
+
 export async function dexState(pool, token, otherDec = 18) {
-  const [s0, liq, t0, balT, balO] = await Promise.all([
+  // один круг до узла (multicall): состояние пула и оба резерва разом
+  const tk = poolTokens(pool);
+  const [s0, liq, balT, { t0, t1 }] = await Promise.all([
     publicClient.readContract({ address: pool, abi: poolAbi, functionName: "slot0" }),
     publicClient.readContract({ address: pool, abi: poolAbi, functionName: "liquidity" }),
-    publicClient.readContract({ address: pool, abi: poolAbi, functionName: "token0" }),
     publicClient.readContract({ address: token, abi: erc20Abi, functionName: "balanceOf", args: [pool] }).catch(() => 0n),
-    Promise.resolve(0n),
+    tk,
   ]);
-  const tokenIsToken0 = lower(t0) === lower(token);
-  const other = tokenIsToken0
-    ? await publicClient.readContract({ address: pool, abi: poolAbi, functionName: "token1" })
-    : t0;
+  const tokenIsToken0 = t0 === lower(token);
+  const other = tokenIsToken0 ? t1 : t0;
   const reserveOther = await publicClient.readContract({ address: other, abi: erc20Abi, functionName: "balanceOf", args: [pool] }).catch(() => 0n);
   return {
     pool, tokenIsToken0, other,
     price: priceFromSqrt(s0[0], tokenIsToken0, otherDec),
-    liquidity: liq, reserveToken: balT, reserveOther: reserveOther || balO,
+    priceF: priceFloatFromSqrt(s0[0], tokenIsToken0, otherDec),
+    liquidity: liq, reserveToken: balT, reserveOther,
   };
 }
 
@@ -95,7 +124,7 @@ export async function dexState(pool, token, otherDec = 18) {
  *  spotPrice кривой (wei валюты за 1e18 монеты); null — пула нет. Память 20 с:
  *  список монет обновляется часто, а цена пула — один вызов на монету. */
 const _dexPx = new Map();
-const DEXPX_LS = "hood_dexpx_v1_";
+const DEXPX_LS = "hood_dexpx_v2_"; // v2: цена числом рядом с BigInt
 export async function dexPriceOf(token, quoteAddr = null, otherDec = 18) {
   const key = `${lower(token)}:${lower(quoteAddr || WETH_ADDRESS)}`;
   const c = _dexPx.get(key);
@@ -109,36 +138,43 @@ export async function dexPriceOf(token, quoteAddr = null, otherDec = 18) {
       const pool = await dexPoolOf(token, quoteAddr);
       if (!pool) return null;
       const st = await dexState(pool, token, otherDec);
-      _dexPx.set(key, { v: st.price, t: Date.now() });
-      try { localStorage.setItem(DEXPX_LS + key, st.price.toString()); } catch (e) { /* ignore */ }
-      return st.price;
+      const v = { price: st.price, priceF: st.priceF };
+      _dexPx.set(key, { v, t: Date.now() });
+      try { localStorage.setItem(DEXPX_LS + key, JSON.stringify({ p: st.price.toString(), f: st.priceF })); } catch (e) { /* ignore */ }
+      return v;
     } catch (e) { lastErr = e; await new Promise((r) => setTimeout(r, 500 * (attempt + 1))); }
   }
   if (c) return c.v;
-  try { const v = localStorage.getItem(DEXPX_LS + key); if (v) return BigInt(v); } catch (e) { /* ignore */ }
+  try { const j = JSON.parse(localStorage.getItem(DEXPX_LS + key) || "null"); if (j && j.p) return { price: BigInt(j.p), priceF: Number(j.f) }; } catch (e) { /* ignore */ }
   throw lastErr;
 }
 
 // ---------------------------------------------------------------- сделки
 // Роутеры и зап: если получатель — один из них, настоящий трейдер — отправитель tx.
 const ROUTERS = new Set([lower(SWAP_ROUTER), lower(ZAP_ADDRESS), "0x8876789976decbfcbbbe364623c63652db8c0904", ADDRESS_THIS]);
-const _txFrom = new Map();
-async function txFrom(hash) {
-  if (_txFrom.has(hash)) return _txFrom.get(hash);
-  const p = publicClient.getTransaction({ hash }).then((tx) => lower(tx.from)).catch(() => null);
-  _txFrom.set(hash, p);
-  return p;
-}
+const txFrom = (hash) => txSenderOf(hash); // вечный кэш в web3.js
 
 /**
  * Сделки на Uniswap в формате сделок кривой: { side, addr, eth, tokens, fee,
  * block, tx, ts, dex: true } (eth — в единицах второй монеты пула: ETH или
  * валюта) и точки графика { i, mcap, ts } (mcap — в тех же единицах × 1e9).
  */
-export async function dexTrades(pool, token, { otherDec = 18, fromBlock = FACTORY_START_BLOCK, startIndex = 0 } = {}) {
-  const t0 = await publicClient.readContract({ address: pool, abi: poolAbi, functionName: "token0" });
-  const tokenIsToken0 = lower(t0) === lower(token);
-  const logs = await getLogsSafe({ address: pool, event: poolAbi[4], fromBlock, toBlock: "latest" });
+const _dexTr = new Map(); // pool:startIndex -> { p, t }: страница монеты и арена не тянут одно и то же дважды
+export async function dexTrades(pool, token, opts = {}) {
+  const key = `${lower(pool)}:${opts.startIndex || 0}:${opts.otherDec || 18}`;
+  const c = _dexTr.get(key);
+  if (c && Date.now() - c.t < 15_000) return c.p;
+  const p = _dexTradesFresh(pool, token, opts).catch((e) => { _dexTr.delete(key); throw e; });
+  _dexTr.set(key, { p, t: Date.now() });
+  return p;
+}
+async function _dexTradesFresh(pool, token, { otherDec = 18, fromBlock = FACTORY_START_BLOCK, startIndex = 0 } = {}) {
+  // порядок монет в пуле (вечный кэш) и логи обменов — одновременно
+  const [{ t0 }, logs] = await Promise.all([
+    poolTokens(pool),
+    getLogsSafe({ address: pool, event: poolAbi[4], fromBlock, toBlock: "latest" }),
+  ]);
+  const tokenIsToken0 = t0 === lower(token);
   logs.sort((a, b) => (a.blockNumber === b.blockNumber ? Number(a.logIndex - b.logIndex) : Number(a.blockNumber - b.blockNumber)));
   // время: интерполяция по блокам (2 вызова), как у кривой
   let ts0 = 0, avg = 0, minB = 0;
@@ -164,7 +200,7 @@ export async function dexTrades(pool, token, { otherDec = 18, fromBlock = FACTOR
     const rec = lower(l.args.recipient);
     const addr = froms.get(l.transactionHash) || (ROUTERS.has(rec) ? lower(l.args.sender) : rec);
     const ts = (ts0 + (Number(l.blockNumber) - minB) * avg) * 1000;
-    const price = Number(formatUnits(priceFromSqrt(l.args.sqrtPriceX96, tokenIsToken0, otherDec), otherDec));
+    const price = priceFloatFromSqrt(l.args.sqrtPriceX96, tokenIsToken0, otherDec);
     trades.push({
       side, addr, dex: true, price,
       eth: Math.abs(Number(othAmt)) / D, tokens: Math.abs(Number(tokAmt)) / 1e18, fee: 0,

@@ -63,8 +63,8 @@ export default function ProfileEditor({ wallet, onDone, open: openProp, onOpenCh
         <div className="pe-fields">
           <input value={f.name} onChange={set("name")} maxLength={32} placeholder={t("Имя (до 32 символов)")} />
           <div className="pe-grid">
-            <input value={f.x} onChange={set("x")} maxLength={120} placeholder="X: @ник или ссылка" />
-            <input value={f.telegram} onChange={set("telegram")} maxLength={120} placeholder="Telegram: @ник или ссылка" />
+            <input value={f.x} onChange={set("x")} maxLength={120} placeholder={t("X: @ник или ссылка")} />
+            <input value={f.telegram} onChange={set("telegram")} maxLength={120} placeholder={t("Telegram: @ник или ссылка")} />
             <input value={f.website} onChange={set("website")} maxLength={200} placeholder={t("Сайт: https://…")} />
           </div>
         </div>

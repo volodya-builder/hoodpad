@@ -1,8 +1,8 @@
-import { parseAbi, parseAbiItem } from "viem";
+import { parseAbi, parseAbiItem, formatUnits } from "viem";
 import { useEffect, useState } from "react";
-import { getLogsSafe, publicClient } from "./web3.js";
+import { getLogsSafe, publicClient, txSenderOf, blockTimeOf } from "./web3.js";
 import { factoryAbi, poolAbi, tokenAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi } from "./abi.js";
-import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE, VIRTUAL_ETH } from "./config.js";
+import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE, VIRTUAL_ETH, FACTORY_START_BLOCK } from "./config.js";
 
 // Метаданные приходят из блокчейна и полностью подконтрольны создателю токена.
 // Любой мусор здесь не должен ронять интерфейс: JSON.parse("null") исключения
@@ -118,10 +118,13 @@ const TOTAL_WEI = 10n ** 27n;               // 1e9 токенов
 const CAP_WEI = 8n * 10n ** 26n;            // 800M
 
 async function _loadTokensSubgraph() {
+  const qf = (await subgraphHasQuote()) ? " quote" : "";
   const d = await gql(`{ tokens(first: 96, orderBy: createdBlock, orderDirection: desc) {
-    id name symbol metadataURI creator pool createdAt graduated ethReserve tokensSold } }`);
+    id name symbol metadataURI creator pool createdAt graduated ethReserve tokensSold${qf} } }`);
   if (!d?.tokens) throw new Error("no tokens field");
-  return d.tokens.map(_mapSubgraphToken);
+  // у монет за валюту цена по формуле ETH-кривой — мусор; такие строки живут
+  // только как запасные (quoteAddr), пока не пришёл точный список с цепи
+  return d.tokens.map((x) => ({ ..._mapSubgraphToken(x), quoteAddr: x.quote ? String(x.quote).toLowerCase() : null }));
 }
 
 /** Все монеты одного создателя — прямо из индексатора (обе фабрики, без
@@ -233,10 +236,14 @@ const fixedUsd = (l) => (l.usd != null && Number(l.usd) > 0 ? Number(l.usd) : nu
 const fixedFeeUsd = (l) => (l.feeUsd != null && Number(l.usd) > 0 ? Number(l.feeUsd) : null);
 
 let _hasQuote = null;
+const HQ_LS = "hood_subgraph_hasquote_v1";
 async function subgraphHasQuote() {
   if (_hasQuote !== null) return _hasQuote;
+  // ответ помним 10 минут: иначе каждый холодный заход ждал лишний запрос
+  try { const c = JSON.parse(localStorage.getItem(HQ_LS) || "null"); if (c && Date.now() - c.t < 600_000) { _hasQuote = !!c.v; return _hasQuote; } } catch (e) { /* ignore */ }
   try { await gql("{ trades(first: 1) { quote } }"); _hasQuote = true; }
   catch (e) { _hasQuote = false; }
+  try { localStorage.setItem(HQ_LS, JSON.stringify({ v: _hasQuote, t: Date.now() })); } catch (e) { /* ignore */ }
   return _hasQuote;
 }
 
@@ -319,7 +326,7 @@ async function _allTradesRpc() {
   const out = [];
   for (const t of tokens.slice(0, 40)) {
     if (!t.pool) continue;
-    const cur = t.q ? { dec: t.q.dec, virt: t.q.virt || 0, token: t.token } : null;
+    const cur = t.q ? { dec: t.q.dec, virt: t.q.virt || 0, token: t.token, div: t.divBps || 0 } : null;
     const h = await poolTrades(t.pool, cur).catch(() => null);
     if (!h) continue;
     const dec = t.q ? t.q.dec : 18;
@@ -376,14 +383,14 @@ export async function subgraphUserTrades(trader) {
  *  через курс валюты и ETH. Возвращает { tokenLower: priceEth }. */
 export async function priceEthMap(tokens) {
   const { quoteUsd, ethUsd, ethUsdCached } = await import("./price.js");
-  const { formatEther, formatUnits } = await import("viem");
   const rate = await Promise.race([ethUsd().catch(() => ethUsdCached()), new Promise((r) => setTimeout(() => r(ethUsdCached()), 4000))]);
   const out = {};
+  const { priceUnitsOf } = await import("./price.js");
   await Promise.all(tokens.map(async (tk) => {
     const k = (tk.token || "").toLowerCase();
-    if (!tk.q) { out[k] = Number(formatEther(tk.price || 0n)); return; }
+    if (!tk.q) { out[k] = priceUnitsOf(tk); return; }
     const px = await quoteUsd(tk.q.addr).catch(() => 0);
-    out[k] = rate > 0 && px > 0 ? Number(formatUnits(tk.price || 0n, tk.q.dec)) * px / rate : 0;
+    out[k] = rate > 0 && px > 0 ? priceUnitsOf(tk) * px / rate : 0;
   }));
   return out;
 }
@@ -478,24 +485,35 @@ async function withDexPrices(rows) {
     const { dexPriceOf } = await import("./dex.js");
     await Promise.all(grads.map(async (x) => {
       const px = await dexPriceOf(x.token, x.q ? x.q.addr : null, x.q ? x.q.dec : 18).catch(() => null);
-      if (px && px > 0n) x.price = px;
+      if (px && px.price > 0n) { x.price = px.price; x.priceF = px.priceF; x.migrated = true; }
     }));
   } catch (e) { /* без DEX — остаётся цена кривой */ }
 }
 
-async function _loadTokensFresh() {
-  let eth;
-  try {
-    eth = await _loadTokensSubgraph();
-    dataSource.v = "subgraph";
-  } catch (e) {
-    dataSource.v = "rpc";
-    eth = await _loadTokensRpc();
+async function _loadQuoteTokensSafe() {
+  // Три попытки; не вышло — прошлый удачный список монет за валюту из памяти.
+  // Без этого при икоте узла в список попадали строки индексатора с ценой по
+  // формуле ETH-кривой (GME $16,8k вместо $4k на главной — аудит 19.09.2026).
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try { return await _loadQuoteTokensRpc(); }
+    catch (e) { await new Promise((r) => setTimeout(r, 700 * (attempt + 1))); }
   }
-  // Монеты за валюту живут в другой фабрике, и сабграф её пока не
-  // индексирует. Читаем их с цепи напрямую: их немного, а один упавший
-  // запрос не должен ронять весь список.
-  const q = await _loadQuoteTokensRpc().catch(() => []);
+  return (_tok.v || []).filter((x) => x.q);
+}
+
+async function _loadTokensFresh() {
+  // Индексатор (ETH-монеты) и цепь (монеты за валюту) — одновременно: раньше
+  // цепь ждала индексатор, и главная собиралась на секунду дольше.
+  const [sg, q] = await Promise.all([
+    _loadTokensSubgraph().then((v) => ({ v })).catch((e) => ({ e })),
+    _loadQuoteTokensSafe(),
+  ]);
+  let eth;
+  if (sg.v) { eth = sg.v; dataSource.v = "subgraph"; }
+  else { dataSource.v = "rpc"; eth = await _loadTokensRpc(); }
+  // строки индексатора для монет за валюту без точной пары с цепи — прочь
+  const known = new Set(q.map((x) => x.token.toLowerCase()));
+  eth = eth.filter((x) => !x.quoteAddr || known.has(x.token.toLowerCase()));
   // Градуировавшие монеты торгуются на Uniswap: цена (и капитализация в
   // карточках) — с пула DEX, а не замёрзшая цена кривой на момент миграции.
   await withDexPrices([...eth, ...q]);
@@ -528,7 +546,7 @@ async function _loadQuoteTokensRpc() {
   const addrs = await publicClient.readContract({
     address: QUOTE_FACTORY_ADDRESS, abi: quoteFactoryAbi, functionName: "tokens", args: [offset, PAGE],
   });
-  const createdAt = await loadCreationTimes(addrs).catch(() => ({}));
+  const createdAtP = loadCreationTimes(addrs).catch(() => ({})); // параллельно с чтением пулов
   const qcache = new Map(); // одна валюта — один запрос символа/знаков
   const quoteInfo = async (addr) => {
     const k = addr.toLowerCase();
@@ -546,7 +564,7 @@ async function _loadQuoteTokensRpc() {
         publicClient.readContract({ address: QUOTE_FACTORY_ADDRESS, abi: quoteFactoryAbi, functionName: "poolOf", args: [token] }),
         publicClient.readContract({ address: QUOTE_FACTORY_ADDRESS, abi: quoteFactoryAbi, functionName: "quoteOf", args: [token] }),
       ]);
-      const [name, symbol, uri, price, sold, cap, reserve, graduated, divBps, q] = await Promise.all([
+      const [name, symbol, uri, price, sold, cap, reserve, graduated, divBps, q, virt] = await Promise.all([
         publicClient.readContract({ address: token, abi: tokenAbi, functionName: "name" }),
         publicClient.readContract({ address: token, abi: tokenAbi, functionName: "symbol" }),
         publicClient.readContract({ address: token, abi: tokenAbi, functionName: "metadataURI" }),
@@ -557,13 +575,29 @@ async function _loadQuoteTokensRpc() {
         publicClient.readContract({ address: pool, abi: quotePoolAbi, functionName: "graduated" }),
         publicClient.readContract({ address: pool, abi: quotePoolAbi, functionName: "divBps" }).catch(() => 0),
         quoteInfo(qaddr),
+        publicClient.readContract({ address: pool, abi: quotePoolAbi, functionName: "virtualQuote" }).catch(() => 0n),
       ]);
-      return { token, pool, name, symbol, price, sold, cap, reserve, graduated,
+      // Точная цена числом: spotPrice контракта — целые сырые единицы валюты
+      // за монету, у USDG (6 знаков) это режет 2,5 → 2 (DOGE: $2k вместо $2,5k).
+      const priceF = curvePriceF(virt, reserve, sold, q.dec);
+      const createdAt = await createdAtP;
+      return { token, pool, name, symbol, price, priceF, sold, cap, reserve, graduated,
                meta: parseMeta(uri), createdAt: createdAt[token.toLowerCase()],
-               q, divBps: Number(divBps) };
+               q: { ...q, virt: Number(formatUnits(virt, q.dec)) }, divBps: Number(divBps) };
     })
   );
   return items.reverse();
+}
+
+/** Цена кривой числом: (виртуал + резерв) / (всего − продано), единицы
+ *  валюты за одну монету. Для ETH-кривой dec = 18 и виртуал VIRT_WEI. */
+export function curvePriceF(virt, reserve, sold, dec = 18) {
+  try {
+    const v = Number(formatUnits(BigInt(virt || 0), dec)), r = Number(formatUnits(BigInt(reserve || 0), dec));
+    const s = Number(formatUnits(BigInt(sold || 0), 18));
+    const denom = 1e9 - s;
+    return denom > 0 ? (v + r) / denom : 0;
+  } catch (e) { return 0; }
 }
 
 async function _loadTokensRpc() {
@@ -629,14 +663,14 @@ export function prefetchToken(token) {
   _prefetched.add(k);
   const tk = (_tok.v || []).find((x) => (x.token || "").toLowerCase() === k);
   if (!tk?.pool) return;
-  poolTrades(tk.pool, tk.q ? { dec: tk.q.dec, virt: tk.q.virt, token: tk.token } : null).catch(() => {});
+  poolTrades(tk.pool, tk.q ? { dec: tk.q.dec, virt: tk.q.virt, token: tk.token, div: tk.divBps || 0 } : null).catch(() => {});
 }
 
 export async function poolTrades(pool, cur = null) {
   // Кэш — по пулу И виртуалу: у монеты за валюту virt приходит с сетью позже
   // кэша (сначала 0) — иначе первый расчёт с виртуалом ETH-кривой оседал в кэше и
   // график монеты за AAPL показывал капу в разы меньше шапки.
-  const key = cur ? `${pool}:${cur.virt || 0}:${cur.dec ?? 18}` : pool;
+  const key = cur ? `${pool}:${cur.virt || 0}:${cur.dec ?? 18}:${cur.div || 0}` : pool;
   const c = _trades.get(key);
   if (c?.v) {
     // мгновенный ответ + тихое обновление в фоне
@@ -697,7 +731,12 @@ async function _poolTradesFresh(pool, cur = null) {
 // (имена полей другие — quoteIn/quoteOut, но топик тот же), поэтому
 // декодер общий; отличаются только знаки валюты и виртуальный резерв.
 async function _poolTradesRpc(pool, cur = null) {
-  const fromBlock = await recentFromBlock();
+  // С блока деплоя фабрик, а не «последние 1,2М блоков»: у монеты старше
+  // полутора суток ранние сделки выпадали из окна, состояние кривой
+  // считалось с середины (проданных «минус 22М»), и последняя свеча GME
+  // стояла на $3,8k при капе $4,0k (аудит 19.09.2026). Узел отдаёт логи по
+  // адресу с любого блока быстро; на отказ getLogsSafe режет диапазон.
+  const fromBlock = FACTORY_START_BLOCK;
   const logs = await getLogsSafe({
     address: pool, events: tradeEvents, fromBlock, toBlock: "latest",
   });
@@ -716,6 +755,11 @@ async function _poolTradesRpc(pool, cur = null) {
 
   const VIRT = cur?.virt || VIRTUAL_ETH, TOTAL = 1e9;
   const D = 10 ** (cur?.dec ?? 18);
+  // Дивиденды холдерам (монеты за валюту, divBps): при продаже с кривой
+  // уходит и комиссия, и дивиденд — событие даёт лишь чистую выручку и
+  // комиссию. Без этой поправки резерв «пух» на сумму дивидендов, и график
+  // GME стоял на $4,1k при капе $4,0k (аудит 19.09.2026; сверено с цепью).
+  const divShare = Math.min(0.5, Math.max(0, (cur?.div || 0) / 10000));
   let eth = 0, sold = 0;
   const trades = [];
   const points = [{ i: 0, mcap: (VIRT / TOTAL) * TOTAL }];
@@ -725,7 +769,7 @@ async function _poolTradesRpc(pool, cur = null) {
     const tokAmt = Number(isBuy ? l.args.tokensOut : l.args.tokensIn) / 1e18;
     const fee = Number(l.args.fee) / D;
     if (isBuy) { eth += ethAmt; sold += tokAmt; }
-    else { eth -= ethAmt + fee; sold -= tokAmt; }
+    else { eth -= (ethAmt + fee) / (1 - divShare); sold -= tokAmt; }
     const price = (VIRT + eth) / (TOTAL - sold);
     trades.push({
       side: isBuy ? "buy" : "sell",
@@ -744,7 +788,8 @@ async function _poolTradesRpc(pool, cur = null) {
   if (fix.length) {
     const byTx = new Map();
     await Promise.all([...new Set(fix.map((tr) => tr.tx))].map(async (h) => {
-      try { const tx = await publicClient.getTransaction({ hash: h }); byTx.set(h, tx.from); } catch (e) { /* оставим как есть */ }
+      const from = await txSenderOf(h); // вечный кэш (web3.js)
+      if (from) byTx.set(h, from);
     }));
     for (const tr of fix) if (byTx.has(tr.tx)) tr.addr = byTx.get(tr.tx);
   }
@@ -939,13 +984,14 @@ export async function loadCreationTimes(addrs) {
   if (still.length) {
     try {
       const logs = await publicClient.getLogs({
-        address: FACTORY_ADDRESS, event: createdEvent, fromBlock: await recentFromBlock(), toBlock: "latest",
+        address: FACTORY_ADDRESS, event: createdEvent, fromBlock: FACTORY_START_BLOCK, toBlock: "latest",
       });
       for (const l of logs) {
         const k = l.args.token.toLowerCase();
         if (!still.includes(k) || out[k]) continue;
-        const b = await publicClient.getBlock({ blockNumber: l.blockNumber });
-        out[k] = Number(b.timestamp) * 1000;
+        const t = await blockTimeOf(l.blockNumber);
+        if (!t) continue;
+        out[k] = t;
         cacheSet(k, out[k]);
       }
     } catch (e) { console.warn("creation time (logs) failed:", e); }

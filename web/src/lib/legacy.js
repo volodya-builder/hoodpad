@@ -16,7 +16,7 @@
 //  Всё запоминается в браузере: события — на час, отправители — навсегда.
 // ============================================================================
 import { parseAbiItem } from "viem";
-import { publicClient } from "./web3.js";
+import { publicClient, txSenderOf, blockTimeOf } from "./web3.js";
 import { poolAbi, tokenAbi } from "./abi.js";
 import { parseMeta } from "./data.js";
 import { FACTORY_ADDRESS, QUOTE_FACTORY_ADDRESS, EXPLORER } from "./config.js";
@@ -44,7 +44,6 @@ const LIVE = new Set([String(FACTORY_ADDRESS).toLowerCase(), String(QUOTE_FACTOR
 const EV_ETH = parseAbiItem("event TokenCreated(address indexed token, address indexed pool, address indexed creator, string name, string symbol, string metadataURI)");
 const EV_QUOTE = parseAbiItem("event TokenCreated(address indexed token, address indexed pool, address indexed creator, address quote, uint16 divBps)");
 const LS_EV = "hood.creations.v2";     // все события создания (час)
-const LS_TX = "hood.creationTx.v1";    // tx → отправитель (навсегда)
 const LS_SRC = "hood.fundSrc.v1";      // кошелёк → источник первого ETH (сутки)
 const TTL = 3600_000;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -76,19 +75,11 @@ export async function loadAllCreations() {
       await sleep(200);
     }
     // отправитель транзакции создания — «дев» в понимании агрегаторов
-    const txCache = lsGet(LS_TX) || {};
-    await Promise.all(found.map(async (x) => {
-      if (txCache[x.tx]) { x.sender = txCache[x.tx]; return; }
-      try { const tx = await publicClient.getTransaction({ hash: x.tx }); x.sender = String(tx.from).toLowerCase(); txCache[x.tx] = x.sender; }
-      catch (e) { x.sender = ""; }
-    }));
-    lsSet(LS_TX, txCache);
+    await Promise.all(found.map(async (x) => { x.sender = (await txSenderOf(x.tx)) || ""; })); // вечный кэш (web3.js)
     // время — по блоку; тикер и градация — с цепи, где событие их не даёт
     const blocks = [...new Set(found.map((x) => x.block))];
     const ts = {};
-    await Promise.all(blocks.map(async (b) => {
-      try { const blk = await publicClient.getBlock({ blockNumber: b }); ts[String(b)] = Number(blk.timestamp) * 1000; } catch (e) { ts[String(b)] = 0; }
-    }));
+    await Promise.all(blocks.map(async (b) => { ts[String(b)] = await blockTimeOf(b); }));
     await Promise.all(found.map(async (x) => {
       x.graduated = await publicClient.readContract({ address: x.pool, abi: poolAbi, functionName: "graduated" }).catch(() => false);
       if (!x.symbol) {
