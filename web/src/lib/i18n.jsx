@@ -1738,6 +1738,8 @@ const EN = {
   "раз в сутки, 00:25 UTC": "daily, 00:25 UTC",
   "Дивиденды и сбор комиссий": "Dividends and fee collection",
   "каждые 5 минут": "every 5 minutes",
+  "X: @ник или ссылка": "X: @handle or link",
+  "Telegram: @ник или ссылка": "Telegram: @handle or link",
 };
 
 const LangCtx = createContext({ lang: "ru", t: (s) => s, setLang: () => {} });

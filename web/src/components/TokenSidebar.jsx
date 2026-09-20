@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Icon from "./Icon.jsx";
-import { formatEther, formatUnits } from "viem";
 import { loadTokens, subgraphStats24, prefetchToken } from "../lib/data.js";
-import { useEthUsd, usd, quoteUsd } from "../lib/price.js";
+import { useEthUsd, useQuoteRates, usd, priceUnitsOf, mcapUsdOf } from "../lib/price.js";
 import { fmtEth, fmt } from "../lib/web3.js";
 import { useLang } from "../lib/i18n.jsx";
 import { useFavs, toggleFav } from "../lib/favs.js";
@@ -42,26 +41,15 @@ export default function TokenSidebar({ current }) {
   const volOf = (tok) => { const k = (tok.pool || "").toLowerCase(); const f = st.volUsd?.[k]; return f != null ? f : (st.vol[k] || 0) * rate; };
   // Курсы валют монет за акцию/крипту — чтобы капа в списке считалась в
   // долларах через курс валюты, а не через ETH (иначе 10 AAPL → «$25k»).
-  const [qRates, setQRates] = useState({});
-  useEffect(() => {
-    const addrs = [...new Set((tokens || []).filter((x) => x.q).map((x) => x.q.addr))];
-    if (!addrs.length) return;
-    let alive = true;
-    Promise.all(addrs.map((a) => quoteUsd(a).then((v) => [a, v]))).then((rows) => {
-      if (alive) setQRates(Object.fromEntries(rows));
-    });
-    return () => { alive = false; };
-  }, [tokens]);
-  // Капа в долларах. Для ETH-монет — через курс ETH; для монет за валюту —
-  // через курс валюты, а нет курса — 0 (показываем прочерк, а не выдумку).
-  const mcapUsdOf = (tok) => tok.q
-    ? Number(formatUnits(tok.price, tok.q.dec)) * 1e9 * (qRates[tok.q.addr] || 0)
-    : Number(formatEther(tok.price)) * 1e9 * rate;
-  const mcapOf = (tok) => mcapUsdOf(tok);
+  // курсы валют монет за акцию/крипту (общий хук: раз в минуту, с памятью)
+  const qRates = useQuoteRates(tokens);
+  // Капа в долларах: общая формула для всех мест сайта (price.js). Нет курса — прочерк.
+  const mcapOf = (tok) => mcapUsdOf(tok, rate, (a) => qRates[String(a).toLowerCase()]) || 0;
   const chgOf = (tok) => {
-    const p0 = st.first[(tok.pool || "").toLowerCase()];
+    const p0 = st.first[(tok.pool || "").toLowerCase()]; // сырые единицы валюты за одну монету
     if (!p0) return null;
-    const cur = Number(tok.price) / 1e18; // сырые единицы валюты за одну монету
+    const dec = tok.q ? (tok.q.dec ?? 18) : 18;
+    const cur = priceUnitsOf(tok) * 10 ** dec; // те же сырые единицы, точно
     if (!(cur > 0)) return null;
     return (cur / p0 - 1) * 100;
   };
@@ -115,10 +103,10 @@ export default function TokenSidebar({ current }) {
                   {v > 0 ? (v >= 1000 ? usd(v) : "$" + v.toFixed(2)) : "—"}
                 </span>
               </span>
-              <span className="ts-price">{mcapUsdOf(x) > 0 ? usd(mcapUsdOf(x)) : "—"}</span>
+              <span className="ts-price">{mcapOf(x) > 0 ? usd(mcapOf(x)) : "—"}</span>
               <span className={`ts-chg ${ch == null ? "dim" : ch >= 0 ? "side-buy" : "side-sell"}`}
                     title={t("Изменение цены за 24ч")}>
-                {ch == null ? "—" : `${ch >= 0 ? "+" : ""}${fmt(ch, 1)}%`}
+                {ch == null ? "—" : Math.abs(ch) < 0.05 ? "0.0%" : `${ch >= 0 ? "+" : ""}${fmt(ch, 1)}%`}
               </span>
             </a>
           );

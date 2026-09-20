@@ -3,13 +3,13 @@ import Icon from "../components/Icon.jsx";
 import Socials from "../components/Socials.jsx";
 import Who from "../components/Who.jsx";
 import { parseEther, formatEther, parseUnits, formatUnits } from "viem";
-import { getLogsSafe, publicClient, fmt, fmtEth, fmtEthFine, short } from "../lib/web3.js";
+import { getLogsSafe, publicClient, blockTimeOf, fmt, fmtEth, fmtEthFine, short } from "../lib/web3.js";
 import { factoryAbi, poolAbi, tokenAbi, treasuryAbi, poolExtraAbi, quoteFactoryAbi, quotePoolAbi, erc20Abi, zapAbi, feeSplitterAbi, erc20TransferEvent } from "../lib/abi.js";
 import { FACTORY_ADDRESS, TREASURY_ADDRESS, EXPLORER, QUOTE_FACTORY_ADDRESS, QUOTE_LIVE, ZAP_ADDRESS, ZAP_LIVE, FEATURES, FEE_SPLITTER_ADDRESS, SPLITTER_LIVE, FACTORY_START_BLOCK, VIRTUAL_ETH } from "../lib/config.js";
 import { poolTrades, invalidateTrades, loadTokens, allTrades, parseMeta, cachedToken, tokensCacheTime } from "../lib/data.js";
 import { computeTrust } from "../lib/trust.js";
 import { honestVolume } from "../lib/fairvol.js";
-import { useEthUsd, useQuoteUsd, usd, moneyEth, ethOf, quoteUsd as quoteUsdOf } from "../lib/price.js";
+import { useEthUsd, useQuoteUsd, usd, moneyEth, ethOf, quoteUsd as quoteUsdOf, priceUnitsOf } from "../lib/price.js";
 import DevTokens, { useDevTokens } from "../components/DevTokens.jsx";
 import Chat from "./Chat.jsx";
 import Workshop from "../components/Workshop.jsx";
@@ -225,7 +225,7 @@ function readTokenCache(addr) {
       // первые секунды висит капитализация многочасовой давности.
       const t = cachedToken(addr);
       if (t && t.pool && tokensCacheTime() > (d._t || 0)) {
-        d.price = t.price ?? d.price; d.sold = t.sold ?? d.sold; d.reserve = t.reserve ?? d.reserve;
+        d.price = t.price ?? d.price; d.priceF = t.priceF ?? d.priceF; d.sold = t.sold ?? d.sold; d.reserve = t.reserve ?? d.reserve;
         if (t.graduated) { d.graduated = true; d.migrated = true; }
       }
       return d;
@@ -620,9 +620,9 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
         });
         const lg = logs[logs.length - 1];
         if (!lg || !alive) return;
-        const blk = await publicClient.getBlock({ blockNumber: lg.blockNumber });
-        if (!alive) return;
-        setMigMark({ kind: "migrated", ts: Number(blk.timestamp) * 1000, tx: lg.transactionHash,
+        const ts = await blockTimeOf(lg.blockNumber);
+        if (!alive || !ts) return;
+        setMigMark({ kind: "migrated", ts, tx: lg.transactionHash,
                      eth: Number(lg.args.ethAmount || 0n) / 1e18, tokens: Number(lg.args.tokenAmount || 0n) / 1e18 });
       } catch (e) { /* нет метки — не страшно */ }
     })();
@@ -664,7 +664,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   const impact = useMemo(() => {
     if (!quote || !data || !amount || Number(amount) <= 0) return null;
     if (viaZap || (viaDex && data.q)) return null; // ETH против цены в валюте — несравнимо, честнее промолчать
-    const spot = Number(fq(data.price));
+    const spot = priceUnitsOf(data);
     if (spot <= 0) return null;
     if (tab === "buy" && quote.kind === "tokens") {
       const tokens = Number(formatEther(quote.value));
@@ -735,17 +735,21 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       ]);
     // После миграции цена и резервы — с пула Uniswap, кривая их больше не знает.
     let dex = null, priceLive = price;
+    // Точная цена числом (spotPrice режет дробные сырые единицы у USDG — 6 знаков)
+    let priceF = q
+      ? (q.virt + Number(formatUnits(reserve, q.dec))) / Math.max(1, 1e9 - Number(formatEther(sold)))
+      : (VIRTUAL_ETH + Number(formatEther(reserve))) / Math.max(1, 1e9 - Number(formatEther(sold)));
     if (migrated) {
       try {
         const dp = await dexPoolOf(tokenAddress, q ? q.addr : null);
         if (dp) {
           const st = await dexState(dp, tokenAddress, q ? q.dec : 18);
           dex = { pool: dp, reserveOther: st.reserveOther, reserveToken: st.reserveToken, liquidity: st.liquidity };
-          if (st.price > 0n) priceLive = st.price;
+          if (st.price > 0n) { priceLive = st.price; priceF = st.priceF; }
         }
       } catch (e) { /* пул не прочитался — покажем последнюю цену кривой */ }
     }
-    const next = { token: String(tokenAddress).toLowerCase(), pool, name, symbol, uri, price: priceLive, sold, cap, reserve, graduated, migrated, creator, balance, walletEth, walletQuote, q, divBps, zapOk, dex };
+    const next = { token: String(tokenAddress).toLowerCase(), pool, name, symbol, uri, price: priceLive, priceF, sold, cap, reserve, graduated, migrated, creator, balance, walletEth, walletQuote, q, divBps, zapOk, dex };
     if (curTok.current !== next.token) return; // пока читали — открыли другую монету
     setData(next);
     writeTokenCache(tokenAddress, next);
@@ -782,7 +786,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       ? Promise.resolve({ [tokenAddress.toLowerCase()]: data.createdAt })
       : loadCreationTimes([tokenAddress]).catch(() => ({}));
     let [h, creatorFees, treasuryOwner, treasuryHeld, burned] = await Promise.all([
-      poolTrades(data.pool, data.q ? { dec: data.q.dec, virt: data.q.virt, token: tokenAddress } : null),
+      poolTrades(data.pool, data.q ? { dec: data.q.dec, virt: data.q.virt, token: tokenAddress, div: data.divBps || 0 } : null),
       publicClient.readContract({ address: data.pool, abi: poolExtraAbi, functionName: "creatorFeesAccrued" }),
       publicClient.readContract({ address: TREASURY_ADDRESS, abi: treasuryAbi, functionName: "owner" }).catch(() => null),
       publicClient.readContract({ address: tokenAddress, abi: tokenAbi, functionName: "balanceOf", args: [TREASURY_ADDRESS] }).catch(() => 0n),
@@ -1142,7 +1146,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
     const need = [...new Set(xferLogs.filter((x) => x.from === a || x.to === a).map((x) => String(x.block)))].filter((b) => !blockTsRef.current[b]).slice(0, 40);
     if (!need.length) return;
     let alive = true;
-    Promise.all(need.map((b) => publicClient.getBlock({ blockNumber: BigInt(b) }).then((bl) => [b, Number(bl.timestamp) * 1000]).catch(() => null)))
+    Promise.all(need.map((b) => blockTimeOf(b).then((t) => (t ? [b, t] : null))))
       .then((rows) => { if (!alive) return; for (const r of rows) if (r) blockTsRef.current[r[0]] = r[1]; setBlockTs({ ...blockTsRef.current }); });
     return () => { alive = false; };
   }, [inspect, xferLogs]);
@@ -1196,11 +1200,12 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
   // (AAPL, USDG), и умножать её на курс ETH нельзя: получалось «$25k» у
   // монеты, стоящей 10 AAPL. Считаем через курс самой валюты; курса нет —
   // показываем в валюте, а не выдуманные доллары.
-  const mcapEth = data.q ? 0 : Number(formatEther(data.price)) * 1_000_000_000;
-  const mcapQuote = data.q ? Number(formatUnits(data.price, data.q.dec)) * 1_000_000_000 : 0;
+  const priceUnits = priceUnitsOf(data); // единицы валюты кривой за монету, точно
+  const mcapEth = data.q ? 0 : priceUnits * 1_000_000_000;
+  const mcapQuote = data.q ? priceUnits * 1_000_000_000 : 0;
   const mcapUsd = data.q
     ? (quoteRate > 0 ? usd(mcapQuote * quoteRate) : "…")
-    : usd(mcapEth * rate);
+    : (rate > 0 ? usd(mcapEth * rate) : "…");
 
   // сортировка таблиц сделок по клику на заголовок колонки
   const sortTradesBy = (arr, { key, dir }) => {
@@ -1543,7 +1548,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
               )}
             </div>
             <div className="tk-cells">
-              <div className="tk-cell"><span>{t("Цена")}</span><b>{ethStr(fc(data.price))} ETH</b></div>
+              <div className="tk-cell"><span>{t("Цена")}</span><b>{ethStr(priceUnits)} ETH</b></div>
               {data.migrated && data.dex
                 ? <div className="tk-cell"><span>{t("Ликвидность")}</span><b>{money(fc(data.dex.reserveOther))}</b></div>
                 : <div className="tk-cell"><span>{t("Собрано")}</span><b>{money(fc(data.reserve))}</b></div>}
@@ -1662,7 +1667,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
             const sellsTok = sells.reduce((s, x) => s + x.tokens, 0);
             const feesEth = mine.reduce((s, x) => s + (x.fee || 0), 0);
             const balTok = Number(formatEther(data.balance));
-            const valEth = balTok * Number(formatEther(data.price));
+            const valEth = balTok * priceUnits; // в единицах валюты кривой, как и x.eth
             const avgBuy = buysTok > 0 ? buysEth / buysTok : 0;   // ETH за токен
             const avgSell = sellsTok > 0 ? sellsEth / sellsTok : 0;
             const costRem = balTok * avgBuy;                       // себестоимость остатка
@@ -1828,8 +1833,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
                 // Как у GMGN: строки по доле, у каждой — стоимость в долларах и
                 // доля в процентах; пул Uniswap (и кривая до миграции) — в общем
                 // списке со своим местом, но с пометкой, что это не человек.
-                const pxUnits = Q ? Number(formatUnits(data.price || 0n, Q.dec)) : Number(formatEther(data.price || 0n));
-                const pxUsd = pxUnits * ((Q ? quoteRate : rate) || 0);
+                const pxUsd = priceUnits * ((Q ? quoteRate : rate) || 0);
                 const TOTAL = 1e9;
                 const rows = [...holders.list,
                   ...(data.migrated ? [] : [{ curve: true, pct: holders.unsoldPct, bal: holders.unsold }]),
@@ -2152,7 +2156,7 @@ export default function TokenPage({ tokenAddress, wallet, onConnect }) {
       const sEth = sells.reduce((s, x) => s + x.eth, 0), sTok = sells.reduce((s, x) => s + x.tokens, 0);
       const avgB = bTok > 0 ? bEth / bTok : 0, avgS = sTok > 0 ? sEth / sTok : 0;
       const balTok = inspBal ? Number(formatEther(inspBal.tok)) : null;
-      const priceEth = Number(formatEther(data.price));
+      const priceEth = priceUnits; // единицы валюты кривой за монету (у ETH-монет — ETH)
       const holdVal = balTok != null ? balTok * priceEth : null;
       // Монеты, которые пришли не с кривой, а переводом с другого кошелька:
       // на балансе больше, чем куплено минус продано. У них нет цены покупки,

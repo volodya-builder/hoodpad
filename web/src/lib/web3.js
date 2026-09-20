@@ -3,36 +3,223 @@ import {
   createWalletClient,
   custom,
   http,
-  fallback,
   numberToHex,
 } from "viem";
 import { CHAIN, RPC_URLS, WC_PROJECT_ID } from "./config.js";
 
-// Устойчивый транспорт: несколько RPC с автопереключением при сбое.
-// Урок 05.08.2026: Alchemy-эндпоинт отдавал 503, а старые настройки
-// (retryCount 4 × timeout 20с × fallback retry 2) заставляли страницы
-// «читать блокчейн» минутами, прежде чем уйти на живой публичный RPC.
-// Теперь: быстрый отвал от больного эндпоинта (1 повтор, 8с) и
-// авторанжирование — viem сам ставит первым тот RPC, что реально отвечает,
-// и периодически перепроверяет остальные.
-const rpcTransport = fallback(
-  RPC_URLS.map((url) =>
-    http(url, {
-      batch: { wait: 16, batchSize: 20 },
-      // 19.09.2026: там, где Alchemy недоступен (часть мобильных сетей), каждый
-      // запрос ждал 8 с × 2 попытки, прежде чем уйти на публичный RPC — главная
-      // грузилась 9+ секунд. Теперь 3 с и без повтора: следующий узел сразу.
-      timeout: 3_000,
-      retryCount: 0,
-    })
-  ),
-  { rank: { interval: 15_000, sampleCount: 3, timeout: 3_000 }, retryCount: 1 }
-);
+// ---------------------------------------------------------------- RPC-шлюз
+// Аудит 19.09.2026, один корень всех «то так, то сяк»: узлы режут по числу
+// JSON-RPC-вызовов. Публичный узел сети (замер): чтения состояния (eth_call,
+// балансы, блоки, транзакции, логи) — около сотни залпом, дальше десятки в
+// секунду и лимит плавает; не больше ~25 вызовов в одной пачке; залп
+// одновременных запросов режется отдельно. Сверх этого — 429 (с двойным
+// CORS-заголовком, в браузере это «CORS error» / «Failed to fetch»).
+// Alchemy — 429 внутри JSON. Страница монеты выстреливала 400–700 вызовов
+// разом: половина падала, и каждое место сайта молча брало старое или
+// пустое значение.
+// Лечение в одном месте: (1) чтения контрактов клеятся в один eth_call через
+// Multicall3 (batch.multicall ниже) — сотни вызовов становятся единицами;
+// (2) этот шлюз ведёт бюджет вызовов по каждому узлу (скорость подстраивается:
+// на 429 — вдвое меньше, на серии удач — чуть больше), ставит лишнее в
+// очередь по важности (цены и логи раньше, отправители транзакций позже),
+// на 429 переключает узел или ждёт, мёртвый узел обходит с растущей паузой;
+// (3) отправитель tx и время блока — в памяти браузера навсегда
+// (txSenderOf/blockTimeOf ниже), повторный заход их не читает.
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const NODES = RPC_URLS.map((url) => {
+  const alchemy = /alchemy\.com/i.test(url);
+  // стартовые оценки; дальше узел сам подстраивает refill (вызовов в секунду)
+  const cap = alchemy ? 40 : 60, refill = alchemy ? 12 : 30;
+  return { url, alchemy, cap, refill, minRefill: 12, maxRefill: alchemy ? 60 : 80, tokens: cap, at: Date.now(), penaltyUntil: 0, fails: 0, okStreak: 0 };
+});
+const MAX_IN_FLIGHT = 4;   // одновременных HTTP-запросов ко всем узлам (публичный режет от ~8)
+const ATTEMPT_MS = 8_000;  // одна попытка к одному узлу
+const ATTEMPTS = 5;
+const gwQueue = [];        // { url, init, need, attempt, resolve, reject }
+let gwActive = 0, gwTimer = null;
+
+function refillNode(n) {
+  const now = Date.now();
+  n.tokens = Math.min(n.cap, n.tokens + ((now - n.at) / 1000) * n.refill);
+  n.at = now;
+}
+/** Первый по порядку узел, у которого есть бюджет; иначе — сколько ждать. */
+function pickNode(need) {
+  const now = Date.now();
+  let wait = 1500;
+  for (const n of NODES) {
+    if (n.penaltyUntil > now) { wait = Math.min(wait, n.penaltyUntil - now); continue; }
+    refillNode(n);
+    if (n.tokens >= need) return { node: n };
+    wait = Math.min(wait, ((need - n.tokens) / n.refill) * 1000);
+  }
+  return { wait: Math.max(40, wait) };
+}
+/** Сколько вызовов в теле и насколько они срочны: 0 — цены/логи/номер блока
+ *  (то, что видно сразу), 1 — блоки (время сделок), 2 — отправители
+ *  транзакций (имена в таблице сделок). */
+function classify(body) {
+  let need = 1, prio = 0;
+  try {
+    const b = JSON.parse(body);
+    const arr = Array.isArray(b) ? b : [b];
+    need = Math.max(1, arr.length);
+    const m = arr[0]?.method || "";
+    prio = m === "eth_getTransactionByHash" ? 2 : m === "eth_getBlockByNumber" ? 1 : 0;
+  } catch (e) { /* ignore */ }
+  return { need, prio };
+}
+function penalize(n, ms) {
+  n.tokens = 0;
+  n.okStreak = 0;
+  n.refill = Math.max(n.minRefill, n.refill * 0.75);  // узел сказал «много» — сбавляем
+  n.penaltyUntil = Math.max(n.penaltyUntil, Date.now() + ms);
+}
+function reward(n) {
+  n.fails = 0;
+  n.okStreak += 1;
+  if (n.okStreak % 5 === 0) n.refill = Math.min(n.maxRefill, n.refill + 4); // всё живо — прибавляем
+}
+const looksRateLimited = async (res) => {
+  if (res.status === 429) return true;
+  if (!res.ok) return false;
+  try { const txt = await res.clone().text(); return /"code"\s*:\s*429\b/.test(txt); } catch (e) { return false; }
+};
+async function gwSend(job, node) {
+  const { init } = job;
+  const ctl = new AbortController();
+  const onAbort = () => ctl.abort();
+  init.signal?.addEventListener("abort", onAbort);
+  const timer = setTimeout(() => ctl.abort(), ATTEMPT_MS);
+  try {
+    const res = await fetch(node.url, { ...init, signal: ctl.signal });
+    if (await looksRateLimited(res)) {
+      // узел перегружен: бюджет в ноль, пауза растёт с повторами
+      penalize(node, 800 * (job.attempt + 1));
+      return { retry: true, err: new Error(`RPC 429: ${node.url}`) };
+    }
+    reward(node);
+    return { res };
+  } catch (e) {
+    if (init.signal?.aborted) return { err: e };           // отменил viem (таймаут сверху) — не повторяем
+    const timedOut = ctl.signal.aborted;
+    // публичный узел на 429 отвечает с двойным CORS — браузер бросает TypeError;
+    // у Alchemy сетевой отказ — узел закрыт/не оплачен: обходим с растущей паузой
+    node.fails += 1;
+    const base = timedOut ? 10_000 : node.alchemy ? 5_000 : 800;
+    penalize(node, Math.min(60_000, base * Math.pow(2, Math.min(node.fails - 1, 4))));
+    return { retry: true, err: e };
+  } finally {
+    clearTimeout(timer);
+    init.signal?.removeEventListener("abort", onAbort);
+  }
+}
+function gwPump() {
+  if (gwTimer) { clearTimeout(gwTimer); gwTimer = null; }
+  while (gwActive < MAX_IN_FLIGHT && gwQueue.length) {
+    const job = gwQueue[0];
+    if (job.init.signal?.aborted) { gwQueue.shift(); job.reject(job.lastErr || new Error("aborted")); continue; }
+    const pick = pickNode(job.need);
+    if (!pick.node) { gwTimer = setTimeout(gwPump, pick.wait); return; }
+    gwQueue.shift();
+    pick.node.tokens -= job.need;
+    gwActive += 1;
+    gwSend(job, pick.node).then((r) => {
+      gwActive -= 1;
+      if (r.res) { job.resolve(r.res); }
+      else if (r.retry && job.attempt + 1 < ATTEMPTS && !job.init.signal?.aborted) {
+        job.attempt += 1; job.lastErr = r.err;
+        gwQueue.unshift(job);   // повтор — первым в очереди, на живой узел
+      } else job.reject(r.err);
+      gwPump();
+    });
+  }
+}
+/** fetch для viem: всё через очередь и бюджеты узлов. Адрес от viem не важен — узел выбирает шлюз. */
+function gatewayFetch(url, init) {
+  return new Promise((resolve, reject) => {
+    const { need, prio } = classify(init?.body);
+    const job = { url, init: init || {}, need, prio, attempt: 0, lastErr: null, resolve, reject };
+    // по важности, внутри одной важности — по порядку
+    let i = gwQueue.length;
+    while (i > 0 && gwQueue[i - 1].prio > prio) i -= 1;
+    gwQueue.splice(i, 0, job);
+    gwPump();
+  });
+}
+
+const rpcTransport = http(RPC_URLS[0], {
+  // пачки JSON-RPC: не больше 20 вызовов (публичный узел режет от ~40)
+  batch: { wait: 12, batchSize: 20 },
+  fetchFn: gatewayFetch,
+  // таймаут viem покрывает и ожидание в очереди — щедрый; быстрый отвал от
+  // мёртвого узла делает шлюз сам (ATTEMPT_MS и пауза узла)
+  timeout: 30_000,
+  retryCount: 0,
+});
 
 export const publicClient = createPublicClient({
   chain: CHAIN,
   transport: rpcTransport,
+  // чтения контрактов одного тика — одним eth_call через Multicall3
+  // (адрес — в defineChain, config.js); ~4 КБ calldata ≈ 40 чтений в пачке
+  batch: { multicall: { wait: 8, batchSize: 4096 } },
 });
+
+// ---------------------------------------------------------------- вечные кэши
+// Отправитель транзакции и время блока не меняются никогда — держим в памяти
+// браузера (localStorage), чтобы каждая страница не тянула их заново.
+function persistentMap(key, cap) {
+  let map = null, timer = null;
+  const load = () => {
+    if (map) return map;
+    try { map = JSON.parse(localStorage.getItem(key) || "{}"); if (!map || typeof map !== "object") map = {}; }
+    catch (e) { map = {}; }
+    return map;
+  };
+  const flush = () => {
+    timer = null;
+    try {
+      const keys = Object.keys(map);
+      if (keys.length > cap) { const keep = keys.slice(-Math.floor(cap / 2)); const m = {}; for (const k of keep) m[k] = map[k]; map = m; }
+      localStorage.setItem(key, JSON.stringify(map));
+    } catch (e) { /* нет места — не страшно */ }
+  };
+  return {
+    get: (k) => load()[k],
+    set: (k, v) => { load()[k] = v; if (!timer) timer = setTimeout(flush, 500); },
+  };
+}
+const txSenders = persistentMap("hood_txfrom_v1", 3000);
+const blockTimes = persistentMap("hood_blockts_v1", 6000);
+const _txP = new Map(), _blkP = new Map();
+/** Кошелёк, отправивший транзакцию (в нижнем регистре); null — не узнали. */
+export function txSenderOf(hash) {
+  const h = String(hash || "").toLowerCase();
+  const c = txSenders.get(h);
+  if (c) return Promise.resolve(c);
+  if (_txP.has(h)) return _txP.get(h);
+  const p = publicClient.getTransaction({ hash: h })
+    .then((tx) => { const a = String(tx.from).toLowerCase(); txSenders.set(h, a); return a; })
+    .catch(() => null)
+    .finally(() => _txP.delete(h));
+  _txP.set(h, p);
+  return p;
+}
+/** Время блока в миллисекундах; 0 — не узнали. */
+export function blockTimeOf(blockNumber) {
+  const k = String(blockNumber);
+  const c = blockTimes.get(k);
+  if (c) return Promise.resolve(c);
+  if (_blkP.has(k)) return _blkP.get(k);
+  const p = publicClient.getBlock({ blockNumber: BigInt(k) })
+    .then((b) => { const t = Number(b.timestamp) * 1000; if (t > 0) blockTimes.set(k, t); return t; })
+    .catch(() => 0)
+    .finally(() => _blkP.delete(k));
+  _blkP.set(k, p);
+  return p;
+}
+
 
 /** getLogs с повторами и делением диапазона: узел иногда отвечает отказом
  *  («HTTP request failed», лимит ответа) — тогда держатели, обмены и график

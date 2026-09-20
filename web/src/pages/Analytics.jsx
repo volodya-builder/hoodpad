@@ -39,7 +39,9 @@ function Delta({ now, was, period }) {
 
 /** Мини-гистограмма как на карточках аналитики.
  *  bins: [{ v, from, to }] — значение и границы корзины по времени. */
+const MONTHS = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
 function Bars({ data, bins, fmtVal, hover, setHover, period }) {
+  const { t } = useLang();
   // Столбики как у Pons: скруглённые, спокойные; под мышью — яркий, остальные
   // приглушаются; последний (сейчас) — акцентный. Значение и дата корзины
   // показываются в шапке карточки, а не во всплывашке.
@@ -50,8 +52,7 @@ function Bars({ data, bins, fmtVal, hover, setHover, period }) {
   const grid = [0.25, 0.5, 0.75, 1];
   const fmtAxis = (ts) => {
     const d = new Date(ts);
-    const p = (x) => String(x).padStart(2, "0");
-    return `${d.getDate()} ${["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"][d.getMonth()]}`;
+    return `${d.getDate()} ${t(MONTHS[d.getMonth()])}`; // месяц — через словарь (EN: Jul)
   };
   const yOf = (v) => TOP + (1 - (max > 0 ? v / max : 0)) * (H - PAD_B - TOP);
   return (
@@ -294,7 +295,7 @@ export default function Analytics() {
         const chartTotal = chart === "count" ? stats.chartCnt : chart === "launch" ? stats.chartLau : chart === "buyback" ? D(stats.chartBuy) : D(stats.chartVol);
         const chartName = { vol: "Объём", count: "Сделки", launch: "Запуски", buyback: "Выкупы" }[chart];
         const hv = hover !== null && stats.bins[hover] ? { v: series[hover], from: stats.bins[hover].from, to: stats.bins[hover].to } : null;
-        const d = (ts) => { const x = new Date(ts); return `${x.getDate()} ${["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"][x.getMonth()]}`; };
+        const d = (ts) => { const x = new Date(ts); return `${x.getDate()} ${t(MONTHS[x.getMonth()])}`; };
         return (
         <>
         <div className="ana-strip">

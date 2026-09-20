@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { formatEther, formatUnits } from "viem";
 import Icon from "./Icon.jsx";
 import Who from "./Who.jsx";
-import { usd, quoteUsd } from "../lib/price.js";
+import { usd, quoteUsd , mcapUsdOf } from "../lib/price.js";
 import { timeAgo, prefetchToken, loadCreatorTokens } from "../lib/data.js";
 import { useLang } from "../lib/i18n.jsx";
 import { loadAllCreations, creationsOf, fundingSource } from "../lib/legacy.js";
@@ -60,8 +60,12 @@ export function useDevTokens(creator, tokens, current) {
     let alive = true;
     setFromIdx(null); setAll(null);
     if (cre) loadCreatorTokens(cre).then((x) => alive && setFromIdx(x)).catch(() => alive && setFromIdx([]));
-    loadAllCreations().then((x) => alive && setAll(x)).catch(() => alive && setAll([]));
-    return () => { alive = false; };
+    // скан всех фабрик (13 getLogs + отправители + блоки) — не раньше, чем
+    // страница показала цену и график: он под сгибом, а бюджет узла общий
+    const timer = setTimeout(() => {
+      if (alive) loadAllCreations().then((x) => alive && setAll(x)).catch(() => alive && setAll([]));
+    }, 4000);
+    return () => { alive = false; clearTimeout(timer); };
   }, [cre]);
   const curL = (current || "").toLowerCase();
   const thisOne = useMemo(() => (all || []).find((x) => x.token === curL) || null, [all, curL]);
@@ -115,10 +119,8 @@ export default function DevTokens({ creator, tokens, trades, rate, current }) {
   }, [mine]);
 
   const mcapUsd = (tk) => {
-    if (tk.price == null) return 0;
-    return tk.q
-      ? Number(formatUnits(tk.price, tk.q.dec)) * 1e9 * (qRates[tk.q.addr] || 0)
-      : Number(formatEther(tk.price)) * 1e9 * (rate || 0);
+    if (tk.price == null && tk.priceF == null) return 0;
+    return mcapUsdOf(tk, rate, (a) => qRates[a] || qRates[String(a).toLowerCase()] || 0) || 0;
   };
 
   // По сделкам платформы: объём, комиссии и ATH-капа каждой монеты.
